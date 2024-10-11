@@ -10,6 +10,7 @@
 	<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
+	<Authors>Ezesil</Authors>
   </PropertyGroup>
 	<ItemGroup>
 		  <PackageReference Include="Castle.Core" Version="5.1.1" />
