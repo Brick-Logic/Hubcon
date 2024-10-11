@@ -1,0 +1,29 @@
+﻿# Personal Use License - Version 1.0
+
+## Permission for Personal Use
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software solely for **personal and non-commercial purposes**, subject to the following conditions:
+
+## Conditions:
+
+1. **Personal Use Only**:
+   - The Software may be used solely for personal, educational, learning, or recreational activities that are **not related to commercial, professional, or for-profit purposes**.
+   - The Software may be modified for personal use under these same conditions.
+
+2. **Prohibition of Commercial and Professional Use**:
+   - The Software is strictly prohibited from being used in any commercial, professional, or for-profit context, whether direct or indirect.
+   - This includes, but is not limited to, using the Software in businesses, organizations, for-profit projects, or any situation where the Software is employed to generate revenue or support commercial activities.
+
+3. **Distribution**:
+   - Redistribution of copies of the Software is allowed as long as this license is retained and the prohibition of commercial or professional use is upheld.
+   - Distributed copies of the Software may not be used for commercial purposes or in professional environments.
+
+4. **Prohibition of Sale or Commercial Redistribution**:
+   - The Software may not be sold, sublicensed, rented, or otherwise redistributed in any form that involves receiving any form of compensation, whether monetary or otherwise.
+
+5. **Disclaimer of Warranties**:
+   - The Software is provided "as is", without any warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the Software or the use or other dealings in the Software.
+
+---
+
+Version Date: October 11, 2024.

@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <AssemblyVersion>1.0.1</AssemblyVersion>
+    <FileVersion>1.0.1</FileVersion>
+	<Version>1.0.1</Version>
+	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+	<ItemGroup>
+		  <PackageReference Include="Castle.Core" Version="5.1.1" />
+		  <PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
+		  <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" /> 
+	  </ItemGroup>
+	  <ItemGroup>
+		  <FrameworkReference Include="Microsoft.AspNetCore.App" />
+	  </ItemGroup>
+	<ItemGroup>
+		<None Include="LICENSE.txt" Pack="true" PackagePath=""/>
+		<None Include="README.md" Pack="true" PackagePath=""/>
+	</ItemGroup>
+</Project>
