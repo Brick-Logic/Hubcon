@@ -31,8 +31,9 @@ On your SignalR client's program.cs, you can now create it and Start it:
     static async Task Main(string[] args)
     {
         var controller = new TestHubController("http://localhost:5001/clienthub");
-        await controller.Connection.StartAsync();
-        Console.ReadLine();
+
+        // This is a blocking task, you can stop it with controller.Stop();
+        await controller.StartAsync();
     }
 
 ## Server
