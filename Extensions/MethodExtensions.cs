@@ -35,5 +35,36 @@ namespace Hubcon.Extensions
             object request = new MethodInvokeInfo(method, args);
             await client.SendAsync(method, request, cancellationToken);
         }
+
+        public static object[] ConvertArgsToDelegateTypes(Delegate del, object?[] args)
+        {
+            var methodParams = del.Method.GetParameters();
+
+            if (args.Length == 0)
+                return [];
+
+            if (args.Length + 1 != methodParams.Length)
+                throw new ArgumentException("El número de argumentos no coincide con los parámetros del método");
+
+            object[] convertedArgs = new object[args.Length];
+            for (int i = 0; i < methodParams.Length - 1; i++)
+            {
+                var expectedType = methodParams[i+1].ParameterType;
+
+                if (args[i] != null && !expectedType.IsAssignableFrom(args[i].GetType()))
+                {
+                    // Convertir el argumento si es necesario
+                    convertedArgs[i] = JsonElementParser.ConvertJsonElement(args[i], expectedType);
+                }
+                else
+                {
+                    // Si es null o ya es del tipo correcto, se usa directamente
+                    convertedArgs[i] = args[i];
+                }
+            }
+
+            // Invocar el delegado con los argumentos convertidos
+            return convertedArgs;
+        }
     }
 }

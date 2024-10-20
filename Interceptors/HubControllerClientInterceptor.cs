@@ -25,7 +25,7 @@ namespace Hubcon.Interceptors
             // Lógica antes de llamar al método original
             var result = await _hub.Clients
                 .Client(_targetClientId)
-                .InvokeMethodAsync(invocation.Method.Name, new CancellationToken(), invocation.Arguments);
+                .InvokeMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
 
             // Convertir el resultado y devolverlo
             TResult convertedResult = JsonElementTools.JsonElementParser.ConvertJsonElement<TResult>(result.Data!);
@@ -37,7 +37,9 @@ namespace Hubcon.Interceptors
             // Lógica antes de llamar al método original
             await _hub.Clients
                 .Client(_targetClientId)
-                .CallMethodAsync(invocation.Method.Name, new CancellationToken(), invocation.Arguments);
+                .CallMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
+
+            proceedInfo.Invoke();
         }
     }
 }

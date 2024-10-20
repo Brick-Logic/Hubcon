@@ -105,22 +105,49 @@ namespace Hubcon.Controller
 
                     AvailableMethods.TryAdd($"{method.GetMethodSignature()}", action);
 
-                    if (method.ReturnType != typeof(void) && method.ReturnType != typeof(Task))
-                        _hubConnection?.On($"{method.GetMethodSignature()}", (Func<MethodInvokeInfo, Task<MethodResponse>>)HandleWithResult);
-                    else
-                        _hubConnection?.On($"{method.GetMethodSignature()}", (Func<MethodInvokeInfo, Task>)Handle);
+                    if (method.ReturnType == typeof(void))
+                        _hubConnection?.On($"{method.GetMethodSignature()}", (Func<MethodInvokeInfo, Task>)HandleWithoutResultAsync);
+                    else if (method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
+                        _hubConnection?.On($"{method.GetMethodSignature()}", (Func<MethodInvokeInfo, Task<MethodResponse>>)HandleWithResultAsync);
+                    else if (method.ReturnType == typeof(Task))
+                        _hubConnection?.On($"{method.GetMethodSignature()}", (Func<MethodInvokeInfo, Task>)HandleWithoutResultAsync);
+                    else 
+                        _hubConnection?.On($"{method.GetMethodSignature()}", (Func<MethodInvokeInfo, Task<MethodResponse>>)HandleSynchronousResult);
                 }
             }
         }
-        private async Task Handle(MethodInvokeInfo methodInfo)
+        private async Task HandleWithoutResultAsync(MethodInvokeInfo methodInfo)
         {
             AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
-            object? result = value?.DynamicInvoke(methodInfo.Args);
+            object? result = value?.DynamicInvoke(HubconExtensions.ConvertArgsToDelegateTypes(value, methodInfo.Args));
 
             if (result is Task task)
                 await task;
         }
-        private async Task<MethodResponse> HandleWithResult(MethodInvokeInfo methodInfo)
+
+        private async Task<MethodResponse> HandleSynchronousResult(MethodInvokeInfo methodInfo)
+        {
+            return await Task.Run(() =>
+            {
+                AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
+                object? result = value?.DynamicInvoke(methodInfo.Args);
+
+                if (result is null)
+                    return new MethodResponse(true);
+
+                return new MethodResponse(true, result);
+            });
+        }
+
+        private Task HandleSynchronous(MethodInvokeInfo methodInfo)
+        {
+            AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
+            value?.DynamicInvoke(methodInfo.Args);
+
+            return Task.CompletedTask;
+        }
+
+        private async Task<MethodResponse> HandleWithResultAsync(MethodInvokeInfo methodInfo)
         {
             AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
             object? result = value?.DynamicInvoke(methodInfo.Args);
