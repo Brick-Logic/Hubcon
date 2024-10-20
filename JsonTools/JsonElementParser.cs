@@ -200,10 +200,6 @@ namespace Hubcon.JsonElementTools
             return instance;
         }
 
-
-
-
-
         private static object DeserializeTuple(JsonElement jsonElement, Type tupleType)
         {
             var genericArguments = tupleType.GetGenericArguments();
