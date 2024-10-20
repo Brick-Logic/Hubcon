@@ -8,7 +8,7 @@ I only tested async Task methods with primitive types for now, but it should wor
 
 ## Domain Project
 After installing this package, create a new interface that implements IHubController in your Domain project. 
-Client and server MUST share this interface, or at least implement exactly the same interface.
+Client and server MUST share this interface, or at least implement exactly the same interface on both sides.
 
     public interface ITestHubController : IHubController
     {
@@ -22,7 +22,7 @@ This project can be literally anything that spins up, even a console application
 
     public class TestHubController(string url) : HubController(url), ITestHubController
     {
-        public async Task ShowText() => Console.WriteLine("Hello.");
+        public async Task ShowText() => Console.WriteLine("ShowText() invoked succesfully.");  
         public async Task<int> GetTemperature() => new Random().Next(-10, 50);
     }
 
@@ -30,7 +30,7 @@ On your SignalR client's program.cs, you can now create it and Start it:
 
     static async Task Main(string[] args)
     {
-        var controller = new TestHubController(url);
+        var controller = new TestHubController("http://localhost:5001/clienthub");
         await controller.Connection.StartAsync();
         Console.ReadLine();
     }
@@ -38,63 +38,40 @@ On your SignalR client's program.cs, you can now create it and Start it:
 ## Server
 The server should be an ASP.NET Core 8 API, but should also work for Blazor and ASP.NET Core MVC.
 
-On your server, create a ClientHub:
-
-	using Microsoft.AspNetCore.SignalR;
-
-	public record class ClientReference(string Id, string Name);
-	public class ClientHub : Hub
-	{
-		public static event EventHandler ClientsChanged;
-		public static Dictionary<string, ClientReference> Clients = new();
-		public IHubContext<ClientHub> Hub { get; set; }
-		public ClientHub(IHubContext<ClientHub> hub)
-		{
-			Hub = hub;
-		}
-
-		public override Task OnConnectedAsync()
-		{
-			Clients.TryAdd(Context.ConnectionId, new ClientReference(Context.ConnectionId, "SomeName"));
-			return base.OnConnectedAsync();
-		}
-
-		public override Task OnDisconnectedAsync(Exception exception)
-		{
-			Clients.Remove(Context.ConnectionId, out _);
-			return base.OnDisconnectedAsync(exception);
-		}
-	}
-
 On your server program.cs's services:
 
     builder.Services.AddSignalR();
     builder.Services.AddControllers();
+    builder.Services.AddScoped<HubControllerClient<ITestHubController, HubconDefaultHub>>();
 
 Same file, after builder.Build():
 
 	app.MapControllers();
-	app.MapHub<ClientHub>("/clienthub");
-	app.Map("/test", async (IHubContext<ClientHub> hub) =>
-	{
-		var clientId = ClientHub.Clients.FirstOrDefault().Key;
-		var client = new HubControllerClientBuilder<ITestHubController>(hub).GetClient(clientId);
-		await client.ShowText();
-		var temperature = await client.GetTemperature();
-		Console.WriteLine(temperature);
-	});
+	app.MapHub<HubconDefaultHub>("/clienthub");
+    
+    // Just a test endpoint, it can also be injected in a controller.
+	app.MapGet("/test", async (HubControllerClient<ITestHubController, HubconDefaultHub> client) =>
+    {
+        // Getting some connected clientId
+        var clientId = HubconDefaultHub.GetClients().FirstOrDefault().Id;
 
-And you are done. Execute both projects at the same time and go to localhost:{port}/test, you should see the the values print on both screens.
+        // Gets a client instance
+        var instance = client.GetInstance(clientId);
 
-To implement more methods, just add them to the interface, implement them in the TestHubController, then use it somewhere from the server, it will just work, 
-specially if injected from a DI container.
+        // Using some methods
+        await instance.ShowText();
+        var temperature = await instance.GetTemperature();
 
-As long as you have the clientId, you can create and use this client from anywhere in the server.
+        return temperature.ToString();
+    });
 
-This fits perfectly if you need to communicate two instances in real time, in an easy way. The created clients are persisted in memory to avoid rebuilding.
+And that's it. Execute both projects at the same time and go to localhost:<port>/test, you should see the ShowText() method print, and GetTemperature() return a value.
 
-In future versions, i'll add reacting to events and other functionality.
+To implement more methods, just add them to the interface, implement them in the TestHubController, then use it somewhere from the server, it will just work.
+
+This fits perfectly if you need to communicate two instances in real time, in an easy way. The wrappers are persisted in memory to avoid rebuilding, working as normal SignalR messages.
+As long as you have the clientId, you can use this client from anywhere in the server.
 
 
 ## Note
-This is a very early stage project, it is not in good shape for production. Use it at your own risk.
+This project is under heavy development. The APIs might change. Use it at your own risk.

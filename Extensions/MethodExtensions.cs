@@ -1,5 +1,5 @@
-﻿using Hubcon.Controller;
-using Hubcon.JsonElementTools;
+﻿using Hubcon.JsonElementTools;
+using Hubcon.Models;
 using Hubcon.Response;
 using Microsoft.AspNetCore.SignalR;
 using System.Reflection;

@@ -1,32 +1,83 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+﻿using Hubcon.Extensions;
+using Hubcon.Models;
+using Hubcon.Response;
+using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
-using Hubcon.Extensions;
-using System.Diagnostics;
-using Hubcon.Response;
 
 namespace Hubcon.Controller
 {
-    public record class MethodInvokeInfo(string MethodName, object?[] Args);
-
     public abstract class HubController
     {
         protected ConcurrentDictionary<string, Delegate?> AvailableMethods = new();
-
-        protected HubConnection _hubConnection;
-        public HubConnection Connection => _hubConnection;
+        protected HubConnection? _hubConnection;
+        protected CancellationToken _token;
+        protected string _url;
 
         protected HubController(string url)
         {
+            _url = url;
             _hubConnection = new HubConnectionBuilder()
-             .WithUrl(url)
-             .WithAutomaticReconnect()
-             .Build();
-
+                .WithUrl(_url)
+                .WithAutomaticReconnect()
+                .Build();
             Build();
         }
 
-        private void Build()
+        public async Task StartAsync(Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                _token = cancellationToken;
+
+
+                _ = _hubConnection.StartAsync(_token);
+
+                bool connectedInvoked = false;
+                while (true)
+                {
+                    await Task.Delay(1000);
+                    if (_hubConnection.State == HubConnectionState.Connecting)
+                    {
+                        consoleOutput?.Invoke($"Connecting to {_url}...");
+                        connectedInvoked = false;
+                    }
+                    else if (_hubConnection.State == HubConnectionState.Disconnected)
+                    {
+                        consoleOutput?.Invoke($"Disconnected. Trying connecting to {_url}...");
+                        _ = _hubConnection.StartAsync(_token);
+                        connectedInvoked = false;
+                    }
+                    else if (_hubConnection.State == HubConnectionState.Reconnecting)
+                    {
+                        consoleOutput?.Invoke($"Connection lost, reconnecting to {_url}...");
+                        _ = _hubConnection.StartAsync(_token);
+                        connectedInvoked = false;
+                    }
+                    else if (_hubConnection.State == HubConnectionState.Connected && !connectedInvoked)
+                    {
+                        consoleOutput?.Invoke($"Successfully connected to {_url}.");
+                        connectedInvoked = true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                consoleOutput?.Invoke($"Error: {ex.Message}");
+
+                if (_token.IsCancellationRequested)
+                {
+                    consoleOutput?.Invoke("Cancelado.");
+                }
+            }
+
+            _ = _hubConnection?.StopAsync(_token);
+        }
+        public void Stop()
+        {
+            _ = _hubConnection?.StopAsync(_token);
+        }
+        protected void Build()
         {
             Type derivedType = GetType();
             if (!typeof(IHubController).IsAssignableFrom(derivedType))
@@ -55,13 +106,12 @@ namespace Hubcon.Controller
                     AvailableMethods.TryAdd($"{method.GetMethodSignature()}", action);
 
                     if (method.ReturnType != typeof(void) && method.ReturnType != typeof(Task))
-                        _hubConnection.On($"{method.GetMethodSignature()}", (Func<MethodInvokeInfo, Task<MethodResponse>>)HandleWithResult);
+                        _hubConnection?.On($"{method.GetMethodSignature()}", (Func<MethodInvokeInfo, Task<MethodResponse>>)HandleWithResult);
                     else
-                        _hubConnection.On($"{method.GetMethodSignature()}", (Func<MethodInvokeInfo, Task>)Handle);
+                        _hubConnection?.On($"{method.GetMethodSignature()}", (Func<MethodInvokeInfo, Task>)Handle);
                 }
             }
         }
-
         private async Task Handle(MethodInvokeInfo methodInfo)
         {
             AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
@@ -70,7 +120,6 @@ namespace Hubcon.Controller
             if (result is Task task)
                 await task;
         }
-
         private async Task<MethodResponse> HandleWithResult(MethodInvokeInfo methodInfo)
         {
             AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
@@ -86,8 +135,7 @@ namespace Hubcon.Controller
             else
                 return new MethodResponse(true, result);
         }
-
-        private static async Task<object?> GetTaskResultAsync(Task taskObject, Type returnType)
+        private async Task<object?> GetTaskResultAsync(Task taskObject, Type returnType)
         {
             // Esperar a que el Task termine
             await taskObject;

@@ -1,31 +1,35 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Controller;
+using Hubcon.Default;
 using Hubcon.Extensions;
 using Hubcon.Interceptors;
+using Hubcon.Models;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Hubcon.Client
 {
-    public class HubControllerClientBuilder<T> where T : IHubController
+    public class HubControllerClient<TIHubController, THub> 
+        where TIHubController : IHubController
+        where THub : Hub
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Major Code Smell", 
             "S2743:Static fields should not be used in generic types", 
             Justification = "The static field by T type is intended.")]
-        protected static Dictionary<string, MethodInvokeInfo> AvailableMethods { get; } = [];
-        protected IHubContext<Hub> _hub { get; }
-        protected static Dictionary<string, T> Clients { get; } = [];
+        internal static Dictionary<string, MethodInvokeInfo> AvailableMethods { get; } = [];
+        protected IHubContext<THub> _hubContext { get; }
+        protected static Dictionary<string, TIHubController> Clients { get; } = [];
 
-        public HubControllerClientBuilder(IHubContext<Hub> hub)
+        public HubControllerClient(IHubContext<THub> hubContext)
         {
-            _hub = hub;
+            _hubContext = hubContext;
 
             if (AvailableMethods.Count == 0)
             {
-                var TType = typeof(T);
+                var TType = typeof(TIHubController);
 
                 if (!TType.IsInterface)
-                    throw new ArgumentException($"El tipo {typeof(T).FullName} no es una interfaz.");
+                    throw new ArgumentException($"El tipo {typeof(TIHubController).FullName} no es una interfaz.");
 
                 if (!typeof(IHubController).IsAssignableFrom(TType))
                     throw new NotImplementedException($"El tipo {TType.FullName} no implementa la interfaz {nameof(IHubController)} ni es un tipo derivado.");
@@ -38,19 +42,19 @@ namespace Hubcon.Client
             }
         }
 
-        public T GetClient(string clientId)
+        public TIHubController GetInstance(string controllerId)
         {
-            if (Clients.TryGetValue(clientId, out T? value))
+            if (Clients.TryGetValue(controllerId, out TIHubController? value))
                 return value;
 
             var proxyGenerator = new ProxyGenerator();
-            var client = (T)proxyGenerator.CreateInterfaceProxyWithTarget(
-                typeof(T),
-                (T)DynamicImplementationCreator.CreateImplementation(typeof(T)),
-                new HubControllerClientInterceptor(_hub, clientId)
+            var client = (TIHubController)proxyGenerator.CreateInterfaceProxyWithTarget(
+                typeof(TIHubController),
+                (TIHubController)DynamicImplementationCreator.CreateImplementation(typeof(TIHubController)),
+                new HubControllerClientInterceptor(_hubContext, controllerId)
             );
 
-            Clients.TryAdd(clientId, client);
+            Clients.TryAdd(controllerId, client);
 
             return client;
         }
