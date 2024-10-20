@@ -56,6 +56,7 @@ namespace Hubcon.Extensions
                 if (args[i] != null && !expectedType.IsAssignableFrom(args[i]!.GetType()))
                 {
                     // Convertir el argumento si es necesario
+                    Console.WriteLine(args[i]!);
                     convertedArgs[i] = JsonElementParser.ConvertJsonElement(args[i]!, expectedType)!;
                 }
                 else
