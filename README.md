@@ -2,7 +2,20 @@
 
 Creates an artificial implementation of your interface, and gives it everything it needs to communicate with a SignalR client seamlessly just with the hub URL. 
 
-I only tested async Task methods with primitive types for now, but it should work with more complex types.
+It currently supports:
+- Async methods
+- Sync methods (automatically wrapped as Async)
+- Void methods
+- Methods with and without return value
+- Methods with and without parameters
+- Nullable parameters
+- Default parameters
+- Variable parameters (params)
+- IEnumerable
+- Dictionary
+- Classes in general (only tested common properties, but classes should work too)
+
+Using very complex classes is not tested and therefore not recommended. Using async Task methods is recommended.
 
 # Usage
 
@@ -71,7 +84,7 @@ And that's it. Execute both projects at the same time and go to localhost:<port>
 To implement more methods, just add them to the interface, implement them in the TestHubController, then use it somewhere from the server, it will just work.
 
 This fits perfectly if you need to communicate two instances in real time, in an easy way. The wrappers are persisted in memory to avoid rebuilding, working as normal SignalR messages.
-As long as you have the clientId, you can use this client from anywhere in the server.
+As long as you have the clientId, you can use this client from anywhere in the server. Keep in mind that object parsing might not be completely optimized.
 
 
 ## Note
