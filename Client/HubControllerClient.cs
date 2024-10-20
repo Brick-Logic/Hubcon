@@ -37,7 +37,8 @@ namespace Hubcon.Client
                 foreach (var method in TType.GetMethods())
                 {
                     var parameters = method.GetParameters();
-                    AvailableMethods.TryAdd(method.GetMethodSignature(), new MethodInvokeInfo(method.GetMethodSignature(), parameters));
+                    var methodSignature = method.GetMethodSignature();
+                    AvailableMethods.TryAdd(methodSignature, new MethodInvokeInfo(methodSignature, parameters));
                 }
             }
         }

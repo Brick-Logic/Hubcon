@@ -11,7 +11,9 @@ namespace Hubcon.Extensions
     {
         public static string GetMethodSignature(this MethodInfo method)
         {
-            List<string> identifiers = [method.Name];
+            List<string> identifiers = [];
+            identifiers.Add(method.ReturnType.Name);
+            identifiers.Add(method.Name);
             identifiers.AddRange(method.GetParameters().Select(p => p.ParameterType.Name));
             var result = string.Join("_", identifiers);
             return result;
@@ -36,7 +38,7 @@ namespace Hubcon.Extensions
             await client.SendAsync(method, request, cancellationToken);
         }
 
-        public static object[] ConvertArgsToDelegateTypes(Delegate del, object?[] args)
+        public static object[] ConvertArgsToDelegateTypes(Delegate del, object[] args)
         {
             var methodParams = del.Method.GetParameters();
 
@@ -54,7 +56,7 @@ namespace Hubcon.Extensions
                 if (args[i] != null && !expectedType.IsAssignableFrom(args[i].GetType()))
                 {
                     // Convertir el argumento si es necesario
-                    convertedArgs[i] = JsonElementParser.ConvertJsonElement(args[i], expectedType);
+                    convertedArgs[i] = JsonElementParser.ConvertJsonElement(args[i], expectedType)!;
                 }
                 else
                 {

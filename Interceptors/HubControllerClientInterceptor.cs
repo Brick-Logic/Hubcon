@@ -29,6 +29,7 @@ namespace Hubcon.Interceptors
 
             // Convertir el resultado y devolverlo
             TResult convertedResult = JsonElementTools.JsonElementParser.ConvertJsonElement<TResult>(result.Data!);
+            invocation.ReturnValue = convertedResult;
             return convertedResult;
         }
 
@@ -38,8 +39,6 @@ namespace Hubcon.Interceptors
             await _hub.Clients
                 .Client(_targetClientId)
                 .CallMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
-
-            proceedInfo.Invoke();
         }
     }
 }

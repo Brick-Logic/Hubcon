@@ -4,57 +4,86 @@ namespace Hubcon.JsonElementTools
 {
     internal static class JsonElementParser
     {
-        internal static T ConvertJsonElement<T>(object jsonElement)
+        internal static T? ConvertJsonElement<T>(object obj)
         {
-            return ConvertJsonElement<T>((JsonElement)jsonElement);
+            return (T?)ConvertJsonElement(obj, typeof(T));
         }
-        internal static T ConvertJsonElement<T>(JsonElement jsonElement)
+
+        internal static T? ConvertJsonElement<T>(JsonElement jsonElement)
         {
-            // Si el JsonElement es nulo, retorna el valor por defecto
-            if (jsonElement.ValueKind == JsonValueKind.Null)
-            {
-                return default; // O lanzar una excepción si prefieres
-            }
-
-            // Intentar convertir a string y luego a T
-            try
-            {
-                // Obtener el valor como string
-                string valueString = jsonElement.GetRawText();
-
-                // Usar conversión genérica
-                return (T)Convert.ChangeType(valueString, typeof(T));
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"No se puede convertir JsonElement a {typeof(T)}: {ex.Message}");
-            }
+            return (T?)ConvertJsonElement(jsonElement, typeof(T));
         }
 
         internal static object? ConvertJsonElement(object jsonElement, Type type)
         {
             return ConvertJsonElement((JsonElement)jsonElement, type);
         }
+
         internal static object? ConvertJsonElement(JsonElement jsonElement, Type type)
         {
-            // Si el JsonElement es nulo, retorna el valor por defecto
             if (jsonElement.ValueKind == JsonValueKind.Null)
             {
-                return default; // O lanzar una excepción si prefieres
+                return null; // Retorna null si el valor es JSON null
             }
 
-            // Intentar convertir a string y luego a T
             try
             {
-                // Obtener el valor como string
-                string valueString = jsonElement.GetRawText();
+                switch (jsonElement.ValueKind)
+                {
+                    case JsonValueKind.String:
+                        string stringValue = jsonElement.GetString();
+                        if (type == typeof(DateTime))
+                        {
+                            return DateTime.Parse(stringValue);
+                        }
+                        else if (type == typeof(Guid))
+                        {
+                            return Guid.Parse(stringValue);
+                        }
+                        return Convert.ChangeType(stringValue, type);
 
-                // Usar conversión genérica
-                return Convert.ChangeType(valueString, type);
+                    case JsonValueKind.Number:
+                        if (type == typeof(int))
+                        {
+                            return jsonElement.GetInt32();
+                        }
+                        else if (type == typeof(long))
+                        {
+                            return jsonElement.GetInt64();
+                        }
+                        else if (type == typeof(decimal))
+                        {
+                            return jsonElement.GetDecimal();
+                        }
+                        else if (type == typeof(double))
+                        {
+                            return jsonElement.GetDouble();
+                        }
+                        else if (type == typeof(float))
+                        {
+                            return jsonElement.GetSingle();
+                        }
+                        return Convert.ChangeType(jsonElement.GetDouble(), type); // Conversión por defecto
+
+                    case JsonValueKind.True:
+                    case JsonValueKind.False:
+                        return jsonElement.GetBoolean();
+
+                    case JsonValueKind.Object:
+                        // Deserializar a un tipo específico usando JsonSerializer
+                        return JsonSerializer.Deserialize(jsonElement.GetRawText(), type);
+
+                    case JsonValueKind.Array:
+                        // Manejo de arrays: deserializa a un array o lista
+                        return JsonSerializer.Deserialize(jsonElement.GetRawText(), type);
+
+                    default:
+                        throw new InvalidOperationException($"No se puede convertir el JsonElement de tipo {jsonElement.ValueKind}.");
+                }
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"No se puede convertir JsonElement a {type}: {ex.Message}");
+                throw new InvalidOperationException($"No se puede convertir JsonElement a {type}: {ex.Message}", ex);
             }
         }
     }
