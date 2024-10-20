@@ -10,7 +10,7 @@ namespace Hubcon.Controller
     public abstract class HubController
     {
         protected ConcurrentDictionary<string, Delegate?> AvailableMethods = new();
-        protected HubConnection? _hubConnection;
+        protected HubConnection _hubConnection;
         protected CancellationToken _token;
         protected string _url;
 
@@ -29,7 +29,6 @@ namespace Hubcon.Controller
             try
             {
                 _token = cancellationToken;
-
 
                 _ = _hubConnection.StartAsync(_token);
 

@@ -28,7 +28,7 @@ namespace Hubcon.Interceptors
                 .InvokeMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
 
             // Convertir el resultado y devolverlo
-            TResult convertedResult = JsonElementTools.JsonElementParser.ConvertJsonElement<TResult>(result.Data!);
+            TResult convertedResult = JsonElementTools.JsonElementParser.ConvertJsonElement<TResult>(result.Data!)!;
             invocation.ReturnValue = convertedResult;
             return convertedResult;
         }

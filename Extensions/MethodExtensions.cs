@@ -38,7 +38,7 @@ namespace Hubcon.Extensions
             await client.SendAsync(method, request, cancellationToken);
         }
 
-        public static object[] ConvertArgsToDelegateTypes(Delegate del, object[] args)
+        public static object[] ConvertArgsToDelegateTypes(Delegate del, object?[] args)
         {
             var methodParams = del.Method.GetParameters();
 
@@ -53,10 +53,10 @@ namespace Hubcon.Extensions
             {
                 var expectedType = methodParams[i+1].ParameterType;
 
-                if (args[i] != null && !expectedType.IsAssignableFrom(args[i].GetType()))
+                if (args[i] != null && !expectedType.IsAssignableFrom(args[i]!.GetType()))
                 {
                     // Convertir el argumento si es necesario
-                    convertedArgs[i] = JsonElementParser.ConvertJsonElement(args[i], expectedType)!;
+                    convertedArgs[i] = JsonElementParser.ConvertJsonElement(args[i]!, expectedType)!;
                 }
                 else
                 {
