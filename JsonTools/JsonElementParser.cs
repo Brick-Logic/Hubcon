@@ -70,11 +70,13 @@ namespace Hubcon.JsonElementTools
                         return jsonElement.GetBoolean();
 
                     case JsonValueKind.Object:
-                        // Deserializar a un tipo específico usando JsonSerializer
-                        return JsonSerializer.Deserialize(jsonElement.GetRawText(), type);
-
                     case JsonValueKind.Array:
-                        // Manejo de arrays: deserializa a un array o lista
+                        // Verificamos si el tipo destino es una tupla
+                        if (IsTuple(type))
+                        {
+                            return DeserializeTuple(jsonElement, type);
+                        }
+                        // Manejo de arrays o deserialización estándar
                         return JsonSerializer.Deserialize(jsonElement.GetRawText(), type);
 
                     default:
@@ -86,5 +88,48 @@ namespace Hubcon.JsonElementTools
                 throw new InvalidOperationException($"No se puede convertir JsonElement a {type}: {ex.Message}", ex);
             }
         }
+
+        // Método que verifica si el tipo es una tupla
+        private static bool IsTuple(Type type)
+        {
+            return type.IsGenericType && (
+                type.GetGenericTypeDefinition() == typeof(ValueTuple<>) ||
+                type.GetGenericTypeDefinition() == typeof(ValueTuple<,>) ||
+                type.GetGenericTypeDefinition() == typeof(ValueTuple<,,>) ||
+                type.GetGenericTypeDefinition() == typeof(ValueTuple<,,,>) ||
+                type.GetGenericTypeDefinition() == typeof(ValueTuple<,,,,>) ||
+                type.GetGenericTypeDefinition() == typeof(ValueTuple<,,,,,>) ||
+                type.GetGenericTypeDefinition() == typeof(ValueTuple<,,,,,,>) ||
+                type.GetGenericTypeDefinition() == typeof(ValueTuple<,,,,,,,>)
+            );
+        }
+
+        // Método que deserializa tuplas
+        private static object DeserializeTuple(JsonElement jsonElement, Type tupleType)
+        {
+            // Obtener los tipos de los elementos de la tupla
+            var genericArguments = tupleType.GetGenericArguments();
+
+            // Suponemos que el JSON es un array o un objeto con propiedades para cada campo de la tupla
+            JsonElement[] elements = jsonElement.ValueKind == JsonValueKind.Array
+                ? jsonElement.EnumerateArray().ToArray() // Si es un array
+                : jsonElement.EnumerateObject().Select(p => p.Value).ToArray(); // Si es un objeto
+
+            if (elements.Length != genericArguments.Length)
+            {
+                throw new InvalidOperationException("El número de elementos en el JSON no coincide con el número de elementos en la tupla.");
+            }
+
+            // Deserializar cada valor al tipo correspondiente en la tupla
+            object[] tupleValues = new object[genericArguments.Length];
+            for (int i = 0; i < genericArguments.Length; i++)
+            {
+                tupleValues[i] = ConvertJsonElement(elements[i], genericArguments[i])!;
+            }
+
+            // Crear una instancia de la tupla con los valores deserializados
+            return Activator.CreateInstance(tupleType, tupleValues);
+        }
+
     }
 }
