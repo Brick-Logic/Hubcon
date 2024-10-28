@@ -121,7 +121,7 @@ namespace Hubcon.Controller
         private async Task HandleWithoutResultAsync(MethodInvokeInfo methodInfo)
         {
             AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
-            object? result = value?.DynamicInvoke(HubconExtensions.ConvertArgsToDelegateTypes(value, methodInfo.Args));
+            object? result = value?.DynamicInvoke(methodInfo.Args);
 
             if (result is Task task)
                 await task;
@@ -132,7 +132,7 @@ namespace Hubcon.Controller
             return await Task.Run(() =>
             {
                 AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
-                object? result = value?.DynamicInvoke(HubconExtensions.ConvertArgsToDelegateTypes(value, methodInfo.Args));
+                object? result = value?.DynamicInvoke(methodInfo.Args);
 
                 if (result is null)
                     return new MethodResponse(true);
@@ -144,7 +144,7 @@ namespace Hubcon.Controller
         private Task HandleSynchronous(MethodInvokeInfo methodInfo)
         {
             AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
-            value?.DynamicInvoke(HubconExtensions.ConvertArgsToDelegateTypes(value, methodInfo.Args));
+            value?.DynamicInvoke(methodInfo.Args);
 
             return Task.CompletedTask;
         }
@@ -152,7 +152,7 @@ namespace Hubcon.Controller
         private async Task<MethodResponse> HandleWithResultAsync(MethodInvokeInfo methodInfo)
         {
             AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
-            object? result = value?.DynamicInvoke(HubconExtensions.ConvertArgsToDelegateTypes(value, methodInfo.Args));
+            object? result = value?.DynamicInvoke(methodInfo.Args);
 
             if (result is null)
                 return new MethodResponse(true);

@@ -23,7 +23,7 @@ namespace Hubcon.Extensions
         {
             object request = new MethodInvokeInfo(method, args);
             MethodResponse result = await client.InvokeAsync<MethodResponse>(method, request, cancellationToken);
-            return (T?)Convert.ChangeType(JsonElementParser.ConvertJsonElement<T>((JsonElement)result.Data!), typeof(T?));
+            return (T?)result.Data;
         }
 
         public static async Task<MethodResponse> InvokeMethodAsync(this ISingleClientProxy client, string method, CancellationToken cancellationToken = default, params object?[] args)
