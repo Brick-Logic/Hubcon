@@ -12,9 +12,22 @@
 	<PackageReadmeFile>README.md</PackageReadmeFile>
 	<Authors>Ezesil</Authors>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="TestAPI\**" />
+    <Compile Remove="TestClient\**" />
+    <Compile Remove="TestDomain\**" />
+    <EmbeddedResource Remove="TestAPI\**" />
+    <EmbeddedResource Remove="TestClient\**" />
+    <EmbeddedResource Remove="TestDomain\**" />
+    <None Remove="TestAPI\**" />
+    <None Remove="TestClient\**" />
+    <None Remove="TestDomain\**" />
+  </ItemGroup>
 	<ItemGroup>
 		  <PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
-		  <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" /> 
+		  <PackageReference Include="MessagePack" Version="2.5.187" />
+		  <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" />
+		  <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.0" /> 
 	  </ItemGroup>
 	  <ItemGroup>
 		  <FrameworkReference Include="Microsoft.AspNetCore.App" />

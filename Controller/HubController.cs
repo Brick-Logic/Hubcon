@@ -1,9 +1,10 @@
 ﻿using Hubcon.Extensions;
 using Hubcon.Models;
-using Hubcon.Response;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using MessagePack;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Controller
 {
@@ -19,8 +20,10 @@ namespace Hubcon.Controller
             _url = url;
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(_url)
+                .AddMessagePackProtocol()
                 .WithAutomaticReconnect()
                 .Build();
+
             Build();
         }
 
