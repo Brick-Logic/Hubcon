@@ -1,11 +1,11 @@
-
-using Hubcon.Client;
-using Hubcon.Default;
+using Hubcon;
+using Hubcon.Connectors;
+using TestAPI.HubControllers;
 using TestDomain;
 
 namespace TestAPI
 {
-    public class Program
+    public static class Program
     {
         public static void Main(string[] args)
         {
@@ -13,9 +13,10 @@ namespace TestAPI
 
             // Add services to the container.
 
-            builder.Services.AddSignalR().AddMessagePackProtocol();
+            builder.Services.AddHubcon();
+            builder.Services.AddScoped<ClientHubControllerConnector<ITestHubController, ServerTestHubController>>();
+
             builder.Services.AddControllers();
-            builder.Services.AddScoped<HubControllerClient<ITestHubController, HubconDefaultHub>>();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -35,13 +36,13 @@ namespace TestAPI
 
 
             app.MapControllers();
-            app.MapHub<HubconDefaultHub>("/clienthub");
+            app.MapHub<ServerTestHubController>("/clienthub");
 
-            // Just a test endpoint, it can also be injected in a controller.
-            app.MapGet("/test", async (HubControllerClient<ITestHubController, HubconDefaultHub> client) =>
+            //Just a test endpoint, it can also be injected in a controller.
+            app.MapGet("/test", async (ClientHubControllerConnector<ITestHubController, ServerTestHubController> client) =>
             {
                 // Getting some connected clientId
-                var clientId = HubconDefaultHub.GetClients().FirstOrDefault().Id;
+                var clientId = ServerHub<IServerTestHubController>.GetClients().FirstOrDefault()!.Id;
 
                 // Gets a client instance
                 var instance = client.GetInstance(clientId);

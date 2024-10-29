@@ -1,5 +1,6 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Extensions;
+using Hubcon.Models;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Collections.Generic;
@@ -9,23 +10,42 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Interceptors
 {
-    internal class HubControllerClientInterceptor : AsyncInterceptorBase
+    internal class ClientHubControllerConnectorInterceptor : AsyncInterceptorBase
     {
-        private protected string _targetClientId { get; private set; }
-        private protected IHubContext<Hub> _hub { get; private set; }
+        private protected string TargetClientId { get; private set; }
+        private protected IHubContext<Hub>? HubContext { get; private set; }
+        private protected Hub? Hub { get; private set; }
 
-        public HubControllerClientInterceptor(IHubContext<Hub> hub, string targetClientId)
+        public ClientHubControllerConnectorInterceptor(IHubContext<Hub> hub, string clientId)
         {
-            _hub = hub;
-            _targetClientId = targetClientId;
+            HubContext = hub;
+            TargetClientId = clientId;
+        }
+
+        public ClientHubControllerConnectorInterceptor(Hub hub, string clientId)
+        {
+            Hub = hub;
+            TargetClientId = clientId;
         }
 
         protected override async Task<TResult> InterceptAsync<TResult>(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
         {
             // Lógica antes de llamar al método original
-            var result = await _hub.Clients
-                .Client(_targetClientId)
-                .InvokeMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
+            MethodResponse result;
+
+            if (Hub == null)
+            {
+                result = await HubContext!.Clients
+                    .Client(TargetClientId)
+                    .InvokeMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
+            }
+            else
+            {
+                result = await Hub.Clients
+                    .Client(TargetClientId)
+                    .InvokeMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
+
+            }
 
             // Convertir el resultado y devolverlo
             invocation.ReturnValue = result.Data;
@@ -35,9 +55,18 @@ namespace Hubcon.Interceptors
         protected override async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task> proceed)
         {
             // Lógica antes de llamar al método original
-            await _hub.Clients
-                .Client(_targetClientId)
-                .CallMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
+            if (Hub == null)
+            {
+                await HubContext!.Clients
+                    .Client(TargetClientId)
+                    .CallMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
+            }
+            else
+            {
+                await Hub.Clients
+                    .Client(TargetClientId)
+                    .CallMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Hubcon.Controller
+﻿namespace Hubcon.Models
 {
     public interface IHubController
     {

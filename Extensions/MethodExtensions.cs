@@ -1,9 +1,7 @@
-﻿using Hubcon.JsonElementTools;
-using Hubcon.Models;
-using MessagePack;
+﻿using Hubcon.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.Client;
 using System.Reflection;
-using System.Text.Json;
 
 namespace Hubcon.Extensions
 {
@@ -38,36 +36,16 @@ namespace Hubcon.Extensions
             await client.SendAsync(method, request, cancellationToken);
         }
 
-        public static object[] ConvertArgsToDelegateTypes(Delegate del, object?[] args)
+        public static async Task<MethodResponse> InvokeServerMethodAsync(this HubConnection client, string method, CancellationToken cancellationToken = default, params object?[] args)
         {
-            var methodParams = del.Method.GetParameters();
+            object request = new MethodInvokeInfo(method, args);
+            return await client.InvokeAsync<MethodResponse>(nameof(ServerHub.HandleTask), request, cancellationToken);
+        }
 
-            if (args.Length == 0)
-                return [];
-
-            if (args.Length + 1 != methodParams.Length)
-                throw new ArgumentException("El número de argumentos no coincide con los parámetros del método");
-
-            object[] convertedArgs = new object[args.Length];
-            for (int i = 0; i < methodParams.Length - 1; i++)
-            {
-                var expectedType = methodParams[i+1].ParameterType;
-
-                if (args[i] != null && !expectedType.IsAssignableFrom(args[i]!.GetType()))
-                {
-                    // Convertir el argumento si es necesario
-                    Console.WriteLine(args[i]!);
-                    convertedArgs[i] = JsonElementParser.ConvertJsonElement(args[i]!, expectedType)!;
-                }
-                else
-                {
-                    // Si es null o ya es del tipo correcto, se usa directamente
-                    convertedArgs[i] = args[i];
-                }
-            }
-
-            // Invocar el delegado con los argumentos convertidos
-            return convertedArgs;
+        public static async Task CallServerMethodAsync(this HubConnection client, string method, CancellationToken cancellationToken = default, params object?[] args)
+        {
+            object request = new MethodInvokeInfo(method, args);
+            await client.SendAsync(nameof(ServerHub.HandleVoid), request, cancellationToken);
         }
     }
 }

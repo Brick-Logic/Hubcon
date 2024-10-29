@@ -6,17 +6,17 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Models
 {
-    public class ClientReference<T>
+    public class ClientReference
     {
         public string Id { get; }
-        public T? ClientInfo { get; set; }
+        public object? ClientInfo { get; set; }
 
         public ClientReference(string id)
         {
             Id = id;
         }
 
-        public ClientReference(string id, T? clientInfo)
+        public ClientReference(string id, object? clientInfo)
         {
             Id = id;
             ClientInfo = clientInfo;

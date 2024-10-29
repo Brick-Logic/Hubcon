@@ -13,7 +13,7 @@ namespace Hubcon.Interceptors
         internal static object CreateImplementation(Type interfaceType)
         {
             // Crear un Assembly dinámico
-            AssemblyName assemblyName = new AssemblyName("DynamicAssembly");
+            AssemblyName assemblyName = new("DynamicAssembly");
             AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
 
             // Crear un módulo dinámico
@@ -66,7 +66,7 @@ namespace Hubcon.Interceptors
             Type dynamicType = typeBuilder.CreateType();
 
             // Retornar una instancia de la clase dinámica
-            return Activator.CreateInstance(dynamicType);
+            return Activator.CreateInstance(dynamicType)!;
         }
     }
 }

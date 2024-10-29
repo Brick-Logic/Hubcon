@@ -1,4 +1,5 @@
-﻿using Hubcon.Controller;
+﻿using Hubcon.Controllers;
+using Hubcon.Models;
 
 namespace TestDomain
 {
@@ -6,5 +7,6 @@ namespace TestDomain
     {
         Task<int> GetTemperature();
         Task ShowText();
+        Task Random();
     }
 }

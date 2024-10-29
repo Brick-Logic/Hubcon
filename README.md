@@ -13,9 +13,9 @@ It currently supports:
 - Variable parameters (params)
 - IEnumerable
 - Dictionary
-- Classes in general (only tested common properties, but classes should work too)
+- Classes in general
 
-Using very complex classes is not tested and therefore not recommended. Using async Task methods is recommended.
+The project now uses MessagePack, greatly enhancing the type safety, stability and speed.
 
 # Usage
 
@@ -43,10 +43,9 @@ On your SignalR client's program.cs, you can now create it and Start it:
 
     static async Task Main(string[] args)
     {
-        var controller = new TestHubController("http://localhost:5001/clienthub");
-
-        // This is a blocking task, you can stop it with controller.Stop();
-        await controller.StartAsync();
+        var controller = new TestHubController("http://localhost:5001/clienthub"); // Use your port
+    
+        await controller.StartAsync(); // This is a blocking task
     }
 
 ## Server
@@ -54,20 +53,18 @@ The server should be an ASP.NET Core 8 API, but should also work for Blazor and 
 
 On your server program.cs's services:
 
-    builder.Services.AddSignalR();
-    builder.Services.AddControllers();
-    builder.Services.AddScoped<HubControllerClient<ITestHubController, HubconDefaultHub>>();
+    builder.Services.AddHubcon();
+    builder.Services.AddScoped<ClientHubControllerConnector<ITestHubController, ServerTestHubController>>();
 
 Same file, after builder.Build():
 
-	app.MapControllers();
-	app.MapHub<HubconDefaultHub>("/clienthub");
+	app.MapHub<ServerTestHubController>("/clienthub");
     
-    // Just a test endpoint, it can also be injected in a controller.
-	app.MapGet("/test", async (HubControllerClient<ITestHubController, HubconDefaultHub> client) =>
+    // Just a test endpoint, the connector can be injected via DI
+	app.MapGet("/test", async (ClientHubControllerConnector<ITestHubController, ServerTestHubController> client) =>
     {
         // Getting some connected clientId
-        var clientId = HubconDefaultHub.GetClients().FirstOrDefault().Id;
+        var clientId = ServerHub<IServerTestHubController>.GetClients().FirstOrDefault()!.Id;
 
         // Gets a client instance
         var instance = client.GetInstance(clientId);
@@ -81,11 +78,24 @@ Same file, after builder.Build():
 
 And that's it. Execute both projects at the same time and go to localhost:<port>/test, you should see the ShowText() method print, and GetTemperature() return a value.
 
+## Adding more methods
 To implement more methods, just add them to the interface, implement them in the TestHubController, then use it somewhere from the server, it will just work.
 
-This fits perfectly if you need to communicate two instances in real time, in an easy way. The wrappers are persisted in memory to avoid rebuilding, working as normal SignalR messages.
-As long as you have the clientId, you can use this client from anywhere in the server. Keep in mind that object parsing might not be completely optimized.
+## Use case
+This fits perfectly if you need to communicate two instances in real time, in an easy and type-safe way. 
+The wrappers are persisted in memory to avoid rebuilding overhead (will be further improved).
 
+## Version changes
+- Added Server Hub/Controller (same functionality, but adapted to Hubs).
+- Implemented MessagePack for stronger type parsing and type safety through SignalR.
+- Now you can reference the current Server target and caller Client in both controllers.
+- Removed unused classes and old json parsers
+- Greatly improved legibility and type safety by using Interfaces.
+- Added new .AddHubcon() method for easy injection.
+- Reorganized folders and namespaces for easier use.
+- Fixed lots of warnings
+- Fixed lots of comments
+- Added proof of concept projects
 
 ## Note
-This project is under heavy development. The APIs might change. Use it at your own risk.
+This project is under heavy development. The APIs might change.
