@@ -1,9 +1,11 @@
 ﻿using Hubcon.Extensions;
 using Hubcon.Models;
-using Microsoft.AspNetCore.SignalR;
+using Hubcon.Models.Interfaces;
+using System.ComponentModel;
 
 namespace Hubcon.Connectors
 {
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public class HubconControllerConnector<TIHubController>
         where TIHubController : IHubController
     {

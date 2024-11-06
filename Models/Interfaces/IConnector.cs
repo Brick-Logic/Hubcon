@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Models
+namespace Hubcon.Models.Interfaces
 {
     public interface IConnector
     {

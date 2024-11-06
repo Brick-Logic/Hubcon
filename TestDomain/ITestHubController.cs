@@ -1,9 +1,9 @@
 ﻿using Hubcon.Controllers;
-using Hubcon.Models;
+using Hubcon.Models.Interfaces;
 
 namespace TestDomain
 {
-    public interface ITestHubController : IHubController
+    public interface ITestHubController : IClientHubController
     {
         Task<int> GetTemperature();
         Task ShowText();

@@ -1,10 +1,11 @@
 ﻿using Castle.DynamicProxy;
+using Hubcon.Connectors;
 using Hubcon.Interceptors;
-using Hubcon.Models;
+using Hubcon.Models.Interfaces;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Hubcon.Connectors
+namespace Hubcon
 {
     public class ServerHubControllerConnector<TIServerHubController> : HubconControllerConnector<TIServerHubController>, IConnector
         where TIServerHubController : IServerHubController

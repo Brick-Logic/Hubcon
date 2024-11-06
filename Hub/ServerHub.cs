@@ -1,23 +1,11 @@
 ﻿using Hubcon.Connectors;
-using Hubcon.Controllers;
+using Hubcon.Handlers;
 using Hubcon.Models;
+using Hubcon.Models.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Hubcon
 {
-    public class ServerHub<TIClientHubController> : ServerHub where TIClientHubController : IHubController
-    {
-#pragma warning disable S2743 // Static fields should not be used in generic types
-        public static new Dictionary<string, ClientReference> ClientReferences { get; } = [];
-#pragma warning restore S2743 // Static fields should not be used in generic types
-
-        public TIClientHubController Client { get => GetConnector(); }
-        public TIClientHubController GetConnector()
-        {
-            return new ClientHubControllerConnector<TIClientHubController, ServerHub>(this).GetInstance(Context.ConnectionId);
-        }
-    }
-
     public abstract class ServerHub : Hub, IServerHubController
     {
         public delegate void OnClientsChangedEventHandler();
@@ -65,6 +53,19 @@ namespace Hubcon
         public async Task HandleVoid(MethodInvokeInfo info)
         {
             await handler.HandleWithoutResultAsync(info);
+        }
+    }
+
+    public abstract class ServerHub<TIClientHubController> : ServerHub where TIClientHubController : IHubController
+    {
+#pragma warning disable S2743 // Static fields should not be used in generic types
+        public static new Dictionary<string, ClientReference> ClientReferences { get; } = [];
+#pragma warning restore S2743 // Static fields should not be used in generic types
+
+        public TIClientHubController Client { get => GetConnector(); }
+        public TIClientHubController GetConnector()
+        {
+            return new ClientHubControllerConnector<TIClientHubController, ServerHub>(this).GetInstance(Context.ConnectionId);
         }
     }
 }

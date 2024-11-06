@@ -16,6 +16,7 @@ namespace TestClient
             await connector.ShowTextOnServer();
             var serverData = await connector.GetTemperatureFromServer();
             await connector.ShowTempOnServerFromClient();
+
             Console.WriteLine(serverData);
             Console.ReadKey();
         }

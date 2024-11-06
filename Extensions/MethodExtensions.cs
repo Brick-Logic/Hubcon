@@ -1,11 +1,13 @@
 ﻿using Hubcon.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
+using System.ComponentModel;
 using System.Reflection;
 
 namespace Hubcon.Extensions
 {
-    public static class HubconExtensions
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static class HubconExtensions
     {
         public static string GetMethodSignature(this MethodInfo method)
         {

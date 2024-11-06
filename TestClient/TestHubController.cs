@@ -1,4 +1,4 @@
-﻿using Hubcon.Controllers;
+﻿using Hubcon;
 using TestDomain;
 
 namespace TestClient

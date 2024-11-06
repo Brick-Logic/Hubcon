@@ -1,5 +1,4 @@
 using Hubcon;
-using Hubcon.Connectors;
 using TestAPI.HubControllers;
 using TestDomain;
 
@@ -12,7 +11,6 @@ namespace TestAPI
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-
             builder.Services.AddHubcon();
             builder.Services.AddScoped<ClientHubControllerConnector<ITestHubController, ServerTestHubController>>();
 

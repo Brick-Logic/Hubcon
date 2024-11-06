@@ -2,14 +2,11 @@
 using Hubcon.Extensions;
 using Hubcon.Models;
 using Microsoft.AspNetCore.SignalR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel;
 
 namespace Hubcon.Interceptors
 {
+    [EditorBrowsable(EditorBrowsableState.Never)]
     internal class ClientHubControllerConnectorInterceptor : AsyncInterceptorBase
     {
         private protected string TargetClientId { get; private set; }
