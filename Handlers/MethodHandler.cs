@@ -1,6 +1,7 @@
 ﻿using Hubcon.Extensions;
 using Hubcon.Models;
 using Hubcon.Models.Interfaces;
+using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Linq.Expressions;
@@ -49,8 +50,8 @@ namespace Hubcon.Handlers
 
         public async Task HandleWithoutResultAsync(MethodInvokeInfo methodInfo)
         {
-            AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
-            object? result = value?.DynamicInvoke(methodInfo.Args);
+            AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? del);
+            object? result = del?.DynamicInvoke(methodInfo.GetDeserializedArgs(del));
 
             if (result is Task task)
                 await task;
@@ -60,38 +61,38 @@ namespace Hubcon.Handlers
         {
             return await Task.Run(() =>
             {
-                AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
-                object? result = value?.DynamicInvoke(methodInfo.Args);
+                AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? del);
+                object? result = del?.DynamicInvoke(methodInfo.GetDeserializedArgs(del));
 
                 if (result is null)
                     return new MethodResponse(true);
 
-                return new MethodResponse(true, result);
+                return new MethodResponse(true, result).SerializeData();
             });
         }
 
         public Task HandleSynchronous(MethodInvokeInfo methodInfo)
         {
-            AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
-            value?.DynamicInvoke(methodInfo.Args);
+            AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? del);
+            del?.DynamicInvoke(methodInfo.GetDeserializedArgs(del));
 
             return Task.CompletedTask;
         }
 
         public async Task<MethodResponse> HandleWithResultAsync(MethodInvokeInfo methodInfo)
         {
-            AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? value);
-            object? result = value?.DynamicInvoke(methodInfo.Args);
+            AvailableMethods.TryGetValue(methodInfo.MethodName, out Delegate? del);
+            object? result = del?.DynamicInvoke(methodInfo.GetDeserializedArgs(del));
 
             if (result is null)
                 return new MethodResponse(true);
             else if (result is Task task)
             {
-                var response = await GetTaskResultAsync(task, value!.Method.ReturnType.GetGenericArguments()[0]);
-                return new MethodResponse(true, response);
+                var response = await GetTaskResultAsync(task, del!.Method.ReturnType.GetGenericArguments()[0]);
+                return new MethodResponse(true, response).SerializeData();
             }
             else
-                return new MethodResponse(true, result);
+                return new MethodResponse(true, result).SerializeData();
         }
         public static async Task<object?> GetTaskResultAsync(Task taskObject, Type returnType)
         {

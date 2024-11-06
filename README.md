@@ -15,7 +15,7 @@ It currently supports:
 - Dictionary
 - Classes in general
 
-The project now uses MessagePack, greatly enhancing the type safety, stability and speed.
+The project now uses MessagePack, greatly enhancing speed and bandwidth usage, and JSON to provide strong type safety and complex object conversion.
 
 # Usage
 
@@ -122,9 +122,8 @@ Create ServerTestHubController.cs. This is the server's hub. It can implement me
     // You can just inherit from ServerHub, or use ServerHub\<T\> to enable the Client variable, which refers to the current calling client.
     // Client variable allows executing calling client methods using the specified interface.
 
+
 And that's it. Execute both projects at the same time and go to localhost:<port>/test, you should see the ShowText() method print, and GetTemperature() return a value.
-
-
 
 
 ## Adding more methods

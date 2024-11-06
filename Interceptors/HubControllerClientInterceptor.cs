@@ -2,6 +2,7 @@
 using Hubcon.Extensions;
 using Hubcon.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.Client;
 using System.ComponentModel;
 
 namespace Hubcon.Interceptors
@@ -28,25 +29,25 @@ namespace Hubcon.Interceptors
         protected override async Task<TResult> InterceptAsync<TResult>(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
         {
             // Lógica antes de llamar al método original
-            MethodResponse result;
+            TResult? result;
 
             if (Hub == null)
             {
                 result = await HubContext!.Clients
                     .Client(TargetClientId)
-                    .InvokeMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
+                    .InvokeMethodAsync<TResult?>(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
             }
             else
             {
                 result = await Hub.Clients
                     .Client(TargetClientId)
-                    .InvokeMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
+                    .InvokeMethodAsync<TResult?>(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
 
             }
 
             // Convertir el resultado y devolverlo
-            invocation.ReturnValue = result.Data;
-            return (TResult)result.Data!;
+            invocation.ReturnValue = result!;
+            return result!;
         }
 
         protected override async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task> proceed)

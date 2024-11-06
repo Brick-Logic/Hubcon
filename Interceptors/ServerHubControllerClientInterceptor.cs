@@ -11,19 +11,17 @@ namespace Hubcon.Interceptors
         {
             if (hub.State != HubConnectionState.Connected) await hub.StartAsync();
 
-            var result = await hub.InvokeServerMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
-                
+            TResult? result = await hub.InvokeServerMethodAsync<TResult?>(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
+
             // Convertir el resultado y devolverlo
-            invocation.ReturnValue = result?.Data;
-            return (TResult)result?.Data!;
+            invocation.ReturnValue = result;
+            return result!;
         }
 
         protected override async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task> proceed)
         {
             if (hub.State != HubConnectionState.Connected) await hub.StartAsync();
-
-            await hub
-                .CallServerMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
+            await hub.CallServerMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
         }
     }
 }

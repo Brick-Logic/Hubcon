@@ -1,6 +1,7 @@
 ﻿using Hubcon.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
+using Newtonsoft.Json;
 using System.ComponentModel;
 using System.Reflection;
 
@@ -21,32 +22,27 @@ namespace Hubcon.Extensions
 
         public static async Task<T?> InvokeMethodAsync<T>(this ISingleClientProxy client, string method, CancellationToken cancellationToken = default, params object?[] args)
         {
-            object request = new MethodInvokeInfo(method, args);
-            MethodResponse result = await client.InvokeAsync<MethodResponse>(method, request, cancellationToken);
-            return (T?)result.Data;
-        }
-
-        public static async Task<MethodResponse> InvokeMethodAsync(this ISingleClientProxy client, string method, CancellationToken cancellationToken = default, params object?[] args)
-        {
-            object request = new MethodInvokeInfo(method, args);
-            return await client.InvokeAsync<MethodResponse>(method, request, cancellationToken);
+            MethodInvokeInfo request = new MethodInvokeInfo(method, args).SerializeArgs();
+            var result = await client.InvokeAsync<MethodResponse>(method, request, cancellationToken);
+            return result.GetDeserializedData<T?>();
         }
 
         public static async Task CallMethodAsync(this ISingleClientProxy client, string method, CancellationToken cancellationToken = default, params object?[] args)
         {
-            object request = new MethodInvokeInfo(method, args);
+            MethodInvokeInfo request = new MethodInvokeInfo(method, args).SerializeArgs();
             await client.SendAsync(method, request, cancellationToken);
         }
 
-        public static async Task<MethodResponse> InvokeServerMethodAsync(this HubConnection client, string method, CancellationToken cancellationToken = default, params object?[] args)
+        public static async Task<T?> InvokeServerMethodAsync<T>(this HubConnection client, string method, CancellationToken cancellationToken = default, params object?[] args)
         {
-            object request = new MethodInvokeInfo(method, args);
-            return await client.InvokeAsync<MethodResponse>(nameof(ServerHub.HandleTask), request, cancellationToken);
+            MethodInvokeInfo request = new MethodInvokeInfo(method, args).SerializeArgs();
+            var result = await client.InvokeAsync<MethodResponse>(nameof(ServerHub.HandleTask), request, cancellationToken);
+            return result.GetDeserializedData<T?>();
         }
 
         public static async Task CallServerMethodAsync(this HubConnection client, string method, CancellationToken cancellationToken = default, params object?[] args)
         {
-            object request = new MethodInvokeInfo(method, args);
+            MethodInvokeInfo request = new MethodInvokeInfo(method, args).SerializeArgs();
             await client.SendAsync(nameof(ServerHub.HandleVoid), request, cancellationToken);
         }
     }
