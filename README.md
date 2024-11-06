@@ -20,8 +20,9 @@ The project now uses MessagePack, greatly enhancing the type safety, stability a
 # Usage
 
 ## Domain Project
-After installing this package, create a new interface that implements IHubController in your Domain project. 
+After installing this package, create a two interfaces that implement IClientHubController and IServerHubController in your Domain project. 
 Client and server MUST share this interface, or at least implement exactly the same interface on both sides.
+You can implement one of them if you only need to control the client or the server.
 
     public interface ITestHubController : IClientHubController
     {
@@ -38,8 +39,8 @@ Client and server MUST share this interface, or at least implement exactly the s
     }
 
 ## Client
-On your SignalR client, implement a concrete HubController with your created interface.
-This project can be literally anything that spins up, even a console application.
+On your SignalR client, create a TestHubController that implements your interface (ITestHubController)
+This project can be anything, a console application, a background worker or even a singleton service.
 
     public class TestHubController(string url) : ClientHubController<IServerTestHubController>(url), ITestHubController
     {
@@ -88,7 +89,7 @@ Same file, after builder.Build():
 
 	app.MapHub<ServerTestHubController>("/clienthub");
     
-    //Just a test endpoint, it can also be injected in a controller.
+    // Just a test endpoint, it can also be injected in a controller.
     app.MapGet("/test", async (ClientHubControllerConnector<ITestHubController, ServerTestHubController> client) =>
     {
         // Getting some connected clientId
@@ -111,16 +112,20 @@ Create ServerTestHubController.cs. This is the server's hub. It can implement me
         // Returns some random temperature to client
         public async Task<int> GetTemperatureFromServer() => await Task.Run(() => new Random().Next(-10, 50));
 
-        // 
+        // Just prints some text when called from client
         public async Task ShowTextOnServer() => await Task.Run(() => Console.WriteLine("ShowTextOnServer() invoked succesfully."));
 
+        // This will be called from client, then this method gets temperature from the client.
         public async Task ShowTempOnServerFromClient() => Console.WriteLine($"ShowTempOnServerFromClient: {await Client.GetTemperature()}");
     }
 
-    // You can inherit from ServerHub, or use ServerHub\<T\> to enable the Client variable, which refers to the current calling client.
+    // You can just inherit from ServerHub, or use ServerHub\<T\> to enable the Client variable, which refers to the current calling client.
     // Client variable allows executing calling client methods using the specified interface.
 
 And that's it. Execute both projects at the same time and go to localhost:<port>/test, you should see the ShowText() method print, and GetTemperature() return a value.
+
+
+
 
 ## Adding more methods
 To implement more methods, just add them to the interface, implement them in the TestHubController, then use it somewhere from the server, it will just work.

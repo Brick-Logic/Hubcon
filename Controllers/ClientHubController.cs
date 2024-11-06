@@ -1,5 +1,4 @@
 ﻿using Hubcon.Controllers;
-using Hubcon.Models.Interfaces;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 

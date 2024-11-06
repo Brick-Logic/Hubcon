@@ -1,5 +1,4 @@
-﻿using Hubcon.Connectors;
-using Hubcon.Handlers;
+﻿using Hubcon.Handlers;
 using Hubcon.Models;
 using Hubcon.Models.Interfaces;
 using Microsoft.AspNetCore.SignalR;

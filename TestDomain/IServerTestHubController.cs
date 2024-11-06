@@ -1,4 +1,4 @@
-﻿using Hubcon.Models.Interfaces;
+﻿using Hubcon;
 
 namespace TestDomain
 {
