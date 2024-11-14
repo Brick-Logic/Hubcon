@@ -9,13 +9,13 @@ namespace TestAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class InstancesController(ClientHubControllerConnector<ITestHubController, ServerTestHubController> client) : ControllerBase
+    public class InstancesController(ClientConnector<ITestClientController, TestServerHubController> client) : ControllerBase
     {
         [HttpGet]
         [Route("GetInstances")]
         public async Task<IEnumerable<ClientReference>> GetInstances()
         {
-            return ServerTestHubController.GetClients();
+            return TestServerHubController.GetClients();
         }
 
         [HttpGet]

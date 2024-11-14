@@ -2,7 +2,7 @@
 
 namespace TestDomain
 {
-    public interface IServerTestHubController : IServerHubController
+    public interface ITestServerHubController : IServerHubController
     {
         Task<int> GetTemperatureFromServer();
         Task ShowTextOnServer();

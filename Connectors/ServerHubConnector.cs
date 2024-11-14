@@ -1,15 +1,20 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Connectors;
 using Hubcon.Interceptors;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon
 {
-    public class ServerHubControllerConnector<TIServerHubController> : HubconControllerConnector<TIServerHubController>, IConnector
+    /// <summary>
+    /// The ServerHubConnector allows a client to connect itself to a ServerHub and control its methods given its URL and
+    /// the server's interface.
+    /// </summary>
+    /// <typeparam name="TIServerHubController"></typeparam>
+    public class ServerHubConnector<TIServerHubController> : HubconClientBuilder<TIServerHubController>, IConnector
         where TIServerHubController : IServerHubController
     {
-
         private TIServerHubController? _client;
         private readonly HubConnection _hubConnection;
 
@@ -24,7 +29,7 @@ namespace Hubcon
 
         public HubConnection Connection { get => _hubConnection; }
 
-        public ServerHubControllerConnector(string url) : base()
+        public ServerHubConnector(string url) : base()
         {
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(url)
@@ -32,7 +37,7 @@ namespace Hubcon
                 .WithAutomaticReconnect()
                 .Build();
         }
-        public ServerHubControllerConnector(HubConnection connection) : base()
+        public ServerHubConnector(HubConnection connection) : base()
         {
             _hubConnection = connection;
         }
@@ -53,7 +58,7 @@ namespace Hubcon
             return (TIServerHubController)proxyGenerator.CreateInterfaceProxyWithTarget(
                 typeof(TIServerHubController),
                 (TIServerHubController)DynamicImplementationCreator.CreateImplementation(typeof(TIServerHubController)),
-                new ServerHubControllerConnectorInterceptor(Connection)
+                new ServerHubConnectorInterceptor(Connection)
             );
         }
     }

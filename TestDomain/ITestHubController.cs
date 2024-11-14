@@ -2,7 +2,7 @@
 
 namespace TestDomain
 {
-    public interface ITestHubController : IClientHubController
+    public interface ITestClientController : IClientController
     {
         Task<int> GetTemperature();
         Task ShowText();

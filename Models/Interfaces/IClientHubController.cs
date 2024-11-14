@@ -1,8 +1,6 @@
-﻿using Hubcon.Models.Interfaces;
-
-namespace Hubcon
+﻿namespace Hubcon
 {
-    public interface IClientHubController : IHubController
+    public interface IClientController : IHubController
     {
     }
 }

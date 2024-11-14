@@ -3,7 +3,7 @@ using TestDomain;
 
 namespace TestClient
 {
-    public class TestHubController(string url) : ClientHubController<IServerTestHubController>(url), ITestHubController
+    public class TestHubController(string url) : ClientController<ITestServerHubController>(url), ITestClientController
     {
         public async Task ShowText() => await Task.Run(() => Console.WriteLine("ShowText() invoked succesfully."));
         public async Task<int> GetTemperature() => await Task.Run(() => new Random().Next(-10, 50));

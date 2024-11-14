@@ -8,19 +8,19 @@ using System.ComponentModel;
 namespace Hubcon.Interceptors
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    internal class ClientHubControllerConnectorInterceptor : AsyncInterceptorBase
+    internal class ClientControllerConnectorInterceptor : AsyncInterceptorBase
     {
         private protected string TargetClientId { get; private set; }
         private protected IHubContext<Hub>? HubContext { get; private set; }
         private protected Hub? Hub { get; private set; }
 
-        public ClientHubControllerConnectorInterceptor(IHubContext<Hub> hub, string clientId)
+        public ClientControllerConnectorInterceptor(IHubContext<Hub> hub, string clientId)
         {
             HubContext = hub;
             TargetClientId = clientId;
         }
 
-        public ClientHubControllerConnectorInterceptor(Hub hub, string clientId)
+        public ClientControllerConnectorInterceptor(Hub hub, string clientId)
         {
             Hub = hub;
             TargetClientId = clientId;
@@ -42,7 +42,6 @@ namespace Hubcon.Interceptors
                 result = await Hub.Clients
                     .Client(TargetClientId)
                     .InvokeMethodAsync<TResult?>(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
-
             }
 
             // Convertir el resultado y devolverlo

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Hubcon.Interceptors
 {
-    internal class ServerHubControllerConnectorInterceptor(HubConnection hub) : AsyncInterceptorBase
+    internal class ServerHubConnectorInterceptor(HubConnection hub) : AsyncInterceptorBase
     {
         protected override async Task<TResult> InterceptAsync<TResult>(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
         {

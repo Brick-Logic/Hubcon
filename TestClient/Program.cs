@@ -11,7 +11,7 @@ namespace TestClient
         static async Task Main()
         {
             var connector = new TestHubController(Url)
-                .GetConnector<IServerTestHubController>();
+                .GetConnector<ITestServerHubController>();
 
             await connector.ShowTextOnServer();
             var serverData = await connector.GetTemperatureFromServer();

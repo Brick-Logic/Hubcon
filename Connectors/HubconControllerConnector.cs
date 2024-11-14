@@ -1,21 +1,20 @@
 ﻿using Hubcon.Extensions;
 using Hubcon.Models;
-using Hubcon.Models.Interfaces;
 using System.ComponentModel;
 
 namespace Hubcon.Connectors
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public class HubconControllerConnector<TIHubController>
+    public class HubconClientBuilder<TIHubController>
         where TIHubController : IHubController
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
            "Major Code Smell",
            "S2743:Static fields should not be used in generic types",
            Justification = "The static field by T type is intended.")]
-        protected static Dictionary<string, MethodInvokeInfo> AvailableMethods { get; } = [];
+        protected Dictionary<string, MethodInvokeInfo> AvailableMethods { get; } = [];
 
-        protected HubconControllerConnector()
+        protected HubconClientBuilder()
         {
             BuildMethods();
         }

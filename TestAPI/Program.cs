@@ -12,7 +12,7 @@ namespace TestAPI
 
             // Add services to the container.
             builder.Services.AddHubcon();
-            builder.Services.AddScoped<ClientHubControllerConnector<ITestHubController, ServerTestHubController>>();
+            builder.Services.AddScoped<ClientHubControllerConnector<ITestClientController, TestServerHubController>>();
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -34,13 +34,13 @@ namespace TestAPI
 
 
             app.MapControllers();
-            app.MapHub<ServerTestHubController>("/clienthub");
+            app.MapHub<TestServerHubController>("/clienthub");
 
             //Just a test endpoint, it can also be injected in a controller.
-            app.MapGet("/test", async (ClientHubControllerConnector<ITestHubController, ServerTestHubController> client) =>
+            app.MapGet("/test", async (ClientHubControllerConnector<ITestClientController, TestServerHubController> client) =>
             {
                 // Getting some connected clientId
-                var clientId = ServerHub<IServerTestHubController>.GetClients().FirstOrDefault()!.Id;
+                var clientId = ServerHub<ITestServerHubController>.GetClients().FirstOrDefault()!.Id;
 
                 // Gets a client instance
                 var instance = client.GetInstance(clientId);

@@ -1,6 +1,5 @@
 ﻿using Hubcon.Handlers;
 using Hubcon.Models;
-using Hubcon.Models.Interfaces;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.ComponentModel;
 
@@ -18,7 +17,6 @@ namespace Hubcon.Controllers
 
         protected void Build(HubConnection hubConnection)
         {
-
             Type derivedType = GetType();
             if (!typeof(IHubController).IsAssignableFrom(derivedType))
                 throw new NotImplementedException($"El tipo {derivedType.FullName} no implementa la interfaz {nameof(IHubController)} o un tipo derivado.");

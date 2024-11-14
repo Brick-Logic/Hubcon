@@ -1,7 +1,5 @@
 ﻿using Hubcon.Extensions;
 using Hubcon.Models;
-using Hubcon.Models.Interfaces;
-using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Linq.Expressions;
@@ -16,34 +14,38 @@ namespace Hubcon.Handlers
 
         public void BuildMethods(object instance, Type type, Action<string, MethodInfo, Delegate>? forEachMethodAction = null)
         {
-            var interfaces = type.GetInterfaces().Where(x => typeof(IHubController).IsAssignableFrom(x));
-
-            foreach (var item in interfaces)
+            
+            if(AvailableMethods.Count == 0)
             {
-                if (item.GetMethods().Length == 0)
-                    continue;
+                var interfaces = type.GetInterfaces().Where(x => typeof(IHubController).IsAssignableFrom(x));
 
-                foreach (var method in item.GetMethods())
+                foreach (var item in interfaces)
                 {
-                    var parameters = method.GetParameters();
-                    var parameterExpressions = parameters.Select(p => Expression.Parameter(p.ParameterType, p.Name)).ToArray();
+                    if (item.GetMethods().Length == 0)
+                        continue;
 
-                    var callExpression = method.ReturnType == typeof(void) ?
-                        Expression.Call(Expression.Constant(instance), method, parameterExpressions) :
-                        (Expression)Expression.Call(Expression.Constant(instance), method, parameterExpressions);
+                    foreach (var method in item.GetMethods())
+                    {
+                        var parameters = method.GetParameters();
+                        var parameterExpressions = parameters.Select(p => Expression.Parameter(p.ParameterType, p.Name)).ToArray();
 
-                    Type delegateType = method.ReturnType == typeof(void) ?
-                        Expression.GetActionType(parameters.Select(p => p.ParameterType).ToArray()) :
-                        Expression.GetFuncType(parameters.Select(p => p.ParameterType).Concat([method.ReturnType]).ToArray());
+                        var callExpression = method.ReturnType == typeof(void) ?
+                            Expression.Call(Expression.Constant(instance), method, parameterExpressions) :
+                            (Expression)Expression.Call(Expression.Constant(instance), method, parameterExpressions);
 
-                    var lambda = Expression.Lambda(delegateType, callExpression, parameterExpressions);
-                    Delegate? action = lambda.Compile();
+                        Type delegateType = method.ReturnType == typeof(void) ?
+                            Expression.GetActionType(parameters.Select(p => p.ParameterType).ToArray()) :
+                            Expression.GetFuncType(parameters.Select(p => p.ParameterType).Concat([method.ReturnType]).ToArray());
 
-                    var methodSignature = method.GetMethodSignature();
+                        var lambda = Expression.Lambda(delegateType, callExpression, parameterExpressions);
+                        Delegate? action = lambda.Compile();
 
-                    AvailableMethods.TryAdd($"{methodSignature}", action);
+                        var methodSignature = method.GetMethodSignature();
 
-                    forEachMethodAction?.Invoke(methodSignature, method, action);
+                        AvailableMethods.TryAdd($"{methodSignature}", action);
+
+                        forEachMethodAction?.Invoke(methodSignature, method, action);
+                    }
                 }
             }
         }
