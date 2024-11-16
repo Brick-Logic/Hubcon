@@ -1,28 +1,30 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Extensions;
-using Hubcon.Models;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.AspNetCore.SignalR.Client;
 using System.ComponentModel;
 
 namespace Hubcon.Interceptors
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    internal class ClientControllerConnectorInterceptor : AsyncInterceptorBase
+    internal class ClientControllerConnectorInterceptor<THub> : AsyncInterceptorBase
+        where THub : Hub
     {
         private protected string TargetClientId { get; private set; }
-        private protected IHubContext<Hub>? HubContext { get; private set; }
-        private protected Hub? Hub { get; private set; }
+        private protected Func<IHubContext<THub>>? HubContextFactory { get; private set; }
+        private protected Func<THub>? HubFactory { get; private set; }
 
-        public ClientControllerConnectorInterceptor(IHubContext<Hub> hub, string clientId)
+        public ClientControllerConnectorInterceptor(IHubContext<THub> hubContextFactory)
         {
-            HubContext = hub;
-            TargetClientId = clientId;
+            HubContextFactory = () => hubContextFactory;
         }
 
-        public ClientControllerConnectorInterceptor(Hub hub, string clientId)
+        public ClientControllerConnectorInterceptor(THub hubFactory)
         {
-            Hub = hub;
+            HubFactory = () => hubFactory;
+        }
+
+        public void WithClientId(string clientId)
+        {
             TargetClientId = clientId;
         }
 
@@ -30,16 +32,19 @@ namespace Hubcon.Interceptors
         {
             // Lógica antes de llamar al método original
             TResult? result;
+            Hub? hub = HubFactory?.Invoke();
+            IHubContext<Hub>? hubContext = HubContextFactory?.Invoke();
 
-            if (Hub == null)
+
+            if (hub == null)
             {
-                result = await HubContext!.Clients
+                result = await hubContext!.Clients
                     .Client(TargetClientId)
                     .InvokeMethodAsync<TResult?>(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
             }
             else
             {
-                result = await Hub.Clients
+                result = await hub!.Clients
                     .Client(TargetClientId)
                     .InvokeMethodAsync<TResult?>(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
             }
@@ -51,16 +56,18 @@ namespace Hubcon.Interceptors
 
         protected override async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task> proceed)
         {
-            // Lógica antes de llamar al método original
-            if (Hub == null)
+            Hub? hub = HubFactory?.Invoke();
+            IHubContext<Hub>? hubContext = HubContextFactory?.Invoke();
+
+            if (hub == null)
             {
-                await HubContext!.Clients
+                await hubContext!.Clients
                     .Client(TargetClientId)
                     .CallMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
             }
             else
             {
-                await Hub.Clients
+                await hub.Clients
                     .Client(TargetClientId)
                     .CallMethodAsync(invocation.Method.GetMethodSignature(), new CancellationToken(), invocation.Arguments);
             }

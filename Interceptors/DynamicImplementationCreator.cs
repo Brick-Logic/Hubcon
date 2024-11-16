@@ -5,8 +5,13 @@ namespace Hubcon.Interceptors
 {
     internal static class DynamicImplementationCreator
     {
+        private readonly static Dictionary<Type, Type> BuiltTypes = [];
+
         internal static object CreateImplementation(Type interfaceType)
         {
+            if (BuiltTypes.TryGetValue(interfaceType, out var type))
+                return Activator.CreateInstance(type)!;
+
             // Crear un Assembly dinámico
             AssemblyName assemblyName = new("DynamicAssembly");
             AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
@@ -59,6 +64,7 @@ namespace Hubcon.Interceptors
 
             // Crear el tipo dinámico
             Type dynamicType = typeBuilder.CreateType();
+            BuiltTypes.TryAdd(interfaceType, dynamicType);
 
             // Retornar una instancia de la clase dinámica
             return Activator.CreateInstance(dynamicType)!;

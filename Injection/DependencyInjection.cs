@@ -1,5 +1,5 @@
 ﻿using Hubcon.Tools;
-using Microsoft.AspNetCore.SignalR;
+using Hubcon.Interceptors;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon
@@ -12,63 +12,36 @@ namespace Hubcon
 
             return services;
         }
-        
-        public static IServiceCollection AddHubconControllers<TController, THub>(this IServiceCollection services, params object[] parameters) 
+
+        /// <summary>
+        /// Este metodo inicia la instancia de <typeparamref name="TController"/> que se conecta a la URL indicada y
+        /// agrega un cliente singleton de tipo <typeparamref name="TServerHubInterface"/> que utiliza <typeparamref name="TController"/> para comunicarse con el servidor.
+        /// </summary>
+        /// <typeparam name="TController"></typeparam>
+        /// <typeparam name="TServerHubInterface"></typeparam>
+        /// <param name="services"></param>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public static IServiceCollection AddHubconClientController<TController, TServerHubInterface>(this IServiceCollection services, string url, Action<string>? consoleOutput = null)
             where TController : ClientController
-            where THub : IServerHubController
+            where TServerHubInterface : IServerHubController
         {
-            ClientController controller = InstanceCreator.TryCreateInstance<TController>(parameters).StartInstanceAsync();           
-            THub connector = controller.GetConnector<THub>()!;
+            ClientController controller = InstanceCreator.TryCreateInstance<TController>([url]).StartInstanceAsync(consoleOutput);
+            TServerHubInterface connector = controller.GetConnector<TServerHubInterface>()!;
 
-            services.AddSingleton(controller);
-            services.AddSingleton(typeof(THub), provider => connector);
+            services.AddSingleton(typeof(TServerHubInterface), provider => connector);
             return services;
         }
 
-        public static IServiceCollection AddHubconControllers<TController, THub>(this IServiceCollection services, string url)
-            where TController : ClientController
-            where THub : IServerHubController
-        {
-            ClientController controller = InstanceCreator.TryCreateInstance<TController>([url]).StartInstanceAsync();
-            THub connector = controller.GetConnector<THub>()!;
-
-            services.AddSingleton(controller);
-            services.AddSingleton(typeof(THub), provider => connector);
-            return services;
-        }
-
-        public static IServiceCollection AddHubconClientController<TController>(this IServiceCollection services, params object[] parameters)
-            where TController : ClientController
-        {
-            ClientController controller = InstanceCreator.TryCreateInstance<TController>(parameters).StartInstanceAsync();
-            services.AddSingleton(controller);
-            return services;
-        }
-
-        public static IServiceCollection AddHubconServerHub<THub>(this IServiceCollection services, Func<ClientController> implementationFactory)
-            where THub : IServerHubController
-        {
-            ClientController controller = implementationFactory.Invoke().StartInstanceAsync();
-            THub connector = controller.GetConnector<THub>()!;
-
-            services.AddSingleton(typeof(THub), provider => connector);
-            return services;
-        }
-
-        public static IServiceCollection AddHubconServerHub<TController, THub>(this IServiceCollection services, string url)
-            where TController : ClientController
-            where THub : IServerHubController
-        {
-            ClientController controller = InstanceCreator.TryCreateInstance<TController>([url]).StartInstanceAsync();
-            THub connector = controller.GetConnector<THub>()!;
-
-            services.AddSingleton(typeof(THub), provider => connector);
-            return services;
-        }
-
+        /// <summary>
+        /// Agrega un servicio IClientAccessor como servicio scoped que permite acceder a los clientes de un hub usando la interfaz IClientAccessor<THub, TIClientController>.
+        /// </summary>
+        /// <param name="services"></param>
+        /// <returns></returns>
         public static IServiceCollection AddHubconClientAccessor(this IServiceCollection services)
         {
-            services.AddScoped(typeof(IClientAccessor<,>), typeof(ClientConnectorsManager<,>));
+            services.AddScoped(typeof(ClientControllerConnectorInterceptor<>));
+            services.AddScoped(typeof(IClientAccessor<,>), typeof(ClientConnector<,>));
             return services;
         }
     }

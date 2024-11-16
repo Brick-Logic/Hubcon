@@ -7,25 +7,27 @@ namespace Hubcon
 {
     public abstract class ClientController : HubController, IHostedService
     {
-        protected HubConnection _hubConnection;
+        protected Func<HubConnection> _hubFactory;
         protected CancellationToken _token;
         protected string _url;
 
         protected ClientController(string url)
         {
             _url = url;
-            _hubConnection = new HubConnectionBuilder()
+            var hub = new HubConnectionBuilder()
                 .WithUrl(_url)
                 .AddMessagePackProtocol()
                 .WithAutomaticReconnect()
                 .Build();
 
-            Build(_hubConnection);
+            _hubFactory = () => hub;
+
+            Build(_hubFactory.Invoke());
         }
 
         public TIServerHubController GetConnector<TIServerHubController>() where TIServerHubController : IServerHubController
         {
-            return new ServerHubConnector<TIServerHubController>(_hubConnection).Instance;
+            return new ServerHubConnector<TIServerHubController>(_hubFactory.Invoke()).Instance;
         }
 
         public ClientController StartInstanceAsync(Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
@@ -36,33 +38,35 @@ namespace Hubcon
 
         public async Task StartAsync(Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
         {
+            var hub = _hubFactory.Invoke();
             try
             {
+
                 _token = cancellationToken;
 
                 bool connectedInvoked = false;
                 while (true)
                 {
                     await Task.Delay(1000, cancellationToken);
-                    if (_hubConnection.State == HubConnectionState.Connecting)
+                    if (hub.State == HubConnectionState.Connecting)
                     {
                         consoleOutput?.Invoke($"Connecting to {_url}...");
-                        _ = _hubConnection.StartAsync(_token);
+                        _ = hub.StartAsync(_token);
                         connectedInvoked = false;
                     }
-                    else if (_hubConnection.State == HubConnectionState.Disconnected)
+                    else if (hub.State == HubConnectionState.Disconnected)
                     {
                         consoleOutput?.Invoke($"Failed connectin to {_url}. Retrying...");
-                        _ = _hubConnection.StartAsync(_token);
+                        _ = hub.StartAsync(_token);
                         connectedInvoked = false;
                     }
-                    else if (_hubConnection.State == HubConnectionState.Reconnecting)
+                    else if (hub.State == HubConnectionState.Reconnecting)
                     {
                         consoleOutput?.Invoke($"Connection lost, reconnecting to {_url}...");
-                        _ = _hubConnection.StartAsync(_token);
+                        _ = hub.StartAsync(_token);
                         connectedInvoked = false;
                     }
-                    else if (_hubConnection.State == HubConnectionState.Connected && !connectedInvoked)
+                    else if (hub.State == HubConnectionState.Connected && !connectedInvoked)
                     {
                         consoleOutput?.Invoke($"Successfully connected to {_url}.");
                         connectedInvoked = true;
@@ -79,11 +83,12 @@ namespace Hubcon
                 }
             }
 
-            _ = _hubConnection?.StopAsync(_token);
+            _ = hub?.StopAsync(_token);
         }
         public void Stop()
         {
-            _ = _hubConnection?.StopAsync(_token);
+            var hub = _hubFactory.Invoke();
+            _ = hub?.StopAsync(_token);
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)

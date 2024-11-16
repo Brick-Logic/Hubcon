@@ -1,8 +1,6 @@
 ﻿using Hubcon.Converters;
 using MessagePack;
-using Newtonsoft.Json;
 using System.ComponentModel;
-using System.Reflection;
 
 namespace Hubcon.Models
 {

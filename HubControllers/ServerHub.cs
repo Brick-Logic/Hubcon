@@ -1,14 +1,13 @@
 ﻿using Hubcon.Handlers;
 using Hubcon.Models;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Hubcon
 {
     public abstract class ServerHub : Hub, IServerHubController
     {
-        public static event OnClientConnectedEventHandler OnClientConnected;
-        public static event OnClientDisconnectedEventHandler OnClientDisconnected;
+        public static event OnClientConnectedEventHandler? OnClientConnected;
+        public static event OnClientDisconnectedEventHandler? OnClientDisconnected;
 
         public delegate void OnClientConnectedEventHandler(Type hubType, string connectionId);
         public delegate void OnClientDisconnectedEventHandler(Type hubType, string connectionId);

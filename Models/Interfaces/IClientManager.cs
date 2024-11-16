@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
-
-namespace Hubcon
+﻿namespace Hubcon
 {
     public interface IClientManager : IClientAccessor
     {
@@ -17,6 +15,6 @@ namespace Hubcon
         where THub : ServerHub
         where TIClientController : IClientController?
     {
-        void RemoveInstance(Type hubType, string instanceId);
+        void RemoveInstance(string instanceId);
     }
 }

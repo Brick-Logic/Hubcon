@@ -1,6 +1,5 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Extensions;
-using Hubcon.Models;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Hubcon.Interceptors
