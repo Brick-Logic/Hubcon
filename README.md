@@ -1,6 +1,4 @@
-﻿Hubcon is a library that abstracts SignalR messages/returns using interface methods, avoiding the hassle of implementing each message and method individually.
-
-Creates an artificial implementation of your interface, and gives it everything it needs to communicate with a SignalR client seamlessly just with the hub URL. 
+﻿Hubcon is a library that abstracts SignalR messages/returns using a custom interface, solving SignalR's hassle of implementing each message and method individually.
 
 It currently supports:
 - Async methods
@@ -22,57 +20,53 @@ The project now uses MessagePack, greatly enhancing speed and bandwidth usage, a
 ## Domain Project
 After installing this package, create a two interfaces that implement IClientHubController and IServerHubController in your Domain project. 
 Client and server MUST share this interface, or at least implement exactly the same interface on both sides.
-You can implement one of them if you only need to control the client or the server.
+You can choose to implement just one of them, this example just covers both cases.
 
-    public interface ITestHubController : IClientHubController
+    public interface IMyClientController : IClientController
     {
-        Task<int> GetTemperature();
-        Task ShowText();
-        Task Random();
+        Task<int> GetClientTemperature();
     }
 
-    public interface IServerTestHubController : IServerHubController
+    public interface IMyServerHub : IServerHubController
     {
-        Task<int> GetTemperatureFromServer();
-        Task ShowTextOnServer();
-        Task ShowTempOnServerFromClient();
+        Task<int> GetServerTemperature();
     }
 
 ## Client
-On your SignalR client, create a TestHubController that implements your interface (ITestHubController)
 This project can be anything, a console application, a background worker or even a singleton service.
 
-    public class TestHubController(string url) : ClientHubController<IServerTestHubController>(url), ITestHubController
+Create MyClientController, inherit ClientController, then implement IMyClientController. This will receive server calls and execute the requested methods.
+
+    public class MyClientController(string hubUrl) : ClientController(hubUrl), IMyClientController
     {
-        public async Task ShowText() => await Task.Run(() => Console.WriteLine("ShowText() invoked succesfully."));
+        public async Task<int> GetTemperature() => await Task.Run(() => new Random().Next(-10, 50));
+    }
+
+You can inherit from ClientController like the last example, or use ClientController<> generic with an interface that implements IServerHubController to enable the Server property.
+Server property allows executing server methods using the specified interface. This is optional.
+
+    public class MyClientController(string url) : ClientController<IMyServerHub>(url), IMyClientController
+    {
         public async Task<int> GetTemperature() => await Task.Run(() => new Random().Next(-10, 50));
 
-        public async Task Random()
+        // Some example method
+        private async Task CallServer()
         {
-            var temperatura = await Server.GetTemperatureFromServer();
-            Console.WriteLine($"Temperatura desde el conector: {temperatura}");
+            // Some call to server
+            Server.SomeServerMethod();
         }
     }
 
-    // You can inherit from ClientHubController, or use ClientHubController\<T\> to enable the Server variable, which refers to the current connected ServerHub.
-    // Server variable allows executing server methods using the specified interface.
-
-On your SignalR client's program.cs, you can now create it and Start it:
+On your SignalR client's program.cs (in this case, an empty console application), you can now create it and Start it:
 
     static async Task Main()
     {
-        var connector = new TestHubController("http://localhost:5001/clienthub")
-            .GetConnector<IServerTestHubController>(); // Gets a "connector", which is a server client.
+        var myClientController = new MyClientController("http://localhost:5001/myclienthub").StartServerInstance();
+        var connector = myClientController.GetConnector<IMyServerHub>(); // Gets a "connector", which is used to call server methods.
 
-        // Executes a method on server
-        await connector.ShowTextOnServer();
+        var temperature = connector.GetTemperatureFromServer();
 
-        // Gets data from server
-        var serverData = await connector.GetTemperatureFromServer();
-        Console.WriteLine(serverData);
-
-        // Executes something on server, server asks for data to client, then prints the result
-        await connector.ShowTempOnServerFromClient();
+        Console.WriteLine(temperature);
 
         Console.ReadKey();
     }
@@ -80,65 +74,115 @@ On your SignalR client's program.cs, you can now create it and Start it:
 ## Server
 The server should be an ASP.NET Core 8 API, but should also work for Blazor and ASP.NET Core MVC.
 
+Create ServerTestHubController.cs. This is the server's hub. It can implement methods and be called from clients.
+
+    public class MyServerHub : ServerHub<IMyClientController>, IMyServerHub
+    {
+        // Returns some random temperature to client
+        public async Task<int> GetTemperatureFromServer() => await Task.Run(() => new Random().Next(-10, 50));
+    }
+
+    // You can just inherit from ServerHub, or use ServerHub<T> to enable the Client variable, which refers to the current calling client.
+    // Client variable allows executing calling client methods using the specified interface.
+
+
 On your server program.cs's services:
 
-    builder.Services.AddHubcon();
-    builder.Services.AddScoped<ClientHubControllerConnector<ITestHubController, ServerTestHubController>>();
+    builder.Services
+            .AddHubcon();
+            .AddHubconClientAccessor(); // This is explained later
 
 Same file, after builder.Build():
 
-	app.MapHub<ServerTestHubController>("/clienthub");
+	app.MapHub<MyServerHub>("/myclienthub");
     
     // Just a test endpoint, it can also be injected in a controller.
-    app.MapGet("/test", async (ClientHubControllerConnector<ITestHubController, ServerTestHubController> client) =>
+    app.MapGet("/test", async (IClientAccessor<MyServerHub, IMyClientController> clientAccessor) =>
     {
         // Getting some connected clientId
-        var clientId = ServerHub<IServerTestHubController>.GetClients().FirstOrDefault()!.Id;
+        var clientId = clientAccessor.GetAllClients().First();
 
         // Gets a client instance
-        var instance = client.GetInstance(clientId);
+        var client = clientAccessor.GetClient(clientId);
 
-        // Using some methods
-        await instance.ShowText();
-        var temperature = await instance.GetTemperature();
+        var temperature = await client.GetTemperature();
 
         return temperature.ToString();
     });
 
-Create ServerTestHubController.cs. This is the server's hub. It can implement methods and be called from clients.
 
-    public class ServerTestHubController : ServerHub<ITestHubController>, IServerTestHubController
-    {
-        // Returns some random temperature to client
-        public async Task<int> GetTemperatureFromServer() => await Task.Run(() => new Random().Next(-10, 50));
+And that's it. Execute both projects at the same time and go to localhost:<port>/test, you should see the GetTemperature() method return a value.
+You can experiment with any method.
 
-        // Just prints some text when called from client
-        public async Task ShowTextOnServer() => await Task.Run(() => Console.WriteLine("ShowTextOnServer() invoked succesfully."));
+## New Dependency Injection methods
 
-        // This will be called from client, then this method gets temperature from the client.
-        public async Task ShowTempOnServerFromClient() => Console.WriteLine($"ShowTempOnServerFromClient: {await Client.GetTemperature()}");
-    }
+AddHubcon() method registers all dependencies needed for hubcon to work properly.
 
-    // You can just inherit from ServerHub, or use ServerHub\<T\> to enable the Client variable, which refers to the current calling client.
-    // Client variable allows executing calling client methods using the specified interface.
+    builder.Services
+            .AddHubcon();
+
+AddHubconClientAccessor() method allows injecting, like the name states, a client accessor. This means that, when you need interacting with a client from
+some scoped class, you can do it through this interface.
+This one is specially made for scoped contexts. Allows interacting with connected clients, for example, from a Blazor page, or an ASP.NET controller, like so:
+NOTE: This is for server hubs.
+You can change IClientAccessor generic to your ServerHub/IClientController combinations as you please, with no additional configuration.
+
+    builder.Services
+            .AddHubcon();
+            .AddHubconClientAccessor();
+
+After adding the client accessor, you can now inject it anywhere you need. For example:
+
+        [ApiController]
+        [Route("[controller]")]
+        public class SomeAspNetController(IClientAccessor<MyServerHub, IMyClientController> clientAccessor) : ControllerBase
+        {              
+            [HttpGet]
+            [Route("SomeMethod")]
+            public async Task<int> SomeMethod()
+            {
+                // Using GetAllClients to get access to the current connected clients.
+                var instances = clientAccessor.GetAllClients().First();
+
+                // Using Getclient to retrieve a specific client, then executing a command.
+                return await clientAccessor.GetClient(instances).GetTemperature();
+            }
+        }
 
 
-And that's it. Execute both projects at the same time and go to localhost:<port>/test, you should see the ShowText() method print, and GetTemperature() return a value.
+AddHubconClientController() method registers and starts your ClientController as a Singleton, as only the server can access it.
+This method also register IMyServerHub as a server instance, allowing you to call the server from anywhere you want.
 
+    builder.Services
+        .AddHubcon()
+        .AddHubconClientController<MyClientController, IMyServerHub>("https://localhost:5001/myclienthub");
+
+You can also use the dependency injection both methods provided at the same time, in case your project need to act both as a ServerHub 
+and a Client of another server. Doesn't need a particular order after AddHubcon method.
+
+    builder.Services
+        .AddHubcon()
+        .AddHubconClientAccessor()
+        .AddHubconClientController<MyClientController, IMyServerHub>("https://localhost:5001/myclienthub");
 
 ## Adding more methods
-To implement more methods, just add them to the interface, implement them in the TestHubController, then use it somewhere from the server, it will just work.
-This also ServerTestHubController and clients.
+To implement more methods, just add them to the interfaces, implement them in MyClientController, then use it somewhere from the server, it will just work.
+This also applies on reverse, using IMyServerHub and clients.
 
 ## Use case
 This fits perfectly if you need to communicate two instances in real time, in an easy and type-safe way. 
 The wrappers are persisted in memory to avoid rebuilding overhead (will be further improved).
 
 ## Version changes
-- Organized project namespaces for simpler implementation
-- Updated usage documentation
-- Removed some unused classes
-- Updated test projects
+- Version updated to 1.7.0
+- Simplified class names for better readability and understandability.
+- Implemented IClientAccessor<THub,TIClientController> for easy client access.
+- Refactored ClientController and fixed internal memory leaks.
+- Added new dependency injection methods.
+- Added scoped support for ClientController.
+- Removed some unused classes and usings.
+- Fixed memory leaks when creating the artificial client implementations.
+- Updated readme
 
 ## Note
 This project is under heavy development. The APIs might change.
