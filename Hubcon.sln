@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hubcon.Core", "Hubcon.Core\Hubcon.Core.csproj", "{4AE99066-0BD6-477B-82AB-E33D116CDB42}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hubcon.SignalR", "Hubcon.SignalR\Hubcon.SignalR.csproj", "{BF2813E8-D799-47CC-BE05-4DD37BF26CDE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HubconTest", "Examples\HubconTest\HubconTest.csproj", "{ED96A658-B7A0-DAA0-7259-5325B3FEC562}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HubconTestClient", "Examples\HubconTestClient\HubconTestClient.csproj", "{30BD5B41-9DF1-BF61-A0E7-B2A3ACCF0EDA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HubconTestDomain", "Examples\HubconTestDomain\HubconTestDomain.csproj", "{FB286D52-D9DD-1104-3A8F-B2B2C97BDA05}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4AE99066-0BD6-477B-82AB-E33D116CDB42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AE99066-0BD6-477B-82AB-E33D116CDB42}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AE99066-0BD6-477B-82AB-E33D116CDB42}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AE99066-0BD6-477B-82AB-E33D116CDB42}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF2813E8-D799-47CC-BE05-4DD37BF26CDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF2813E8-D799-47CC-BE05-4DD37BF26CDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF2813E8-D799-47CC-BE05-4DD37BF26CDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF2813E8-D799-47CC-BE05-4DD37BF26CDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED96A658-B7A0-DAA0-7259-5325B3FEC562}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED96A658-B7A0-DAA0-7259-5325B3FEC562}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED96A658-B7A0-DAA0-7259-5325B3FEC562}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED96A658-B7A0-DAA0-7259-5325B3FEC562}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30BD5B41-9DF1-BF61-A0E7-B2A3ACCF0EDA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30BD5B41-9DF1-BF61-A0E7-B2A3ACCF0EDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30BD5B41-9DF1-BF61-A0E7-B2A3ACCF0EDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30BD5B41-9DF1-BF61-A0E7-B2A3ACCF0EDA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB286D52-D9DD-1104-3A8F-B2B2C97BDA05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB286D52-D9DD-1104-3A8F-B2B2C97BDA05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB286D52-D9DD-1104-3A8F-B2B2C97BDA05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB286D52-D9DD-1104-3A8F-B2B2C97BDA05}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{ED96A658-B7A0-DAA0-7259-5325B3FEC562} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{30BD5B41-9DF1-BF61-A0E7-B2A3ACCF0EDA} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{FB286D52-D9DD-1104-3A8F-B2B2C97BDA05} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1B50F528-C46C-4120-AEAF-8768F535DD28}
+	EndGlobalSection
+EndGlobal
