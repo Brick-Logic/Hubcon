@@ -11,8 +11,8 @@ namespace HubconTestClient
         static async Task Main()
         {
 
-            var hubController = new TestHubController(Url);
-            await hubController.StartAsync(Console.WriteLine);
+            var hubController = new TestHubController();
+            await hubController.StartAsync(Url, Console.WriteLine);
 
             //var connector = hub.sERVER;
 

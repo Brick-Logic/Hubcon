@@ -3,7 +3,7 @@ using HubconTestDomain;
 
 namespace HubconTestClient
 {
-    public class TestHubController(string url) : BaseSignalRClientController<IServerHubContract>(url), ITestClientController
+    public class TestHubController : BaseSignalRClientController<IServerHubContract>, ITestClientController
     {
         public async Task ShowText() => await Task.Run(() => Console.WriteLine("ShowText() invoked succesfully."));
         public async Task<int> GetTemperature() => await Task.Run(() => new Random().Next(-10, 50));

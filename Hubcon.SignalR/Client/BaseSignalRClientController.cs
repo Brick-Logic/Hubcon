@@ -9,23 +9,33 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
 using System.Threading.Channels;
 
 namespace Hubcon.SignalR.Client
 {
     public abstract class BaseSignalRClientController : IHubconTargetedClientController, IHostedService
     {
-        protected string _url;
-        protected Func<HubConnection> _hubFactory;
+        protected string _url = string.Empty;
+        protected Func<HubConnection>? _hubFactory = null;
         protected CancellationToken _token;
-        protected Task? runningTask;
-        protected HubConnection hub;
+        protected Task? runningTask = null;
+        protected HubConnection? hub = null;
 
-        public ICommunicationHandler CommunicationHandler { get; set; }
-        public MethodHandler MethodHandler { get; set; }
+        public ICommunicationHandler? CommunicationHandler { get; set; } = null;
+        public MethodHandler? MethodHandler { get; set; } = null;
 
-        protected BaseSignalRClientController(string url)
+        private bool IsBuilt { get; set; } = false;
+
+        protected BaseSignalRClientController() { }
+
+        protected BaseSignalRClientController(string url) => Build(url);
+
+        private void Build(string url)
         {
+            if (IsBuilt)
+                return;
+
             var derivedType = GetType();
             if (!typeof(IHubconController).IsAssignableFrom(derivedType))
                 throw new NotImplementedException($"El tipo {derivedType.FullName} no implementa la interfaz {nameof(IHubconController)} o un tipo derivado.");
@@ -44,7 +54,7 @@ namespace Hubcon.SignalR.Client
 
             MethodHandler.BuildMethods(this, GetType(), (methodSignature, methodInfo, handler) =>
             {
-                if(typeof(IAsyncEnumerable<object>).IsAssignableFrom(methodInfo.ReturnType))
+                if (typeof(IAsyncEnumerable<object>).IsAssignableFrom(methodInfo.ReturnType))
                     hub?.On($"{methodSignature}", (Func<string, MethodInvokeRequest, Task>)HandleStream);
                 else if (methodInfo.ReturnType == typeof(void))
                     hub?.On($"{methodSignature}", (Func<MethodInvokeRequest, Task>)handler.HandleWithoutResultAsync);
@@ -55,22 +65,24 @@ namespace Hubcon.SignalR.Client
                 else
                     hub?.On($"{methodSignature}", (Func<MethodInvokeRequest, Task<MethodResponse>>)handler.HandleWithResultAsync);
             });
+
+            IsBuilt = true;
         }
 
         public TICommunicationContract GetConnector<TICommunicationContract>() 
             where TICommunicationContract : ICommunicationContract
 
         {
-            return new HubconServerConnector<TICommunicationContract, ICommunicationHandler>(CommunicationHandler).GetClient()!;
+            return new HubconServerConnector<TICommunicationContract, ICommunicationHandler>(CommunicationHandler!).GetClient()!;
         }
 
-        public async Task<BaseSignalRClientController> StartInstanceAsync(Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
+        public async Task<BaseSignalRClientController> StartInstanceAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
         {
-            _ = StartAsync(consoleOutput, cancellationToken);
+            _ = StartAsync(url, consoleOutput, cancellationToken);
 
             while (true) 
             { 
-                if(hub.State == HubConnectionState.Connected)
+                if(hub?.State == HubConnectionState.Connected)
                 {
                     return this;
                 }
@@ -79,9 +91,12 @@ namespace Hubcon.SignalR.Client
             }          
         }
 
-        public async Task StartAsync(Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
+        public async Task StartAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
         {
-            hub = _hubFactory.Invoke();
+            if (!IsBuilt)
+                Build(url ?? "localhost:5000/clienthub");
+
+            hub = _hubFactory?.Invoke();
             try
             {
                 _token = cancellationToken;
@@ -90,25 +105,25 @@ namespace Hubcon.SignalR.Client
                 while (true)
                 {
                     await Task.Delay(3000, cancellationToken);
-                    if (hub.State == HubConnectionState.Connecting)
+                    if (hub?.State == HubConnectionState.Connecting)
                     {
                         consoleOutput?.Invoke($"Connecting to {_url}...");
                         _ = hub.StartAsync(_token);
                         connectedInvoked = false;
                     }
-                    else if (hub.State == HubConnectionState.Disconnected)
+                    else if (hub?.State == HubConnectionState.Disconnected)
                     {
                         consoleOutput?.Invoke($"Failed connecting to {_url}. Retrying...");
                         _ = hub.StartAsync(_token);
                         connectedInvoked = false;
                     }
-                    else if (hub.State == HubConnectionState.Reconnecting)
+                    else if (hub?.State == HubConnectionState.Reconnecting)
                     {
                         consoleOutput?.Invoke($"Connection lost, reconnecting to {_url}...");
                         _ = hub.StartAsync(_token);
                         connectedInvoked = false;
                     }
-                    else if (hub.State == HubConnectionState.Connected && !connectedInvoked)
+                    else if (hub?.State == HubConnectionState.Connected && !connectedInvoked)
                     {
                         consoleOutput?.Invoke($"Successfully connected to {_url}.");
                         connectedInvoked = true;
@@ -129,14 +144,13 @@ namespace Hubcon.SignalR.Client
         }
         public void Stop()
         {
-            var hub = _hubFactory.Invoke();
+            var hub = _hubFactory?.Invoke();
             _ = hub?.StopAsync(_token);
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
+        public Task StartAsync(string? url = null, CancellationToken cancellationToken = default)
         {
-
-            runningTask = Task.Run(async () => await StartAsync(Console.WriteLine, cancellationToken));
+            runningTask = Task.Run(async () => await StartAsync(url, Console.WriteLine, cancellationToken), cancellationToken);
             return Task.CompletedTask;
         }
 
@@ -145,11 +159,11 @@ namespace Hubcon.SignalR.Client
             return runningTask ?? Task.CompletedTask;
         }
 
-        public Task<MethodResponse> HandleTask(MethodInvokeRequest info) => MethodHandler.HandleWithResultAsync(info);
-        public Task HandleVoid(MethodInvokeRequest info) => MethodHandler.HandleWithoutResultAsync(info);
+        public Task<MethodResponse> HandleTask(MethodInvokeRequest info) => MethodHandler!.HandleWithResultAsync(info);
+        public Task HandleVoid(MethodInvokeRequest info) => MethodHandler!.HandleWithoutResultAsync(info);
         public async Task HandleStream(string methodCode, MethodInvokeRequest info)
         {
-            var stream = await MethodHandler.HandleStream(info);
+            var stream = await MethodHandler!.HandleStream(info);
 
             var channel = Channel.CreateUnbounded<object>();
 
@@ -163,7 +177,12 @@ namespace Hubcon.SignalR.Client
                 channel.Writer.Complete();
             });
 
-            await hub.SendAsync(nameof(IHubconServerController.ReceiveStream), methodCode, channel.Reader);
+            await hub!.SendAsync(nameof(IHubconServerController.ReceiveStream), methodCode, channel.Reader);
+        }
+
+        public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            await StartAsync(null, cancellationToken);
         }
     }
 
@@ -171,6 +190,6 @@ namespace Hubcon.SignalR.Client
         where TICommunicationContract : ICommunicationContract
     {
         public TICommunicationContract Server { get; private set; }
-        public BaseSignalRClientController(string url) : base(url) => Server = GetConnector<TICommunicationContract>();
+        public BaseSignalRClientController() => Server = GetConnector<TICommunicationContract>();
     }
 }

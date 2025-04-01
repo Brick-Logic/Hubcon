@@ -7,8 +7,8 @@ namespace Hubcon.Core.Interfaces
 {
     public interface IHubconController
     {
-        ICommunicationHandler CommunicationHandler { get; set; }
-        MethodHandler MethodHandler { get; set; }
+        ICommunicationHandler? CommunicationHandler { get; set; }
+        MethodHandler? MethodHandler { get; set; }
         Task<MethodResponse> HandleTask(MethodInvokeRequest info);
         Task HandleVoid(MethodInvokeRequest info);
     }
