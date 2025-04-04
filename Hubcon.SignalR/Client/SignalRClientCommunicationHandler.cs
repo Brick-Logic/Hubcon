@@ -1,8 +1,13 @@
-﻿using Hubcon.Core.Interfaces;
+﻿using Hubcon.Core.Converters;
+using Hubcon.Core.Handlers;
+using Hubcon.Core.Interfaces;
 using Hubcon.Core.Interfaces.Communication;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
+using System.Runtime.CompilerServices;
+using Hubcon.SignalR.Extensions;
 
 namespace Hubcon.SignalR.Client
 {
@@ -15,44 +20,28 @@ namespace Hubcon.SignalR.Client
             _hubFactory = hubFactory;
         }
 
-        public async Task<MethodResponse> InvokeAsync(string method, object[] arguments, CancellationToken cancellationToken)
-        {
-            var client = _hubFactory.Invoke();
-
-            if (client.State != HubConnectionState.Connected) await client.StartAsync();
-
-            MethodInvokeRequest request = new MethodInvokeRequest(method, arguments).SerializeArgs();
-
-            return await client.InvokeAsync<MethodResponse>(nameof(IHubconController.HandleTask), request, cancellationToken);
-        }
-
-        public async Task CallAsync(string method, object[] arguments, CancellationToken cancellationToken)
-        {
-            var client = _hubFactory.Invoke();
-
-            MethodInvokeRequest request = new MethodInvokeRequest(method, arguments).SerializeArgs();
-            await client.SendAsync(nameof(IHubconController.HandleVoid), request, cancellationToken);
-        }
-
-        public async Task<IAsyncEnumerable<T>> StreamAsync<T>(string method, object[] arguments, CancellationToken cancellationToken)
+        public async Task<MethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken)
         {
             var client = _hubFactory.Invoke();
 
             if (client.State != HubConnectionState.Connected) await client.StartAsync(cancellationToken);
 
-            MethodInvokeRequest request = new MethodInvokeRequest(method, arguments).SerializeArgs();
-
-            return client.StreamAsync<T>(nameof(IHubconTargetedClientController.HandleStream), request, cancellationToken);
+            return await client.InvokeAsync<MethodResponse>(request.HandlerMethodName!, request, cancellationToken);
         }
 
-        public List<IClientReference> GetAllClients()
+        public async Task CallAsync(MethodInvokeRequest request, CancellationToken cancellationToken)
         {
-            return Array.Empty<IClientReference>().ToList();
+            var client = _hubFactory.Invoke();
+            await client.SendAsync(request.HandlerMethodName!, request, cancellationToken);
         }
-
-        public ICommunicationHandler WithUserId(string id)
+        
+        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, CancellationToken cancellationToken)
         {
-            return this;
+            var client = _hubFactory.Invoke();
+
+            if (client.State != HubConnectionState.Connected) await client.StartAsync(cancellationToken);
+
+            return await client.StreamAsync<T>(request, cancellationToken);
         }
     }
 }

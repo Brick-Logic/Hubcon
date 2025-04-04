@@ -36,7 +36,7 @@ namespace Hubcon.Core.Connectors
                 {
                     var parameters = method.GetParameters();
                     var methodSignature = method.GetMethodSignature();
-                    AvailableMethods.TryAdd(methodSignature, new MethodInvokeRequest(methodSignature, parameters));
+                    AvailableMethods.TryAdd(methodSignature, new MethodInvokeRequest(methodSignature, null, parameters));
                 }
             }
         }

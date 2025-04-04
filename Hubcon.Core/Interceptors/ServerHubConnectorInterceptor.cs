@@ -1,6 +1,8 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Core.Extensions;
+using Hubcon.Core.Interfaces;
 using Hubcon.Core.Interfaces.Communication;
+using Hubcon.Core.Models;
 
 
 namespace Hubcon.Core.Interceptors
@@ -26,26 +28,30 @@ namespace Hubcon.Core.Interceptors
                 var itemType = typeof(TResult).GetGenericArguments()[0];
 
                 // Crear el método adecuado que se espera
-                var streamMethod = handler.GetType() // Cambia 'Handler' por el tipo adecuado
+                var streamMethod = handler
+                    .GetType() // Cambia 'Handler' por el tipo adecuado
                     .GetMethod(nameof(handler.StreamAsync))! // Cambia 'StreamAsync' por el nombre correcto del método
                     .MakeGenericMethod(itemType);
 
+                var request = new MethodInvokeRequest(invocation.Method.GetMethodSignature(), nameof(IHubconServerController.HandleMethodStream), invocation.Arguments).SerializeArgs();
+
                 // Invocar el método StreamAsync pasando el tipo adecuado
-                result = (TResult)streamMethod.Invoke(handler, new object[]
+                result = await (Task<TResult>)streamMethod.Invoke(handler, new object[]
                 {
-                    invocation.Method.GetMethodSignature(),
-                    invocation.Arguments,
+                    request,
                     new CancellationToken()
                 })!;
             }
             else
             {
-                var response = await handler.InvokeAsync(
+                MethodInvokeRequest request = new MethodInvokeRequest(
                     invocation.Method.GetMethodSignature(),
-                    invocation.Arguments,
-                    new CancellationToken()
-                );
+                    nameof(IHubconController.HandleMethodTask),
+                    invocation.Arguments
+                )
+                .SerializeArgs();
 
+                var response = await handler.InvokeAsync(request,new CancellationToken());
                 result = response.GetDeserializedData<TResult>()!;
             }
 
@@ -59,11 +65,14 @@ namespace Hubcon.Core.Interceptors
         {
             Console.WriteLine($"[Client][MethodInterceptor] Calling {invocation.Method.Name} on SERVER. Args: [{string.Join(",", invocation.Arguments.Select(x => $"{x}"))}]");
 
-            await handler.CallAsync(
-                invocation.Method.GetMethodSignature(),
-                invocation.Arguments,
-                new CancellationToken()
-            );
+            MethodInvokeRequest request = new MethodInvokeRequest(
+                invocation.Method.GetMethodSignature(), 
+                nameof(IHubconController.HandleMethodVoid), 
+                invocation.Arguments
+            )
+            .SerializeArgs();
+
+            await handler.CallAsync(request,new CancellationToken());
         }
     }
 }

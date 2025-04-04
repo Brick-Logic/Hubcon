@@ -18,7 +18,6 @@ namespace HubconTestClient
         {
             for(int i = 0; i < count; i++)
             {
-                await Task.Delay(100);
                 yield return "hola";
             }
         }

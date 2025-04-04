@@ -1,8 +1,10 @@
 using Hubcon.Core;
+using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.SignalR;
 using HubconTest.Controllers;
 using HubconTestDomain;
+using Microsoft.AspNetCore.SignalR;
 using Scalar.AspNetCore;
 
 
@@ -43,32 +45,22 @@ namespace HubconTest
             app.MapHub<TestSignalRController>("/clienthub");
 
             //Just a test endpoint, it can also be injected in a controller.
-            app.MapGet("/test", async (IClientManager<ITestClientController, TestSignalRController> clientAccessor) =>
+            app.MapGet("/test", async (IClientManager<ITestClientController, TestSignalRController> clientAccessor, IHubContext<TestSignalRController> hubContext) =>
             {
                 // Getting some connected clientId
                 var clientId = clientAccessor.GetAllClients().FirstOrDefault()!;
 
-                // Gets a client instance
+                //Gets a client instance
                 var client = clientAccessor.GetOrCreateClient(clientId);
-                var messages = client.GetMessages(5).ToBlockingEnumerable();
 
-                foreach (var item in messages)
+                var test = await client.ShowAndReturnMessage("hello");
+
+                var messages = client.GetMessages(10);
+
+                await foreach (var item in messages)
                 {
-                    Console.WriteLine(item);                   
+                    Console.WriteLine(item);
                 }
-
-
-
-                //await foreach (var item in messages)
-                //{
-                //    Console.WriteLine(item);
-                //}
-
-                //// Using some methods
-                //string message = "Mensaje de prueba";
-                //Console.WriteLine($"Servidor: Mensaje enviado a cliente de Hubcon SignalR: {message}");
-                //var item = await instance.ShowAndReturnMessage(message);
-                //Console.WriteLine($"Servidor: Mensaje recibido desde el cliente de Hubcon SignalR: {message}");
             });
 
             app.Run();

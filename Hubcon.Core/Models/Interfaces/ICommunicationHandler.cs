@@ -5,15 +5,14 @@ namespace Hubcon.Core.Interfaces.Communication
 {
     public interface ICommunicationHandler
     {
-        public Task<MethodResponse> InvokeAsync(string method, object[] arguments, CancellationToken cancellationToken);
-        public Task CallAsync(string method, object[] arguments, CancellationToken cancellationToken);
-        public Task<IAsyncEnumerable<T>> StreamAsync<T>(string method, object[] arguments, CancellationToken cancellationToken);
-        public List<IClientReference> GetAllClients();
-        public ICommunicationHandler WithUserId(string id);
+        public Task<MethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken);
+        public Task CallAsync(MethodInvokeRequest request, CancellationToken cancellationToken);
+        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, CancellationToken cancellationToken);
     }
 
-    public interface IAsyncCommunicationHandler : ICommunicationHandler
+    public interface IServerCommunicationHandler : ICommunicationHandler
     {
-        public Task<MethodInvokeRequest> ReceiveAsync();
+        public List<IClientReference> GetAllClients();
+        public IServerCommunicationHandler WithClientId(string clientId);
     }
 }

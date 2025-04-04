@@ -1,17 +1,20 @@
-﻿using Hubcon.Core.Extensions;
+﻿using Hubcon.Core.Converters;
+using Hubcon.Core.Extensions;
 using Hubcon.Core.Interfaces;
 using Hubcon.Core.Interfaces.Communication;
 using Hubcon.Core.Models;
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading.Channels;
 
 
 namespace Hubcon.Core.Handlers
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public class MethodHandler
+    public class MethodHandler : IMethodHandler
     {
         internal ConcurrentDictionary<string, Delegate?> AvailableMethods = new();
         internal static ConcurrentDictionary<string, Delegate?> TempMethods = new();
@@ -103,13 +106,14 @@ namespace Hubcon.Core.Handlers
             return Task.CompletedTask;
         }
 
-        public async Task<IAsyncEnumerable<object>> HandleStream(MethodInvokeRequest methodInfo)
+        public IAsyncEnumerable<object> GetStream(MethodInvokeRequest methodInfo)
         {
             Console.WriteLine($"[MethodHandler] Received call {methodInfo.MethodName}. Args: [{string.Join(",", methodInfo.Args.Select(x => $"{x}"))}]");
 
             AvailableMethods.TryGetValue(methodInfo.MethodName, out var del);
             object? result = del?.DynamicInvoke(methodInfo.GetDeserializedArgs(del));
-            return (IAsyncEnumerable<object>)result!;
+
+            return (IAsyncEnumerable<object>)result!;          
         }
 
         public async Task<MethodResponse> HandleWithResultAsync(MethodInvokeRequest methodInfo)

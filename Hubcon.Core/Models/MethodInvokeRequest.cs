@@ -6,13 +6,14 @@ namespace Hubcon.Core.Models
     [EditorBrowsable(EditorBrowsableState.Never)]
     public class MethodInvokeRequest
     {
+        public string? HandlerMethodName { get; }
         public string MethodName { get; }
-
         public object?[] Args { get; private set; }
 
-        public MethodInvokeRequest(string methodName, object?[]? args = null)
+        public MethodInvokeRequest(string methodName, string? handlerMethodName, object?[]? args = null)
         {
             MethodName = methodName;
+            HandlerMethodName = handlerMethodName;
             Args = args ?? new List<object>().ToArray();
         }
 

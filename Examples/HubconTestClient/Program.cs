@@ -1,4 +1,5 @@
 ﻿using Hubcon.SignalR.Models.Interfaces;
+using HubconTestDomain;
 
 namespace HubconTestClient
 {
@@ -12,12 +13,19 @@ namespace HubconTestClient
         {
 
             var hubController = new TestHubController();
-            await hubController.StartAsync(Url, Console.WriteLine);
 
-            //var connector = hub.sERVER;
+            //await hubController.StartAsync(Url, Console.WriteLine);
 
-            //var message = "PING";
-            //await connector.PrintMessage(message);
+            var server = await hubController.StartInstanceAsync(Url, Console.WriteLine);
+
+            var client = server.GetConnector<IServerHubContract>();
+
+            var list = client.GetMessages(10);
+
+            await foreach (var message in list)
+            {
+                Console.WriteLine(message);
+            }
 
             Console.ReadKey();
         }

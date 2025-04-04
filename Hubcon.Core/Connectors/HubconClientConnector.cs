@@ -16,18 +16,18 @@ namespace Hubcon.Core.Connectors
         where TICommunicationContract : ICommunicationContract?
         where TIHubconController : class, IHubconController
     {
-        protected Func<ICommunicationHandler> handlerFactory;
+        protected Func<IServerCommunicationHandler> handlerFactory;
         protected Dictionary<string, TICommunicationContract>? clients = new();
 
         public HubconClientConnector(TIHubconController handler)
         {
-            handlerFactory = () => handler.CommunicationHandler;
+            handlerFactory = () => (IServerCommunicationHandler)handler.HubconController.CommunicationHandler;
         }
 
         protected TICommunicationContract BuildInstance(string instanceId)
         {
             var communicationHandler = handlerFactory.Invoke();
-            communicationHandler.WithUserId(instanceId);
+            communicationHandler.WithClientId(instanceId);
 
             var interceptor = new ClientControllerConnectorInterceptor(communicationHandler);
 
@@ -44,6 +44,7 @@ namespace Hubcon.Core.Connectors
         {
             if (clients!.TryGetValue(instanceId, out var value))
                 return value;
+
 
             var client = BuildInstance(instanceId);
             clients.TryAdd(instanceId, client);
