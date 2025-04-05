@@ -12,7 +12,7 @@ namespace Hubcon.Core.Connectors
     /// </summary>
     /// <typeparam name="TICommunicationHandler"></typeparam>
     /// <typeparam name="TICommunicationContract"></typeparam>
-    public class HubconClientConnector<TICommunicationContract, TIHubconController> : IClientManager<TICommunicationContract, TIHubconController>
+    public class HubconClientConnector<TICommunicationContract, TIHubconController> : IClientAccessor<TICommunicationContract, TIHubconController>
         where TICommunicationContract : ICommunicationContract?
         where TIHubconController : class, IHubconController
     {

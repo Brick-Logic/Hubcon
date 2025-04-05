@@ -3,7 +3,7 @@ using Hubcon.Core.Interfaces.Communication;
 
 namespace Hubcon.Core.Models.Interfaces
 {
-    public interface IClientManager
+    public interface IClientAccessor
     {
         TICommunicationContract GetClient<TICommunicationContract>(string instanceId) where TICommunicationContract : ICommunicationContract;
         List<string> GetAllClients();
@@ -11,7 +11,7 @@ namespace Hubcon.Core.Models.Interfaces
     }
 
 #pragma warning disable S2326 // Unused type parameters should be removed
-    public interface IClientManager<out TICommunicationContract, TIHubconController> : IClientManager
+    public interface IClientAccessor<out TICommunicationContract, TIHubconController> : IClientAccessor
 #pragma warning restore S2326 // Unused type parameters should be removed
         where TICommunicationContract : ICommunicationContract?
         where TIHubconController : IHubconController

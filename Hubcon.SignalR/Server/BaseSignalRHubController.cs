@@ -68,18 +68,18 @@ namespace Hubcon.SignalR.Server
         where TICommunicationContract : ICommunicationContract
     {
 
-        private IClientManager _clientManager;
-        protected IClientManager clientManager 
+        private IClientAccessor _clientManager;
+        protected IClientAccessor clientManager 
         { 
             get
             {
                 if (_clientManager == null)
                 {
-                    Type clientManagerType = typeof(IClientManager<,>).MakeGenericType(typeof(TICommunicationContract), GetType());
+                    Type clientManagerType = typeof(IClientAccessor<,>).MakeGenericType(typeof(TICommunicationContract), GetType());
                     using (var scope = StaticServiceProvider.Services.CreateScope())
                     {
                         var scopedProvider = scope.ServiceProvider;
-                        _clientManager = (IClientManager)scopedProvider.GetRequiredService(clientManagerType);
+                        _clientManager = (IClientAccessor)scopedProvider.GetRequiredService(clientManagerType);
                     }
                 }
 

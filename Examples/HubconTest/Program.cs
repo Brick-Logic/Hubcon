@@ -26,6 +26,7 @@ namespace HubconTest
             builder.Services.AddHubconClientAccessor();
             builder.Services.AddHubconController<TestSignalRController>();
 
+            var test = new TestSignalRController();
 
             var app = builder.Build();
 
@@ -45,7 +46,7 @@ namespace HubconTest
             app.MapHub<TestSignalRController>("/clienthub");
 
             //Just a test endpoint, it can also be injected in a controller.
-            app.MapGet("/test", async (IClientManager<ITestClientController, TestSignalRController> clientAccessor, IHubContext<TestSignalRController> hubContext) =>
+            app.MapGet("/test", async (IClientAccessor<ITestClientController, TestSignalRController> clientAccessor) =>
             {
                 // Getting some connected clientId
                 var clientId = clientAccessor.GetAllClients().FirstOrDefault()!;
