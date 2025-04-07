@@ -20,7 +20,7 @@ namespace Hubcon.SignalR.Client
         protected Func<HubConnection>? _hubFactory = null;
         protected CancellationToken _token;
         protected Task? runningTask = null;
-        protected HubConnection? hub = null; 
+        protected HubConnection? hub = null;
 
         private bool IsBuilt { get; set; } = false;
 
@@ -30,7 +30,7 @@ namespace Hubcon.SignalR.Client
         protected BaseSignalRClientController() { }
 
         protected BaseSignalRClientController(string url) => Build(url);
-        
+
 
         private void Build(string url)
         {
@@ -53,24 +53,24 @@ namespace Hubcon.SignalR.Client
             var commHandler = new SignalRClientCommunicationHandler(_hubFactory);
             HubconController = HubconControllerManager.GetControllerManager(commHandler);
 
-            HubconController.Methods.BuildMethods(this, GetType(), (methodSignature, methodInfo, handler) =>
+            HubconController.Pipeline.RegisterMethods(GetType(), (methodSignature, methodInfo) =>
             {
                 if (typeof(IAsyncEnumerable<object>).IsAssignableFrom(methodInfo.ReturnType))
                     hub?.On($"{methodSignature}", (Func<string, MethodInvokeRequest, Task>)StartStream);
                 else if (methodInfo.ReturnType == typeof(void))
-                    hub?.On($"{methodSignature}", (Func<MethodInvokeRequest, Task>)HubconController.Methods!.HandleWithoutResultAsync);
+                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => HubconController.Pipeline!.HandleWithoutResultAsync(this, request));
                 else if (methodInfo.ReturnType.IsGenericType && methodInfo.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
-                    hub?.On($"{methodSignature}", (Func<MethodInvokeRequest, Task<MethodResponse>>)HubconController.Methods!.HandleWithResultAsync);
+                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => HubconController.Pipeline!.HandleWithResultAsync(this, request));
                 else if (methodInfo.ReturnType == typeof(Task))
-                    hub?.On($"{methodSignature}", (Func<MethodInvokeRequest, Task>)HubconController.Methods!.HandleWithoutResultAsync);
+                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => HubconController.Pipeline!.HandleWithoutResultAsync(this, request));
                 else
-                    hub?.On($"{methodSignature}", (Func<MethodInvokeRequest, Task<MethodResponse>>)HubconController.Methods!.HandleWithResultAsync);
+                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => HubconController.Pipeline!.HandleWithResultAsync(this, request));
             });
 
             IsBuilt = true;
         }
 
-        public TICommunicationContract GetConnector<TICommunicationContract>() 
+        public TICommunicationContract GetConnector<TICommunicationContract>()
             where TICommunicationContract : ICommunicationContract
 
         {
@@ -81,15 +81,15 @@ namespace Hubcon.SignalR.Client
         {
             _ = StartAsync(url, consoleOutput, cancellationToken);
 
-            while (true) 
-            { 
+            while (true)
+            {
                 await Task.Delay(500, cancellationToken);
 
-                if(hub?.State == HubConnectionState.Connected)
+                if (hub?.State == HubConnectionState.Connected)
                 {
                     return this;
                 }
-            }          
+            }
         }
 
         public async Task StartAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
@@ -160,18 +160,18 @@ namespace Hubcon.SignalR.Client
             return runningTask ?? Task.CompletedTask;
         }
 
-        public async Task<MethodResponse> HandleMethodTask(MethodInvokeRequest info) => await HubconController.Methods!.HandleWithResultAsync(info);
-        public async Task HandleMethodVoid(MethodInvokeRequest info) => await HubconController.Methods!.HandleWithoutResultAsync(info);
+        public async Task<MethodResponse> HandleMethodTask(MethodInvokeRequest info) => await HubconController.Pipeline!.HandleWithResultAsync(this, info);
+        public async Task HandleMethodVoid(MethodInvokeRequest info) => await HubconController.Pipeline!.HandleWithoutResultAsync(this, info);
         public async Task StartStream(string methodCode, MethodInvokeRequest info)
         {
             Console.WriteLine("StartStream llamado");
-            var reader = HubconController.Methods!.GetStream(info);
+            var reader = HubconController.Pipeline!.GetStream(this, info);
             var channel = Channel.CreateUnbounded<object>();
 
             // Simulamos un productor que escribe en el canal
             _ = Task.Run(async () =>
             {
-                await foreach(var item in reader)
+                await foreach (var item in reader)
                 {
                     await channel.Writer.WriteAsync(DynamicConverter.SerializeData(item)!);
                 }
@@ -196,7 +196,7 @@ namespace Hubcon.SignalR.Client
         {
             get
             {
-                if(_server == null)
+                if (_server == null)
                     return _server = new HubconServerConnector<TICommunicationContract, ICommunicationHandler>(HubconController.CommunicationHandler).GetClient();
 
                 return _server;

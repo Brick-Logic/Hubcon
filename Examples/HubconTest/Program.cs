@@ -26,8 +26,6 @@ namespace HubconTest
             builder.Services.AddHubconClientAccessor();
             builder.Services.AddHubconController<TestSignalRController>();
 
-            var test = new TestSignalRController();
-
             var app = builder.Build();
 
             app.UseHubcon();

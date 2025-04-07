@@ -1,4 +1,5 @@
 ﻿using Hubcon.Core.Handlers;
+using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Models;
 using System;
 using System.Collections.Generic;
@@ -10,14 +11,13 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.Models.Interfaces
 {
-    public interface IMethodHandler
+    public interface IRequestPipeline
     {
-        public void BuildMethods(object instance, Type type, Action<string, MethodInfo, MethodHandler>? forEachMethodAction = null);
-        public Delegate CreateAction(MethodInfo method, object instance);
-        public Task HandleWithoutResultAsync(MethodInvokeRequest methodInfo);
-        public Task<MethodResponse> HandleSynchronousResult(MethodInvokeRequest methodInfo);
-        public Task HandleSynchronous(MethodInvokeRequest methodInfo);
-        public IAsyncEnumerable<object> GetStream(MethodInvokeRequest methodInfo);
-        public Task<MethodResponse> HandleWithResultAsync(MethodInvokeRequest methodInfo);
+        public void RegisterMethods(Type type, Action<string, MethodInfo>? forEachMethodAction = null) => MethodInvokerProvider.RegisterMethods(type, forEachMethodAction);
+        public Task HandleWithoutResultAsync(object instance, MethodInvokeRequest methodInfo);
+        public Task<MethodResponse> HandleSynchronousResult(object instance, MethodInvokeRequest methodInfo);
+        public Task HandleSynchronous(object instance, MethodInvokeRequest methodInfo);
+        public IAsyncEnumerable<object> GetStream(object instance, MethodInvokeRequest methodInfo);
+        public Task<MethodResponse> HandleWithResultAsync(object instance, MethodInvokeRequest methodInfo);
     }
 }

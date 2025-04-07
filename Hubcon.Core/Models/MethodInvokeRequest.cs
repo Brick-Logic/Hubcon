@@ -23,9 +23,9 @@ namespace Hubcon.Core.Models
             return this;
         }
 
-        public object?[] GetDeserializedArgs(Delegate del)
+        public object?[] GetDeserializedArgs(Type[] types)
         {
-            return DynamicConverter.DeserializedArgs(del, Args);
+            return DynamicConverter.DeserializeArgs(types, Args);
         }
     }
 }

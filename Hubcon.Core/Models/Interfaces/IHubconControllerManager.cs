@@ -9,7 +9,7 @@ namespace Hubcon.Core.Models.Interfaces
     public interface IHubconControllerManager
     {
         // Handlers
-        public IMethodHandler Methods { get; set; }
+        public IRequestPipeline Pipeline { get; set; }
         public ICommunicationHandler CommunicationHandler { get; set; }
     }
 

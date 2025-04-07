@@ -29,19 +29,19 @@ namespace Hubcon.SignalR.Server
         {
             var commHandler = new SignalRServerCommunicationHandler(GetType());
             HubconController = HubconControllerManager.GetControllerManager(commHandler);
-            HubconController.Methods.BuildMethods(this, GetType());
+            HubconController.Pipeline.RegisterMethods(GetType());
 
             ClientReferences.TryAdd(GetType(), new());
         }
 
         public async Task<MethodResponse> HandleMethodTask(MethodInvokeRequest info) 
-            => await HubconController.Methods.HandleWithResultAsync(info);
+            => await HubconController.Pipeline.HandleWithResultAsync(this, info);
         public async Task HandleMethodVoid(MethodInvokeRequest info) 
-            => await HubconController.Methods.HandleWithoutResultAsync(info);
+            => await HubconController.Pipeline.HandleWithoutResultAsync(this, info);
         public async Task ReceiveStream(string code, ChannelReader<object> reader) 
             => await StreamHandler.NotifyStream(code, reader);
         public IAsyncEnumerable<object> HandleMethodStream(MethodInvokeRequest info) 
-            => HubconController.Methods.GetStream(info);
+            => HubconController.Pipeline.GetStream(this, info);
 
         protected IEnumerable<IClientReference> GetClients() => ClientReferences[GetType()].Values;
         public static IEnumerable<IClientReference> GetClients(Type hubType) => ClientReferences[hubType].Values;
@@ -59,7 +59,6 @@ namespace Hubcon.SignalR.Server
             OnClientDisconnected?.Invoke(GetType(), Context.ConnectionId);
             return base.OnDisconnectedAsync(exception);
         }
-
     }
 
     public abstract class BaseHubController<TICommunicationContract> : BaseHubController
