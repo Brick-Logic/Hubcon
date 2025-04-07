@@ -1,7 +1,5 @@
 ﻿using Hubcon.Core.Controllers;
 using Hubcon.Core.Handlers;
-using Hubcon.Core.Interfaces;
-using Hubcon.Core.Interfaces.Communication;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Tools;
@@ -68,25 +66,25 @@ namespace Hubcon.SignalR.Server
         where TICommunicationContract : ICommunicationContract
     {
 
-        private IClientAccessor _clientManager;
-        protected IClientAccessor clientManager 
+        private IClientAccessor _clientAccessor = default!;
+        protected IClientAccessor ClientAccessor 
         { 
             get
             {
-                if (_clientManager == null)
+                if (_clientAccessor == null)
                 {
                     Type clientManagerType = typeof(IClientAccessor<,>).MakeGenericType(typeof(TICommunicationContract), GetType());
                     using (var scope = StaticServiceProvider.Services.CreateScope())
                     {
                         var scopedProvider = scope.ServiceProvider;
-                        _clientManager = (IClientAccessor)scopedProvider.GetRequiredService(clientManagerType);
+                        _clientAccessor = (IClientAccessor)scopedProvider.GetRequiredService(clientManagerType);
                     }
                 }
 
-                return _clientManager;
+                return _clientAccessor;
             } 
         }
-        protected TICommunicationContract? CurrentClient { get => clientManager.GetClient<TICommunicationContract>(Context.ConnectionId); }
-        protected TICommunicationContract? GetClient(string connectionId) => clientManager.GetClient<TICommunicationContract>(connectionId);
+        protected TICommunicationContract? CurrentClient { get => ClientAccessor.GetClient<TICommunicationContract>(Context.ConnectionId); }
+        protected TICommunicationContract? GetClient(string connectionId) => ClientAccessor.GetClient<TICommunicationContract>(connectionId);
     }
 }

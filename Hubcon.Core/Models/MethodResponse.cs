@@ -10,6 +10,7 @@ namespace Hubcon.Core.Models
 
         public object? Data { get; set; }
 
+
         public MethodResponse(bool success, object? data = null)
         {
             Success = success;

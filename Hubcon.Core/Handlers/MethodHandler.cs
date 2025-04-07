@@ -1,8 +1,7 @@
 ﻿using Hubcon.Core.Converters;
 using Hubcon.Core.Extensions;
-using Hubcon.Core.Interfaces;
-using Hubcon.Core.Interfaces.Communication;
 using Hubcon.Core.Models;
+using Hubcon.Core.Models.Interfaces;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.IO;
@@ -26,8 +25,8 @@ namespace Hubcon.Core.Handlers
 
         public void BuildMethods(object instance, Type type, Action<string, MethodInfo, MethodHandler>? forEachMethodAction = null)
         {
-            if (!typeof(IHubconController).IsAssignableFrom(type))
-                throw new NotImplementedException($"El tipo {type.FullName} no implementa la interfaz {nameof(IHubconController)} o un tipo derivado.");
+            if (!typeof(IBaseHubconController).IsAssignableFrom(type))
+                throw new NotImplementedException($"El tipo {type.FullName} no implementa la interfaz {nameof(IBaseHubconController)} o un tipo derivado.");
 
             if (AvailableMethods.IsEmpty)
             {

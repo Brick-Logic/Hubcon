@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Core.Handlers
+namespace Hubcon.Core.Models.Interfaces
 {
     public interface IOnStreamReceived
     {
-        public Delegate GetCurrentEvent();
+        public Delegate? GetCurrentEvent();
     }
 }

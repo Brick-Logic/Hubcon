@@ -1,4 +1,5 @@
 ﻿using Hubcon.Core.Converters;
+using Hubcon.Core.Models.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,7 +27,7 @@ namespace Hubcon.Core.Handlers
 
             if (StreamWaitList.TryGetValue(code, out var value))
             {
-                value.GetCurrentEvent().DynamicInvoke(reader);
+                value.GetCurrentEvent()?.DynamicInvoke(reader);
             }
         }
 

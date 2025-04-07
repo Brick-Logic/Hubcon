@@ -1,7 +1,5 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Core.Interceptors;
-using Hubcon.Core.Interfaces;
-using Hubcon.Core.Interfaces.Communication;
 using Hubcon.Core.Models.Interfaces;
 
 namespace Hubcon.Core.Connectors
@@ -14,15 +12,12 @@ namespace Hubcon.Core.Connectors
     /// <typeparam name="TICommunicationContract"></typeparam>
     public class HubconClientConnector<TICommunicationContract, TIHubconController> : IClientAccessor<TICommunicationContract, TIHubconController>
         where TICommunicationContract : ICommunicationContract?
-        where TIHubconController : class, IHubconController
+        where TIHubconController : class, IBaseHubconController
     {
         protected Func<IServerCommunicationHandler> handlerFactory;
         protected Dictionary<string, TICommunicationContract>? clients = new();
 
-        public HubconClientConnector(TIHubconController handler)
-        {
-            handlerFactory = () => (IServerCommunicationHandler)handler.HubconController.CommunicationHandler;
-        }
+        public HubconClientConnector(TIHubconController handler) => handlerFactory = () => (IServerCommunicationHandler)handler.HubconController.CommunicationHandler;
 
         protected TICommunicationContract BuildInstance(string instanceId)
         {

@@ -1,26 +1,22 @@
-﻿using Hubcon.Core.Controllers;
-using Hubcon.Core.Handlers;
-using Hubcon.Core.Interfaces.Communication;
-using Hubcon.Core.Models;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 
-namespace Hubcon.Core.Interfaces
+namespace Hubcon.Core.Models.Interfaces
 {
-    public interface IHubconController
+    public interface IBaseHubconController
     {
         IHubconControllerManager HubconController { get; }
         Task<MethodResponse> HandleMethodTask(MethodInvokeRequest info);
         Task HandleMethodVoid(MethodInvokeRequest info);
     }
 
-    public interface IHubconServerController : IHubconController
+    public interface IHubconServerController : IBaseHubconController
     {
         Task ReceiveStream(string code, ChannelReader<object> reader);
         IAsyncEnumerable<object> HandleMethodStream(MethodInvokeRequest info);
 
     }
 
-    public interface IHubconTargetedClientController : IHubconController
+    public interface IHubconClientController : IBaseHubconController
     {
         Task StartStream(string methodCode, MethodInvokeRequest info);
     }

@@ -1,6 +1,4 @@
 ﻿using Hubcon.Core.Connectors;
-using Hubcon.Core.Interfaces;
-using Hubcon.Core.Interfaces.Communication;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Tools;
 using Microsoft.AspNetCore.Builder;
@@ -28,7 +26,7 @@ namespace Hubcon.Core
         }
 
         public static IServiceCollection AddHubconController<T>(this IServiceCollection services)
-            where T : class, IHubconController, ICommunicationContract
+            where T : class, IBaseHubconController, ICommunicationContract
         {
             var controllerType = typeof(T);
             List<Type> implementationTypes = controllerType

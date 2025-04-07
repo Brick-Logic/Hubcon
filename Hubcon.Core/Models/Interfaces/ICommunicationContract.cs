@@ -1,4 +1,4 @@
-﻿namespace Hubcon.Core.Interfaces.Communication
+﻿namespace Hubcon.Core.Models.Interfaces
 {
     public interface ICommunicationContract
     {

@@ -1,5 +1,4 @@
-﻿using Hubcon.SignalR.Models.Interfaces;
-using HubconTestDomain;
+﻿using HubconTestDomain;
 
 namespace HubconTestClient
 {

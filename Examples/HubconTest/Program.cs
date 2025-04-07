@@ -54,7 +54,7 @@ namespace HubconTest
                 //Gets a client instance
                 var client = clientAccessor.GetOrCreateClient(clientId);
 
-                var test = await client.ShowAndReturnMessage("hello");
+                var test = client.ShowAndReturnMessage("hello");
 
                 var messages = client.GetMessages(10);
 

@@ -1,4 +1,4 @@
-﻿using Hubcon.Core.Interfaces.Communication;
+﻿using Hubcon.Core.Models.Interfaces;
 
 namespace HubconTestDomain
 {

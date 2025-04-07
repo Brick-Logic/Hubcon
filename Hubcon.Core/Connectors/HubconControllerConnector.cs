@@ -1,6 +1,6 @@
 ﻿using Hubcon.Core.Extensions;
-using Hubcon.Core.Interfaces.Communication;
 using Hubcon.Core.Models;
+using Hubcon.Core.Models.Interfaces;
 using System.ComponentModel;
 
 namespace Hubcon.Core.Connectors

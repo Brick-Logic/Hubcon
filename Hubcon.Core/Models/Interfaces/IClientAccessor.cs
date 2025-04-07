@@ -1,7 +1,4 @@
-﻿using Hubcon.Core.Interfaces;
-using Hubcon.Core.Interfaces.Communication;
-
-namespace Hubcon.Core.Models.Interfaces
+﻿namespace Hubcon.Core.Models.Interfaces
 {
     public interface IClientAccessor
     {
@@ -14,7 +11,7 @@ namespace Hubcon.Core.Models.Interfaces
     public interface IClientAccessor<out TICommunicationContract, TIHubconController> : IClientAccessor
 #pragma warning restore S2326 // Unused type parameters should be removed
         where TICommunicationContract : ICommunicationContract?
-        where TIHubconController : IHubconController
+        where TIHubconController : IBaseHubconController
     {
         TICommunicationContract GetOrCreateClient(string instanceId);
     }

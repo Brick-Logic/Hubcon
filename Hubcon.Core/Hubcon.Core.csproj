@@ -24,4 +24,7 @@
 		<None Include="../LICENSE.txt" Pack="true" PackagePath="" />
 		<None Include="./README.md" Pack="true" PackagePath="" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="ExceptionHandling\" />
+	</ItemGroup>
 </Project>

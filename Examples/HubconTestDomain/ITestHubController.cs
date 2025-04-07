@@ -1,5 +1,5 @@
 ﻿using Hubcon;
-using Hubcon.Core.Interfaces.Communication;
+using Hubcon.Core.Models.Interfaces;
 
 namespace HubconTestDomain
 {
@@ -10,17 +10,17 @@ namespace HubconTestDomain
         Task Random();
         void ShowMessage(string message);
         IAsyncEnumerable<string> GetMessages(int count);
-        Task ShowTextMessage(string message);
-        Task<string> ShowAndReturnMessage(string message);
+        void ShowTextMessage(string message);
+        string ShowAndReturnMessage(string message);
         string ShowAndReturnType(string message);
-        Task VariableParameters(string[] parameters);
-        Task DefaultParameters(string parameters = "parametro opcional");
-        Task NullableParameters(string? parameters = null);
-        Task TestClass(TestClass parameter);
-        Task NullableTestClass(TestClass? parameter);
-        Task DefaultNullableTestClass(TestClass? parameter = null);
-        Task TestClassList1(List<TestClass>? parameter = null);
-        Task TestClassList2(Dictionary<string, TestClass>? parameter = null);
-        Task TestClassList3(HashSet<TestClass>? parameter = null);
+        void VariableParameters(string[] parameters);
+        void DefaultParameters(string parameters = "parametro opcional");
+        void NullableParameters(string? parameters = null);
+        void TestClass(TestClass parameter);
+        void NullableTestClass(TestClass? parameter);
+        void DefaultNullableTestClass(TestClass? parameter = null);
+        void TestClassList1(List<TestClass>? parameter = null);
+        void TestClassList2(Dictionary<string, TestClass>? parameter = null);
+        void TestClassList3(HashSet<TestClass>? parameter = null);
     }
 }

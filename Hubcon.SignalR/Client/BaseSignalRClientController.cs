@@ -2,8 +2,6 @@
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Converters;
 using Hubcon.Core.Handlers;
-using Hubcon.Core.Interfaces;
-using Hubcon.Core.Interfaces.Communication;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using Microsoft.AspNetCore.SignalR;
@@ -16,7 +14,7 @@ using System.Threading.Channels;
 
 namespace Hubcon.SignalR.Client
 {
-    public abstract class BaseSignalRClientController : IHubconTargetedClientController, IHostedService
+    public abstract class BaseSignalRClientController : IHubconClientController, IHostedService
     {
         protected string _url = string.Empty;
         protected Func<HubConnection>? _hubFactory = null;
@@ -26,7 +24,8 @@ namespace Hubcon.SignalR.Client
 
         private bool IsBuilt { get; set; } = false;
 
-        public IHubconControllerManager HubconController { get; private set; }
+        private IHubconControllerManager? _hubconController;
+        public IHubconControllerManager HubconController { get => _hubconController!; set => _hubconController = value; }
 
         protected BaseSignalRClientController() { }
 
@@ -39,8 +38,8 @@ namespace Hubcon.SignalR.Client
                 return;
 
             var derivedType = GetType();
-            if (!typeof(IHubconController).IsAssignableFrom(derivedType))
-                throw new NotImplementedException($"El tipo {derivedType.FullName} no implementa la interfaz {nameof(IHubconController)} o un tipo derivado.");
+            if (!typeof(IBaseHubconController).IsAssignableFrom(derivedType))
+                throw new NotImplementedException($"El tipo {derivedType.FullName} no implementa la interfaz {nameof(IBaseHubconController)} o un tipo derivado.");
 
             _url = url;
             var hub = new HubConnectionBuilder()

@@ -1,13 +1,8 @@
-﻿using Hubcon.Core.Converters;
-using Hubcon.Core.Handlers;
-using Hubcon.Core.Interfaces;
-using Hubcon.Core.Interfaces.Communication;
-using Hubcon.Core.Models;
+﻿using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.SignalR.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
-using System.Runtime.CompilerServices;
-using Hubcon.SignalR.Extensions;
 
 namespace Hubcon.SignalR.Client
 {

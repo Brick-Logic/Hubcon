@@ -1,6 +1,4 @@
-﻿using Hubcon.Core.Interfaces;
-using Hubcon.Core.Interfaces.Communication;
-using Hubcon.Core.Models.Interfaces;
+﻿using Hubcon.Core.Models.Interfaces;
 
 namespace Hubcon.SignalR.Models
 {

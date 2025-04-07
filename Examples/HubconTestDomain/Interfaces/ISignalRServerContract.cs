@@ -1,6 +1,6 @@
-﻿using Hubcon.Core.Interfaces.Communication;
+﻿using Hubcon.Core.Models.Interfaces;
 
-namespace Hubcon.SignalR.Models.Interfaces
+namespace HubconTestDomain.Interfaces
 {
     public interface ISignalRServerContract : ICommunicationContract
     {

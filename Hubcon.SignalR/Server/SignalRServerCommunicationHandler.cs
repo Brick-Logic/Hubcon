@@ -1,11 +1,9 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
-using Hubcon.Core.Tools;
-using Hubcon.Core.Interfaces;
+﻿using Hubcon.Core.Handlers;
 using Hubcon.Core.Models;
-using Hubcon.Core.Interfaces.Communication;
-using Hubcon.Core.Handlers;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Tools;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.SignalR.Server
 {

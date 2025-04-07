@@ -18,11 +18,13 @@ namespace HubconTest.Controllers
 
         public async Task PrintMessage(string message)
         {
-            Console.WriteLine($"[Servidor] Mensaje recibido: {message}");
-            string message2 = "PONG";
-            Console.WriteLine($"[Servidor] Devolviendo mensaje al cliente: {message2}");
+            await Task.Run(() => {          
+                Console.WriteLine($"[Servidor] Mensaje recibido: {message}");
+                string message2 = "PONG";
+                Console.WriteLine($"[Servidor] Devolviendo mensaje al cliente: {message2}");
 
-            CurrentClient?.ShowMessage(message2);
+                CurrentClient?.ShowMessage(message2);
+            });
         }
 
         public Task ShowTempOnServerFromClient()

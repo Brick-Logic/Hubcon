@@ -18,11 +18,11 @@ namespace HubconTestClient
         {
             for(int i = 0; i < count; i++)
             {
-                yield return "hola";
+                yield return await Task.Run(() => { return "hola"; });
             }
         }
 
-        public async Task<string> ShowAndReturnMessage(string message)
+        public string ShowAndReturnMessage(string message)
         {
             string returnMessage = "Hola desde el controller del cliente.";
             Console.WriteLine($"Cliente: Metodo {nameof(ShowAndReturnMessage)} llamado. Mensaje recibido: {message}. Respondiendo con '{returnMessage}'");
@@ -37,53 +37,53 @@ namespace HubconTestClient
 
         public void ShowMessage(string message) => Console.WriteLine(message);
 
-        public async Task ShowTextMessage(string message)
+        public void ShowTextMessage(string message)
         {
             Console.WriteLine(message);
         }
 
-        public async Task VariableParameters(params string[] parameters)
+        public void VariableParameters(params string[] parameters)
         {
             Console.WriteLine($"Variable parameters: {parameters.Length} received");
         }
 
-        public async Task DefaultParameters(string parameters = "parametro opcional")
+        public void DefaultParameters(string parameters = "parametro opcional")
         {
             Console.WriteLine(parameters);
         }
 
-        public async Task NullableParameters(string? parameters = null)
+        public void NullableParameters(string? parameters = null)
         {
             Console.WriteLine($"Nullable reached: {parameters == null}");
         }
 
 
-        public async Task TestClass(TestClass parameter)
+        public void TestClass(TestClass parameter)
         {
             Console.WriteLine($"TestClass reached: {parameter.Id}, {parameter.Name}");
         }
 
-        public async Task NullableTestClass(TestClass? parameter)
+        public void NullableTestClass(TestClass? parameter)
         {
             Console.WriteLine($"NullableTestClass reached: {parameter?.Id}, {parameter?.Name}");
         }
 
-        public async Task DefaultNullableTestClass(TestClass? parameter = null)
+        public void DefaultNullableTestClass(TestClass? parameter = null)
         {
             Console.WriteLine($"DefaultNullableTestClass reached: {parameter == null}");
         }
 
-        public async Task TestClassList1(List<TestClass>? parameter = null)
+        public void TestClassList1(List<TestClass>? parameter = null)
         {
             Console.WriteLine($"TestClassList1 reached: {parameter == null}, {parameter?.Count}");
         }
 
-        public async Task TestClassList2(Dictionary<string, TestClass>? parameter = null)
+        public void TestClassList2(Dictionary<string, TestClass>? parameter = null)
         {
             Console.WriteLine($"TestClassList2 reached: {parameter == null}, {parameter?.Count}");
         }
 
-        public async Task TestClassList3(HashSet<TestClass>? parameter = null)
+        public void TestClassList3(HashSet<TestClass>? parameter = null)
         {
             Console.WriteLine($"TestClassList3 reached: {parameter == null}, {parameter?.Count}");
         }

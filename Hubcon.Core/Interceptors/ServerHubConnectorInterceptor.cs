@@ -1,8 +1,7 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Core.Extensions;
-using Hubcon.Core.Interfaces;
-using Hubcon.Core.Interfaces.Communication;
 using Hubcon.Core.Models;
+using Hubcon.Core.Models.Interfaces;
 
 
 namespace Hubcon.Core.Interceptors
@@ -46,7 +45,7 @@ namespace Hubcon.Core.Interceptors
             {
                 MethodInvokeRequest request = new MethodInvokeRequest(
                     invocation.Method.GetMethodSignature(),
-                    nameof(IHubconController.HandleMethodTask),
+                    nameof(IBaseHubconController.HandleMethodTask),
                     invocation.Arguments
                 )
                 .SerializeArgs();
@@ -67,7 +66,7 @@ namespace Hubcon.Core.Interceptors
 
             MethodInvokeRequest request = new MethodInvokeRequest(
                 invocation.Method.GetMethodSignature(), 
-                nameof(IHubconController.HandleMethodVoid), 
+                nameof(IBaseHubconController.HandleMethodVoid), 
                 invocation.Arguments
             )
             .SerializeArgs();

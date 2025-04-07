@@ -1,7 +1,6 @@
 ﻿using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
 
-namespace Hubcon.Core.Interfaces.Communication
+namespace Hubcon.Core.Models.Interfaces
 {
     public interface ICommunicationHandler
     {
