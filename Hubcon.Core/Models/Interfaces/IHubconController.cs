@@ -1,4 +1,5 @@
-﻿using System.Threading.Channels;
+﻿using Microsoft.Extensions.Hosting;
+using System.Threading.Channels;
 
 namespace Hubcon.Core.Models.Interfaces
 {
@@ -16,7 +17,7 @@ namespace Hubcon.Core.Models.Interfaces
 
     }
 
-    public interface IHubconClientController : IBaseHubconController
+    public interface IHubconClientController : IBaseHubconController, IHostedService
     {
         Task StartStream(string methodCode, MethodInvokeRequest info);
     }

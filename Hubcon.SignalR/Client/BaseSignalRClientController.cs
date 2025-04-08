@@ -1,21 +1,16 @@
 ﻿using Hubcon.Core.Connectors;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Converters;
-using Hubcon.Core.Handlers;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Registries;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using System;
-using System.Reflection.Metadata;
 using System.Threading.Channels;
 
 namespace Hubcon.SignalR.Client
 {
-    public abstract class BaseSignalRClientController : IHubconClientController, IHostedService
+    public abstract class BaseSignalRClientController : IHubconClientController
     {
         protected string _url = string.Empty;
         protected Func<HubConnection>? _hubFactory = null;
