@@ -25,5 +25,27 @@ namespace Hubcon.Core.Tools
 
             return (T)constructor.Invoke(parameters);
         }
+
+        public static object? TryCreateInstance(Type type, params object[] parameters)
+        {
+            List<Type> types = new();
+
+            foreach (var parameter in parameters)
+            {
+                types.Add(parameter.GetType());
+            }
+
+            var constructor = type
+                .GetConstructor(
+                    BindingFlags.Public | BindingFlags.CreateInstance | BindingFlags.Instance,
+                    null,
+                    types.ToArray(),
+                    null
+                );
+
+            if (constructor == null) return Activator.CreateInstance(type, true)!;
+
+            return constructor.Invoke(parameters);
+        }
     }
 }

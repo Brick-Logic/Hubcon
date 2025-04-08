@@ -1,12 +1,13 @@
 using Hubcon.Core;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Models.Middleware;
 using Hubcon.SignalR;
 using HubconTest.Controllers;
+using HubconTest.Middleware.HubconMiddlewares;
 using HubconTestDomain;
 using Microsoft.AspNetCore.SignalR;
 using Scalar.AspNetCore;
-
 
 namespace HubconTest
 {
@@ -24,7 +25,10 @@ namespace HubconTest
 
             builder.UseHubconSignalR();
             builder.Services.AddHubconClientAccessor();
-            builder.Services.AddHubconController<TestSignalRController>();
+            builder.Services.AddHubconController<TestSignalRController>(options =>
+            {
+                options.AddMiddleware<LoggingMiddleware>();
+            });
 
             var app = builder.Build();
 

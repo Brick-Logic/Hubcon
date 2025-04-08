@@ -1,4 +1,5 @@
 ﻿using Hubcon.Core.Connectors;
+using Hubcon.Core.Middleware;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Tools;
 using Microsoft.AspNetCore.Builder;
@@ -25,7 +26,7 @@ namespace Hubcon.Core
             return services;
         }
 
-        public static IServiceCollection AddHubconController<T>(this IServiceCollection services)
+        public static IServiceCollection AddHubconController<T>(this IServiceCollection services, Action<IPipelineOptions>? options = null)
             where T : class, IBaseHubconController, ICommunicationContract
         {
             var controllerType = typeof(T);
@@ -39,7 +40,12 @@ namespace Hubcon.Core
 
             
             services.AddScoped<T>();
-            
+
+            if(options != null)
+            {
+                var middlewareProvider = new MiddlewareProvider();
+                middlewareProvider.AddMiddlewares<T>(options);
+            }
 
             return services;
         }

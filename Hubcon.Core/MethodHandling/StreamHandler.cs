@@ -9,9 +9,9 @@ using System.Text.Json;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace Hubcon.Core.Handlers
+namespace Hubcon.Core.MethodHandling
 {
-    public static class StreamHandler
+    public static class StreamNotificationHandler
     {
         private static Dictionary<string, IOnStreamReceived> StreamWaitList = new();
 
@@ -31,7 +31,7 @@ namespace Hubcon.Core.Handlers
             }
         }
 
-        public static async Task<IAsyncEnumerable<T>> WaitStreamAsync<T>(string code)
+        public static Task<IAsyncEnumerable<T>> WaitStreamAsync<T>(string code)
         {
             static async IAsyncEnumerable<TOut> ToAsyncEnumerable<TOut>(ChannelReader<object> reader)
             {
@@ -61,9 +61,9 @@ namespace Hubcon.Core.Handlers
             eventHolder.OnStreamReceivedEvent += eventHandler;
 
             // Esperar a que el evento se dispare
-            await tcs.Task;
+            tcs.Task.Wait(5000);
 
-            return tcs.Task.Result;
+            return tcs.Task;
         }
     }
 }

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace Hubcon.Core.Handlers
+namespace Hubcon.Core.MethodHandling
 {
     public class OnStreamReceived : IOnStreamReceived
     {

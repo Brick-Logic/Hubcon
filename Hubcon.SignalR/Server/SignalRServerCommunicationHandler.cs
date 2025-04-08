@@ -1,4 +1,4 @@
-﻿using Hubcon.Core.Handlers;
+﻿using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Tools;
@@ -66,7 +66,7 @@ namespace Hubcon.SignalR.Server
 
             _ = client.SendAsync(request.HandlerMethodName!, code, request, cancellationToken);
 
-            var stream = await StreamHandler.WaitStreamAsync<T>(code);
+            var stream = await StreamNotificationHandler.WaitStreamAsync<T>(code);
             return stream;
         }
 

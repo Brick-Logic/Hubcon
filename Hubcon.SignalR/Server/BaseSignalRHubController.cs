@@ -1,5 +1,5 @@
 ﻿using Hubcon.Core.Controllers;
-using Hubcon.Core.Handlers;
+using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Tools;
@@ -39,7 +39,7 @@ namespace Hubcon.SignalR.Server
         public async Task HandleMethodVoid(MethodInvokeRequest info) 
             => await HubconController.Pipeline.HandleWithoutResultAsync(this, info);
         public async Task ReceiveStream(string code, ChannelReader<object> reader) 
-            => await StreamHandler.NotifyStream(code, reader);
+            => await StreamNotificationHandler.NotifyStream(code, reader);
         public IAsyncEnumerable<object> HandleMethodStream(MethodInvokeRequest info) 
             => HubconController.Pipeline.GetStream(this, info);
 

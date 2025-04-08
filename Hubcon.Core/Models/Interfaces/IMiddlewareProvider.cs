@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Hubcon.Core.Middleware;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,14 +10,8 @@ namespace Hubcon.Core.Models.Interfaces
 {
     internal interface IMiddlewareProvider
     {
-        public void AddMiddleware<TMiddleware, TController>() where TMiddleware : IHubconMiddleware where TController : IBaseHubconController;
-        public IEnumerable<Type> GetMiddlewares<TController>() where TController : IBaseHubconController;
-    }
+        public void AddMiddlewares<TController>(Action<IPipelineOptions> options) where TController : IBaseHubconController;
 
-    internal interface IMiddlewareOptions
-    {
-        public void AddMiddleware<TMiddleware, TController>()
-            where TMiddleware : IHubconMiddleware
-            where TController : IBaseHubconController;
+        public IPipeline GetPipeline(Type controllerType, MethodInvokeRequest request, Func<Task<MethodResponse?>> handler);
     }
 }
