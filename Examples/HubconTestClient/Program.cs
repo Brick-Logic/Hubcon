@@ -17,14 +17,28 @@ namespace HubconTestClient
 
             var client = server.GetConnector<IServerHubContract>();
 
-            var list = client.GetMessages(10);
 
-            await foreach (var message in list)
+            while (true)
             {
-                Console.WriteLine(message);
-            }
+                var list = client.GetMessages(10);
 
-            Console.ReadKey();
+                await foreach (var message in list)
+                {
+                    Console.WriteLine(message);
+                }
+
+                Console.ReadKey();
+
+                await client.ShowTextOnServer();
+
+                Console.ReadKey();
+
+                await client.ShowTempOnServerFromClient();
+
+                Console.ReadKey();
+
+                await client.ShowTextOnServer();
+            }
         }
     }
 }

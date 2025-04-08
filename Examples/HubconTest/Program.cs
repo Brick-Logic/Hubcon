@@ -25,6 +25,7 @@ namespace HubconTest
 
             builder.UseHubconSignalR();
             builder.Services.AddHubconClientAccessor();
+
             builder.Services.AddHubconController<TestSignalRController>(options =>
             {
                 options.AddMiddleware<LoggingMiddleware>();

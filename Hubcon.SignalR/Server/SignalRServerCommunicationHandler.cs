@@ -10,8 +10,7 @@ namespace Hubcon.SignalR.Server
     public class SignalRServerCommunicationHandler : IServerCommunicationHandler
     {
         private protected string TargetClientId { get; private set; } = string.Empty;
-        private protected Func<IHubContext<BaseHubController>>? HubContextFactory { get; private set; }
-        private protected Func<BaseHubController>? HubFactory { get; private set; }
+        private protected Func<IHubContext<BaseHubController>> HubContextFactory { get; private set; }
         private protected Type HubType { get; private set; }
 
         public SignalRServerCommunicationHandler(Type hubType)
@@ -22,19 +21,11 @@ namespace Hubcon.SignalR.Server
             HubContextFactory = () => hubContext;
         }
 
-        public SignalRServerCommunicationHandler(BaseHubController hubFactory)
-        {
-            HubType = hubFactory.GetType();
-            HubFactory = () => hubFactory;
-        }
-
         public async Task<MethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken) 
         { 
             MethodResponse result;
-            Hub? hub = HubFactory?.Invoke();
-            IHubContext<Hub>? hubContext = HubContextFactory?.Invoke();
-
-            var client = hubContext?.Clients.Client(TargetClientId) ?? hub!.Clients.Client(TargetClientId);
+            IHubContext<Hub> hubContext = HubContextFactory.Invoke();
+            var client = hubContext.Clients.Client(TargetClientId);
 
             result = await client.InvokeAsync<MethodResponse>(request.HandlerMethodName!, request, cancellationToken);
             return result;                   
@@ -42,10 +33,9 @@ namespace Hubcon.SignalR.Server
 
         public async Task CallAsync(MethodInvokeRequest request, CancellationToken cancellationToken)
         {
-            BaseHubController? hub = HubFactory?.Invoke();
-            IHubContext<BaseHubController>? hubContext = HubContextFactory?.Invoke();
+            IHubContext<BaseHubController> hubContext = HubContextFactory.Invoke();
 
-            var client = hubContext?.Clients.Client(TargetClientId) ?? hub!.Clients.Client(TargetClientId);
+            var client = hubContext.Clients.Client(TargetClientId);
 
             await client.SendAsync(request.HandlerMethodName!, request, cancellationToken);
         }
@@ -57,10 +47,9 @@ namespace Hubcon.SignalR.Server
 
         public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, CancellationToken cancellationToken)
         {
-            BaseHubController? hub = HubFactory?.Invoke();
-            IHubContext<BaseHubController>? hubContext = HubContextFactory?.Invoke();
+            IHubContext<BaseHubController> hubContext = HubContextFactory.Invoke();
 
-            var client = hubContext?.Clients.Client(TargetClientId) ?? hub!.Clients.Client(TargetClientId);
+            var client = hubContext.Clients.Client(TargetClientId);
 
             var code = Guid.NewGuid().ToString();
 

@@ -9,7 +9,6 @@ namespace HubconTest.Controllers
         {
             for (int i = 0; i < count; i++)
             {
-                await Task.Delay(100);
                 yield return "hola2";
             }
         }
@@ -23,18 +22,19 @@ namespace HubconTest.Controllers
                 string message2 = "PONG";
                 Console.WriteLine($"[Servidor] Devolviendo mensaje al cliente: {message2}");
 
-                CurrentClient?.ShowMessage(message2);
+                Client.ShowMessage(message2);
             });
         }
 
-        public Task ShowTempOnServerFromClient()
+        public async Task ShowTempOnServerFromClient()
         {
-            throw new NotImplementedException();
+            Console.WriteLine(await Client.GetTemperature());
         }
 
         public Task ShowTextOnServer()
         {
-            throw new NotImplementedException();
+            Console.WriteLine("Mostrando texto");
+            return Task.CompletedTask;
         }
     }
 }

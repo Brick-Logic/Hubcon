@@ -4,6 +4,7 @@ using Hubcon.Core.Converters;
 using Hubcon.Core.Handlers;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Registries;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -190,7 +191,6 @@ namespace Hubcon.SignalR.Client
     public class BaseSignalRClientController<TICommunicationContract> : BaseSignalRClientController
         where TICommunicationContract : ICommunicationContract
     {
-
         private TICommunicationContract? _server;
         public TICommunicationContract Server
         {

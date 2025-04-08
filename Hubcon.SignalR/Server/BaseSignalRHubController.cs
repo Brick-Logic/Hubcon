@@ -1,7 +1,9 @@
-﻿using Hubcon.Core.Controllers;
+﻿using Castle.DynamicProxy.Contributors;
+using Hubcon.Core.Controllers;
 using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Registries;
 using Hubcon.Core.Tools;
 using Hubcon.SignalR.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -83,7 +85,24 @@ namespace Hubcon.SignalR.Server
                 return _clientAccessor;
             } 
         }
-        protected TICommunicationContract? CurrentClient { get => ClientAccessor.GetClient<TICommunicationContract>(Context.ConnectionId); }
-        protected TICommunicationContract? GetClient(string connectionId) => ClientAccessor.GetClient<TICommunicationContract>(connectionId);
+        protected TICommunicationContract Client => clientRegistry.TryGetClient<TICommunicationContract>(Context.ConnectionId)!;    
+        protected TICommunicationContract GetClient(string connectionId) => clientRegistry.TryGetClient<TICommunicationContract>(connectionId)!;
+
+        private readonly ClientRegistry clientRegistry = new();
+
+        public override Task OnConnectedAsync()
+        {
+            var client = ClientAccessor.GetClient<TICommunicationContract>(Context.ConnectionId);
+            clientRegistry.RegisterClient(Context.ConnectionId, client);
+
+            return base.OnConnectedAsync();
+        }
+
+        public override Task OnDisconnectedAsync(Exception? exception)
+        {
+            clientRegistry.UnregisterClient(Context.ConnectionId);
+
+            return base.OnDisconnectedAsync(exception);
+        }
     }
 }

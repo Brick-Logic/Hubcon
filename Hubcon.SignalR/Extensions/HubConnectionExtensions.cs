@@ -18,7 +18,7 @@ namespace Hubcon.SignalR.Extensions
         {
             await foreach (var item in stream.WithCancellation(cancellationToken))
             {
-                if (item is T typedItem)
+                if (item is T typedItem) 
                 {
                     yield return typedItem;
                 }

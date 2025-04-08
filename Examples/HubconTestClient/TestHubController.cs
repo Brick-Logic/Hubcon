@@ -18,7 +18,7 @@ namespace HubconTestClient
         {
             for(int i = 0; i < count; i++)
             {
-                yield return await Task.Run(() => { return "hola"; });
+                yield return "hola";
             }
         }
 
