@@ -22,6 +22,8 @@ namespace Hubcon.SignalR.Client
         protected HubConnection? hub = null;
         protected IServiceScope scope = null!;
         protected DynamicConverter _converter = null!;
+        bool connectedInvoked = false;
+
 
         private bool IsBuilt { get; set; } = false;
 
@@ -101,16 +103,23 @@ namespace Hubcon.SignalR.Client
         public async Task<BaseSignalRClientController> StartInstanceAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
         {
             //await StartAsync(url, consoleOutput, cancellationToken);
-            _ = StartAsync(url, consoleOutput, cancellationToken);
+            var startTask = StartAsync(url, consoleOutput, cancellationToken); // NO awaited aún
 
             while (true)
             {
-                await Task.Delay(500, cancellationToken);
+                if (startTask.IsFaulted)
+                {
+                    // Si la task falló, lanzar la excepción
+                    throw startTask.Exception!.GetBaseException();
+                }
 
                 if (hub?.State == HubConnectionState.Connected)
                 {
+                    while (!connectedInvoked);
                     return this;
                 }
+
+                await Task.Delay(100, cancellationToken); // Evitar busy-wait
             }
         }
 
@@ -122,11 +131,9 @@ namespace Hubcon.SignalR.Client
             try
             {
                 _token = cancellationToken;
-
-                bool connectedInvoked = false;
                 while (true)
                 {
-                    await Task.Delay(3000, cancellationToken);
+                    await Task.Delay(2000, cancellationToken);
                     if (hub?.State == HubConnectionState.Connecting)
                     {
                         consoleOutput?.Invoke($"Connecting to {_url}...");
