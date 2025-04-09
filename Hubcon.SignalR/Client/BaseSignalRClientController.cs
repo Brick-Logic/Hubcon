@@ -1,8 +1,12 @@
-﻿using Hubcon.Core.Connectors;
+﻿using Hubcon.Core;
+using Hubcon.Core.Connectors;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Converters;
+using Hubcon.Core.Interceptors;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Tools;
+using Hubcon.SignalR.Server;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,10 +17,11 @@ namespace Hubcon.SignalR.Client
     public abstract class BaseSignalRClientController : IHubconClientController
     {
         protected string _url = string.Empty;
-        protected Func<HubConnection>? _hubFactory = null;
         protected CancellationToken _token;
         protected Task? runningTask = null;
         protected HubConnection? hub = null;
+        protected IServiceScope scope = null!;
+        protected DynamicConverter _converter = null!;
 
         private bool IsBuilt { get; set; } = false;
 
@@ -33,21 +38,40 @@ namespace Hubcon.SignalR.Client
             if (IsBuilt)
                 return;
 
+            StaticServiceProvider.Setup(new ServiceCollection(), services => 
+            { 
+                services.AddHubconClient();
+                services.AddScoped<HubConnectionBuilder>();
+                services.AddSingleton(x => 
+                { 
+                    return new HubConnectionBuilder()
+                        .WithUrl(url)
+                        .AddMessagePackProtocol()
+                        .WithAutomaticReconnect()
+                        .Build();
+                });
+                services.AddScoped(typeof(SignalRClientCommunicationHandler<>));
+                services.AddScoped(typeof(HubconServerConnector<>));
+                services.AddScoped(typeof(ServerConnectorInterceptor<>));
+                services.AddSingleton(GetType(), x => this);
+            });
+
+            scope = StaticServiceProvider.Services.CreateScope();
+
+            hub = scope.ServiceProvider.GetRequiredService<HubConnection>();
+
+            Type communicationHandlerType = typeof(SignalRClientCommunicationHandler<>).MakeGenericType(hub.GetType());
+            Type controllerManagerType = typeof(HubconControllerManager<>).MakeGenericType(communicationHandlerType);
+
+            HubconController = (IHubconControllerManager)scope.ServiceProvider.GetRequiredService(controllerManagerType);
+            
+            _converter = scope.ServiceProvider.GetRequiredService<DynamicConverter>();
+
             var derivedType = GetType();
             if (!typeof(IBaseHubconController).IsAssignableFrom(derivedType))
                 throw new NotImplementedException($"El tipo {derivedType.FullName} no implementa la interfaz {nameof(IBaseHubconController)} o un tipo derivado.");
 
             _url = url;
-            var hub = new HubConnectionBuilder()
-                .WithUrl(url)
-                .AddMessagePackProtocol()
-                .WithAutomaticReconnect()
-                .Build();
-
-            _hubFactory = () => hub;
-
-            var commHandler = new SignalRClientCommunicationHandler(_hubFactory);
-            HubconController = HubconControllerManager.GetControllerManager(commHandler);
 
             HubconController.Pipeline.RegisterMethods(GetType(), (methodSignature, methodInfo) =>
             {
@@ -70,11 +94,13 @@ namespace Hubcon.SignalR.Client
             where TICommunicationContract : ICommunicationContract
 
         {
-            return new HubconServerConnector<TICommunicationContract, ICommunicationHandler>(HubconController.CommunicationHandler).GetClient()!;
+            Type communicationHandlerType = typeof(HubconServerConnector<>).MakeGenericType(GetType());
+            return ((IServerConnector)scope.ServiceProvider.GetRequiredService(communicationHandlerType)).GetClient<TICommunicationContract>();
         }
 
         public async Task<BaseSignalRClientController> StartInstanceAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
         {
+            //await StartAsync(url, consoleOutput, cancellationToken);
             _ = StartAsync(url, consoleOutput, cancellationToken);
 
             while (true)
@@ -93,7 +119,6 @@ namespace Hubcon.SignalR.Client
             if (!IsBuilt)
                 Build(url ?? "localhost:5000/clienthub");
 
-            hub = _hubFactory?.Invoke();
             try
             {
                 _token = cancellationToken;
@@ -141,7 +166,6 @@ namespace Hubcon.SignalR.Client
         }
         public void Stop()
         {
-            var hub = _hubFactory?.Invoke();
             _ = hub?.StopAsync(_token);
         }
 
@@ -169,7 +193,7 @@ namespace Hubcon.SignalR.Client
             {
                 await foreach (var item in reader)
                 {
-                    await channel.Writer.WriteAsync(DynamicConverter.SerializeData(item)!);
+                    await channel.Writer.WriteAsync(_converter.SerializeData(item)!);
                 }
                 channel.Writer.Complete(); // Indica que no habrá más datos
             });
@@ -192,7 +216,10 @@ namespace Hubcon.SignalR.Client
             get
             {
                 if (_server == null)
-                    return _server = new HubconServerConnector<TICommunicationContract, ICommunicationHandler>(HubconController.CommunicationHandler).GetClient();
+                {
+                    Type communicationHandlerType = typeof(HubconServerConnector<>).MakeGenericType(hub!.GetType());
+                    return _server = ((HubconServerConnector<IBaseHubconController>)scope.ServiceProvider.GetRequiredService(communicationHandlerType)).GetClient<TICommunicationContract>();
+                }
 
                 return _server;
             }

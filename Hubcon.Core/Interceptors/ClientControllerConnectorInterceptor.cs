@@ -1,4 +1,5 @@
 ﻿using Castle.DynamicProxy;
+using Hubcon.Core.Converters;
 using Hubcon.Core.Extensions;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
@@ -7,11 +8,20 @@ using System.ComponentModel;
 namespace Hubcon.Core.Interceptors
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public class ClientControllerConnectorInterceptor : AsyncInterceptorBase
+    public class ClientControllerConnectorInterceptor<TIHubController> : AsyncInterceptorBase
+        where TIHubController : IBaseHubconController
     {
-        private protected Func<ICommunicationHandler> HandlerFactory { get; private set; }
+        private readonly DynamicConverter _converter;
 
-        public ClientControllerConnectorInterceptor(ICommunicationHandler handler) => HandlerFactory = () => handler;
+        private Func<ICommunicationHandler> HandlerFactory { get; set; }
+
+        public ICommunicationHandler CommunicationHandler { get => HandlerFactory.Invoke(); }
+
+        public ClientControllerConnectorInterceptor(TIHubController handler, DynamicConverter converter)
+        {
+            HandlerFactory = () => handler.HubconController.CommunicationHandler;
+            _converter = converter;
+        }
 
         protected override async Task<TResult> InterceptAsync<TResult>(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
         {
@@ -38,7 +48,7 @@ namespace Hubcon.Core.Interceptors
                     methodName,
                     invocation.Arguments
                 )
-                .SerializeArgs();
+                .SerializeArgs(_converter.SerializeArgs);
 
                 // Invocar el método StreamAsync pasando el tipo adecuado
                 result = await (Task<TResult>)streamMethod.Invoke(handler, new object[]
@@ -56,10 +66,10 @@ namespace Hubcon.Core.Interceptors
                     methodName,
                     invocation.Arguments
                 )
-                .SerializeArgs();
+                .SerializeArgs(_converter.SerializeArgs);
 
                 var response = await handler.InvokeAsync(request, new CancellationToken());
-                result = response.GetDeserializedData<TResult>();
+                result = response.GetDeserializedData<TResult>(_converter.DeserializeData<TResult>);
             }
 
             invocation.ReturnValue = result;
@@ -79,7 +89,7 @@ namespace Hubcon.Core.Interceptors
                 methodName,
                 invocation.Arguments
             )
-            .SerializeArgs();
+            .SerializeArgs(_converter.SerializeArgs);
 
             await handler.CallAsync(request, new CancellationToken());
         }

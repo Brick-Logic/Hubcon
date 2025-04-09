@@ -11,11 +11,17 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.MethodHandling
 {
-    public static class StreamNotificationHandler
+    public class StreamNotificationHandler
     {
-        private static Dictionary<string, IOnStreamReceived> StreamWaitList = new();
+        private DynamicConverter _converter;
+        private Dictionary<string, IOnStreamReceived> StreamWaitList = new();
 
-        public static async Task NotifyStream(string code, ChannelReader<object> reader)
+        public StreamNotificationHandler(DynamicConverter converter)
+        {
+            _converter = converter;
+        }
+
+        public async Task NotifyStream(string code, ChannelReader<object> reader)
         {
             while (await reader.WaitToReadAsync())
             {
@@ -31,13 +37,13 @@ namespace Hubcon.Core.MethodHandling
             }
         }
 
-        public static Task<IAsyncEnumerable<T>> WaitStreamAsync<T>(string code)
+        public Task<IAsyncEnumerable<T>> WaitStreamAsync<T>(string code)
         {
-            static async IAsyncEnumerable<TOut> ToAsyncEnumerable<TOut>(ChannelReader<object> reader)
+            async IAsyncEnumerable<TOut> ToAsyncEnumerable<TOut>(ChannelReader<object> reader)
             {
                 await foreach (object item in reader.ReadAllAsync())
                 {
-                    yield return DynamicConverter.DeserializeData<TOut>(item)!;
+                    yield return _converter.DeserializeData<TOut>(item)!;
                 }
             }
 

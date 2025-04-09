@@ -17,15 +17,20 @@ namespace Hubcon.Core.Models
             Args = args ?? new List<object>().ToArray();
         }
 
-        public MethodInvokeRequest SerializeArgs()
+        public MethodInvokeRequest SerializeArgs(Func<object?[], object?[]> serializer)
         {
-            Args = DynamicConverter.SerializeArgs(Args);
+            Args = serializer.Invoke(Args!);
             return this;
         }
 
-        public object?[] GetDeserializedArgs(Type[] types)
+        public object[] GetSerializedArgs(Func<object[], object[]> serializer)
         {
-            return DynamicConverter.DeserializeArgs(types, Args);
+            return serializer.Invoke(Args!);
+        }
+
+        public object?[] GetDeserializedArgs(Type[] types, Func<Type[], object?[], object?[]> deserializer)
+        {
+            return deserializer.Invoke(types, Args!);
         }
     }
 }

@@ -14,24 +14,22 @@ namespace Hubcon.Core.Connectors
         where TICommunicationContract : ICommunicationContract?
         where TIHubconController : class, IBaseHubconController
     {
-        protected Func<IServerCommunicationHandler> handlerFactory;
         protected Dictionary<string, TICommunicationContract>? clients = new();
+        protected ClientControllerConnectorInterceptor<TIHubconController> Interceptor { get; set; }
 
-        public HubconClientConnector(TIHubconController handler) => handlerFactory = () => (IServerCommunicationHandler)handler.HubconController.CommunicationHandler;
+        public HubconClientConnector(ClientControllerConnectorInterceptor<TIHubconController> interceptor) => Interceptor = interceptor;
 
         protected TICommunicationContract BuildInstance(string instanceId)
         {
-            var communicationHandler = handlerFactory.Invoke();
+            var communicationHandler = (IServerCommunicationHandler)Interceptor.CommunicationHandler;
             communicationHandler.WithClientId(instanceId);
-
-            var interceptor = new ClientControllerConnectorInterceptor(communicationHandler);
 
             ProxyGenerator ProxyGen = new();
 
             return (TICommunicationContract)ProxyGen.CreateInterfaceProxyWithTarget(
                 typeof(TICommunicationContract),
                 (TICommunicationContract)DynamicImplementationCreator.CreateImplementation(typeof(TICommunicationContract)),
-                interceptor
+                Interceptor
             );
         }
 
@@ -48,11 +46,8 @@ namespace Hubcon.Core.Connectors
 
         public List<string> GetAllClients()
         {
-            return handlerFactory
-                .Invoke()
-                .GetAllClients()
-                .Select(x => x.Id)
-                .ToList();
+            var handler = (IServerCommunicationHandler)Interceptor.CommunicationHandler;
+            return handler.GetAllClients().Select(x => x.Id).ToList();
         }
 
         public void RemoveClient(string instanceId)

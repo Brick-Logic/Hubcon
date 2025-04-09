@@ -7,24 +7,25 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.SignalR.Server
 {
-    public class SignalRServerCommunicationHandler : IServerCommunicationHandler
+    public class SignalRServerCommunicationHandler<THub> : IServerCommunicationHandler
+        where THub : BaseHubController
     {
+        private readonly StreamNotificationHandler _streamNotificationHandler;
         private protected string TargetClientId { get; private set; } = string.Empty;
-        private protected Func<IHubContext<BaseHubController>> HubContextFactory { get; private set; }
+        private protected Func<IHubContext<THub>> HubContextFactory { get; private set; }
         private protected Type HubType { get; private set; }
 
-        public SignalRServerCommunicationHandler(Type hubType)
+        public SignalRServerCommunicationHandler(IHubContext<THub> hubContext, StreamNotificationHandler streamNotificationHandler)
         {
-            HubType = hubType;
-            Type hubContextType = typeof(IHubContext<>).MakeGenericType(hubType);
-            var hubContext = (IHubContext<BaseHubController>)StaticServiceProvider.Services.GetRequiredService(hubContextType);
+            HubType = hubContext.GetType().GetGenericArguments()[0];
             HubContextFactory = () => hubContext;
+            _streamNotificationHandler = streamNotificationHandler;
         }
 
         public async Task<MethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken) 
         { 
             MethodResponse result;
-            IHubContext<Hub> hubContext = HubContextFactory.Invoke();
+            IHubContext<THub> hubContext = HubContextFactory.Invoke();
             var client = hubContext.Clients.Client(TargetClientId);
 
             result = await client.InvokeAsync<MethodResponse>(request.HandlerMethodName!, request, cancellationToken);
@@ -33,7 +34,7 @@ namespace Hubcon.SignalR.Server
 
         public async Task CallAsync(MethodInvokeRequest request, CancellationToken cancellationToken)
         {
-            IHubContext<BaseHubController> hubContext = HubContextFactory.Invoke();
+            IHubContext<THub> hubContext = HubContextFactory.Invoke();
 
             var client = hubContext.Clients.Client(TargetClientId);
 
@@ -47,7 +48,7 @@ namespace Hubcon.SignalR.Server
 
         public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, CancellationToken cancellationToken)
         {
-            IHubContext<BaseHubController> hubContext = HubContextFactory.Invoke();
+            IHubContext<THub> hubContext = HubContextFactory.Invoke();
 
             var client = hubContext.Clients.Client(TargetClientId);
 
@@ -55,7 +56,7 @@ namespace Hubcon.SignalR.Server
 
             _ = client.SendAsync(request.HandlerMethodName!, code, request, cancellationToken);
 
-            var stream = await StreamNotificationHandler.WaitStreamAsync<T>(code);
+            var stream = await _streamNotificationHandler.WaitStreamAsync<T>(code);
             return stream;
         }
 

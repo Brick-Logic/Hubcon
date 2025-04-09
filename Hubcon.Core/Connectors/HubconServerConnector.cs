@@ -4,41 +4,42 @@ using Hubcon.Core.Models.Interfaces;
 
 namespace Hubcon.Core.Connectors
 {
+    public interface IServerConnector
+    {
+        public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : ICommunicationContract;
+    }
+
     /// <summary>
     /// The ServerHubConnector allows a client to connect itself to a ServerHub and control its methods given its URL and
     /// the server's interface.
     /// </summary>
     /// <typeparam name="TIServerHubController"></typeparam>
-    public class HubconServerConnector<TICommunicationContract, TICommunicationHandler> : HubconClientBuilder<TICommunicationContract>, IConnector
-        where TICommunicationContract : ICommunicationContract
-        where TICommunicationHandler : ICommunicationHandler
+    public class HubconServerConnector<TIBaseHubconController> : IServerConnector
+        where TIBaseHubconController : IBaseHubconController
     {
-        private TICommunicationContract? _client;
-        private readonly TICommunicationHandler _connectionHandler;
+        private ICommunicationContract? _client;
+        private readonly ServerConnectorInterceptor<TIBaseHubconController> Interceptor;
 
-        public TICommunicationHandler Connection { get => _connectionHandler; }
+        public ICommunicationHandler Connection { get => Interceptor.CommunicationHandler; }
 
-        public HubconServerConnector(TICommunicationHandler handler) : base()
-        {
-            _connectionHandler = handler;
-        }
+        public HubconServerConnector(ServerConnectorInterceptor<TIBaseHubconController> interceptor) : base() => Interceptor = interceptor;
 
-        public TICommunicationContract? GetCurrentClient() => _client;
+        public ICommunicationContract? GetCurrentClient() => _client;
 
-        public TICommunicationContract GetClient()
+        public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : ICommunicationContract
         {
             if (_client != null)
-                return _client;
+                return (TICommunicationContract)_client;
 
             var proxyGenerator = new ProxyGenerator();
 
             _client = (TICommunicationContract)proxyGenerator.CreateInterfaceProxyWithTarget(
                 typeof(TICommunicationContract),
                 (TICommunicationContract)DynamicImplementationCreator.CreateImplementation(typeof(TICommunicationContract)),
-                new ServerConnectorInterceptor(Connection)
+                Interceptor
             );
 
-            return _client;
+            return (TICommunicationContract)_client;
         }
     }
 }

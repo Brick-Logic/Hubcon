@@ -7,14 +7,14 @@ namespace Hubcon.SignalR.Extensions
 {
     internal static class HubConnectionExtensions
     {
-        public static async Task<IAsyncEnumerable<T>> StreamAsync<T>(this HubConnection connection, MethodInvokeRequest request, CancellationToken cancellationToken)
+        public static async Task<IAsyncEnumerable<T>> StreamAsync<T>(this HubConnection connection, MethodInvokeRequest request, DynamicConverter converter, CancellationToken cancellationToken)
         {
             var stream = connection.StreamAsync<object>(request.HandlerMethodName!, request, cancellationToken);
 
-            return await Task.FromResult(ConvertStream<T>(stream, cancellationToken));
+            return await Task.FromResult(ConvertStream<T>(stream, converter, cancellationToken));
         }
 
-        private static async IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<object> stream, [EnumeratorCancellation] CancellationToken cancellationToken)
+        private static async IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<object> stream, DynamicConverter converter, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             await foreach (var item in stream.WithCancellation(cancellationToken))
             {
@@ -24,7 +24,7 @@ namespace Hubcon.SignalR.Extensions
                 }
                 else
                 {
-                    yield return DynamicConverter.DeserializeData<T>(item)!;
+                    yield return converter.DeserializeData<T>(item)!;
                 }
             }
         }

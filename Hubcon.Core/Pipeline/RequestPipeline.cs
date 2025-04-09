@@ -14,14 +14,26 @@ namespace Hubcon.Core.Handlers
     [EditorBrowsable(EditorBrowsableState.Never)]
     public class RequestPipeline : IRequestPipeline
     {
+        private readonly MethodInvokerProvider _methodInvokerProvider;
+        private readonly DynamicConverter _converter;
+        private readonly IMiddlewareProvider _middlewareProvider;
+
+        public RequestPipeline(MethodInvokerProvider methodInvokerProvider, DynamicConverter dynamicConverter, IMiddlewareProvider middlewareProvider)
+        {
+            _methodInvokerProvider = methodInvokerProvider;
+            _converter = dynamicConverter;
+            _middlewareProvider = middlewareProvider;
+        }
+
         public async Task HandleWithoutResultAsync(object instance, MethodInvokeRequest methodInfo)
         {
             Console.WriteLine($"[MethodHandler] Received call {methodInfo.MethodName}. Args: [{string.Join(",", methodInfo.Args.Select(x => $"{x}"))}]");
             
             Func<Task<MethodResponse?>> method = async () =>
             {
-                MethodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
-                object? result = methodInvoker?.Method?.DynamicInvoke(instance, methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes));
+                _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
+                var args = methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes, _converter.DeserializeArgs);
+                object? result = methodInvoker?.Method?.DynamicInvoke(instance, args);
 
                 if (result is Task task)
                     await task;
@@ -29,7 +41,7 @@ namespace Hubcon.Core.Handlers
                 return new MethodResponse(true);
             };
 
-            var pipeline = new MiddlewareProvider().GetPipeline(instance.GetType(), methodInfo, method);
+            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), methodInfo, method);
             await pipeline.Execute();
         }
 
@@ -41,17 +53,18 @@ namespace Hubcon.Core.Handlers
             {
                 return await Task.Run(() =>
                 {
-                    MethodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
-                    object? result = methodInvoker?.Method?.DynamicInvoke(instance, methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes));
+                    _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
+                    object?[] args = methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes, _converter.DeserializeArgs);
+                    object? result = methodInvoker?.Method?.DynamicInvoke(instance, args);
 
                     if (result is null)
                         return new MethodResponse(true);
 
-                    return new MethodResponse(true, result).SerializeData();
+                    return new MethodResponse(true, result).SerializeData(_converter.SerializeData);
                 });
             };
 
-            var pipeline = new MiddlewareProvider().GetPipeline(instance.GetType(), methodInfo, method);
+            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), methodInfo, method);
             return await pipeline.Execute();
         }
 
@@ -63,8 +76,9 @@ namespace Hubcon.Core.Handlers
             {
                 return Task.Run<MethodResponse?>(async () =>
                 {
-                    MethodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
-                    object? result = methodInvoker?.Method?.DynamicInvoke(instance, methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes));
+                    _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
+                    object?[] args = methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes, _converter.DeserializeArgs);
+                    object? result = methodInvoker?.Method?.DynamicInvoke(instance, args);
 
                     if (result is Task task)
                         await task;
@@ -73,7 +87,7 @@ namespace Hubcon.Core.Handlers
                 });
             };
 
-            var pipeline = new MiddlewareProvider().GetPipeline(instance.GetType(), methodInfo, method);
+            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), methodInfo, method);
             return pipeline.Execute();
         }
 
@@ -83,13 +97,14 @@ namespace Hubcon.Core.Handlers
 
             Func<Task<MethodResponse?>> method = async () =>
             {
-                MethodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
-                object? result = methodInvoker?.Method?.DynamicInvoke(instance, methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes));
+                _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
+                object?[] args = methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes, _converter.DeserializeArgs);
+                object? result = methodInvoker?.Method?.DynamicInvoke(instance, args);
 
                 return await Task.FromResult(new MethodResponse(true, result!));
             };
 
-            var pipeline = new MiddlewareProvider().GetPipeline(instance.GetType(), methodInfo, method);
+            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), methodInfo, method);
             return (IAsyncEnumerable<object>)pipeline.Execute().Result.Data!;        
         }
 
@@ -99,21 +114,22 @@ namespace Hubcon.Core.Handlers
 
             var method = async () =>
             {
-                MethodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
-                object? result = methodInvoker?.Method?.DynamicInvoke(instance, methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes));
+                _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
+                object?[] args = methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes, _converter.DeserializeArgs);
+                object? result = methodInvoker?.Method?.DynamicInvoke(instance, args);
 
                 if (result is null)
                     return new MethodResponse(true);
                 else if (result is Task task)
                 {
                     var response = await GetTaskResultAsync(task, methodInvoker!.ReturnType.GetGenericArguments()[0]);
-                    return new MethodResponse(true, response).SerializeData();
+                    return new MethodResponse(true, response).SerializeData(_converter.SerializeData);
                 }
                 else
-                    return new MethodResponse(true, result).SerializeData();
+                    return new MethodResponse(true, result).SerializeData(_converter.SerializeData);
             };
 
-            var pipeline = new MiddlewareProvider().GetPipeline(instance.GetType(), methodInfo, method);
+            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), methodInfo, method);
             return await pipeline.Execute();
         }
 
@@ -139,5 +155,7 @@ namespace Hubcon.Core.Handlers
             // Si no es un Task<T>, no hay valor que devolver
             return null;
         }
+
+        public void RegisterMethods(Type type, Action<string, MethodInfo>? forEachMethodAction = null) => _methodInvokerProvider.RegisterMethods(type, forEachMethodAction);
     }
 }

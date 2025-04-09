@@ -13,7 +13,7 @@ namespace Hubcon.Core.Models.Interfaces
 {
     public interface IRequestPipeline
     {
-        public void RegisterMethods(Type type, Action<string, MethodInfo>? forEachMethodAction = null) => MethodInvokerProvider.RegisterMethods(type, forEachMethodAction);
+        public void RegisterMethods(Type type, Action<string, MethodInfo>? forEachMethodAction = null);
         public Task HandleWithoutResultAsync(object instance, MethodInvokeRequest methodInfo);
         public Task<MethodResponse> HandleSynchronousResult(object instance, MethodInvokeRequest methodInfo);
         public Task HandleSynchronous(object instance, MethodInvokeRequest methodInfo);

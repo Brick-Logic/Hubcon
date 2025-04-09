@@ -9,25 +9,45 @@ namespace Hubcon.Core.Registries
 {
     public class ClientRegistry
     {
-        private static Dictionary<string, ICommunicationContract> Clients { get; } = new();
+        private static Dictionary<Type, Dictionary<string, ICommunicationContract>> Clients { get; } = new();
 
-        public void RegisterClient(string clientId, ICommunicationContract client)
+        public void RegisterClient(Type controllerType, string clientId, ICommunicationContract client)
         {
-            if (Clients.ContainsKey(clientId))
+            if (client == null)
+                throw new ArgumentNullException(nameof(client), "El cliente no puede ser nulo.");
+
+            if (string.IsNullOrWhiteSpace(clientId))
+                throw new ArgumentNullException(nameof(client), "El clientId no puede ser nulo.");
+
+            if (!Clients.TryGetValue(controllerType, out Dictionary<string, ICommunicationContract>? clientList))
+                Clients[controllerType] = clientList = new();
+            
+            if (clientList.ContainsKey(clientId))
                 throw new ArgumentException($"El cliente con ID {clientId} ya está registrado.");
 
-            Clients[clientId] = client;
+            clientList[clientId] = client;
         }
 
-        public void UnregisterClient(string clientId)
+        public void UnregisterClient(Type controllerType, string clientId)
         {
-            Clients.Remove(clientId);
+            if (string.IsNullOrWhiteSpace(clientId))
+                throw new ArgumentNullException(nameof(clientId), "El clientId no puede ser nulo.");
+
+            if (Clients.TryGetValue(controllerType, out Dictionary<string, ICommunicationContract>? clientList))
+                clientList.Remove(clientId);
+            
         }
 
-        public T? TryGetClient<T>(string clientId) where T : ICommunicationContract
+        public T? TryGetClient<T>(Type controllerType, string clientId) where T : ICommunicationContract
         {
-            if (Clients.TryGetValue(clientId, out ICommunicationContract? client))
-                return (T)client;
+            if (string.IsNullOrWhiteSpace(clientId))
+                throw new ArgumentNullException(nameof(clientId), "El clientId no puede ser nulo.");
+
+            if (Clients.TryGetValue(controllerType, out Dictionary<string, ICommunicationContract>? clientList))
+            {
+                if (clientList.TryGetValue(clientId, out ICommunicationContract? client))
+                    return (T)client;
+            }
 
             return default;
         }

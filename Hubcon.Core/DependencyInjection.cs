@@ -1,6 +1,13 @@
 ﻿using Hubcon.Core.Connectors;
+using Hubcon.Core.Controllers;
+using Hubcon.Core.Converters;
+using Hubcon.Core.Handlers;
+using Hubcon.Core.Interceptors;
+using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Middleware;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Models.Pipeline.Interfaces;
+using Hubcon.Core.Registries;
 using Hubcon.Core.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +16,38 @@ namespace Hubcon.Core
 {
     public static class DependencyInjection
     {
+        public static IServiceCollection AddHubcon(this IServiceCollection services, Action<IServiceCollection>? additionalServices = null)
+        {
+            services.AddSingleton<DynamicConverter>();
+            services.AddSingleton<StreamNotificationHandler>();
+            services.AddScoped(typeof(ClientControllerConnectorInterceptor<>));
+            services.AddSingleton<ClientRegistry>();
+            services.AddScoped<MethodInvokerProvider>();
+            services.AddScoped<IMiddlewareProvider, MiddlewareProvider>();
+            services.AddScoped<RequestPipeline>();
+
+            additionalServices?.Invoke(services);
+
+            services.AddScoped(typeof(HubconControllerManager<>));
+
+            return services;
+        }
+
+        public static IServiceCollection AddHubconClient(this IServiceCollection services, Action<IServiceCollection>? additionalServices = null)
+        {
+            services.AddSingleton<DynamicConverter>();
+            services.AddScoped<MethodInvokerProvider>();
+            services.AddScoped<IMiddlewareProvider, MiddlewareProvider>();
+            services.AddScoped<RequestPipeline>();
+
+            additionalServices?.Invoke(services);
+
+            services.AddScoped(typeof(HubconControllerManager<>));
+
+            return services;
+        }
+
+
         public static WebApplication? UseHubcon(this WebApplication e)
         {
             StaticServiceProvider.Setup(e);
@@ -43,8 +82,8 @@ namespace Hubcon.Core
 
             if(options != null)
             {
-                var middlewareProvider = new MiddlewareProvider();
-                middlewareProvider.AddMiddlewares<T>(options);
+                MiddlewareProvider.AddMiddlewares<T>(options, services);
+                services.AddScoped<T>();
             }
 
             return services;

@@ -3,21 +3,17 @@ using Hubcon.Core.Models.Interfaces;
 
 namespace Hubcon.Core.Controllers
 {
-    public class HubconControllerManager : IHubconControllerManager
+    public class HubconControllerManager<TICommunicationHandler> : IHubconControllerManager
+        where TICommunicationHandler : ICommunicationHandler
     {
         // Handlers
         public IRequestPipeline Pipeline { get; set; }
         public ICommunicationHandler CommunicationHandler { get; set; }
 
-        private HubconControllerManager(ICommunicationHandler communicationHandler)
+        public HubconControllerManager(TICommunicationHandler communicationHandler, RequestPipeline requestPipeline)
         {
-            Pipeline = new RequestPipeline();
+            Pipeline = requestPipeline;
             CommunicationHandler = communicationHandler;
-        }
-
-        public static IHubconControllerManager GetControllerManager(ICommunicationHandler communicationHandler)
-        {
-            return new HubconControllerManager(communicationHandler);
         }
     }
 }

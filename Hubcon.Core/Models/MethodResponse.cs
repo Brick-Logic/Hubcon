@@ -17,16 +17,16 @@ namespace Hubcon.Core.Models
             Data = data;
         }
 
-        public MethodResponse SerializeData()
+        public MethodResponse SerializeData(Func<object?, object?> serializer)
         {
             if (Data == null) return this;
-            Data = DynamicConverter.SerializeData(Data);
+            Data = serializer.Invoke(Data);
             return this;
         }
 
-        public T? GetDeserializedData<T>()
+        public T? GetDeserializedData<T>(Func<object?, T?> deserializer)
         {
-            return DynamicConverter.DeserializeData<T>(Data!);
+            return deserializer.Invoke(Data!);
         }
     }
 }

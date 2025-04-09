@@ -4,13 +4,16 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Hubcon.Core.Converters
 {
-    public static class DynamicConverter
+    public class DynamicConverter
     {
-        public static Dictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
+        public Dictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 
-        public static object?[] SerializeArgs(object?[] args)
+        public object?[] SerializeArgs(object?[] args)
         {
-            if (args.Length == 0) return Array.Empty<object>();
+            if(args == null)
+                return Array.Empty<object>();
+            if (args.Length == 0) 
+                return Array.Empty<object>();
 
             for (int i = 0; i < args.Length; i++)
                 args[i] = JsonConvert.SerializeObject(args[i]);
@@ -18,7 +21,7 @@ namespace Hubcon.Core.Converters
             return args;
         }
 
-        public static object?[] DeserializeArgs(Type[] types, object?[] args)
+        public object?[] DeserializeArgs(Type[] types, object?[] args)
         {
             if (types.Length == 0) return Array.Empty<object>();
 
@@ -36,7 +39,7 @@ namespace Hubcon.Core.Converters
             return args;
         }
 
-        public static object?[] DeserializedArgs(Delegate del, object?[] args)
+        public object?[] DeserializedArgs(Delegate del, object?[] args)
         {
             if (args.Length == 0) return Array.Empty<object>();
 
@@ -59,10 +62,12 @@ namespace Hubcon.Core.Converters
             return DeserializeArgs(parameterTypes, args);
         }
 
-        public static string? SerializeData(object data) => data == null ? null : JsonConvert.SerializeObject(data);    
-        public static object? DeserializeData(Type type, object data) => data == null ? null : JsonConvert.DeserializeObject($"{data}", type);
-        public static T? DeserializeData<T>(object data)
-        { 
+        public string? SerializeData(object? data) => data == null ? null : JsonConvert.SerializeObject(data);    
+        public object? DeserializeData(Type type, object data) => data == null ? null : JsonConvert.DeserializeObject($"{data}", type);
+        public T? DeserializeData<T>(object? data)
+        {
+            if (data == null) return default;
+
             if(typeof(IAsyncEnumerable<object>).IsAssignableFrom(typeof(T)))
                 return (T)data;
 

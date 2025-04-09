@@ -1,6 +1,9 @@
-﻿using MessagePack;
+﻿using Hubcon.Core;
+using Hubcon.SignalR.Server;
+using MessagePack;
 using MessagePack.Resolvers;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.SignalR
@@ -19,9 +22,15 @@ namespace Hubcon.SignalR
                  {
                      options.SerializerOptions = mpOptions;
                  });
+
+            e.Services.AddHubcon(services =>
+            {
+                services.AddScoped(typeof(SignalRServerCommunicationHandler<>));
+                services.AddScoped(typeof(HubConnectionBuilder));
+            });
+
+
             return e;
         }
-
-        
     }
 }

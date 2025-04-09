@@ -1,18 +1,23 @@
 ﻿using Castle.DynamicProxy;
+using Hubcon.Core.Converters;
 using Hubcon.Core.Extensions;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using System;
 
 
 namespace Hubcon.Core.Interceptors
 {
-    internal class ServerConnectorInterceptor : AsyncInterceptorBase
+    public class ServerConnectorInterceptor<TIHubController> : AsyncInterceptorBase
+        where TIHubController : IBaseHubconController
     {
-        private readonly ICommunicationHandler handler;
+        public readonly ICommunicationHandler CommunicationHandler;
+        private readonly DynamicConverter _converter;
 
-        public ServerConnectorInterceptor(ICommunicationHandler handler)
+        public ServerConnectorInterceptor(TIHubController handler, DynamicConverter converter)
         {
-            this.handler = handler;
+            CommunicationHandler = handler.HubconController.CommunicationHandler;
+            _converter = converter;
         }
 
         protected override async Task<TResult> InterceptAsync<TResult>(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
@@ -27,15 +32,15 @@ namespace Hubcon.Core.Interceptors
                 var itemType = typeof(TResult).GetGenericArguments()[0];
 
                 // Crear el método adecuado que se espera
-                var streamMethod = handler
+                var streamMethod = CommunicationHandler
                     .GetType() // Cambia 'Handler' por el tipo adecuado
-                    .GetMethod(nameof(handler.StreamAsync))! // Cambia 'StreamAsync' por el nombre correcto del método
+                    .GetMethod(nameof(CommunicationHandler.StreamAsync))! // Cambia 'StreamAsync' por el nombre correcto del método
                     .MakeGenericMethod(itemType);
 
-                var request = new MethodInvokeRequest(invocation.Method.GetMethodSignature(), nameof(IHubconServerController.HandleMethodStream), invocation.Arguments).SerializeArgs();
+                var request = new MethodInvokeRequest(invocation.Method.GetMethodSignature(), nameof(IHubconServerController.HandleMethodStream), invocation.Arguments).SerializeArgs(_converter.SerializeArgs);
 
                 // Invocar el método StreamAsync pasando el tipo adecuado
-                result = await (Task<TResult>)streamMethod.Invoke(handler, new object[]
+                result = await (Task<TResult>)streamMethod.Invoke(CommunicationHandler, new object[]
                 {
                     request,
                     new CancellationToken()
@@ -48,10 +53,10 @@ namespace Hubcon.Core.Interceptors
                     nameof(IBaseHubconController.HandleMethodTask),
                     invocation.Arguments
                 )
-                .SerializeArgs();
+                .SerializeArgs(_converter.SerializeArgs);
 
-                var response = await handler.InvokeAsync(request,new CancellationToken());
-                result = response.GetDeserializedData<TResult>()!;
+                var response = await CommunicationHandler.InvokeAsync(request,new CancellationToken());
+                result = response.GetDeserializedData<TResult>(_converter.DeserializeData<TResult>)!;
             }
 
 
@@ -69,9 +74,9 @@ namespace Hubcon.Core.Interceptors
                 nameof(IBaseHubconController.HandleMethodVoid), 
                 invocation.Arguments
             )
-            .SerializeArgs();
+            .SerializeArgs(_converter.SerializeArgs);
 
-            await handler.CallAsync(request,new CancellationToken());
+            await CommunicationHandler.CallAsync(request,new CancellationToken());
         }
     }
 }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.MethodHandling
 {
-    internal class MethodInvoker
+    public class MethodInvoker
     {
         public string MethodSignature { get; set; }
         public MethodInfo InternalMethodInfo { get; set; }

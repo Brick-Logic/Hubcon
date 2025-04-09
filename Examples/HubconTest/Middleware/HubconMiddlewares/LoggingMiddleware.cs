@@ -8,6 +8,11 @@ namespace HubconTest.Middleware.HubconMiddlewares
     {
         public static Stopwatch stopwatch = new Stopwatch();
 
+        public LoggingMiddleware(IServiceProvider scope, IConfiguration configuration)
+        {
+            var test = scope;          
+        }
+
         public Task<MethodResponse?> Execute(MethodInvokeRequest request, Func<Task<MethodResponse?>> next)
         {
             Console.WriteLine($"[Inicio] Methodo {request.MethodName} llamado...");
@@ -19,7 +24,8 @@ namespace HubconTest.Middleware.HubconMiddlewares
         public Task Execute(MethodInvokeRequest request, MethodResponse response, Func<Task> next)
         {
             stopwatch.Stop();
-            Console.WriteLine($"[Fin] Methodo {request.MethodName} finalizado. Tiempo: {stopwatch.ElapsedMilliseconds} ms.");
+            var nanosecs = (double)stopwatch.ElapsedTicks / Stopwatch.Frequency * 1_000;
+            Console.WriteLine($"[Fin] Methodo {request.MethodName} finalizado. Tiempo: {nanosecs} ms.");
             return next();
         }
     }

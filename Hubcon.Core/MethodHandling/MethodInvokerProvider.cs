@@ -10,11 +10,11 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.MethodHandling
 {
-    internal static class MethodInvokerProvider
+    public class MethodInvokerProvider
     {
-        internal static Dictionary<Type, Dictionary<string, MethodInvoker>> ControllerMethods = new();
+        internal Dictionary<Type, Dictionary<string, MethodInvoker>> ControllerMethods = new();
 
-        public static void RegisterMethods(Type type, Action<string, MethodInfo>? forEachMethodAction = null)
+        public void RegisterMethods(Type type, Action<string, MethodInfo>? forEachMethodAction = null)
         {
             if (!typeof(IBaseHubconController).IsAssignableFrom(type))
                 throw new NotImplementedException($"El tipo {type.FullName} no implementa la interfaz {nameof(IBaseHubconController)} o un tipo derivado.");
@@ -46,7 +46,7 @@ namespace Hubcon.Core.MethodHandling
             }
         }
 
-        public static bool GetMethodInvoker(string methodName, Type type, out MethodInvoker? value)
+        public bool GetMethodInvoker(string methodName, Type type, out MethodInvoker? value)
         {
             if (ControllerMethods.TryGetValue(type, out Dictionary<string, MethodInvoker>? methods))
             {
@@ -60,7 +60,7 @@ namespace Hubcon.Core.MethodHandling
             return false;
         }
 
-        public static MethodInvokerDelegate CreateMethodInvoker(MethodInfo method)
+        public MethodInvokerDelegate CreateMethodInvoker(MethodInfo method)
         {
             var instanceParam = Expression.Parameter(typeof(object), "instance");
             var argsParam = Expression.Parameter(typeof(object[]), "args");
