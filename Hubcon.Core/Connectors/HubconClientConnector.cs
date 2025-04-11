@@ -15,9 +15,9 @@ namespace Hubcon.Core.Connectors
         where TIHubconController : class, IBaseHubconController
     {
         protected Dictionary<string, TICommunicationContract>? clients = new();
-        protected ClientControllerConnectorInterceptor<TIHubconController> Interceptor { get; set; }
+        protected ClientControllerConnectorInterceptor<TIHubconController, ICommunicationHandler> Interceptor { get; set; }
 
-        public HubconClientConnector(ClientControllerConnectorInterceptor<TIHubconController> interceptor) => Interceptor = interceptor;
+        public HubconClientConnector(ClientControllerConnectorInterceptor<TIHubconController, ICommunicationHandler> interceptor) => Interceptor = interceptor;
 
         protected TICommunicationContract BuildInstance(string instanceId)
         {

@@ -22,17 +22,14 @@ namespace HubconTest
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
-            builder.UseHubconSignalR();
-            builder.Services.AddHubconClientAccessor();
 
-            builder.Services.AddHubconController<TestSignalRController>(options =>
+            builder.UseHubconSignalR();
+            builder.AddHubconController<TestSignalRController>(options =>
             {
                 options.AddMiddleware<LoggingMiddleware>();
             });
 
             var app = builder.Build();
-
-            app.UseHubcon();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

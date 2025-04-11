@@ -27,17 +27,16 @@ namespace HubconTestClient
                     Console.WriteLine(message);
                 }
 
-                Console.ReadKey();
+                //Console.ReadKey();
 
-                await client.ShowTextOnServer();
-
+                //client.ShowTextOnServer();
+                //Console.ReadKey();
                 Console.ReadKey();
 
                 await client.ShowTempOnServerFromClient();
 
-                Console.ReadKey();
-
-                await client.ShowTextOnServer();
+                //client.ShowTextOnServer();
+                //Console.ReadKey();
             }
         }
     }

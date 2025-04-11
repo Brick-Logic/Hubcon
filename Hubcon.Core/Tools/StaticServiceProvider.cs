@@ -14,7 +14,7 @@ namespace Hubcon.Core.Tools
                 // Se asegura de que el _app ha sido inicializado antes de su uso
                 if (_app == null)
                 {
-                    throw new InvalidOperationException($"Use {nameof(DependencyInjection.UseHubcon)}() method after App.Build().");
+                    //throw new InvalidOperationException($"Use {nameof(DependencyInjection.UseHubcon)}() method after App.Build().");
                 }
                 return _app;
             }
@@ -40,7 +40,7 @@ namespace Hubcon.Core.Tools
             {
                 if (_app == null)
                 {
-                    throw new InvalidOperationException($"Use {nameof(DependencyInjection.UseHubcon)}() method after App.Build().");
+                    //throw new InvalidOperationException($"Use {nameof(DependencyInjection.UseHubcon)}() method after App.Build().");
                 }
 
                 return ServiceProvider;

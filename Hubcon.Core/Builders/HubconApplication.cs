@@ -1,4 +1,5 @@
-﻿using Hubcon.Core.Models.Interfaces;
+﻿using Hubcon.Core.Injectors;
+using Hubcon.Core.Models.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -13,14 +14,14 @@ namespace Hubcon.Core.Builders
     {
         public IServiceProvider Services { get; }
 
-        public IHubconClientController Controller { get; }
+        public IHubconClientController<ICommunicationHandler> Controller { get; }
 
         internal HubconApplication(IServiceProvider services)
         {
             Services = services;
         }
 
-        public static IHubconApplicationBuilder CreateBuilder<T>(string[] args) where T : IHubconClientController
+        public static IHubconApplicationBuilder CreateBuilder<T>(string[] args) where T : IHubconClientController<ICommunicationHandler>
         {
             var builder = new HubconApplicationBuilder();
             //builder.Services.AddSingleton<>();
@@ -43,7 +44,7 @@ namespace Hubcon.Core.Builders
             throw new NotImplementedException();
         }
 
-        public Task<IHubconClientController> StartInstanceAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
+        public Task<IHubconClientController<ICommunicationHandler>> StartInstanceAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
@@ -54,6 +55,11 @@ namespace Hubcon.Core.Builders
         }
 
         public Task StartAsync(string? url = null, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        Task<Models.Interfaces.IHubconClientController<ICommunicationHandler>> IHubconClientApplication.StartInstanceAsync(string? url, Action<string>? consoleOutput, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

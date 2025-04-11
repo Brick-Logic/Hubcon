@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Hubcon.Core.Injectors;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ namespace Hubcon.Core.Models.Interfaces
     {
         public IServiceProvider Services { get; }
         public TICommunicationContract GetConnector<TICommunicationContract>() where TICommunicationContract : ICommunicationContract;
-        public Task<IHubconClientController> StartInstanceAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default);
+        public Task<IHubconClientController<ICommunicationHandler>> StartInstanceAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default);
         public Task StartAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default);
         public Task StartAsync(string? url = null, CancellationToken cancellationToken = default);
         public Task StopAsync(CancellationToken cancellationToken);

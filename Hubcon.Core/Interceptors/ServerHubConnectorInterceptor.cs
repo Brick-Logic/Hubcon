@@ -8,7 +8,8 @@ using System;
 
 namespace Hubcon.Core.Interceptors
 {
-    public class ServerConnectorInterceptor<TIHubController> : AsyncInterceptorBase
+    public class ServerConnectorInterceptor<TIHubController, TICommunicationHandler> : AsyncInterceptorBase
+        where TICommunicationHandler : ICommunicationHandler
         where TIHubController : IBaseHubconController
     {
         public readonly ICommunicationHandler CommunicationHandler;
@@ -67,6 +68,7 @@ namespace Hubcon.Core.Interceptors
 
         protected override async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task> proceed)
         {
+            
             Console.WriteLine($"[Client][MethodInterceptor] Calling {invocation.Method.Name} on SERVER. Args: [{string.Join(",", invocation.Arguments.Select(x => $"{x}"))}]");
 
             MethodInvokeRequest request = new MethodInvokeRequest(

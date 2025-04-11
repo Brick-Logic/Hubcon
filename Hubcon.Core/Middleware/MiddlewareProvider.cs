@@ -1,4 +1,5 @@
-﻿using Hubcon.Core.Models;
+﻿using Autofac;
+using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Models.Middleware;
 using Hubcon.Core.Models.Pipeline;
@@ -19,20 +20,20 @@ namespace Hubcon.Core.Middleware
     internal class MiddlewareProvider : IMiddlewareProvider
     {
         private readonly static Dictionary<Type, PipelineBuilder> PipelineBuilders = new();
-        private readonly IServiceProvider _serviceProvider;
+        private readonly ILifetimeScope _serviceProvider;
 
-        public MiddlewareProvider(IServiceProvider serviceProvider)
+        public MiddlewareProvider(ILifetimeScope serviceProvider)
         {
             _serviceProvider = serviceProvider;
         }
 
-        public static void AddMiddlewares<TController>(Action<IPipelineOptions> options, IServiceCollection services) where TController : IBaseHubconController
+        public static void AddMiddlewares<TController>(Action<IPipelineOptions> options, List<Action<ContainerBuilder>> servicesToInject) where TController : IBaseHubconController
         {
             if (!PipelineBuilders.TryGetValue(typeof(TController), out PipelineBuilder? value))
             {
                 PipelineBuilders[typeof(TController)] = value = new PipelineBuilder();
             }
-                var pipelineOptions = new PipelineOptions(services, value);
+                var pipelineOptions = new PipelineOptions(value, servicesToInject);
                 options?.Invoke(pipelineOptions);
         }
 

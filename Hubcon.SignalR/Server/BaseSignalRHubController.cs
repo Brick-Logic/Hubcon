@@ -1,5 +1,8 @@
-﻿using Castle.DynamicProxy.Contributors;
+﻿using Autofac;
+using Castle.DynamicProxy.Contributors;
+using Hubcon.Core.Connectors;
 using Hubcon.Core.Controllers;
+using Hubcon.Core.Injectors.Attributes;
 using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
@@ -10,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
 
 namespace Hubcon.SignalR.Server
@@ -26,31 +30,42 @@ namespace Hubcon.SignalR.Server
         // Clients
         protected static Dictionary<Type, Dictionary<string, ClientReference>> ClientReferences { get; } = new();
 
-        public IHubconControllerManager HubconController { get; }
-        private readonly StreamNotificationHandler _streamNotificationHandler;
-        protected IServiceScope CurrentScope;
+        private IHubconControllerManager _hubconController = null!;
+        public IHubconControllerManager HubconController 
+        {   get
+            {
+                if(_hubconController == null)
+                {
+                    var hubType = typeof(SignalRServerCommunicationHandler<>).MakeGenericType(GetType());
+                    var type = typeof(IHubconControllerManager<>).MakeGenericType(hubType);
+                    _hubconController = (IHubconControllerManager)ServiceProvider.Resolve(type);
+                }
 
-        protected BaseHubController()
-        {
-            CurrentScope = StaticServiceProvider.Services.CreateScope();
-            
-            Type communicationHandlerType = typeof(SignalRServerCommunicationHandler<>).MakeGenericType(GetType());
-            Type controllerManagerType = typeof(HubconControllerManager<>).MakeGenericType(communicationHandlerType);
-
-            _streamNotificationHandler = CurrentScope.ServiceProvider.GetRequiredService<StreamNotificationHandler>();
-            HubconController = (IHubconControllerManager)CurrentScope.ServiceProvider.GetRequiredService(controllerManagerType);
-            HubconController.Pipeline.RegisterMethods(GetType());
-            ClientReferences.TryAdd(GetType(), new());         
+                return _hubconController;
+            }
         }
+
+        [HubconInject]
+        public StreamNotificationHandler StreamNotificationHandler { get; } = null!;
+
+        [HubconInject]
+        public ILifetimeScope ServiceProvider { get; } = null!;
+
 
         public async Task<MethodResponse> HandleMethodTask(MethodInvokeRequest info) 
             => await HubconController.Pipeline.HandleWithResultAsync(this, info);
         public async Task HandleMethodVoid(MethodInvokeRequest info) 
             => await HubconController.Pipeline.HandleWithoutResultAsync(this, info);
         public async Task ReceiveStream(string code, ChannelReader<object> reader) 
-            => await _streamNotificationHandler.NotifyStream(code, reader);
+            => await StreamNotificationHandler.NotifyStream(code, reader);
         public IAsyncEnumerable<object> HandleMethodStream(MethodInvokeRequest info) 
             => HubconController.Pipeline.GetStream(this, info);
+
+        public void Build()
+        {
+            HubconController.Pipeline.RegisterMethods(GetType());
+            ClientReferences.TryAdd(GetType(), new());         
+        }
 
         protected IEnumerable<IClientReference> GetClients() => ClientReferences[GetType()].Values;
         public static IEnumerable<IClientReference> GetClients(Type hubType) => ClientReferences[hubType].Values;
@@ -68,40 +83,36 @@ namespace Hubcon.SignalR.Server
             OnClientDisconnected?.Invoke(GetType(), Context.ConnectionId);
             return base.OnDisconnectedAsync(exception);
         }
+
     }
 
     public abstract class BaseHubController<TICommunicationContract> : BaseHubController
         where TICommunicationContract : ICommunicationContract
     {
 
-        private IClientAccessor _clientAccessor = default!;
-        protected IClientAccessor ClientAccessor 
+        private IClientAccessor _clientAccessor = null!;
+
+        private IClientAccessor ClientAccessor 
         { 
             get
             {
                 if (_clientAccessor == null)
                 {
                     Type clientManagerType = typeof(IClientAccessor<,>).MakeGenericType(typeof(TICommunicationContract), GetType());
-                    var scopedProvider = CurrentScope.ServiceProvider;
-                    _clientAccessor = (IClientAccessor)scopedProvider.GetRequiredService(clientManagerType);
+                    _clientAccessor = (IClientAccessor)ServiceProvider.Resolve(clientManagerType);
                     
                 }
 
                 return _clientAccessor;
             } 
         }
+
         protected TICommunicationContract Client => ClientRegistry.TryGetClient<TICommunicationContract>(GetType(), Context.ConnectionId)!;    
         protected TICommunicationContract GetClient(string connectionId) => ClientRegistry.TryGetClient<TICommunicationContract>(GetType(), connectionId)!;
 
 
-
-        private ClientRegistry? _clientRegistry = null;
-        private ClientRegistry ClientRegistry { get => _clientRegistry ??= CurrentScope.ServiceProvider.GetRequiredService<ClientRegistry>(); }
-
-        protected BaseHubController()
-        {
-            
-        }
+        [HubconInject]
+        private ClientRegistry ClientRegistry { get; } = null!;
 
         public override Task OnConnectedAsync()
         {

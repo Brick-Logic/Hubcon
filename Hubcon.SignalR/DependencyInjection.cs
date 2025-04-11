@@ -1,8 +1,13 @@
-﻿using Hubcon.Core;
+﻿using Autofac;
+using Hubcon.Core;
+using Hubcon.Core.Controllers;
+using Hubcon.Core.Models.Interfaces;
+using Hubcon.SignalR.HubActivator;
 using Hubcon.SignalR.Server;
 using MessagePack;
 using MessagePack.Resolvers;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,7 +19,7 @@ namespace Hubcon.SignalR
         {
             MessagePackSerializerOptions mpOptions = MessagePackSerializerOptions.Standard
                 .WithResolver(CompositeResolver.Create(
-                    ContractlessStandardResolver.Instance // Usa un resolver sin atributos
+                    ContractlessStandardResolver.Instance
                 ));
 
             e.Services.AddSignalR()
@@ -23,12 +28,17 @@ namespace Hubcon.SignalR
                      options.SerializerOptions = mpOptions;
                  });
 
-            e.Services.AddHubcon(services =>
+            e.AddHubcon(container =>
             {
-                services.AddScoped(typeof(SignalRServerCommunicationHandler<>));
-                services.AddScoped(typeof(HubConnectionBuilder));
-            });
+                var commHandlerType = typeof(SignalRServerCommunicationHandler<>);
+                var hubControllerType = typeof(HubconControllerManager<>);
 
+                container
+                    .RegisterWithInjector(x => x.RegisterGeneric(commHandlerType).AsScoped())
+                    .RegisterWithInjector(x => x.RegisterGeneric(hubControllerType).As(typeof(IHubconControllerManager<>)).AsScoped())
+                    .RegisterWithInjector(x => x.RegisterType(typeof(HubConnectionBuilder)).AsScoped())
+                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconHubActivator<>)).As(typeof(IHubActivator<>)).AsScoped());
+            });
 
             return e;
         }

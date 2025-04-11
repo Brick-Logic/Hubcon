@@ -8,18 +8,25 @@ namespace Hubcon.Core.Models.Interfaces
 {
     public interface IHubconControllerManager
     {
+        public IRequestPipeline Pipeline { get; }
+        public ICommunicationHandler CommunicationHandler { get; }
+    }
+
+    public interface IHubconControllerManager<TICommunicationHandler> : IHubconControllerManager
+    where TICommunicationHandler : ICommunicationHandler
+    {
         // Handlers
-        public IRequestPipeline Pipeline { get; set; }
-        public ICommunicationHandler CommunicationHandler { get; set; }
     }
 
-    public interface IHubconClientControllerManager : IHubconControllerManager
+    public interface IHubconClientControllerManager<TICommunicationHandler> : IHubconControllerManager<TICommunicationHandler>
+         where TICommunicationHandler : ICommunicationHandler
     {
-        public new ICommunicationHandler CommunicationHandler { get; set; }
+        public new TICommunicationHandler CommunicationHandler { get; }
     }
 
-    public interface IHubconServerControllerManager : IHubconControllerManager
+    public interface IHubconServerControllerManager<TICommunicationHandler> : IHubconControllerManager<TICommunicationHandler>
+         where TICommunicationHandler : IServerCommunicationHandler
     {
-        public new IServerCommunicationHandler CommunicationHandler { get; set; }
+        public new TICommunicationHandler CommunicationHandler { get; }
     }
 }

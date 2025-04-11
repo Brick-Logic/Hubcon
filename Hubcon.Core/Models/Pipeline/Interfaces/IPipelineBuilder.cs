@@ -1,4 +1,5 @@
-﻿using Hubcon.Core.Models.Middleware;
+﻿using Autofac;
+using Hubcon.Core.Models.Middleware;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,6 @@ namespace Hubcon.Core.Models.Pipeline.Interfaces
     public interface IPipelineBuilder
     {
         public IPipelineBuilder AddMiddleware<T>() where T : IMiddleware;
-        public IPipeline Build(Type controllerType, MethodInvokeRequest request, Func<Task<MethodResponse?>> handler, IServiceProvider serviceProvider);
+        public IPipeline Build(Type controllerType, MethodInvokeRequest request, Func<Task<MethodResponse?>> handler, ILifetimeScope serviceProvider);
     }
 }

@@ -11,6 +11,8 @@
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<Authors>Ezesil</Authors>
+		<EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+		<PublishTrimmed>false</PublishTrimmed>
 	</PropertyGroup>
 	<ItemGroup>
 	  <Compile Remove="ExceptionHandling\**" />
@@ -19,6 +21,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
 		<PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 	</ItemGroup>

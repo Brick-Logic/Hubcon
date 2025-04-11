@@ -8,7 +8,8 @@ using System.ComponentModel;
 namespace Hubcon.Core.Interceptors
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public class ClientControllerConnectorInterceptor<TIHubController> : AsyncInterceptorBase
+    public class ClientControllerConnectorInterceptor<TIHubController, TICommunicationHandler> : AsyncInterceptorBase
+        where TICommunicationHandler : ICommunicationHandler
         where TIHubController : IBaseHubconController
     {
         private readonly DynamicConverter _converter;
@@ -25,8 +26,6 @@ namespace Hubcon.Core.Interceptors
 
         protected override async Task<TResult> InterceptAsync<TResult>(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
         {
-            Console.WriteLine($"[Server][MethodInterceptor] Calling {invocation.Method.Name} on CLIENT. Args: [{string.Join(",", invocation.Arguments.Select(x => $"{x}"))}]");
-
             var handler = HandlerFactory.Invoke();
             TResult? result;
 
@@ -78,8 +77,6 @@ namespace Hubcon.Core.Interceptors
 
         protected override async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task> proceed)
         {
-            Console.WriteLine($"[Server][MethodInterceptor] Calling {invocation.Method.Name} on CLIENT. Args: [{string.Join(",", invocation.Arguments.Select(x => $"{x}"))}]");
-
             var handler = HandlerFactory.Invoke();
 
             var methodName = invocation.Method.GetMethodSignature();

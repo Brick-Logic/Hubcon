@@ -14,15 +14,16 @@ namespace Hubcon.Core.Connectors
     /// the server's interface.
     /// </summary>
     /// <typeparam name="TIServerHubController"></typeparam>
-    public class HubconServerConnector<TIBaseHubconController> : IServerConnector
-        where TIBaseHubconController : IBaseHubconController
+    public class HubconServerConnector<TIBaseHubconController, TICommunicationHandler> : IServerConnector
+        where TICommunicationHandler : ICommunicationHandler
+        where TIBaseHubconController : IBaseHubconController<TICommunicationHandler>
     {
         private ICommunicationContract? _client;
-        private readonly ServerConnectorInterceptor<TIBaseHubconController> Interceptor;
+        private readonly ServerConnectorInterceptor<TIBaseHubconController, TICommunicationHandler> Interceptor;
 
         public ICommunicationHandler Connection { get => Interceptor.CommunicationHandler; }
 
-        public HubconServerConnector(ServerConnectorInterceptor<TIBaseHubconController> interceptor) : base() => Interceptor = interceptor;
+        public HubconServerConnector(ServerConnectorInterceptor<TIBaseHubconController, TICommunicationHandler> interceptor) : base() => Interceptor = interceptor;
 
         public ICommunicationContract? GetCurrentClient() => _client;
 

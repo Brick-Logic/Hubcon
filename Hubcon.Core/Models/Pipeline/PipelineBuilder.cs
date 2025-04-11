@@ -1,4 +1,5 @@
-﻿using Hubcon.Core.Models.Middleware;
+﻿using Autofac;
+using Hubcon.Core.Models.Middleware;
 using Hubcon.Core.Models.Pipeline.Interfaces;
 using Hubcon.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,25 +13,22 @@ namespace Hubcon.Core.Models.Pipeline
 {
     public class PipelineOptions : IPipelineOptions
     {
-        IServiceCollection _serviceProvider;
-
         IPipelineBuilder _builder;
+        public List<Action<ContainerBuilder>> ServicesToInject;
 
-        internal PipelineOptions(IServiceCollection serviceProvider, PipelineBuilder builder)
+        internal PipelineOptions(PipelineBuilder builder, List<Action<ContainerBuilder>> servicesToInject)
         {
-            _serviceProvider = serviceProvider;
             _builder = builder;
+            ServicesToInject = servicesToInject;
         }
+
 
         public IPipelineOptions AddMiddleware<T>() where T : class, IMiddleware
         {
-            _serviceProvider.AddScoped<T>();
             _builder.AddMiddleware<T>();
-
+            ServicesToInject.Add(x => x.RegisterWithInjector(y => y.RegisterType<T>()));
             return this;
         }
-
-
     }
 
     internal class PipelineBuilder : IPipelineBuilder
@@ -70,7 +68,7 @@ namespace Hubcon.Core.Models.Pipeline
             return this;
         }
 
-        public IPipeline Build(Type controllerType, MethodInvokeRequest request, Func<Task<MethodResponse?>> handler, IServiceProvider serviceProvider)
+        public IPipeline Build(Type controllerType, MethodInvokeRequest request, Func<Task<MethodResponse?>> handler, ILifetimeScope serviceProvider)
         {
             var preHandlerMiddlewares = new List<Type>();
             preHandlerMiddlewares.AddRange(ExceptionMiddlewares);
@@ -80,15 +78,15 @@ namespace Hubcon.Core.Models.Pipeline
 
             var middlewares = new List<IMiddleware>();
             foreach (var mw in preHandlerMiddlewares)
-                middlewares.Add((IMiddleware)serviceProvider.GetRequiredService(mw));
+                middlewares.Add((IMiddleware)serviceProvider.Resolve(mw));
 
             var postHandlerMiddlewares = new List<IPostRequestMiddleware>();
             foreach (var mw in PostRequestMiddlewares)
-                postHandlerMiddlewares.Add((IPostRequestMiddleware)serviceProvider.GetRequiredService(mw));
+                postHandlerMiddlewares.Add((IPostRequestMiddleware)serviceProvider.Resolve(mw));
 
             var loggingMiddlewares = new List<ILoggingMiddleware>();
             foreach (var mw in LoggingMiddlewares)
-                loggingMiddlewares.Add((ILoggingMiddleware)serviceProvider.GetRequiredService(mw));
+                loggingMiddlewares.Add((ILoggingMiddleware)serviceProvider.Resolve(mw));
 
 
             Func<Task<MethodResponse?>> final = () => handler(); // el método original
@@ -113,7 +111,7 @@ namespace Hubcon.Core.Models.Pipeline
 
                     if (ResponseMiddleware != null)
                     {
-                        var responseMw = (IResponseMiddleware)serviceProvider.GetRequiredService(ResponseMiddleware);
+                        var responseMw = (IResponseMiddleware)serviceProvider.Resolve(ResponseMiddleware);
                         response = await responseMw.Execute(response!);
                     }
                 };
