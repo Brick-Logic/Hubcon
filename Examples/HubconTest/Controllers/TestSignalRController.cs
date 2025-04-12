@@ -18,10 +18,7 @@ namespace HubconTest.Controllers
         public async Task PrintMessage(string message)
         {
             await Task.Run(() => {          
-                Console.WriteLine($"[Servidor] Mensaje recibido: {message}");
                 string message2 = "PONG";
-                Console.WriteLine($"[Servidor] Devolviendo mensaje al cliente: {message2}");
-
                 Client.ShowMessage(message2);
             });
         }

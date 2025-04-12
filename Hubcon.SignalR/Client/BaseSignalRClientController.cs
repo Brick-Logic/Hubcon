@@ -1,5 +1,5 @@
 ﻿using Autofac;
-using Autofac.Core;
+using Autofac.Core.Lifetime;
 using Hubcon.Core;
 using Hubcon.Core.Connectors;
 using Hubcon.Core.Controllers;
@@ -8,7 +8,8 @@ using Hubcon.Core.Injectors;
 using Hubcon.Core.Interceptors;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Tools;
+using Hubcon.Core.Models.Middleware;
+using Hubcon.Core.Models.Pipeline.Interfaces;
 using Hubcon.SignalR.Server;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -28,50 +29,50 @@ namespace Hubcon.SignalR.Client
         bool connectedInvoked = false;
 
 
+        private readonly TaskCompletionSource _connectedTcs = new();
+        public Task WaitUntilConnectedAsync() => _connectedTcs.Task;
+
+
         private bool IsBuilt { get; set; } = false;
 
         public Task InternalTask { get; private set; }
 
         public IHubconControllerManager HubconController { get; private set; }
 
+        private ILifetimeScope lifetimeScope = null!;
+
         protected BaseSignalRClientController() { }
 
-        protected BaseSignalRClientController(string url) => Build(url);
+        protected BaseSignalRClientController(
+            string url, 
+            Action<ContainerBuilder>? additionalServices = null, 
+            Action<IMiddlewareOptions>? options = null) => Build(url, additionalServices, options);
 
+        private IHubconControllerManager GetControllerManager() => lifetimeScope.BeginLifetimeScope().Resolve<IHubconControllerManager>();
 
-        private void Build(string url)
+        private void Build(string url, Action<ContainerBuilder>? additionalServices = null, Action<IMiddlewareOptions>? options = null)
         {
             if (IsBuilt)
                 return;
 
-            serviceProvider = Hubcon.Core.DependencyInjection.CreateHubconServiceProvider(container =>
+            serviceProvider = Hubcon.Core.DependencyInjection.CreateHubconServiceProvider(this, container =>
             {
-                container
-                    .RegisterWithInjector(x => x.RegisterType<HubconServiceProvider>().As<IHubconServiceProvider>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterInstance
-                    (
-                        new HubConnectionBuilder()
-                            .WithUrl(url)
-                            .AddMessagePackProtocol()
-                            .WithAutomaticReconnect()
-                            .Build()
+                container.RegisterWithInjector(x => x.RegisterInstance
+                (
+                    new HubConnectionBuilder()
+                        .WithUrl(url)
+                        .AddMessagePackProtocol()
+                        .WithAutomaticReconnect()
+                        .Build()
 
-                    ).As(typeof(HubConnection)).AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(SignalRClientCommunicationHandler<>)).AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType(typeof(HubconControllerManager<SignalRClientCommunicationHandler<HubConnection>>)).As(typeof(IHubconControllerManager)).AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerConnectorInterceptor<,>)).AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<,>)).AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterInstance(this).As(GetType()).AsSingleton());
-            });
+                ).As(typeof(HubConnection)).AsSingleton());
+            }, additionalServices, options);
+
+            lifetimeScope = serviceProvider.GetRequiredService<ILifetimeScope>()!;
 
             hub = serviceProvider.GetRequiredService<HubConnection>();
-
-            HubconController = serviceProvider.GetRequiredService<IHubconControllerManager>()!;
-            
+            HubconController = serviceProvider.GetRequiredService<IHubconControllerManager>()!;         
             _converter = serviceProvider.GetRequiredService<DynamicConverter>()!;
-
-
-            var test = serviceProvider.GetRequiredService(GetType());
 
 
             var derivedType = GetType();
@@ -85,13 +86,13 @@ namespace Hubcon.SignalR.Client
                 if (typeof(IAsyncEnumerable<object>).IsAssignableFrom(methodInfo.ReturnType))
                     hub?.On($"{methodSignature}", (Func<string, MethodInvokeRequest, Task>)StartStream);
                 else if (methodInfo.ReturnType == typeof(void))
-                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => HubconController.Pipeline!.HandleWithoutResultAsync(this, request));
+                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithoutResultAsync(this, request));
                 else if (methodInfo.ReturnType.IsGenericType && methodInfo.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
-                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => HubconController.Pipeline!.HandleWithResultAsync(this, request));
+                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithResultAsync(this, request));
                 else if (methodInfo.ReturnType == typeof(Task))
-                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => HubconController.Pipeline!.HandleWithoutResultAsync(this, request));
+                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithoutResultAsync(this, request));
                 else
-                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => HubconController.Pipeline!.HandleWithResultAsync(this, request));
+                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithResultAsync(this, request));
             });
 
             IsBuilt = true;
@@ -106,10 +107,15 @@ namespace Hubcon.SignalR.Client
             return connector.GetClient<TICommunicationContract>();
         }
 
-        public async Task<BaseSignalRClientController> StartInstanceAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
+        public async Task<BaseSignalRClientController> StartInstanceAsync(
+            string? url = null, 
+            Action<string>? consoleOutput = null, 
+            Action<ContainerBuilder>? additionalServices = null, 
+            Action<IMiddlewareOptions>? options = null, 
+            CancellationToken cancellationToken = default)
         {
             //await StartAsync(url, consoleOutput, cancellationToken);
-            InternalTask = StartAsync(url, consoleOutput, cancellationToken); // NO awaited aún
+            InternalTask = StartAsync(url, consoleOutput, additionalServices, options, cancellationToken);
 
             while (true)
             {
@@ -121,18 +127,25 @@ namespace Hubcon.SignalR.Client
 
                 if (hub?.State == HubConnectionState.Connected)
                 {
-                    while (!connectedInvoked);
+                    while (!connectedInvoked)
+                    {
+                        await Task.Delay(100, cancellationToken);
+                    }
                     return this;
                 }
 
-                await Task.Delay(100, cancellationToken); // Evitar busy-wait
+                await Task.Delay(100, cancellationToken);
             }
         }
 
-        public async Task StartAsync(string? url = null, Action<string>? consoleOutput = null, CancellationToken cancellationToken = default)
+        public async Task StartAsync(string? url = null, 
+            Action<string>? consoleOutput = null, 
+            Action<ContainerBuilder>? additionalServices = null, 
+            Action<IMiddlewareOptions>? options = null, 
+            CancellationToken cancellationToken = default)
         {
             if (!IsBuilt)
-                Build(url ?? "localhost:5000/clienthub");
+                Build(url ?? "localhost:5000/clienthub", additionalServices, options);
 
             try
             {
@@ -162,6 +175,7 @@ namespace Hubcon.SignalR.Client
                     {
                         consoleOutput?.Invoke($"Successfully connected to {_url}.");
                         connectedInvoked = true;
+                        await Task.Delay(10000, cancellationToken);
                     }
                 }
             }
@@ -182,9 +196,9 @@ namespace Hubcon.SignalR.Client
             _ = hub?.StopAsync(_token);
         }
 
-        public Task StartAsync(string? url = null, CancellationToken cancellationToken = default)
+        public Task StartAsync(string? url = null, Action<ContainerBuilder>? additionalServices = null, Action<IMiddlewareOptions>? options = null, CancellationToken cancellationToken = default)
         {
-            runningTask = Task.Run(async () => await StartAsync(url, Console.WriteLine, cancellationToken), cancellationToken);
+            runningTask = Task.Run(async () => await StartAsync(url, Console.WriteLine, additionalServices, options, cancellationToken), cancellationToken);
             return Task.CompletedTask;
         }
 
@@ -197,7 +211,6 @@ namespace Hubcon.SignalR.Client
         public async Task HandleMethodVoid(MethodInvokeRequest info) => await HubconController.Pipeline!.HandleWithoutResultAsync(this, info);
         public async Task StartStream(string methodCode, MethodInvokeRequest info)
         {
-            Console.WriteLine("StartStream llamado");
             var reader = HubconController.Pipeline!.GetStream(this, info);
             var channel = Channel.CreateUnbounded<object>();
 
@@ -216,7 +229,7 @@ namespace Hubcon.SignalR.Client
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            await StartAsync(null, cancellationToken);
+            await StartAsync(null, null, null, cancellationToken);
         }
     }
 

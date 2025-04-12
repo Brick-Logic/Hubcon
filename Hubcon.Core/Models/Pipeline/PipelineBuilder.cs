@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.Models.Pipeline
 {
-    public class PipelineOptions : IPipelineOptions
+    public class PipelineOptions : IMiddlewareOptions
     {
         IPipelineBuilder _builder;
         public List<Action<ContainerBuilder>> ServicesToInject;
@@ -22,8 +22,7 @@ namespace Hubcon.Core.Models.Pipeline
             ServicesToInject = servicesToInject;
         }
 
-
-        public IPipelineOptions AddMiddleware<T>() where T : class, IMiddleware
+        public IMiddlewareOptions AddMiddleware<T>() where T : class, IMiddleware
         {
             _builder.AddMiddleware<T>();
             ServicesToInject.Add(x => x.RegisterWithInjector(y => y.RegisterType<T>()));

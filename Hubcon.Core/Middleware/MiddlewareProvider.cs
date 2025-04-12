@@ -27,14 +27,28 @@ namespace Hubcon.Core.Middleware
             _serviceProvider = serviceProvider;
         }
 
-        public static void AddMiddlewares<TController>(Action<IPipelineOptions> options, List<Action<ContainerBuilder>> servicesToInject) where TController : IBaseHubconController
+        public static void AddMiddlewares<TController>(Action<IMiddlewareOptions> options, List<Action<ContainerBuilder>> servicesToInject) where TController : IBaseHubconController
         {
-            if (!PipelineBuilders.TryGetValue(typeof(TController), out PipelineBuilder? value))
+            AddMiddlewares(typeof(TController), options, servicesToInject);
+        }
+
+        public static void AddMiddlewares(Type iBaseHubconControllerType, Action<IMiddlewareOptions> options, Action<ContainerBuilder> servicesToInject)
+        {
+            AddMiddlewares(iBaseHubconControllerType, options, new List<Action<ContainerBuilder>>(){ servicesToInject });
+        }
+
+        public static void AddMiddlewares(Type iBaseHubconControllerType, Action<IMiddlewareOptions> options, List<Action<ContainerBuilder>> servicesToInject)
+        {
+            if (typeof(IBaseHubconController).IsAssignableTo(iBaseHubconControllerType))
+                throw new ArgumentException($"El tipo {iBaseHubconControllerType.Name} no implementa la interfaz {nameof(IBaseHubconController)}");
+
+            if (!PipelineBuilders.TryGetValue(iBaseHubconControllerType, out PipelineBuilder? value))
             {
-                PipelineBuilders[typeof(TController)] = value = new PipelineBuilder();
+                PipelineBuilders[iBaseHubconControllerType] = value = new PipelineBuilder();
             }
-                var pipelineOptions = new PipelineOptions(value, servicesToInject);
-                options?.Invoke(pipelineOptions);
+
+            var pipelineOptions = new PipelineOptions(value, servicesToInject);
+            options?.Invoke(pipelineOptions);
         }
 
         public IPipeline GetPipeline(Type controllerType, MethodInvokeRequest request, Func<Task<MethodResponse?>> handler)

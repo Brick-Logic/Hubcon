@@ -9,7 +9,7 @@ namespace Hubcon.Core.Registries
 {
     public class ClientRegistry
     {
-        private static Dictionary<Type, Dictionary<string, ICommunicationContract>> Clients { get; } = new();
+        private Dictionary<Type, Dictionary<string, ICommunicationContract>> Clients { get; } = new();
 
         public void RegisterClient(Type controllerType, string clientId, ICommunicationContract client)
         {

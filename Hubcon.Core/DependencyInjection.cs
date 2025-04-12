@@ -28,12 +28,14 @@ namespace Hubcon.Core
     public static class DependencyInjection
     {
         public static ContainerBuilder RegisterWithInjector<TType, TActivatorData, TSingleRegistrationStyle>(
-            this ContainerBuilder container, 
+            this ContainerBuilder container,
             Func<ContainerBuilder, IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle>>? options = null)
         {
             var registered = options?.Invoke(container);
             registered?.OnActivated(e =>
             {
+                //Console.WriteLine($"Instancia creada: {e?.Instance?.GetType().Name}");
+
                 List<PropertyInfo> props = new();
 
                 props.AddRange(e.Instance!.GetType()
@@ -48,8 +50,8 @@ namespace Hubcon.Core
 
                 foreach (PropertyInfo prop in props!)
                 {
-                    if(prop.GetValue(e.Instance) != null)
-                        continue;          
+                    if (prop.GetValue(e.Instance) != null)
+                        continue;
 
                     var resolved = e.Context.ResolveOptional(prop.PropertyType);
 
@@ -77,19 +79,19 @@ namespace Hubcon.Core
         }
 
         public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsScoped<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
-            => regBuilder.InstancePerLifetimeScope();       
+            => regBuilder.InstancePerLifetimeScope();
 
         public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsTransient<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
             => regBuilder.InstancePerDependency();
 
         public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsSingleton<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
-            => regBuilder.SingleInstance(); 
+            => regBuilder.SingleInstance();
 
         private static List<Action<ContainerBuilder>> ServicesToInject { get; } = new();
 
-        public static WebApplicationBuilder AddHubcon(this WebApplicationBuilder builder, Action<ContainerBuilder>? additionalServices = null, IServiceCollection? serviceCollection = null)
-            => AddHubcon(builder, serviceCollection, additionalServices);
-        public static WebApplicationBuilder AddHubcon(this WebApplicationBuilder builder, IServiceCollection? serviceCollection = null, Action<ContainerBuilder>? additionalServices = null)
+        public static WebApplicationBuilder AddHubcon(
+            this WebApplicationBuilder builder,
+            Action<ContainerBuilder>? additionalServices = null)
         {
             builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
             builder.Host.ConfigureContainer<ContainerBuilder>((context, container) =>
@@ -97,16 +99,13 @@ namespace Hubcon.Core
                 if (ServicesToInject.Count > 0)
                     ServicesToInject.ForEach(x => x.Invoke(container));
 
-                if (serviceCollection != null)
-                    container.Populate(serviceCollection);
-
                 container
                     .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<StreamNotificationHandler>().AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterType<MethodInvokerProvider>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<ClientRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<HubconServiceProvider>().As<IHubconServiceProvider>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterGeneric(typeof(ClientControllerConnectorInterceptor<,>)).AsScoped())
-                    .RegisterWithInjector(x => x.RegisterType<MethodInvokerProvider>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<MiddlewareProvider>().As<IMiddlewareProvider>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterGeneric(typeof(ClientControllerConnectorInterceptor<,>)).AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<RequestPipeline>().AsScoped())
@@ -120,20 +119,38 @@ namespace Hubcon.Core
             return builder;
         }
 
-        public static IServiceProvider CreateHubconServiceProvider(Action<ContainerBuilder>? additionalServices = null)
+        public static IServiceProvider CreateHubconServiceProvider<TICommunicationHandler>(
+            IBaseHubconController<TICommunicationHandler> iBaseHubconControllerInstance,
+            Action<ContainerBuilder>? internalServices = null,
+            Action<ContainerBuilder>? additionalServices = null,
+            Action<IMiddlewareOptions>? options = null
+            )
+            where TICommunicationHandler : class, ICommunicationHandler
         {
             var container = new ContainerBuilder();
-             
+
             // Registrás tus tipos
             container
-                   .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().AsSingleton())
                    .RegisterWithInjector(x => x.RegisterType<MethodInvokerProvider>().AsSingleton())
-                   .RegisterWithInjector(x => x.RegisterType<MiddlewareProvider>().As<IMiddlewareProvider>().AsSingleton())
-                   .RegisterWithInjector(x => x.RegisterType<RequestPipeline>().AsSingleton());
+                   .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().AsSingleton())
+                   .RegisterWithInjector(x => x.RegisterType<MiddlewareProvider>().As<IMiddlewareProvider>().AsScoped())
+                   .RegisterWithInjector(x => x.RegisterType<RequestPipeline>().AsScoped())
+                   .RegisterWithInjector(x => x.RegisterType(typeof(TICommunicationHandler)).AsScoped())
+                   .RegisterWithInjector(x => x.RegisterType(typeof(HubconControllerManager<TICommunicationHandler>)).As(typeof(IHubconControllerManager)).AsScoped())
+                   .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerConnectorInterceptor<,>)).AsScoped())
+                   .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<,>)).AsScoped())
+                   .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconControllerManager<>)).AsScoped())
+                   .RegisterWithInjector(x => x.RegisterInstance(iBaseHubconControllerInstance).As(iBaseHubconControllerInstance.GetType()).AsSingleton());
 
             additionalServices?.Invoke(container);
+            internalServices?.Invoke(container);            
 
-            container.RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconControllerManager<>)).AsSingleton());
+            if (options != null)
+            {
+                List<Action<ContainerBuilder>> ServicesToInject = new();
+                MiddlewareProvider.AddMiddlewares(iBaseHubconControllerInstance.GetType(), options, ServicesToInject);
+                ServicesToInject.ForEach(x => x.Invoke(container));
+            }           
 
             // Build del container
             var builtContainer = container.Build();
@@ -143,7 +160,9 @@ namespace Hubcon.Core
             return new AutofacServiceProvider(scope);
         }
 
-        public static WebApplicationBuilder AddHubconController<T>(this WebApplicationBuilder builder, Action<IPipelineOptions>? options = null)
+        public static WebApplicationBuilder AddHubconController<T>(
+            this WebApplicationBuilder builder,
+            Action<IMiddlewareOptions>? options = null)
             where T : class, IBaseHubconController, ICommunicationContract
         {
             var controllerType = typeof(T);
@@ -164,7 +183,7 @@ namespace Hubcon.Core
             {
                 MiddlewareProvider.AddMiddlewares<T>(options, ServicesToInject);
             }
-            
+
             return builder;
         }
     }

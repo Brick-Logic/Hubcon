@@ -2,8 +2,8 @@
 
 namespace Hubcon.Core.Models.Pipeline.Interfaces
 {
-    public interface IPipelineOptions
+    public interface IMiddlewareOptions
     {
-        public IPipelineOptions AddMiddleware<T>() where T : class, IMiddleware;
+        public IMiddlewareOptions AddMiddleware<T>() where T : class, IMiddleware;
     }
 }

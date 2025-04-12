@@ -1,10 +1,16 @@
-﻿using HubconTestDomain;
+﻿using Autofac;
+using Hubcon.Core;
+using Hubcon.Core.Connectors;
+using Hubcon.Core.Models.Interfaces;
+using Hubcon.SignalR.Client;
+using HubconTest.Middleware.HubconMiddlewares;
+using HubconTestDomain;
 
 namespace HubconTestClient
 {
     internal class Program
     {
-        private const string Url = "http://localhost:5056/clienthub";
+        private const string Url = "http://localhost:5000/clienthub";
 
         static async Task Main()
         {
@@ -13,7 +19,12 @@ namespace HubconTestClient
 
             //await hubController.StartAsync(Url, Console.WriteLine);
 
-            var server = await hubController.StartInstanceAsync(Url, Console.WriteLine);
+            var server = await hubController.StartInstanceAsync(Url, Console.WriteLine, null, options => 
+            {
+                options.AddMiddleware<LoggingMiddleware>();
+            });
+
+            HubconServerConnector<IBaseHubconController<ICommunicationHandler>, ICommunicationHandler> serverConnector = new();
 
             var client = server.GetConnector<IServerHubContract>();
 

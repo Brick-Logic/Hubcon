@@ -4,10 +4,16 @@ using Hubcon.Core.Extensions;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 
 namespace Hubcon.Core.Interceptors
 {
+    public interface IServerConnectorInterceptor
+    {
+
+    }
+
     public class ServerConnectorInterceptor<TIHubController, TICommunicationHandler> : AsyncInterceptorBase
         where TICommunicationHandler : ICommunicationHandler
         where TIHubController : IBaseHubconController
@@ -15,6 +21,7 @@ namespace Hubcon.Core.Interceptors
         public readonly ICommunicationHandler CommunicationHandler;
         private readonly DynamicConverter _converter;
 
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ServerConnectorInterceptor<,>))]
         public ServerConnectorInterceptor(TIHubController handler, DynamicConverter converter)
         {
             CommunicationHandler = handler.HubconController.CommunicationHandler;
@@ -23,8 +30,6 @@ namespace Hubcon.Core.Interceptors
 
         protected override async Task<TResult> InterceptAsync<TResult>(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
         {
-            Console.WriteLine($"[Client][MethodInterceptor] Calling {invocation.Method.Name} on SERVER. Args: [{string.Join(",", invocation.Arguments.Select(x => $"{x}"))}]");
-
             TResult result;
 
             if (typeof(TResult).IsGenericType && typeof(TResult).GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
@@ -68,9 +73,6 @@ namespace Hubcon.Core.Interceptors
 
         protected override async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task> proceed)
         {
-            
-            Console.WriteLine($"[Client][MethodInterceptor] Calling {invocation.Method.Name} on SERVER. Args: [{string.Join(",", invocation.Arguments.Select(x => $"{x}"))}]");
-
             MethodInvokeRequest request = new MethodInvokeRequest(
                 invocation.Method.GetMethodSignature(), 
                 nameof(IBaseHubconController.HandleMethodVoid), 

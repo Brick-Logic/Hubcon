@@ -26,9 +26,7 @@ namespace Hubcon.Core.Handlers
         }
 
         public async Task HandleWithoutResultAsync(object instance, MethodInvokeRequest methodInfo)
-        {
-            Console.WriteLine($"[MethodHandler] Received call {methodInfo.MethodName}. Args: [{string.Join(",", methodInfo.Args.Select(x => $"{x}"))}]");
-            
+        {            
             Func<Task<MethodResponse?>> method = async () =>
             {
                 _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
@@ -47,8 +45,6 @@ namespace Hubcon.Core.Handlers
 
         public async Task<MethodResponse> HandleSynchronousResult(object instance, MethodInvokeRequest methodInfo)
         {
-            Console.WriteLine($"[MethodHandler] Received call {methodInfo.MethodName}. Args: [{string.Join(",", methodInfo.Args.Select(x => $"{x}"))}]");
-
             var method = async () =>
             {
                 return await Task.Run(() =>
@@ -70,8 +66,6 @@ namespace Hubcon.Core.Handlers
 
         public Task HandleSynchronous(object instance, MethodInvokeRequest methodInfo)
         {
-            Console.WriteLine($"[MethodHandler] Received call {methodInfo.MethodName}. Args: [{string.Join(",", methodInfo.Args.Select(x => $"{x}"))}]");
-
             Func<Task<MethodResponse?>> method = () =>
             {
                 return Task.Run<MethodResponse?>(async () =>
@@ -93,8 +87,6 @@ namespace Hubcon.Core.Handlers
 
         public IAsyncEnumerable<object> GetStream(object instance, MethodInvokeRequest methodInfo)
         {
-            Console.WriteLine($"[MethodHandler] Received call {methodInfo.MethodName}. Args: [{string.Join(",", methodInfo.Args.Select(x => $"{x}"))}]");
-
             Func<Task<MethodResponse?>> method = async () =>
             {
                 _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
@@ -110,8 +102,6 @@ namespace Hubcon.Core.Handlers
 
         public async Task<MethodResponse> HandleWithResultAsync(object instance, MethodInvokeRequest methodInfo)
         {
-            Console.WriteLine($"[MethodHandler] Received call {methodInfo.MethodName}. Args: [{string.Join(",", methodInfo.Args.Select(x => $"{x}"))}]");
-
             var method = async () =>
             {
                 _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);

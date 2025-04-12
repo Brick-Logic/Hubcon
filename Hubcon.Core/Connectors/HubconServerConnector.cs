@@ -1,6 +1,8 @@
 ﻿using Castle.DynamicProxy;
+using Hubcon.Core.Injectors.Attributes;
 using Hubcon.Core.Interceptors;
 using Hubcon.Core.Models.Interfaces;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Hubcon.Core.Connectors
 {
@@ -19,11 +21,16 @@ namespace Hubcon.Core.Connectors
         where TIBaseHubconController : IBaseHubconController<TICommunicationHandler>
     {
         private ICommunicationContract? _client;
-        private readonly ServerConnectorInterceptor<TIBaseHubconController, TICommunicationHandler> Interceptor;
+
+        [HubconInject]
+        private ServerConnectorInterceptor<TIBaseHubconController, TICommunicationHandler> Interceptor { get; }
+
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(HubconServerConnector<,>))]
+        public HubconServerConnector()
+        {
+        }
 
         public ICommunicationHandler Connection { get => Interceptor.CommunicationHandler; }
-
-        public HubconServerConnector(ServerConnectorInterceptor<TIBaseHubconController, TICommunicationHandler> interceptor) : base() => Interceptor = interceptor;
 
         public ICommunicationContract? GetCurrentClient() => _client;
 
