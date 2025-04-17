@@ -1,15 +1,53 @@
 ﻿using Hubcon.SignalR.Client;
 using HubconTestDomain;
+using System;
 
 namespace HubconTestClient
 {
     public class TestHubController : BaseSignalRClientController<IServerHubContract>, ITestClientController
     {
+        // Función simple que vamos a apuntar
+
+        //unsafe struct FixedBuffer
+        //{
+        //    public fixed int numeros[10];
+        //}
+
+        public TestHubController()
+        {
+
+            //Span<byte> bytes = stackalloc byte[100];
+            //nint ptr = (nint)0x12345678;
+
+            //unsafe
+            //{
+            //    int x = 42;
+            //    int* p = &x;
+            //    Console.WriteLine(*p);
+
+            //    static int Sumar(int a, int b) => a + b;        
+            //    delegate*<int, int, int> sumaPtr = &Sumar;
+            //    Delegate suma = Sumar;
+
+
+            //}
+        }
+
+
+
+
         public async Task ShowText() => await Task.Run(() => Console.WriteLine("ShowText() invoked succesfully."));
         public async Task<int> GetTemperature() => await Task.Run(() => new Random().Next(-10, 50));
 
         public async Task Random()
         {
+
+
+
+            
+
+
+
             var temperatura = await Server.GetTemperatureFromServer();
             Console.WriteLine($"Temperatura desde el conector: {temperatura}");
         }

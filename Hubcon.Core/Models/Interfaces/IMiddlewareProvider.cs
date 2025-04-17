@@ -4,7 +4,7 @@ namespace Hubcon.Core.Models.Interfaces
 {
     public interface IMiddlewareProvider
     {
-        //public void AddMiddlewares<TController>(Action<IPipelineOptions> options) where TController : IBaseHubconController;
+        //public void AddMiddlewares<TController>(Action<IMiddlewareOptions> options) where TController : IBaseHubconController;
 
         public IPipeline GetPipeline(Type controllerType, MethodInvokeRequest request, Func<Task<MethodResponse?>> handler);
     }

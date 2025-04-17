@@ -2,7 +2,8 @@
 using Hubcon.Core.Injectors.Attributes;
 using Hubcon.Core.Interceptors;
 using Hubcon.Core.Models.Interfaces;
-using System.Diagnostics.CodeAnalysis;
+using Hubcon.Core.Registries;
+using Hubcon.Core.Tools;
 
 namespace Hubcon.Core.Connectors
 {
@@ -21,16 +22,16 @@ namespace Hubcon.Core.Connectors
         where TIBaseHubconController : IBaseHubconController<TICommunicationHandler>
     {
         private ICommunicationContract? _client;
-
-        [HubconInject]
-        private ServerConnectorInterceptor<TIBaseHubconController, TICommunicationHandler> Interceptor { get; }
-
-        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(HubconServerConnector<,>))]
-        public HubconServerConnector()
-        {
-        }
+        private readonly ServerConnectorInterceptor<TIBaseHubconController, TICommunicationHandler> Interceptor;
+        private readonly ProxyRegistry proxyRegistry;
 
         public ICommunicationHandler Connection { get => Interceptor.CommunicationHandler; }
+
+        public HubconServerConnector(ServerConnectorInterceptor<TIBaseHubconController, TICommunicationHandler> interceptor, ProxyRegistry proxyRegistry) : base()
+        {
+            Interceptor = interceptor;
+            this.proxyRegistry = proxyRegistry;
+        }
 
         public ICommunicationContract? GetCurrentClient() => _client;
 
@@ -38,6 +39,10 @@ namespace Hubcon.Core.Connectors
         {
             if (_client != null)
                 return (TICommunicationContract)_client;
+
+            var proxyType = proxyRegistry.TryGetProxy<TICommunicationContract>();
+
+            return (TICommunicationContract)InstanceCreator.TryCreateInstance(proxyType, Interceptor)!;
 
             var proxyGenerator = new ProxyGenerator();
 

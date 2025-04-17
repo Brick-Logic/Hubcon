@@ -1,9 +1,5 @@
-﻿using Autofac;
-using Hubcon.Core;
-using Hubcon.Core.Connectors;
-using Hubcon.Core.Models.Interfaces;
-using Hubcon.SignalR.Client;
-using HubconTest.Middleware.HubconMiddlewares;
+﻿using Hubcon.Core.Middleware;
+using Hubcon.SignalR;
 using HubconTestDomain;
 
 namespace HubconTestClient
@@ -14,7 +10,6 @@ namespace HubconTestClient
 
         static async Task Main()
         {
-
             var hubController = new TestHubController();
 
             //await hubController.StartAsync(Url, Console.WriteLine);
@@ -24,30 +19,29 @@ namespace HubconTestClient
                 options.AddMiddleware<LoggingMiddleware>();
             });
 
-            HubconServerConnector<IBaseHubconController<ICommunicationHandler>, ICommunicationHandler> serverConnector = new();
-
             var client = server.GetConnector<IServerHubContract>();
 
 
             while (true)
             {
-                var list = client.GetMessages(10);
-
-                await foreach (var message in list)
-                {
-                    Console.WriteLine(message);
-                }
 
                 //Console.ReadKey();
+                //var list = client.GetMessages(10);
 
-                //client.ShowTextOnServer();
-                //Console.ReadKey();
+                //await foreach (var message in list)
+                //{
+                //    Console.WriteLine(message);
+                //}
+
+
                 Console.ReadKey();
+                await client.ShowTextOnServer();
 
+                Console.ReadKey();
                 await client.ShowTempOnServerFromClient();
 
-                //client.ShowTextOnServer();
-                //Console.ReadKey();
+                Console.ReadKey();
+                await client.ShowTextOnServer();
             }
         }
     }

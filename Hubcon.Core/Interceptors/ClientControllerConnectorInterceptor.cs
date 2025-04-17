@@ -3,11 +3,9 @@ using Hubcon.Core.Converters;
 using Hubcon.Core.Extensions;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
-using System.ComponentModel;
 
 namespace Hubcon.Core.Interceptors
 {
-    [EditorBrowsable(EditorBrowsableState.Never)]
     public class ClientControllerConnectorInterceptor<TIHubController, TICommunicationHandler> : AsyncInterceptorBase
         where TICommunicationHandler : ICommunicationHandler
         where TIHubController : IBaseHubconController
@@ -26,6 +24,7 @@ namespace Hubcon.Core.Interceptors
 
         protected override async Task<TResult> InterceptAsync<TResult>(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
         {
+            
             var handler = HandlerFactory.Invoke();
             TResult? result;
 

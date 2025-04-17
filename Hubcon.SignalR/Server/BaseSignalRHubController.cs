@@ -46,10 +46,10 @@ namespace Hubcon.SignalR.Server
         }
 
         [HubconInject]
-        public StreamNotificationHandler StreamNotificationHandler { get; } = null!;
+        public StreamNotificationHandler StreamNotificationHandler { get; }
 
         [HubconInject]
-        public ILifetimeScope ServiceProvider { get; } = null!;
+        public ILifetimeScope ServiceProvider { get; }
 
 
         public async Task<MethodResponse> HandleMethodTask(MethodInvokeRequest info) 

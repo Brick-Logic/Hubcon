@@ -1,12 +1,9 @@
 using Hubcon.Core;
-using Hubcon.Core.Models;
+using Hubcon.Core.Middleware;
 using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Models.Middleware;
 using Hubcon.SignalR;
 using HubconTest.Controllers;
-using HubconTest.Middleware.HubconMiddlewares;
 using HubconTestDomain;
-using Microsoft.AspNetCore.SignalR;
 using Scalar.AspNetCore;
 
 namespace HubconTest
@@ -28,6 +25,7 @@ namespace HubconTest
             {
                 options.AddMiddleware<LoggingMiddleware>();
             });
+            builder.AddContractsFromAssembly(nameof(HubconTestDomain));
 
             var app = builder.Build();
 
@@ -53,14 +51,16 @@ namespace HubconTest
                 //Gets a client instance
                 var client = clientAccessor.GetOrCreateClient(clientId);
 
-                var test = client.ShowAndReturnMessage("hello");
+                Console.WriteLine(await client.GetTemperature());
 
-                var messages = client.GetMessages(10);
+                //var test = client.ShowAndReturnMessage("hello");
 
-                await foreach (var item in messages)
-                {
-                    Console.WriteLine(item);
-                }
+                //var messages = client.GetMessages(10);
+
+                //await foreach (var item in messages)
+                //{
+                //    Console.WriteLine(item);
+                //}
             });
 
             app.Run();

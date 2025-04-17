@@ -6,6 +6,7 @@ using Hubcon.Core.Controllers;
 using Hubcon.Core.Converters;
 using Hubcon.Core.Injectors;
 using Hubcon.Core.Interceptors;
+using Hubcon.Core.Middleware;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Models.Middleware;
@@ -35,9 +36,9 @@ namespace Hubcon.SignalR.Client
 
         private bool IsBuilt { get; set; } = false;
 
-        public Task InternalTask { get; private set; }
+        public Task InternalTask { get; private set; } = null!;
 
-        public IHubconControllerManager HubconController { get; private set; }
+        public IHubconControllerManager HubconController { get; private set; } = null!;
 
         private ILifetimeScope lifetimeScope = null!;
 
@@ -65,13 +66,21 @@ namespace Hubcon.SignalR.Client
                         .WithAutomaticReconnect()
                         .Build()
 
-                ).As(typeof(HubConnection)).AsSingleton());
-            }, additionalServices, options);
+                    ).As(typeof(HubConnection)).AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(SignalRClientCommunicationHandler<>)).AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterType(typeof(HubconControllerManager<SignalRClientCommunicationHandler<HubConnection>>)).As(typeof(IHubconControllerManager)).AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerConnectorInterceptor<,>)).AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<,>)).AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterInstance(this).As(GetType()).AsSingleton());
+            },
+            options => 
+            {
+                options.AddMiddleware<LoggingMiddleware>();
+            });
 
-            lifetimeScope = serviceProvider.GetRequiredService<ILifetimeScope>()!;
-
+            lifetimeScope = serviceProvider.GetRequiredService<ILifetimeScope>();
             hub = serviceProvider.GetRequiredService<HubConnection>();
-            HubconController = serviceProvider.GetRequiredService<IHubconControllerManager>()!;         
+            HubconController = serviceProvider.GetRequiredService<IHubconControllerManager>()!;        
             _converter = serviceProvider.GetRequiredService<DynamicConverter>()!;
 
 

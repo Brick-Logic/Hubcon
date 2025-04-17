@@ -1,6 +1,8 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Core.Interceptors;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Registries;
+using Hubcon.Core.Tools;
 
 namespace Hubcon.Core.Connectors
 {
@@ -11,18 +13,27 @@ namespace Hubcon.Core.Connectors
     /// <typeparam name="TICommunicationHandler"></typeparam>
     /// <typeparam name="TICommunicationContract"></typeparam>
     public class HubconClientConnector<TICommunicationContract, TIHubconController> : IClientAccessor<TICommunicationContract, TIHubconController>
-        where TICommunicationContract : ICommunicationContract?
+        where TICommunicationContract : ICommunicationContract
         where TIHubconController : class, IBaseHubconController
     {
         protected Dictionary<string, TICommunicationContract>? clients = new();
+        private readonly ProxyRegistry proxyRegistry;
+
         protected ClientControllerConnectorInterceptor<TIHubconController, ICommunicationHandler> Interceptor { get; set; }
 
-        public HubconClientConnector(ClientControllerConnectorInterceptor<TIHubconController, ICommunicationHandler> interceptor) => Interceptor = interceptor;
+        public HubconClientConnector(ClientControllerConnectorInterceptor<TIHubconController, ICommunicationHandler> interceptor, ProxyRegistry proxyRegistry)
+        {
+            Interceptor = interceptor;
+            this.proxyRegistry = proxyRegistry;
+        }
 
         protected TICommunicationContract BuildInstance(string instanceId)
         {
             var communicationHandler = (IServerCommunicationHandler)Interceptor.CommunicationHandler;
             communicationHandler.WithClientId(instanceId);
+
+            var proxyType = proxyRegistry.TryGetProxy<TICommunicationContract>();
+            return (TICommunicationContract)InstanceCreator.TryCreateInstance(proxyType, Interceptor)!;
 
             ProxyGenerator ProxyGen = new();
 
