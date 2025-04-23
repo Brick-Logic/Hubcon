@@ -4,11 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Kafka.Server
+namespace Hubcon.Core.Models
 {
-    internal class BaseKafkaServerController
+    internal class MethodStreamRequest
     {
     }
 }
-
-

@@ -1,6 +1,7 @@
 using Hubcon.Core;
 using Hubcon.Core.Middleware;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.GraphQL;
 using Hubcon.SignalR;
 using HubconTest.Controllers;
 using HubconTestDomain;
@@ -19,7 +20,10 @@ namespace HubconTest
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
-
+            //builder.AddHubconGraphQL(controllerOptions => 
+            //{
+            //    controllerOptions.AddController<TestSignalRController>();
+            //});
             builder.UseHubconSignalR();
             builder.AddHubconController<TestSignalRController>(options =>
             {
@@ -40,7 +44,11 @@ namespace HubconTest
 
             app.MapControllers();
 
+            //app.MapHubconGraphQL("/graphql");
+
             app.MapHub<TestSignalRController>("/clienthub");
+
+            //app.MapHubconRestControllers();
 
             //Just a test endpoint, it can also be injected in a controller.
             app.MapGet("/test", async (IClientAccessor<ITestClientController, TestSignalRController> clientAccessor) =>

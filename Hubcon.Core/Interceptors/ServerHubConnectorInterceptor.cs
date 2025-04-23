@@ -5,15 +5,11 @@ using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 
 namespace Hubcon.Core.Interceptors
 {
-    public interface IServerConnectorInterceptor
-    {
-
-    }
-
     public class ServerConnectorInterceptor<TIHubController, TICommunicationHandler> : AsyncInterceptorBase
         where TICommunicationHandler : ICommunicationHandler
         where TIHubController : IBaseHubconController
@@ -43,7 +39,11 @@ namespace Hubcon.Core.Interceptors
                     .GetMethod(nameof(CommunicationHandler.StreamAsync))! // Cambia 'StreamAsync' por el nombre correcto del método
                     .MakeGenericMethod(itemType);
 
-                var request = new MethodInvokeRequest(invocation.Method.GetMethodSignature(), nameof(IHubconServerController.HandleMethodStream), invocation.Arguments).SerializeArgs(_converter.SerializeArgs);
+                var request = new MethodInvokeRequest(
+                    invocation.Method.GetMethodSignature(), 
+                    nameof(IHubconServerController.HandleMethodStream), 
+                    _converter.SerializeArgsToJson(invocation.Arguments)
+                );
 
                 // Invocar el método StreamAsync pasando el tipo adecuado
                 result = await (Task<TResult>)streamMethod.Invoke(CommunicationHandler, new object[]
@@ -57,12 +57,11 @@ namespace Hubcon.Core.Interceptors
                 MethodInvokeRequest request = new MethodInvokeRequest(
                     invocation.Method.GetMethodSignature(),
                     nameof(IBaseHubconController.HandleMethodTask),
-                    invocation.Arguments
-                )
-                .SerializeArgs(_converter.SerializeArgs);
+                    _converter.SerializeArgsToJson(invocation.Arguments)
+                );
 
                 var response = await CommunicationHandler.InvokeAsync(request,new CancellationToken());
-                result = response.GetDeserializedData<TResult>(_converter.DeserializeData<TResult>)!;
+                result = _converter.DeserializeJsonElement<TResult>((JsonElement?)response.Data)!;
             }
 
 
@@ -74,11 +73,10 @@ namespace Hubcon.Core.Interceptors
         protected override async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task> proceed)
         {
             MethodInvokeRequest request = new MethodInvokeRequest(
-                invocation.Method.GetMethodSignature(), 
-                nameof(IBaseHubconController.HandleMethodVoid), 
-                invocation.Arguments
-            )
-            .SerializeArgs(_converter.SerializeArgs);
+                invocation.Method.GetMethodSignature(),
+                nameof(IBaseHubconController.HandleMethodVoid),
+                _converter.SerializeArgsToJson(invocation.Arguments)
+            );
 
             await CommunicationHandler.CallAsync(request,new CancellationToken());
         }

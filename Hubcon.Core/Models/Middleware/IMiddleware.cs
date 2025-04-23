@@ -8,7 +8,7 @@ namespace Hubcon.Core.Models.Middleware
 {
     public interface IMiddleware
     {
-        public Task<MethodResponse?> Execute(MethodInvokeRequest request, Func<Task<MethodResponse?>> next);
+        public Task<IMethodResponse?> Execute(MethodInvokeRequest request, Func<Task<IMethodResponse?>> next);
     }
 
     public interface IExceptionMiddleware : IMiddleware
@@ -23,7 +23,7 @@ namespace Hubcon.Core.Models.Middleware
 
     public interface ILoggingMiddleware : IMiddleware
     {
-        public Task Execute(MethodInvokeRequest request, MethodResponse response, Func<Task> next);
+        public Task Execute(MethodInvokeRequest request, IMethodResponse response, Func<Task> next);
     }
 
     public interface IPreRequestMiddleware : IMiddleware
@@ -32,11 +32,11 @@ namespace Hubcon.Core.Models.Middleware
 
     public interface IPostRequestMiddleware : IMiddleware
     {
-        public Task<MethodResponse?> Execute(MethodInvokeRequest request, MethodResponse response);
+        public Task<IMethodResponse?> Execute(MethodInvokeRequest request, IMethodResponse response);
     }
 
     public interface IResponseMiddleware : IMiddleware
     {
-        public Task<MethodResponse?> Execute(MethodResponse response);
+        public Task<IMethodResponse?> Execute(IMethodResponse response);
     }
 }

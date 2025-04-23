@@ -1,5 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Hubcon.Core.Converters
@@ -30,7 +32,10 @@ namespace Hubcon.Core.Converters
 
             for (int i = 0; i < types.Length; i++)
             {
-                if (typeof(IAsyncEnumerable<object>).IsAssignableFrom(types[i]))
+                if (typeof(IAsyncEnumerable<JsonElement>).IsAssignableFrom(types[i]))
+                    args[i] = (IAsyncEnumerable<JsonElement>?)args[i];
+
+                if (typeof(IAsyncEnumerable<>).IsAssignableFrom(types[i]))
                     args[i] = (IAsyncEnumerable<object>?)args[i];
 
                 args[i] = JsonConvert.DeserializeObject($"{args[i]}", types[i]);
@@ -68,10 +73,95 @@ namespace Hubcon.Core.Converters
         {
             if (data == null) return default;
 
-            if(typeof(IAsyncEnumerable<object>).IsAssignableFrom(typeof(T)))
+            if (typeof(IAsyncEnumerable<JsonElement>).IsAssignableFrom(typeof(T)))
                 return (T)data;
 
-            return JsonConvert.DeserializeObject<T>($"{data}");       
-        }   
+            if (typeof(IAsyncEnumerable<object>).IsAssignableFrom(typeof(T)))
+                return (T)data;
+
+            return (T?)DeserializeData(typeof(T), data);       
+        }
+
+
+        // 1. Convierte un objeto a JsonElement
+        public JsonElement? SerializeObject(object? value)
+        {
+            return value is null ? null : System.Text.Json.JsonSerializer.SerializeToElement(value);
+        }
+
+        // 2. Convierte una colección de objetos a JsonElements
+        public IEnumerable<JsonElement?> SerializeArgsToJson(IEnumerable<object?> values)
+        {
+            List<JsonElement?> results = new();
+            foreach (var val in values)
+            {
+                results.Add(SerializeObject(val));
+            }
+
+            return results;
+        }
+
+        // 3. Convierte un JsonElement a un objeto fuertemente tipado
+        public object? DeserializeJsonElement(JsonElement? element, Type targetType)
+        {
+            if (element is null || element?.ValueKind == JsonValueKind.Null)
+                return null;
+
+            return System.Text.Json.JsonSerializer.Deserialize(element.Value.GetRawText(), targetType);
+        }
+
+        // 3. Convierte un JsonElement a un objeto fuertemente tipado
+        public T? DeserializeJsonElement<T>(JsonElement? element)
+        {
+            if (element is null || element?.ValueKind == JsonValueKind.Null)
+                return default;
+
+            var value = element!.Value;
+            return (T?)System.Text.Json.JsonSerializer.Deserialize(value, typeof(T));
+        }
+
+        // 4. Convierte una lista de JsonElements a objetos, según tipos dados
+        public IEnumerable<object?> DeserializeJsonArgs(IEnumerable<JsonElement?> elements, IEnumerable<Type> types)
+        {
+            List<object?> list = new();
+            using var elementEnum = elements.GetEnumerator();
+            using var typeEnum = types.GetEnumerator();
+
+            while (elementEnum.MoveNext() && typeEnum.MoveNext())
+            {
+                list.Add(DeserializeJsonElement(elementEnum.Current, typeEnum.Current));
+            }
+
+            return list;
+        }
+        public async IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement?> stream, DynamicConverter converter, [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            await foreach (var item in stream.WithCancellation(cancellationToken))
+            {
+                if (item is T typedItem)
+                {
+                    yield return typedItem;
+                }
+                else
+                {
+                    yield return converter.DeserializeJsonElement<T>(item)!;
+                }
+            }
+        }
+
+        public async IAsyncEnumerable<JsonElement?> ConvertToJsonElementStream(IAsyncEnumerable<object?> stream, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await foreach (var item in stream.WithCancellation(cancellationToken))
+            {
+                if (item is JsonElement typedItem)
+                {
+                    yield return typedItem;
+                }
+                else
+                {
+                    yield return SerializeObject(item)!;
+                }
+            }
+        }
     }
 }

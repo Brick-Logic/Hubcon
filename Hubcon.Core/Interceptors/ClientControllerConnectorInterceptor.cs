@@ -44,9 +44,8 @@ namespace Hubcon.Core.Interceptors
                 MethodInvokeRequest request = new MethodInvokeRequest(
                     methodName,
                     methodName,
-                    invocation.Arguments
-                )
-                .SerializeArgs(_converter.SerializeArgs);
+                    _converter.SerializeArgsToJson(invocation.Arguments)
+                );
 
                 // Invocar el método StreamAsync pasando el tipo adecuado
                 result = await (Task<TResult>)streamMethod.Invoke(handler, new object[]
@@ -62,12 +61,11 @@ namespace Hubcon.Core.Interceptors
                 MethodInvokeRequest request = new MethodInvokeRequest(
                     methodName,
                     methodName,
-                    invocation.Arguments
-                )
-                .SerializeArgs(_converter.SerializeArgs);
+                    _converter.SerializeArgsToJson(invocation.Arguments)
+                );
 
                 var response = await handler.InvokeAsync(request, new CancellationToken());
-                result = response.GetDeserializedData<TResult>(_converter.DeserializeData<TResult>);
+                result = _converter.DeserializeData<TResult>(response.Data);
             }
 
             invocation.ReturnValue = result;
@@ -83,9 +81,8 @@ namespace Hubcon.Core.Interceptors
             MethodInvokeRequest request = new MethodInvokeRequest(
                 methodName,
                 methodName,
-                invocation.Arguments
-            )
-            .SerializeArgs(_converter.SerializeArgs);
+                _converter.SerializeArgsToJson(invocation.Arguments)
+            );
 
             await handler.CallAsync(request, new CancellationToken());
         }

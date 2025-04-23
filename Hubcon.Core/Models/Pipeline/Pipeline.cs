@@ -4,14 +4,14 @@ namespace Hubcon.Core.Models.Pipeline
 {
     internal class Pipeline : IPipeline
     {
-        public Pipeline(Type controllerType, Func<Task<MethodResponse?>> pipelineReference)
+        public Pipeline(Type controllerType, Func<Task<IMethodResponse>> pipelineReference)
         {
             pipelineMethod = pipelineReference!;
         }
 
-        private Func<Task<MethodResponse>> pipelineMethod { get; }
+        private Func<Task<IMethodResponse>> pipelineMethod { get; }
 
-        public async Task<MethodResponse> Execute()
+        public async Task<IMethodResponse> Execute()
         {
             return await pipelineMethod();
         }

@@ -4,7 +4,7 @@ namespace Hubcon.Core.Models.Interfaces
 {
     public interface ICommunicationHandler
     {
-        public Task<MethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken);
+        public Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken);
         public Task CallAsync(MethodInvokeRequest request, CancellationToken cancellationToken);
         public Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, CancellationToken cancellationToken);
     }

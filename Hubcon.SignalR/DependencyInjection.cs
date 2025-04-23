@@ -4,8 +4,6 @@ using Hubcon.Core.Controllers;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.SignalR.HubActivator;
 using Hubcon.SignalR.Server;
-using MessagePack;
-using MessagePack.Resolvers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -17,16 +15,7 @@ namespace Hubcon.SignalR
     {
         public static WebApplicationBuilder? UseHubconSignalR(this WebApplicationBuilder e)
         {
-            MessagePackSerializerOptions mpOptions = MessagePackSerializerOptions.Standard
-                .WithResolver(CompositeResolver.Create(
-                    ContractlessStandardResolver.Instance
-                ));
-
-            e.Services.AddSignalR()
-                .AddMessagePackProtocol(options =>
-                 {
-                     options.SerializerOptions = mpOptions;
-                 });
+            e.Services.AddSignalR();
 
             e.AddHubcon(container =>
             {

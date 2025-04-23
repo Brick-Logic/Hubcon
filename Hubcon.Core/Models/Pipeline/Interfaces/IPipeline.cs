@@ -8,6 +8,6 @@ namespace Hubcon.Core.Models.Pipeline.Interfaces
 {
     public interface IPipeline
     {
-        public Task<MethodResponse> Execute();
+        public Task<IMethodResponse> Execute();
     }
 }

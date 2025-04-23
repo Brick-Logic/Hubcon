@@ -1,4 +1,5 @@
-﻿using Hubcon.SignalR.Server;
+﻿using Hubcon.GraphQL.Server;
+using Hubcon.SignalR.Server;
 using HubconTestDomain;
 
 namespace HubconTest.Controllers
@@ -17,15 +18,14 @@ namespace HubconTest.Controllers
 
         public async Task PrintMessage(string message)
         {
-            await Task.Run(() => {          
-                string message2 = "PONG";
-                Client.ShowMessage(message2);
-            });
+            Console.WriteLine(message);
+            await Task.CompletedTask;
         }
 
         public async Task ShowTempOnServerFromClient()
         {
-            Console.WriteLine(await Client.GetTemperature());
+            Console.WriteLine(Client.GetTemperature());
+            await Task.CompletedTask;
         }
 
         public Task ShowTextOnServer()

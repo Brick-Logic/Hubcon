@@ -12,7 +12,7 @@ namespace Hubcon.Core.Middleware
         {
         }
 
-        public async Task<MethodResponse?> Execute(MethodInvokeRequest request, Func<Task<MethodResponse?>> next)
+        public async Task<IMethodResponse?> Execute(MethodInvokeRequest request, Func<Task<IMethodResponse?>> next)
         {
             Console.WriteLine($"[Inicio] Methodo {request.MethodName} llamado...");
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -26,7 +26,7 @@ namespace Hubcon.Core.Middleware
             return result;
         }
 
-        public Task Execute(MethodInvokeRequest request, MethodResponse response, Func<Task> next)
+        public Task Execute(MethodInvokeRequest request, IMethodResponse response, Func<Task> next)
         {
             return next();
         }

@@ -20,12 +20,12 @@ namespace Hubcon.SignalR.Server
         [HubconInject]
         private StreamNotificationHandler streamNotificationHandler { get; }
 
-        public async Task<MethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken) 
+        public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken) 
         { 
-            MethodResponse result;
+            IMethodResponse result;
             var client = hubContext.Clients.Client(TargetClientId);
 
-            result = await client.InvokeAsync<MethodResponse>(request.HandlerMethodName!, request, cancellationToken);
+            result = await client.InvokeAsync<BaseMethodResponse>(request.HandlerMethodName!, request, cancellationToken);
             return result;                   
         }
 

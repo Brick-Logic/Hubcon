@@ -1,6 +1,9 @@
-﻿using Hubcon.Core.Extensions;
+﻿using Castle.DynamicProxy;
+using Hubcon.Core.Converters;
+using Hubcon.Core.Extensions;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using System;
 using System.ComponentModel;
 
 namespace Hubcon.Core.Connectors
@@ -36,7 +39,7 @@ namespace Hubcon.Core.Connectors
                 {
                     var parameters = method.GetParameters();
                     var methodSignature = method.GetMethodSignature();
-                    AvailableMethods.TryAdd(methodSignature, new MethodInvokeRequest(methodSignature, null, parameters));
+                    AvailableMethods.TryAdd(methodSignature, new MethodInvokeRequest(methodSignature, null, new DynamicConverter().SerializeArgsToJson(parameters)));
                 }
             }
         }

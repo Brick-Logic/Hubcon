@@ -76,9 +76,7 @@ namespace HubconAnalyzer.SourceGenerators
                 
                
                 sb.AppendLine($"    public {returnType} {methodName}({parameters})");
-
                 sb.AppendLine($"    {{");
-                sb.AppendLine($"");
 
                 sb.AppendLine($"        MethodInfo method = typeof({iface.ToDisplayString()}).GetMethod(\"{methodName}\")!;");
 
@@ -105,11 +103,10 @@ namespace HubconAnalyzer.SourceGenerators
                 else
                 {
                     sb.AppendLine($"        Interceptor.InterceptSynchronous(invocation);");
-                    sb.AppendLine($"        return ({returnType}?)invocation.ReturnValue!;");
+                    sb.AppendLine($"        return ({returnType})invocation.ReturnValue!;");
                 }
 
                 sb.AppendLine($"    }}");
-                sb.AppendLine($"");
             }
 
             sb.AppendLine("}");

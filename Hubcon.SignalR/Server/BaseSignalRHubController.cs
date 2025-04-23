@@ -1,19 +1,13 @@
 ﻿using Autofac;
-using Castle.DynamicProxy.Contributors;
-using Hubcon.Core.Connectors;
-using Hubcon.Core.Controllers;
 using Hubcon.Core.Injectors.Attributes;
 using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Registries;
-using Hubcon.Core.Tools;
 using Hubcon.SignalR.Models;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
-using System.Data;
-using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using System.Threading.Channels;
 
 namespace Hubcon.SignalR.Server
@@ -52,16 +46,16 @@ namespace Hubcon.SignalR.Server
         public ILifetimeScope ServiceProvider { get; }
 
 
-        public async Task<MethodResponse> HandleMethodTask(MethodInvokeRequest info) 
+        public async Task<IMethodResponse> HandleMethodTask(MethodInvokeRequest info) 
             => await HubconController.Pipeline.HandleWithResultAsync(this, info);
         public async Task HandleMethodVoid(MethodInvokeRequest info) 
             => await HubconController.Pipeline.HandleWithoutResultAsync(this, info);
         public async Task ReceiveStream(string code, ChannelReader<object> reader) 
             => await StreamNotificationHandler.NotifyStream(code, reader);
-        public IAsyncEnumerable<object> HandleMethodStream(MethodInvokeRequest info) 
+        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest info) 
             => HubconController.Pipeline.GetStream(this, info);
 
-        public void Build()
+        public void Build(WebApplication? app)
         {
             HubconController.Pipeline.RegisterMethods(GetType());
             ClientReferences.TryAdd(GetType(), new());         

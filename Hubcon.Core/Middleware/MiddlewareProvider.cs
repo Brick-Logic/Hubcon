@@ -42,7 +42,7 @@ namespace Hubcon.Core.Middleware
             AddMiddlewares(typeof(TController), options, servicesToInject);
         }
 
-        public IPipeline GetPipeline(Type controllerType, MethodInvokeRequest request, Func<Task<MethodResponse?>> handler)
+        public IPipeline GetPipeline(Type controllerType, MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler)
         {
             if (!PipelineBuilders.TryGetValue(controllerType, out PipelineBuilder? value))
                 PipelineBuilders[controllerType] = value = new PipelineBuilder();

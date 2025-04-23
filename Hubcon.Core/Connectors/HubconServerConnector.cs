@@ -21,7 +21,7 @@ namespace Hubcon.Core.Connectors
         where TICommunicationHandler : ICommunicationHandler
         where TIBaseHubconController : IBaseHubconController<TICommunicationHandler>
     {
-        private ICommunicationContract? _client;
+        private readonly ICommunicationContract? _client;
         private readonly ServerConnectorInterceptor<TIBaseHubconController, TICommunicationHandler> Interceptor;
         private readonly ProxyRegistry proxyRegistry;
 
@@ -33,26 +33,13 @@ namespace Hubcon.Core.Connectors
             this.proxyRegistry = proxyRegistry;
         }
 
-        public ICommunicationContract? GetCurrentClient() => _client;
-
         public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : ICommunicationContract
         {
             if (_client != null)
                 return (TICommunicationContract)_client;
 
             var proxyType = proxyRegistry.TryGetProxy<TICommunicationContract>();
-
             return (TICommunicationContract)InstanceCreator.TryCreateInstance(proxyType, Interceptor)!;
-
-            var proxyGenerator = new ProxyGenerator();
-
-            _client = (TICommunicationContract)proxyGenerator.CreateInterfaceProxyWithTarget(
-                typeof(TICommunicationContract),
-                (TICommunicationContract)DynamicImplementationCreator.CreateImplementation(typeof(TICommunicationContract)),
-                Interceptor
-            );
-
-            return (TICommunicationContract)_client;
         }
     }
 }

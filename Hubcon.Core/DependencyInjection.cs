@@ -93,7 +93,7 @@ namespace Hubcon.Core
 
         public static WebApplicationBuilder AddHubcon(
             this WebApplicationBuilder builder,
-            Action<ContainerBuilder>? additionalServices = null)
+            params Action<ContainerBuilder>?[] additionalServices)
         {
             builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
             builder.Host.ConfigureContainer<ContainerBuilder>((context, container) =>
@@ -114,7 +114,8 @@ namespace Hubcon.Core
                     .RegisterWithInjector(x => x.RegisterType<RequestPipeline>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconClientConnector<,>)).As(typeof(IClientAccessor<,>)).AsScoped());
 
-                additionalServices?.Invoke(container);
+                foreach(var services in additionalServices)
+                    services?.Invoke(container);
 
                 container.RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconControllerManager<>)).AsScoped());
             });

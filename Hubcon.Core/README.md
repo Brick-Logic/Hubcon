@@ -13,7 +13,7 @@ It currently supports:
 - Dictionary
 - Classes in general
 
-The project now uses MessagePack, greatly enhancing speed and bandwidth usage, and JSON to provide strong type safety and complex object conversion.
+The project now uses JSON to provide strong type safety and complex object conversion.
 
 # Usage
 

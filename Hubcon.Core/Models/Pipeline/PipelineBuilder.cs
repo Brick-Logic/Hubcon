@@ -67,7 +67,7 @@ namespace Hubcon.Core.Models.Pipeline
             return this;
         }
 
-        public IPipeline Build(Type controllerType, MethodInvokeRequest request, Func<Task<MethodResponse?>> handler, ILifetimeScope serviceProvider)
+        public IPipeline Build(Type controllerType, MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler, ILifetimeScope serviceProvider)
         {
             var preHandlerMiddlewares = new List<Type>();
             preHandlerMiddlewares.AddRange(ExceptionMiddlewares);
@@ -88,7 +88,7 @@ namespace Hubcon.Core.Models.Pipeline
                 loggingMiddlewares.Add((ILoggingMiddleware)serviceProvider.Resolve(mw));
 
 
-            Func<Task<MethodResponse?>> final = () => handler(); // el método original
+            Func<Task<IMethodResponse?>> final = () => handler(); // el método original
 
             foreach (var mw in middlewares.Reverse<IMiddleware>())
             {
@@ -96,7 +96,7 @@ namespace Hubcon.Core.Models.Pipeline
                 final = () => mw.Execute(request, next!);
             }
 
-            Func<Task<MethodResponse?>> wrapped = async () =>
+            Func<Task<IMethodResponse?>> wrapped = async () =>
             {
                 var response = await final();
 

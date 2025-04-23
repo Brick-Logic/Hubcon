@@ -1,13 +1,9 @@
 ﻿using Hubcon.Core.Converters;
-using Hubcon.Core.Extensions;
 using Hubcon.Core.MethodHandling;
-using Hubcon.Core.Middleware;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
-using System.Collections.Concurrent;
 using System.ComponentModel;
-using System.Linq.Expressions;
-using System.Reflection;
+using System.Text.Json;
 
 namespace Hubcon.Core.Handlers
 {
@@ -18,109 +14,114 @@ namespace Hubcon.Core.Handlers
         private readonly DynamicConverter _converter;
         private readonly IMiddlewareProvider _middlewareProvider;
 
-        public RequestPipeline(MethodInvokerProvider methodInvokerProvider, DynamicConverter dynamicConverter, IMiddlewareProvider middlewareProvider)
+        public RequestPipeline(
+            MethodInvokerProvider methodInvokerProvider, 
+            DynamicConverter dynamicConverter, 
+            IMiddlewareProvider middlewareProvider)
         {
             _methodInvokerProvider = methodInvokerProvider;
             _converter = dynamicConverter;
             _middlewareProvider = middlewareProvider;
         }
 
-        public async Task HandleWithoutResultAsync(object instance, MethodInvokeRequest methodInfo)
+        public Task HandleWithoutResultAsync(object instance, MethodInvokeRequest request)
         {            
-            Func<Task<MethodResponse?>> method = async () =>
+            Func<Task<IMethodResponse?>> method = async () =>
             {
-                _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
-                var args = methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes, _converter.DeserializeArgs);
+                _methodInvokerProvider.GetMethodInvoker(request.MethodName, instance.GetType(), out var methodInvoker);
+                object?[] args = _converter.DeserializeJsonArgs(request.Args, methodInvoker!.ParameterTypes).ToArray();
                 object? result = methodInvoker?.Method?.DynamicInvoke(instance, args);
 
                 if (result is Task task)
                     await task;
 
-                return new MethodResponse(true);
+                return new BaseMethodResponse(true);
             };
 
-            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), methodInfo, method);
-            await pipeline.Execute();
+            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), request, method);
+
+            return pipeline.Execute();
         }
 
-        public async Task<MethodResponse> HandleSynchronousResult(object instance, MethodInvokeRequest methodInfo)
+        public Task<IMethodResponse> HandleSynchronousResult(object instance, MethodInvokeRequest request)
         {
-            var method = async () =>
+            Func<Task<IMethodResponse>> method = async () =>
             {
                 return await Task.Run(() =>
                 {
-                    _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
-                    object?[] args = methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes, _converter.DeserializeArgs);
+                    _methodInvokerProvider.GetMethodInvoker(request.MethodName, instance.GetType(), out var methodInvoker);
+                    object?[] args = _converter.DeserializeJsonArgs(request.Args, methodInvoker!.ParameterTypes).ToArray();
                     object? result = methodInvoker?.Method?.DynamicInvoke(instance, args);
 
                     if (result is null)
-                        return new MethodResponse(true);
+                        return new BaseMethodResponse(true);
 
-                    return new MethodResponse(true, result).SerializeData(_converter.SerializeData);
+                    return new BaseMethodResponse(true, _converter.SerializeObject(result));
                 });
             };
 
-            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), methodInfo, method);
-            return await pipeline.Execute();
+            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), request, method!);
+            return pipeline.Execute();
         }
 
-        public Task HandleSynchronous(object instance, MethodInvokeRequest methodInfo)
+        public Task HandleSynchronous(object instance, MethodInvokeRequest request)
         {
-            Func<Task<MethodResponse?>> method = () =>
+            Func<Task<IMethodResponse?>> method = () =>
             {
-                return Task.Run<MethodResponse?>(async () =>
+                return Task.Run<IMethodResponse?>(async () =>
                 {
-                    _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
-                    object?[] args = methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes, _converter.DeserializeArgs);
+                    _methodInvokerProvider.GetMethodInvoker(request.MethodName, instance.GetType(), out var methodInvoker);
+                    object?[] args = _converter.DeserializeJsonArgs(request.Args, methodInvoker!.ParameterTypes).ToArray();
                     object? result = methodInvoker?.Method?.DynamicInvoke(instance, args);
 
                     if (result is Task task)
                         await task;
 
-                    return new MethodResponse(true);
+                    return new BaseMethodResponse(true);
                 });
             };
 
-            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), methodInfo, method);
+            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), request, method);
             return pipeline.Execute();
         }
 
-        public IAsyncEnumerable<object> GetStream(object instance, MethodInvokeRequest methodInfo)
+        public IAsyncEnumerable<JsonElement?> GetStream(object instance, MethodInvokeRequest request)
         {
-            Func<Task<MethodResponse?>> method = async () =>
+            Func<Task<IMethodResponse?>> method = async () =>
             {
-                _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
-                object?[] args = methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes, _converter.DeserializeArgs);
+                _methodInvokerProvider.GetMethodInvoker(request.MethodName, instance.GetType(), out var methodInvoker);
+                object?[] args = _converter.DeserializeJsonArgs(request.Args, methodInvoker!.ParameterTypes).ToArray();
                 object? result = methodInvoker?.Method?.DynamicInvoke(instance, args);
-
-                return await Task.FromResult(new MethodResponse(true, result!));
+                var response = new BaseMethodResponse(true, result);
+                return response;
             };
-
-            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), methodInfo, method);
-            return (IAsyncEnumerable<object>)pipeline.Execute().Result.Data!;        
+            
+            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), request, method);
+            var pipelineResult = (IAsyncEnumerable<object>)pipeline.Execute().Result.Data!;
+            return _converter.ConvertToJsonElementStream(pipelineResult);
         }
 
-        public async Task<MethodResponse> HandleWithResultAsync(object instance, MethodInvokeRequest methodInfo)
+        public Task<IMethodResponse> HandleWithResultAsync(object instance, MethodInvokeRequest request)
         {
-            var method = async () =>
+            Func<Task<IMethodResponse>> method = async () =>
             {
-                _methodInvokerProvider.GetMethodInvoker(methodInfo.MethodName, instance.GetType(), out var methodInvoker);
-                object?[] args = methodInfo.GetDeserializedArgs(methodInvoker!.ParameterTypes, _converter.DeserializeArgs);
+                _methodInvokerProvider.GetMethodInvoker(request.MethodName, instance.GetType(), out var methodInvoker);
+                object?[] args = _converter.DeserializeJsonArgs(request.Args, methodInvoker!.ParameterTypes).ToArray();
                 object? result = methodInvoker?.Method?.DynamicInvoke(instance, args);
 
                 if (result is null)
-                    return new MethodResponse(true);
+                    return new BaseMethodResponse(true);
                 else if (result is Task task)
                 {
                     var response = await GetTaskResultAsync(task, methodInvoker!.ReturnType.GetGenericArguments()[0]);
-                    return new MethodResponse(true, response).SerializeData(_converter.SerializeData);
+                    return new BaseMethodResponse(true, _converter.SerializeObject(response));
                 }
                 else
-                    return new MethodResponse(true, result).SerializeData(_converter.SerializeData);
+                    return new BaseMethodResponse(true, _converter.SerializeObject(result));
             };
 
-            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), methodInfo, method);
-            return await pipeline.Execute();
+            var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), request, method!);
+            return pipeline.Execute();
         }
 
         public static async Task<object?> GetTaskResultAsync(Task taskObject, Type returnType)
@@ -146,6 +147,6 @@ namespace Hubcon.Core.Handlers
             return null;
         }
 
-        public void RegisterMethods(Type type, Action<string, MethodInfo>? forEachMethodAction = null) => _methodInvokerProvider.RegisterMethods(type, forEachMethodAction);
+        public void RegisterMethods(Type type, Action<HubconMethodInvoker>? forEachMethodAction = null) => _methodInvokerProvider.RegisterMethods(type, forEachMethodAction);
     }
 }

@@ -12,14 +12,14 @@ namespace Hubcon.Core.MethodHandling
 {
     public class MethodInvokerProvider
     {
-        internal Dictionary<Type, Dictionary<string, MethodInvoker>> ControllerMethods = new();
+        internal Dictionary<Type, Dictionary<string, HubconMethodInvoker>> ControllerMethods = new();
 
-        public void RegisterMethods(Type type, Action<string, MethodInfo>? forEachMethodAction = null)
+        public void RegisterMethods(Type type, Action<HubconMethodInvoker>? forEachMethodAction = null)
         {
             if (!typeof(IBaseHubconController).IsAssignableFrom(type))
                 throw new NotImplementedException($"El tipo {type.FullName} no implementa la interfaz {nameof(IBaseHubconController)} o un tipo derivado.");
 
-            if (!ControllerMethods.TryGetValue(type, out Dictionary<string, MethodInvoker>? methods))
+            if (!ControllerMethods.TryGetValue(type, out Dictionary<string, HubconMethodInvoker>? methods))
                 methods = ControllerMethods[type] = new();
 
             if (methods.Count == 0)
@@ -37,20 +37,20 @@ namespace Hubcon.Core.MethodHandling
 
                         var methodSignature = method.GetMethodSignature();
 
-                        var methodInvokerInfo = new MethodInvoker(methodSignature, method, action);
-                        forEachMethodAction?.Invoke(methodInvokerInfo.MethodSignature, methodInvokerInfo.InternalMethodInfo);
+                        var methodInvokerInfo = new HubconMethodInvoker(methodSignature, method, action);
+                        forEachMethodAction?.Invoke(methodInvokerInfo);
 
-                        methods.TryAdd($"{methodSignature}", methodInvokerInfo);
+                        methods.TryAdd($"{methodInvokerInfo.MethodSignature}", methodInvokerInfo);
                     }
                 }
             }
         }
 
-        public bool GetMethodInvoker(string methodName, Type type, out MethodInvoker? value)
+        public bool GetMethodInvoker(string methodName, Type type, out HubconMethodInvoker? value)
         {
-            if (ControllerMethods.TryGetValue(type, out Dictionary<string, MethodInvoker>? methods))
+            if (ControllerMethods.TryGetValue(type, out Dictionary<string, HubconMethodInvoker>? methods))
             {
-                if (methods.TryGetValue(methodName, out MethodInvoker? methodInvoker))
+                if (methods.TryGetValue(methodName, out HubconMethodInvoker? methodInvoker))
                 {
                     value = methodInvoker;
                     return true;
@@ -89,6 +89,5 @@ namespace Hubcon.Core.MethodHandling
             var lambda = Expression.Lambda<MethodInvokerDelegate>(body, instanceParam, argsParam);
             return lambda.Compile();
         }
-
     }
 }

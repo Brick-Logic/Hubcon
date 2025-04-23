@@ -62,7 +62,6 @@ namespace Hubcon.SignalR.Client
                 (
                     new HubConnectionBuilder()
                         .WithUrl(url)
-                        .AddMessagePackProtocol()
                         .WithAutomaticReconnect()
                         .Build()
 
@@ -72,11 +71,7 @@ namespace Hubcon.SignalR.Client
                     .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerConnectorInterceptor<,>)).AsSingleton())
                     .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<,>)).AsSingleton())
                     .RegisterWithInjector(x => x.RegisterInstance(this).As(GetType()).AsSingleton());
-            },
-            options => 
-            {
-                options.AddMiddleware<LoggingMiddleware>();
-            });
+            }, options);
 
             lifetimeScope = serviceProvider.GetRequiredService<ILifetimeScope>();
             hub = serviceProvider.GetRequiredService<HubConnection>();
@@ -90,18 +85,18 @@ namespace Hubcon.SignalR.Client
 
             _url = url;
 
-            HubconController.Pipeline.RegisterMethods(GetType(), (methodSignature, methodInfo) =>
+            HubconController.Pipeline.RegisterMethods(GetType(), (methodInvoker) =>
             {
-                if (typeof(IAsyncEnumerable<object>).IsAssignableFrom(methodInfo.ReturnType))
-                    hub?.On($"{methodSignature}", (Func<string, MethodInvokeRequest, Task>)StartStream);
-                else if (methodInfo.ReturnType == typeof(void))
-                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithoutResultAsync(this, request));
-                else if (methodInfo.ReturnType.IsGenericType && methodInfo.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
-                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithResultAsync(this, request));
-                else if (methodInfo.ReturnType == typeof(Task))
-                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithoutResultAsync(this, request));
+                if (typeof(IAsyncEnumerable<>).IsAssignableFrom(methodInvoker.InternalMethodInfo.ReturnType))
+                    hub?.On($"{methodInvoker.MethodSignature}", (Func<string, MethodInvokeRequest, Task>)StartStream);
+                else if (methodInvoker.InternalMethodInfo.ReturnType == typeof(void))
+                    hub?.On($"{methodInvoker.MethodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithoutResultAsync(this, request));
+                else if (methodInvoker.InternalMethodInfo.ReturnType.IsGenericType && methodInvoker.InternalMethodInfo.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
+                    hub?.On($"{methodInvoker.MethodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithResultAsync(this, request));
+                else if (methodInvoker.InternalMethodInfo.ReturnType == typeof(Task))
+                    hub?.On($"{methodInvoker.MethodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithoutResultAsync(this, request));
                 else
-                    hub?.On($"{methodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithResultAsync(this, request));
+                    hub?.On($"{methodInvoker.MethodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithResultAsync(this, request));
             });
 
             IsBuilt = true;
@@ -216,7 +211,7 @@ namespace Hubcon.SignalR.Client
             return runningTask ?? Task.CompletedTask;
         }
 
-        public async Task<MethodResponse> HandleMethodTask(MethodInvokeRequest info) => await HubconController.Pipeline!.HandleWithResultAsync(this, info);
+        public async Task<IMethodResponse> HandleMethodTask(MethodInvokeRequest info) => await HubconController.Pipeline!.HandleWithResultAsync(this, info);
         public async Task HandleMethodVoid(MethodInvokeRequest info) => await HubconController.Pipeline!.HandleWithoutResultAsync(this, info);
         public async Task StartStream(string methodCode, MethodInvokeRequest info)
         {
@@ -228,7 +223,7 @@ namespace Hubcon.SignalR.Client
             {
                 await foreach (var item in reader)
                 {
-                    await channel.Writer.WriteAsync(_converter.SerializeData(item)!);
+                    await channel.Writer.WriteAsync(_converter.SerializeObject(item)!);
                 }
                 channel.Writer.Complete(); // Indica que no habrá más datos
             });

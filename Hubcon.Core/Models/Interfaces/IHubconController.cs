@@ -1,14 +1,15 @@
 ﻿using Autofac;
 using Hubcon.Core.MethodHandling;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
+using System.Text.Json;
 using System.Threading.Channels;
 
 namespace Hubcon.Core.Models.Interfaces
 {
     public interface IBaseHubconController
     {
-        Task<MethodResponse> HandleMethodTask(MethodInvokeRequest info);
+        Task<IMethodResponse> HandleMethodTask(MethodInvokeRequest info);
         Task HandleMethodVoid(MethodInvokeRequest info);
         public IHubconControllerManager HubconController { get; }
     }
@@ -23,8 +24,8 @@ namespace Hubcon.Core.Models.Interfaces
         public StreamNotificationHandler StreamNotificationHandler { get; }
         public ILifetimeScope ServiceProvider { get; }
         public Task ReceiveStream(string code, ChannelReader<object> reader);
-        public IAsyncEnumerable<object> HandleMethodStream(MethodInvokeRequest info);
-        public void Build();
+        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest info);
+        public void Build(WebApplication? app = null);
     }
 
     public interface IHubconClientController<TICommunicationHandler> : IBaseHubconController<TICommunicationHandler>, IHostedService
