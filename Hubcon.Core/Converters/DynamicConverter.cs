@@ -159,7 +159,8 @@ namespace Hubcon.Core.Converters
                 }
                 else
                 {
-                    yield return SerializeObject(item)!;
+                    var obj = SerializeObject(item)!;
+                    yield return obj;
                 }
             }
         }

@@ -4,7 +4,7 @@ using HubconTestDomain;
 
 namespace HubconTest.Controllers
 {
-    public class TestSignalRController : BaseHubController<ITestClientController>, IServerHubContract
+    public class TestSignalRController : BaseHubconController, IServerHubContract
     {
         public async IAsyncEnumerable<string> GetMessages(int count)
         {
@@ -24,7 +24,7 @@ namespace HubconTest.Controllers
 
         public async Task ShowTempOnServerFromClient()
         {
-            Console.WriteLine(Client.GetTemperature());
+            //Console.WriteLine(Client.GetTemperature());
             await Task.CompletedTask;
         }
 

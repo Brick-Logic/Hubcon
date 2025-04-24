@@ -19,16 +19,19 @@ namespace HubconTest
 
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
             builder.Services.AddOpenApi();
-            //builder.AddHubconGraphQL(controllerOptions => 
-            //{
-            //    controllerOptions.AddController<TestSignalRController>();
-            //});
-            builder.UseHubconSignalR();
-            builder.AddHubconController<TestSignalRController>(options =>
+            builder.AddHubconGraphQL(controllerOptions =>
             {
-                options.AddMiddleware<LoggingMiddleware>();
+                controllerOptions.AddController<TestSignalRController>();
             });
+
+            //builder.UseHubconSignalR();
+            //builder.AddHubconController<TestSignalRController>(options =>
+            //{
+            //    options.AddMiddleware<LoggingMiddleware>();
+            //});
+
             builder.AddContractsFromAssembly(nameof(HubconTestDomain));
 
             var app = builder.Build();
@@ -44,9 +47,9 @@ namespace HubconTest
 
             app.MapControllers();
 
-            //app.MapHubconGraphQL("/graphql");
+            //app.MapHub<TestSignalRController>("/clienthub");
 
-            app.MapHub<TestSignalRController>("/clienthub");
+            app.MapHubconGraphQL("/graphql");
 
             //app.MapHubconRestControllers();
 

@@ -15,6 +15,7 @@ using Hubcon.SignalR.Server;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
 using System.Threading.Channels;
 
 namespace Hubcon.SignalR.Client
@@ -211,9 +212,9 @@ namespace Hubcon.SignalR.Client
             return runningTask ?? Task.CompletedTask;
         }
 
-        public async Task<IMethodResponse> HandleMethodTask(MethodInvokeRequest info) => await HubconController.Pipeline!.HandleWithResultAsync(this, info);
-        public async Task HandleMethodVoid(MethodInvokeRequest info) => await HubconController.Pipeline!.HandleWithoutResultAsync(this, info);
-        public async Task StartStream(string methodCode, MethodInvokeRequest info)
+        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest info) => (BaseJsonResponse)await HubconController.Pipeline!.HandleWithResultAsync(this, info);
+        public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest info) => await HubconController.Pipeline!.HandleWithoutResultAsync(this, info);
+        public async Task<IResponse> StartStream(string methodCode, MethodInvokeRequest info)
         {
             var reader = HubconController.Pipeline!.GetStream(this, info);
             var channel = Channel.CreateUnbounded<object>();
@@ -229,6 +230,8 @@ namespace Hubcon.SignalR.Client
             });
 
             await hub!.SendAsync(nameof(IHubconServerController.ReceiveStream), methodCode, channel.Reader);
+
+            return new BaseMethodResponse(true);
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)

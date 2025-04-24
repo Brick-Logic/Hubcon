@@ -3,6 +3,7 @@ using Hubcon.Core.Injectors.Attributes;
 using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.GraphQL.CustomAttributes;
 using Hubcon.GraphQL.Data;
 using Microsoft.AspNetCore.Builder;
 using System;
@@ -17,62 +18,40 @@ namespace Hubcon.GraphQL.Server
 {
     public abstract class BaseHubconController : IHubconServerController
     {
-        [GraphQLIgnore]
         [HubconInject]
         public StreamNotificationHandler StreamNotificationHandler { get; }
 
-        [GraphQLIgnore]
         [HubconInject]
         public ILifetimeScope ServiceProvider { get; }
 
-        [GraphQLIgnore]
         [HubconInject]
         public IHubconControllerManager HubconController { get; }
 
-        [GraphQLIgnore]
-        public void Build(WebApplication? app = null)
-        {
-            
-        }
+        public void Build(WebApplication? app = null) => HubconController.Pipeline.RegisterMethods(GetType());
 
-        [GraphQLIgnore]
+        [HubconMethod(MethodType.Mutation)]
+        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest info)
+            => (BaseJsonResponse)await HubconController.Pipeline.HandleWithResultAsync(this, info);
+
+        [HubconMethod(MethodType.Mutation)]
+        public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest info)
+            => await HubconController.Pipeline.HandleWithoutResultAsync(this, info);
+        
+        public async Task<IResponse> ReceiveStream(string code, ChannelReader<object> reader)
+            => await StreamNotificationHandler.NotifyStream(code, reader);
+
+        [HubconMethod(MethodType.Subscription)]
         public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest info)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<IMethodResponse> HandleMethodTask(MethodInvokeRequest info)
-        {
-            throw new NotImplementedException();
-        }       
-
-        [GraphQLIgnore]
-        public Task HandleMethodVoid(MethodInvokeRequest info)
-        {
-            throw new NotImplementedException();
-        }
-
-        [GraphQLIgnore]
-        public Task ReceiveStream(string code, ChannelReader<object> reader)
-        {
-            throw new NotImplementedException();
-        }
+            => HubconController.Pipeline.GetStream(this, info);
     }
 
-    public class DeleteResult
+    public class VoidTaskResult : IResponse
     {
-        public bool Result { get; set; }
-        public TestData DeletedEntity { get; set; }
+        public bool Success { get; set; }
 
-        public DeleteResult(bool result, TestData deletedEntity)
+        public VoidTaskResult(bool success)
         {
-            Result = result;
-            DeletedEntity = deletedEntity;
-        }
-
-        public DeleteResult()
-        {
-
+            Success = success;
         }
     }
 }

@@ -24,7 +24,7 @@ namespace Hubcon.Core.Handlers
             _middlewareProvider = middlewareProvider;
         }
 
-        public Task HandleWithoutResultAsync(object instance, MethodInvokeRequest request)
+        public async Task<IResponse> HandleWithoutResultAsync(object instance, MethodInvokeRequest request)
         {            
             Func<Task<IMethodResponse?>> method = async () =>
             {
@@ -40,10 +40,10 @@ namespace Hubcon.Core.Handlers
 
             var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), request, method);
 
-            return pipeline.Execute();
+            return (IResponse)await pipeline.Execute();
         }
 
-        public Task<IMethodResponse> HandleSynchronousResult(object instance, MethodInvokeRequest request)
+        public async Task<BaseJsonResponse> HandleSynchronousResult(object instance, MethodInvokeRequest request)
         {
             Func<Task<IMethodResponse>> method = async () =>
             {
@@ -61,10 +61,11 @@ namespace Hubcon.Core.Handlers
             };
 
             var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), request, method!);
-            return pipeline.Execute();
+            var result = await pipeline.Execute();
+            return new BaseJsonResponse(result.Success, _converter.SerializeObject(result.Data));
         }
 
-        public Task HandleSynchronous(object instance, MethodInvokeRequest request)
+        public async Task<IResponse> HandleSynchronous(object instance, MethodInvokeRequest request)
         {
             Func<Task<IMethodResponse?>> method = () =>
             {
@@ -82,7 +83,7 @@ namespace Hubcon.Core.Handlers
             };
 
             var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), request, method);
-            return pipeline.Execute();
+            return await pipeline.Execute();
         }
 
         public IAsyncEnumerable<JsonElement?> GetStream(object instance, MethodInvokeRequest request)
@@ -101,7 +102,7 @@ namespace Hubcon.Core.Handlers
             return _converter.ConvertToJsonElementStream(pipelineResult);
         }
 
-        public Task<IMethodResponse> HandleWithResultAsync(object instance, MethodInvokeRequest request)
+        public async Task<BaseJsonResponse> HandleWithResultAsync(object instance, MethodInvokeRequest request)
         {
             Func<Task<IMethodResponse>> method = async () =>
             {
@@ -121,7 +122,8 @@ namespace Hubcon.Core.Handlers
             };
 
             var pipeline = _middlewareProvider.GetPipeline(instance.GetType(), request, method!);
-            return pipeline.Execute();
+            var result =  await pipeline.Execute();
+            return new BaseJsonResponse(result.Success, _converter.SerializeObject(result.Data));
         }
 
         public static async Task<object?> GetTaskResultAsync(Task taskObject, Type returnType)

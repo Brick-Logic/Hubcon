@@ -5,6 +5,7 @@ using Autofac.Extensions.DependencyInjection;
 using Hubcon.Core.Connectors;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Converters;
+using Hubcon.Core.Dummy;
 using Hubcon.Core.Handlers;
 using Hubcon.Core.Injectors;
 using Hubcon.Core.Injectors.Attributes;
@@ -103,6 +104,8 @@ namespace Hubcon.Core
 
                 container
                     .RegisterWithInjector(x => x.RegisterInstance(Proxies).AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterType<DummyCommunicationHandler>().AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterType<DummyServerCommunicationHandler>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<MethodInvokerProvider>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<StreamNotificationHandler>().AsSingleton())
@@ -116,8 +119,6 @@ namespace Hubcon.Core
 
                 foreach(var services in additionalServices)
                     services?.Invoke(container);
-
-                container.RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconControllerManager<>)).AsScoped());
             });
 
             return builder;

@@ -1,4 +1,5 @@
 ﻿using Hubcon.Core.Converters;
+using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -21,7 +22,7 @@ namespace Hubcon.Core.MethodHandling
             _converter = converter;
         }
 
-        public async Task NotifyStream(string code, ChannelReader<object> reader)
+        public async Task<IResponse> NotifyStream(string code, ChannelReader<object> reader)
         {
             while (await reader.WaitToReadAsync())
             {
@@ -35,6 +36,8 @@ namespace Hubcon.Core.MethodHandling
             {
                 value.GetCurrentEvent()?.DynamicInvoke(reader);
             }
+
+            return new BaseMethodResponse(true);
         }
 
         public Task<IAsyncEnumerable<T>> WaitStreamAsync<T>(string code)

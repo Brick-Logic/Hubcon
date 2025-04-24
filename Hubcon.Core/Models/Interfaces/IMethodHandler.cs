@@ -15,10 +15,13 @@ namespace Hubcon.Core.Models.Interfaces
     public interface IRequestPipeline
     {
         public void RegisterMethods(Type type, Action<HubconMethodInvoker>? forEachMethodAction = null);
-        public Task HandleWithoutResultAsync(object instance, MethodInvokeRequest methodInfo);
-        public Task<IMethodResponse> HandleSynchronousResult(object instance, MethodInvokeRequest methodInfo);
-        public Task HandleSynchronous(object instance, MethodInvokeRequest methodInfo);
+
+        public Task<IResponse> HandleSynchronous(object instance, MethodInvokeRequest methodInfo);
+        public Task<IResponse> HandleWithoutResultAsync(object instance, MethodInvokeRequest methodInfo);
+
+        public Task<BaseJsonResponse> HandleSynchronousResult(object instance, MethodInvokeRequest methodInfo);
+        public Task<BaseJsonResponse> HandleWithResultAsync(object instance, MethodInvokeRequest methodInfo);
+
         public IAsyncEnumerable<JsonElement?> GetStream(object instance, MethodInvokeRequest methodInfo);
-        public Task<IMethodResponse> HandleWithResultAsync(object instance, MethodInvokeRequest methodInfo);
     }
 }
