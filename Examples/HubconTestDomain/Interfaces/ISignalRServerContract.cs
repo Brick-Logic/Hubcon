@@ -2,7 +2,7 @@
 
 namespace HubconTestDomain.Interfaces
 {
-    public interface ISignalRServerContract : ICommunicationContract
+    public interface ISignalRServerContract : IHubconControllerContract
     {
         public Task PrintMessage(string message);
         public void VoidPrintMessage(string message);

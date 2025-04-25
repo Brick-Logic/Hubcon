@@ -24,18 +24,18 @@ namespace Hubcon.Core.Registries
             ProxyTypes[interfaceType] = proxyType;
         }
 
-        public void TryRegisterProxyByContract<T>() where T : ICommunicationContract
+        public void TryRegisterProxyByContract<T>() where T : IHubconControllerContract
             => TryRegisterProxyByContract(typeof(T));
         public void TryRegisterProxyByContract(Type contractType)
         {
-            if (contractType.IsAssignableTo(typeof(ICommunicationContract)))
-                throw new ArgumentException($"El tipo {contractType.Name} no implementa {nameof(ICommunicationContract)}");
+            if (contractType.IsAssignableTo(typeof(IHubconControllerContract)))
+                throw new ArgumentException($"El tipo {contractType.Name} no implementa {nameof(IHubconControllerContract)}");
 
             var assembly = contractType.Assembly;
 
             var implementation = assembly
                 .GetTypes()
-                .Find(t => !t.IsInterface && typeof(ICommunicationContract).IsAssignableFrom(t) && t.Name == contractType.Name + "Proxy");
+                .Find(t => !t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t) && t.Name == contractType.Name + "Proxy");
 
             if(implementation == null)
                 throw new ArgumentNullException($"No se detectó una implementación para el contrato {contractType.Name}.");
@@ -43,7 +43,7 @@ namespace Hubcon.Core.Registries
             RegisterProxy(contractType, implementation);
         }
 
-        public Type TryGetProxy<T>() where T : ICommunicationContract
+        public Type TryGetProxy<T>() where T : IHubconControllerContract
         {
             if (ProxyTypes.TryGetValue(typeof(T), out Type? proxy))
                 return proxy;
@@ -52,7 +52,7 @@ namespace Hubcon.Core.Registries
 
             var implementation = assembly
                 .GetTypes()
-                .Find(t => !t.IsInterface && typeof(ICommunicationContract).IsAssignableFrom(t) && t.Name == typeof(T).Name + "Proxy");
+                .Find(t => !t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t) && t.Name == typeof(T).Name + "Proxy");
 
             RegisterProxy(typeof(T), implementation);
 

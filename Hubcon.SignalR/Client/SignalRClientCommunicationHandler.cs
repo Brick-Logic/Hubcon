@@ -25,13 +25,13 @@ namespace Hubcon.SignalR.Client
 
             if (client.State != HubConnectionState.Connected) await client.StartAsync(cancellationToken);
 
-            return await client.InvokeAsync<BaseMethodResponse>(request.HandlerMethodName!, request, cancellationToken);
+            return await client.InvokeAsync<BaseMethodResponse>(request.MethodName!, request, cancellationToken);
         }
 
         public async Task CallAsync(MethodInvokeRequest request, CancellationToken cancellationToken)
         {
             var client = _hubFactory.Invoke();
-            await client.SendAsync(request.HandlerMethodName!, request, cancellationToken);
+            await client.SendAsync(request.MethodName!, request, cancellationToken);
         }
         
         public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, CancellationToken cancellationToken)

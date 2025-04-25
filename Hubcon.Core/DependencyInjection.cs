@@ -1,96 +1,42 @@
 ﻿using Autofac;
-using Autofac.Builder;
-using Autofac.Core;
 using Autofac.Extensions.DependencyInjection;
+using Hubcon.Core.Attributes;
 using Hubcon.Core.Connectors;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Converters;
-using Hubcon.Core.Dummy;
+using Hubcon.Core.Extensions;
 using Hubcon.Core.Handlers;
 using Hubcon.Core.Injectors;
-using Hubcon.Core.Injectors.Attributes;
 using Hubcon.Core.Interceptors;
 using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Middleware;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Models.Middleware;
 using Hubcon.Core.Models.Pipeline.Interfaces;
 using Hubcon.Core.Registries;
-using Hubcon.Core.Tools;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
-using System;
 using System.Reflection;
-using System.Reflection.Metadata;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Hubcon.Core
 {
+    public class HubconServerBuilder
+    {
+        private readonly WebApplicationBuilder _builder;
+
+        public HubconServerBuilder(WebApplicationBuilder builder)
+        {
+            _builder = builder;
+        }
+    }
+
     public static class DependencyInjection
     {
-        public static ContainerBuilder RegisterWithInjector<TType, TActivatorData, TSingleRegistrationStyle>(
-            this ContainerBuilder container,
-            Func<ContainerBuilder, IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle>>? options = null)
-        {
-            var registered = options?.Invoke(container);
-            registered?.OnActivated(e =>
-            {
-                //Console.WriteLine($"Instancia creada: {e?.Instance?.GetType().Name}");
-
-                List<PropertyInfo> props = new();
-
-                props.AddRange(e.Instance!.GetType()
-                    .GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
-                    .Where(prop => Attribute.IsDefined(prop, typeof(HubconInjectAttribute)))
-                    .ToList());
-
-                props.AddRange(e.Instance!.GetType().BaseType!
-                    .GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy)
-                    .Where(p => p.IsDefined(typeof(HubconInjectAttribute), false))
-                    .ToList());
-
-                foreach (PropertyInfo prop in props!)
-                {
-                    if (prop.GetValue(e.Instance) != null)
-                        continue;
-
-                    var resolved = e.Context.ResolveOptional(prop.PropertyType);
-
-                    if (resolved == null)
-                        continue;
-
-                    var instance = e.Instance;
-
-                    var setMethod = prop!.GetSetMethod(true);
-                    if (setMethod != null)
-                    {
-                        setMethod.Invoke(instance, new[] { resolved });
-                    }
-                    else
-                    {
-                        // Si no tiene setter, usamos el campo backing
-                        var field = prop!.DeclaringType?.GetField($"<{prop.Name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
-
-                        field?.SetValue(instance, resolved);
-                    }
-                }
-            });
-
-            return container;
-        }
-
-        public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsScoped<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
-            => regBuilder.InstancePerLifetimeScope();
-
-        public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsTransient<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
-            => regBuilder.InstancePerDependency();
-
-        public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsSingleton<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
-            => regBuilder.SingleInstance();
-
         private static List<Action<ContainerBuilder>> ServicesToInject { get; } = new();
+        private static List<Action<IMiddlewareOptions>> GlobalMiddlewares { get; } = new();
+
+        private readonly static ProxyRegistry Proxies = new();
+        private readonly static List<Type> ControllersToRegister = new();
 
         public static WebApplicationBuilder AddHubcon(
             this WebApplicationBuilder builder,
@@ -104,18 +50,15 @@ namespace Hubcon.Core
 
                 container
                     .RegisterWithInjector(x => x.RegisterInstance(Proxies).AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<DummyCommunicationHandler>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<DummyServerCommunicationHandler>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<MethodInvokerProvider>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<StreamNotificationHandler>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<ClientRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<HubconServiceProvider>().As<IHubconServiceProvider>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(ClientControllerConnectorInterceptor<,>)).AsScoped())
+                    .RegisterWithInjector(x => x.RegisterType(typeof(ClientControllerConnectorInterceptor)).AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<MiddlewareProvider>().As<IMiddlewareProvider>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(ClientControllerConnectorInterceptor<,>)).AsScoped())
-                    .RegisterWithInjector(x => x.RegisterType<RequestPipeline>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconClientConnector<,>)).As(typeof(IClientAccessor<,>)).AsScoped());
+                    .RegisterWithInjector(x => x.RegisterType<ControllerInvocationHandler>().AsScoped())
+                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconClientConnector<>)).As(typeof(IClientAccessor<>)).AsScoped());
 
                 foreach(var services in additionalServices)
                     services?.Invoke(container);
@@ -124,24 +67,53 @@ namespace Hubcon.Core
             return builder;
         }
 
-        private readonly static ProxyRegistry Proxies = new();
+        public static void MapHubconControllers(this WebApplication app)
+        {
+            var invokerProvider = app.Services.GetRequiredService<MethodInvokerProvider>();
 
-        public static WebApplicationBuilder AddContractsFromAssembly(this WebApplicationBuilder e, string assemblyName)
+            foreach(var controller in ControllersToRegister)
+            {
+                invokerProvider.RegisterMethods(controller);
+            }
+        }
+
+        public static ContainerBuilder AddHubconControllersFromAssembly(this ContainerBuilder container, Assembly assembly, Action<IMiddlewareOptions>? globalMiddlewareOptions = null)
+        {
+            var contracts = assembly
+                .GetTypes()
+                .Where(t => t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t))
+                .ToList();
+
+            var controllers = assembly
+                .GetTypes()
+                .Where(t => !t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t) && t.IsDefined(typeof(HubconControllerAttribute)))
+                .ToList();
+
+            foreach (var controller in controllers)
+                container.RegisterWithInjector(x => x.RegisterType(controller));
+
+            if(globalMiddlewareOptions != null)
+                GlobalMiddlewares.Add(globalMiddlewareOptions);
+
+            return container;
+        }
+
+        public static WebApplicationBuilder UseContractsFromAssembly(this WebApplicationBuilder e, string assemblyName)
         {
             var assembly = AppDomain.CurrentDomain.Load(assemblyName);
 
             var contracts = assembly
                 .GetTypes()
-                .Where(t => t.IsInterface && typeof(ICommunicationContract).IsAssignableFrom(t))
+                .Where(t => t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t))
                 .ToList();
 
-            var classes = assembly
+            var proxies = assembly
                 .GetTypes()
-                .Where(t => !t.IsInterface && typeof(ICommunicationContract).IsAssignableFrom(t))
+                .Where(t => !t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t) && t.IsDefined(typeof(HubconProxyAttribute)))
                 .ToList();
 
             foreach (var contract in contracts)
-                Proxies.RegisterProxy(contract, classes.Find(x => x.Name == contract.Name + "Proxy")!);
+                Proxies.RegisterProxy(contract, proxies.Find(x => x.Name == contract.Name + "Proxy")!);
 
             return e;
         }
@@ -158,12 +130,12 @@ namespace Hubcon.Core
 
             var contracts = assembly
                 .GetTypes()
-                .Where(t => t.IsInterface && typeof(ICommunicationContract).IsAssignableFrom(t))
+                .Where(t => t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t))
                 .ToList();
 
             var classes = assembly
                 .GetTypes()
-                .Where(t => !t.IsInterface && typeof(ICommunicationContract).IsAssignableFrom(t))
+                .Where(t => !t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t))
                 .ToList();
 
             foreach(var contract in contracts)
@@ -172,10 +144,10 @@ namespace Hubcon.Core
             return serviceProvider;
         }
 
-        public static IServiceProvider CreateHubconServiceProvider<TICommunicationHandler>(
-            IBaseHubconController<TICommunicationHandler> iBaseHubconControllerInstance,
+        public static IServiceProvider CreateHubconServiceProvider(
+            IBaseHubconController iBaseHubconControllerInstance,
             Action<ContainerBuilder>? additionalServices = null, 
-            Action<IMiddlewareOptions>? options = null) where TICommunicationHandler : ICommunicationHandler
+            Action<IMiddlewareOptions>? options = null)
         {
             var container = new ContainerBuilder();
 
@@ -185,25 +157,21 @@ namespace Hubcon.Core
                    .RegisterWithInjector(x => x.RegisterType<MethodInvokerProvider>().AsSingleton())
                    .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().AsSingleton())
                    .RegisterWithInjector(x => x.RegisterType<MiddlewareProvider>().As<IMiddlewareProvider>().AsScoped())
-                   .RegisterWithInjector(x => x.RegisterType<RequestPipeline>().AsScoped())
-                   .RegisterWithInjector(x => x.RegisterType(typeof(TICommunicationHandler)).AsScoped())
-                   .RegisterWithInjector(x => x.RegisterType(typeof(HubconControllerManager<TICommunicationHandler>)).As(typeof(IHubconControllerManager)).AsScoped())
+                   .RegisterWithInjector(x => x.RegisterType<ControllerInvocationHandler>().AsScoped())
+                   .RegisterWithInjector(x => x.RegisterType(typeof(HubconControllerManager)).As(typeof(IHubconControllerManager)).AsScoped())
                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerConnectorInterceptor<,>)).AsScoped())
                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<,>)).AsScoped())
-                   .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconControllerManager<>)).AsScoped())
                    .RegisterWithInjector(x => x.RegisterInstance(iBaseHubconControllerInstance).As(iBaseHubconControllerInstance.GetType()).AsSingleton());
 
             additionalServices?.Invoke(container);
 
             if(options != null)
             {
-                MiddlewareProvider.AddMiddlewares(iBaseHubconControllerInstance.GetType(), options, ServicesToInject);
+                MiddlewareProvider.AddMiddlewares(iBaseHubconControllerInstance.GetType(), options, GlobalMiddlewares, ServicesToInject);
 
                 foreach (var service in ServicesToInject)
                     ServicesToInject.ForEach(x => x.Invoke(container));
             }
-
-            container.RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconControllerManager<>)).AsSingleton());
 
             // Build del container
             var builtContainer = container.Build();
@@ -213,28 +181,56 @@ namespace Hubcon.Core
             return new AutofacServiceProvider(scope);
         }
 
-        public static WebApplicationBuilder AddHubconController<T>(
-            this WebApplicationBuilder builder,
-            Action<IMiddlewareOptions>? options = null)
-            where T : class, IBaseHubconController, ICommunicationContract
+        public static WebApplicationBuilder AddHubconController<T>(this WebApplicationBuilder builder,Action<IMiddlewareOptions>? options = null)
+            where T : class, IHubconControllerContract
+                => AddHubconController(builder, typeof(T), options);
+
+        public static void AddGlobalMiddleware<TMiddleware>(this WebApplicationBuilder builder) => AddGlobalMiddleware(builder, typeof(TMiddleware));
+        public static void AddGlobalMiddleware(this WebApplicationBuilder builder, Type middlewareType)
         {
-            var controllerType = typeof(T);
+            if (!middlewareType.IsAssignableTo(typeof(IMiddleware)))
+                throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(IMiddleware)}");
+
+            GlobalMiddlewares.Add(x => x.AddMiddleware(middlewareType));
+        }
+
+        public static ContainerBuilder AddHubconEntrypoint<THubconEntrypoint>(this ContainerBuilder container)
+            where THubconEntrypoint : class, IHubconEntrypoint
+                => AddHubconEntrypoint(container, typeof(THubconEntrypoint));
+
+        public static ContainerBuilder AddHubconEntrypoint(this ContainerBuilder container, Type hubconEntrypointType)
+        {
+            if (!hubconEntrypointType.IsAssignableTo(typeof(IHubconEntrypoint)))
+                throw new ArgumentException($"El tipo {hubconEntrypointType.Name} no implementa la interfaz {nameof(IHubconEntrypoint)}");
+
+            return container.RegisterWithInjector(x => x.RegisterType(hubconEntrypointType));
+        }
+
+        public static WebApplicationBuilder AddHubconController(
+            this WebApplicationBuilder builder,
+            Type controllerType,
+            Action<IMiddlewareOptions>? options = null)
+        {
+            if (!controllerType.IsAssignableTo(typeof(IHubconControllerContract)))
+                throw new ArgumentException($"El tipo {controllerType.Name} no implementa la interfaz {nameof(IHubconControllerContract)}");
+
             List<Type> implementationTypes = controllerType
                 .GetInterfaces()
-                .Where(x => typeof(ICommunicationContract).IsAssignableFrom(x))
+                .Where(x => typeof(IHubconControllerContract).IsAssignableFrom(x))
                 .ToList();
 
             if (implementationTypes.Count == 0)
                 throw new InvalidOperationException($"Controller {controllerType.Name} does not implement ICommunicationContract.");
 
 
-            Action<ContainerBuilder> injector = (ContainerBuilder x) => x.RegisterWithInjector(x => x.RegisterType<T>().AsScoped());
+            Action<ContainerBuilder> injector = (ContainerBuilder x) => x.RegisterWithInjector(x => x.RegisterType(controllerType).AsScoped());
 
             ServicesToInject.Add(injector);
+            ControllersToRegister.Add(controllerType);
 
-            if (options != null)
+            if (options != null || GlobalMiddlewares.Count > 0)
             {
-                MiddlewareProvider.AddMiddlewares<T>(options, ServicesToInject);
+                MiddlewareProvider.AddMiddlewares(controllerType, options, GlobalMiddlewares, ServicesToInject);
             }
 
             return builder;

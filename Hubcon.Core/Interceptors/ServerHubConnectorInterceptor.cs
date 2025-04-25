@@ -1,4 +1,5 @@
-﻿using Castle.DynamicProxy;
+﻿using Castle.Core.Internal;
+using Castle.DynamicProxy;
 using Hubcon.Core.Converters;
 using Hubcon.Core.Extensions;
 using Hubcon.Core.Models;
@@ -16,11 +17,13 @@ namespace Hubcon.Core.Interceptors
     {
         public readonly ICommunicationHandler CommunicationHandler;
         private readonly DynamicConverter _converter;
+        private readonly Type CommunicationContractType;
 
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ServerConnectorInterceptor<,>))]
         public ServerConnectorInterceptor(TIHubController handler, DynamicConverter converter)
         {
             CommunicationHandler = handler.HubconController.CommunicationHandler;
+            CommunicationContractType = handler.GetType().GetInterfaces().Find(x => x.IsAssignableTo(typeof(IHubconControllerContract)));
             _converter = converter;
         }
 
@@ -40,8 +43,8 @@ namespace Hubcon.Core.Interceptors
                     .MakeGenericMethod(itemType);
 
                 var request = new MethodInvokeRequest(
-                    invocation.Method.GetMethodSignature(), 
-                    nameof(IHubconServerController.HandleMethodStream), 
+                    invocation.Method.GetMethodSignature(),
+                    CommunicationContractType.Name, 
                     _converter.SerializeArgsToJson(invocation.Arguments)
                 );
 
@@ -56,7 +59,7 @@ namespace Hubcon.Core.Interceptors
             {
                 MethodInvokeRequest request = new MethodInvokeRequest(
                     invocation.Method.GetMethodSignature(),
-                    nameof(IBaseHubconController.HandleMethodTask),
+                    CommunicationContractType.Name,
                     _converter.SerializeArgsToJson(invocation.Arguments)
                 );
 
@@ -74,7 +77,7 @@ namespace Hubcon.Core.Interceptors
         {
             MethodInvokeRequest request = new MethodInvokeRequest(
                 invocation.Method.GetMethodSignature(),
-                nameof(IBaseHubconController.HandleMethodVoid),
+                CommunicationContractType.Name,
                 _converter.SerializeArgsToJson(invocation.Arguments)
             );
 

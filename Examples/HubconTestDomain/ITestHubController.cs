@@ -3,7 +3,7 @@ using Hubcon.Core.Models.Interfaces;
 
 namespace HubconTestDomain
 {
-    public interface ITestClientController : ICommunicationContract
+    public interface ITestClientController : IHubconControllerContract
     {
         Task<int> GetTemperature();
         Task ShowText();

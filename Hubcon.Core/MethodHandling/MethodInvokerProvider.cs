@@ -1,4 +1,5 @@
 ﻿using Hubcon.Core.Extensions;
+using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -12,55 +13,58 @@ namespace Hubcon.Core.MethodHandling
 {
     public class MethodInvokerProvider
     {
-        internal Dictionary<Type, Dictionary<string, HubconMethodInvoker>> ControllerMethods = new();
+        public event Action<HubconMethodInvoker> OnMethodRegistered;
 
-        public void RegisterMethods(Type type, Action<HubconMethodInvoker>? forEachMethodAction = null)
+        internal Dictionary<string, Dictionary<string, HubconMethodInvoker>> ControllerMethods = new();
+
+        public void RegisterMethods(Type controllerType)
         {
-            if (!typeof(IBaseHubconController).IsAssignableFrom(type))
-                throw new NotImplementedException($"El tipo {type.FullName} no implementa la interfaz {nameof(IBaseHubconController)} o un tipo derivado.");
+            if (!typeof(IHubconControllerContract).IsAssignableFrom(controllerType))
+                throw new NotImplementedException($"El tipo {controllerType.FullName} no implementa la interfaz {nameof(IHubconControllerContract)} o un tipo derivado.");
 
-            if (!ControllerMethods.TryGetValue(type, out Dictionary<string, HubconMethodInvoker>? methods))
-                methods = ControllerMethods[type] = new();
+            var interfaces = controllerType.GetInterfaces().Where(x => typeof(IHubconControllerContract).IsAssignableFrom(x));
 
-            if (methods.Count == 0)
+            foreach (var interfaceType in interfaces)
             {
-                var interfaces = type.GetInterfaces().Where(x => typeof(ICommunicationContract).IsAssignableFrom(x));
+                if (interfaceType.GetMethods().Length == 0)
+                    continue;
 
-                foreach (var item in interfaces)
+                if (!ControllerMethods.TryGetValue(interfaceType.Name, out Dictionary<string, HubconMethodInvoker>? contractMethods))
+                    contractMethods = ControllerMethods[interfaceType.Name] = new();
+
+                if (contractMethods.Count > 0)
+                    continue;
+
+                foreach (var method in interfaceType.GetMethods())
                 {
-                    if (item.GetMethods().Length == 0)
-                        continue;
+                    var action = CreateMethodInvoker(method);
 
-                    foreach (var method in item.GetMethods())
-                    {
-                        var action = CreateMethodInvoker(method);
+                    var methodSignature = method.GetMethodSignature();
 
-                        var methodSignature = method.GetMethodSignature();
-
-                        var methodInvokerInfo = new HubconMethodInvoker(methodSignature, method, action);
-                        forEachMethodAction?.Invoke(methodInvokerInfo);
-
-                        methods.TryAdd($"{methodInvokerInfo.MethodSignature}", methodInvokerInfo);
-                    }
+                    var methodInvokerInfo = new HubconMethodInvoker(methodSignature, method, action, interfaceType, controllerType);
+                    contractMethods.TryAdd($"{methodInvokerInfo.MethodSignature}", methodInvokerInfo);
+                    OnMethodRegistered?.Invoke(methodInvokerInfo);
                 }
             }
+            
         }
 
-        public bool GetMethodInvoker(string methodName, Type type, out HubconMethodInvoker? value)
+        public bool GetMethodInvoker(MethodInvokeRequest request, out HubconMethodInvoker? value)
         {
-            if (ControllerMethods.TryGetValue(type, out Dictionary<string, HubconMethodInvoker>? methods))
+            if (ControllerMethods.TryGetValue(request.ContractName, out Dictionary<string, HubconMethodInvoker>? methods))
             {
-                if (methods.TryGetValue(methodName, out HubconMethodInvoker? methodInvoker))
+                if (methods.TryGetValue(request.MethodName, out HubconMethodInvoker? methodInvoker))
                 {
                     value = methodInvoker;
                     return true;
                 }
             }
+
             value = null;
             return false;
         }
 
-        public MethodInvokerDelegate CreateMethodInvoker(MethodInfo method)
+        private MethodInvokerDelegate CreateMethodInvoker(MethodInfo method)
         {
             var instanceParam = Expression.Parameter(typeof(object), "instance");
             var argsParam = Expression.Parameter(typeof(object[]), "args");

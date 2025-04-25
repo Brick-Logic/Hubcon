@@ -12,7 +12,7 @@ using System.Threading.Channels;
 
 namespace Hubcon.SignalR.Server
 {
-    public abstract class BaseHubController : Hub, IHubconServerController
+    public abstract class BaseHubController : Hub, IHubconEntrypoint
     {
         // Events
         public static event OnClientConnectedEventHandler? OnClientConnected;
@@ -45,21 +45,19 @@ namespace Hubcon.SignalR.Server
         [HubconInject]
         public ILifetimeScope ServiceProvider { get; }
 
+        protected BaseHubController()
+        {
+            ClientReferences.TryAdd(GetType(), new());
+        }
 
         public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest info) 
-            => (BaseJsonResponse)await HubconController.Pipeline.HandleWithResultAsync(this, info);
+            => (BaseJsonResponse)await HubconController.Pipeline.HandleWithResultAsync(info);
         public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest info) 
-            => await HubconController.Pipeline.HandleWithoutResultAsync(this, info);
+            => await HubconController.Pipeline.HandleWithoutResultAsync(info);
         public async Task<IResponse> ReceiveStream(string code, ChannelReader<object> reader) 
             => await StreamNotificationHandler.NotifyStream(code, reader);
         public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest info) 
-            => HubconController.Pipeline.GetStream(this, info);
-
-        public void Build(WebApplication? app)
-        {
-            HubconController.Pipeline.RegisterMethods(GetType());
-            ClientReferences.TryAdd(GetType(), new());         
-        }
+            => HubconController.Pipeline.GetStream(info);
 
         protected IEnumerable<IClientReference> GetClients() => ClientReferences[GetType()].Values;
         public static IEnumerable<IClientReference> GetClients(Type hubType) => ClientReferences[hubType].Values;
@@ -78,10 +76,14 @@ namespace Hubcon.SignalR.Server
             return base.OnDisconnectedAsync(exception);
         }
 
+        public void Build(WebApplication? app = null)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public abstract class BaseHubController<TICommunicationContract> : BaseHubController
-        where TICommunicationContract : ICommunicationContract
+        where TICommunicationContract : IHubconControllerContract
     {
 
         private IClientAccessor _clientAccessor = null!;
@@ -92,7 +94,7 @@ namespace Hubcon.SignalR.Server
             {
                 if (_clientAccessor == null)
                 {
-                    Type clientManagerType = typeof(IClientAccessor<,>).MakeGenericType(typeof(TICommunicationContract), GetType());
+                    Type clientManagerType = typeof(IClientAccessor<TICommunicationContract>);
                     _clientAccessor = (IClientAccessor)ServiceProvider.Resolve(clientManagerType);
                     
                 }

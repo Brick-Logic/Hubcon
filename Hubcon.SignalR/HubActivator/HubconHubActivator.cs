@@ -12,7 +12,7 @@ using System.Reflection;
 
 namespace Hubcon.SignalR.HubActivator
 {
-    public class HubconHubActivator<T> : IHubActivator<T> where T : Hub, IHubconServerController
+    public class HubconHubActivator<T> : IHubActivator<T> where T : Hub, IHubconEntrypoint
     {
         private readonly ILifetimeScope _serviceProvider;
 

@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Hubcon.Core;
 using Hubcon.Core.Controllers;
+using Hubcon.Core.Extensions;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.SignalR.HubActivator;
 using Hubcon.SignalR.Server;
@@ -20,7 +21,7 @@ namespace Hubcon.SignalR
             e.AddHubcon(container =>
             {
                 var commHandlerType = typeof(SignalRServerCommunicationHandler<>);
-                var hubControllerType = typeof(HubconControllerManager<>);
+                var hubControllerType = typeof(HubconControllerManager);
 
                 container
                     .RegisterWithInjector(x => x.RegisterGeneric(commHandlerType).AsScoped())

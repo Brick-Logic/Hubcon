@@ -16,42 +16,25 @@ using System.Threading.Tasks;
 
 namespace Hubcon.GraphQL.Server
 {
-    public abstract class BaseHubconController : IHubconServerController
+    public class ControllerEntrypoint : IHubconEntrypoint
     {
-        [HubconInject]
-        public StreamNotificationHandler StreamNotificationHandler { get; }
-
         [HubconInject]
         public ILifetimeScope ServiceProvider { get; }
 
         [HubconInject]
         public IHubconControllerManager HubconController { get; }
 
-        public void Build(WebApplication? app = null) => HubconController.Pipeline.RegisterMethods(GetType());
+        [HubconMethod(MethodType.Mutation)]
+        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest info) => await HubconController.Pipeline.HandleWithResultAsync(info);    
 
         [HubconMethod(MethodType.Mutation)]
-        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest info)
-            => (BaseJsonResponse)await HubconController.Pipeline.HandleWithResultAsync(this, info);
-
-        [HubconMethod(MethodType.Mutation)]
-        public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest info)
-            => await HubconController.Pipeline.HandleWithoutResultAsync(this, info);
-        
-        public async Task<IResponse> ReceiveStream(string code, ChannelReader<object> reader)
-            => await StreamNotificationHandler.NotifyStream(code, reader);
+        public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest info) => await HubconController.Pipeline.HandleWithoutResultAsync(info);
 
         [HubconMethod(MethodType.Subscription)]
-        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest info)
-            => HubconController.Pipeline.GetStream(this, info);
-    }
+        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest info) => HubconController.Pipeline.GetStream(info);
 
-    public class VoidTaskResult : IResponse
-    {
-        public bool Success { get; set; }
-
-        public VoidTaskResult(bool success)
-        {
-            Success = success;
+        public void Build(WebApplication? app = null)
+        {      
         }
     }
 }

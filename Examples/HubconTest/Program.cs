@@ -1,7 +1,7 @@
 using Hubcon.Core;
 using Hubcon.Core.Middleware;
 using Hubcon.Core.Models.Interfaces;
-using Hubcon.GraphQL;
+using Hubcon.GraphQL.Injection;
 using Hubcon.SignalR;
 using HubconTest.Controllers;
 using HubconTestDomain;
@@ -23,16 +23,18 @@ namespace HubconTest
             builder.Services.AddOpenApi();
             builder.AddHubconGraphQL(controllerOptions =>
             {
-                controllerOptions.AddController<TestSignalRController>();
+                controllerOptions.AddGlobalMiddleware<LoggingMiddleware>();
+
+                controllerOptions.AddController<TestController>();
             });
+
+            builder.UseContractsFromAssembly(nameof(HubconTestDomain));
 
             //builder.UseHubconSignalR();
             //builder.AddHubconController<TestSignalRController>(options =>
             //{
             //    options.AddMiddleware<LoggingMiddleware>();
             //});
-
-            builder.AddContractsFromAssembly(nameof(HubconTestDomain));
 
             var app = builder.Build();
 
@@ -46,15 +48,15 @@ namespace HubconTest
             app.UseAuthorization();
 
             app.MapControllers();
-
             //app.MapHub<TestSignalRController>("/clienthub");
 
+            app.MapHubconControllers();
             app.MapHubconGraphQL("/graphql");
 
             //app.MapHubconRestControllers();
 
             //Just a test endpoint, it can also be injected in a controller.
-            app.MapGet("/test", async (IClientAccessor<ITestClientController, TestSignalRController> clientAccessor) =>
+            app.MapGet("/test", async (IClientAccessor<ITestClientController> clientAccessor) =>
             {
                 // Getting some connected clientId
                 var clientId = clientAccessor.GetAllClients().FirstOrDefault()!;

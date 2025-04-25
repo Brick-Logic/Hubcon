@@ -3,72 +3,34 @@ using Castle.Core.Internal;
 using HotChocolate.Execution.Configuration;
 using HotChocolate.Language;
 using Hubcon.Core;
-using Hubcon.Core.Controllers;
-using Hubcon.Core.Dummy;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Models.Pipeline.Interfaces;
 using Hubcon.GraphQL.CustomAttributes;
 using Hubcon.GraphQL.Data;
-using Hubcon.GraphQL.Server;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
-namespace Hubcon.GraphQL
+namespace Hubcon.GraphQL.Injection
 {
-    public static class DependencyInjection
+    public class ControllerOptions : IControllerOptions
     {
-        public static WebApplicationBuilder AddHubconGraphQL(
-            this WebApplicationBuilder builder,
-            Action<IRequestExecutorBuilder>? controllerOptions = null,
-            Action<ContainerBuilder>? additionalServices = null)
+        public ControllerOptions(IRequestExecutorBuilder executorBuilder, WebApplicationBuilder builder)
         {
-
-            var executorBuilder = builder.Services
-                .AddGraphQLServer()
-                .AddQueryType<Query>()
-                .AddType<BaseResponse>()
-                .AddType<BaseMethodResponse>()
-                .AddType<BaseJsonResponse>()
-                .AddType<JsonScalarType>()
-                .AddType<ObjectType<IResponse>>()    // Registra tipos como ObjectType si es necesario
-                .AddType<ObjectType<IMethodResponse<JsonElement?>>>()    // Registra tipos como ObjectType si es necesario
-                .AddType<InputObjectType<MethodInvokeRequest>>()  // Para cualquier tipo de entrada
-                .AddProjections();
-
-            controllerOptions?.Invoke(executorBuilder);
-      
-            builder.AddHubcon(additionalServices, container =>
-            {
-                if (ControllerTypes != null && ControllerTypes.Count > 0)
-                    foreach (var controller in ControllerTypes)
-                        container.RegisterWithInjector(x => x.RegisterType(controller));
-
-                ControllerTypes?.Clear();
-
-                container.RegisterWithInjector(x => x
-                    .RegisterType(typeof(HubconControllerManager<DummyCommunicationHandler>))
-                    .As<IHubconControllerManager>()
-                    .AsScoped());
-            });
-
-            return builder;
+            ExecutorBuilder = executorBuilder;
+            Builder = builder;
         }
 
-        private static List<Type> ControllerTypes { get; } = new();
+        public IRequestExecutorBuilder ExecutorBuilder { get; }
+        public WebApplicationBuilder Builder { get; }
 
-        public static IRequestExecutorBuilder AddController<TController>(this IRequestExecutorBuilder e)
-            where TController : class, IHubconServerController
+        public void SetEntrypoint(Type controllerType)
         {
-            ControllerTypes.Add(typeof(TController));
-            var controllerType = typeof(TController);
+            if (!controllerType.IsAssignableTo(typeof(IHubconEntrypoint)))
+                throw new ArgumentException($"El tipo {controllerType.Name} no implementa la interfaz {nameof(IHubconEntrypoint)}");
+
             var methods = controllerType
                 .GetMethods()
                 .Where(method => method.IsDefined(typeof(HubconMethodAttribute), inherit: false));
@@ -76,35 +38,35 @@ namespace Hubcon.GraphQL
             var mutations = methods.Where(method => method.GetAttribute<HubconMethodAttribute>().MethodType == MethodType.Mutation);
             var subscriptions = methods.Where(method => method.GetAttribute<HubconMethodAttribute>().MethodType == MethodType.Subscription);
 
-            if(mutations.Any())
-                e.AddMutationType(descriptor =>
-                {
-                    RegisterMethods<TController>(descriptor, mutations);
-                });
-
-            if (subscriptions.Any())
-                e.AddSubscriptionType(descriptor =>
-                {
-                    RegisterSubscriptions<TController>(descriptor, subscriptions);
-                });
-
-            return e;
+            ExecutorBuilder.AddMutationType(descriptor =>
+            {
+                Console.WriteLine("hello1");
+                RegisterMethods(controllerType, descriptor, mutations);
+                Console.WriteLine("hello2");
+            });
+            
+            ExecutorBuilder.AddSubscriptionType(descriptor => RegisterSubscriptions(controllerType, descriptor, subscriptions));
         }
 
-        private static void RegisterMethods<TController>(IObjectTypeDescriptor descriptor, IEnumerable<MethodInfo> methods)
-            where TController : class, IHubconServerController
+        public void SetEntrypoint<TIHubconEntrypoint>()
+            where TIHubconEntrypoint : class, IHubconEntrypoint
+                => SetEntrypoint(typeof(TIHubconEntrypoint));
+
+        private void RegisterMethods<TIHubconEntrypoint>(IObjectTypeDescriptor descriptor, IEnumerable<MethodInfo> methods)
+            where TIHubconEntrypoint : class, IHubconEntrypoint
+                => RegisterMethods(typeof(TIHubconEntrypoint), descriptor, methods);
+        private void RegisterMethods(Type controllerType, IObjectTypeDescriptor descriptor, IEnumerable<MethodInfo> methods)
         {
+            if (!controllerType.IsAssignableTo(typeof(IHubconEntrypoint)))
+                throw new ArgumentException($"El tipo {controllerType.Name} no implementa la interfaz {nameof(IHubconEntrypoint)}");
+
             foreach (var method in methods)
             {
                 var fieldDescriptor = descriptor.Field(method.Name!) // Usa el nombre real del método
                     .Resolve(async context =>
                     {
                         // Instancia del controlador
-                        var controller = context
-                        .Service<ILifetimeScope>()
-                                .Resolve<TController>();
-
-                        controller.Build();
+                        var controller = (IHubconEntrypoint)context.Service<ILifetimeScope>().Resolve(controllerType);
 
                         // Prepara argumentos desde el contexto
                         var args = method.GetParameters().Select(p =>
@@ -139,9 +101,14 @@ namespace Hubcon.GraphQL
             }
         }
 
-        private static void RegisterSubscriptions<TController>(IObjectTypeDescriptor descriptor, IEnumerable<MethodInfo> methods)
-            where TController : class, IHubconServerController
+        private void RegisterSubscriptions<TIHubconEntrypoint>(IObjectTypeDescriptor descriptor, IEnumerable<MethodInfo> methods)
+            where TIHubconEntrypoint : class, IHubconEntrypoint
+                => RegisterSubscriptions(typeof(TIHubconEntrypoint), descriptor, methods);
+        private void RegisterSubscriptions(Type controllerType, IObjectTypeDescriptor descriptor, IEnumerable<MethodInfo> methods)
         {
+            if (!controllerType.IsAssignableTo(typeof(IHubconEntrypoint)))
+                throw new ArgumentException($"El tipo {controllerType.Name} no implementa la interfaz {nameof(IHubconEntrypoint)}");
+
             foreach (var method in methods)
             {
                 var fieldDescriptor = descriptor.Field(method.Name!) // Usa el nombre real del método
@@ -149,9 +116,7 @@ namespace Hubcon.GraphQL
                     .Subscribe(context =>
                     {
                         // Instancia del controlador
-                        var controller = context
-                            .Service<ILifetimeScope>()
-                            .Resolve<TController>();
+                        var controller = (IHubconEntrypoint)context.Service<ILifetimeScope>().Resolve(controllerType);
 
                         controller.Build();
 
@@ -190,14 +155,6 @@ namespace Hubcon.GraphQL
                 if (gqlOutputType != null)
                     fieldDescriptor.Type(gqlOutputType);
             }
-        }
-
-
-        public static WebApplication MapHubconGraphQL(this WebApplication builder, string path)
-        {
-            builder.MapGraphQL(path);
-
-            return builder;
         }
 
         private static Type UnwrapReturnType(Type returnType)
@@ -247,6 +204,28 @@ namespace Hubcon.GraphQL
                 return new NamedTypeNode("MethodInvokeRequest");
 
             throw new NotSupportedException($"No se puede mapear el tipo de entrada {type.Name}");
+        }
+
+
+        public void AddGlobalMiddleware<T>()
+        {
+            Builder.AddGlobalMiddleware<T>();
+        }
+
+        public void AddGlobalMiddleware(Type middlewareType)
+        {
+            Builder.AddGlobalMiddleware(middlewareType);
+        }
+
+        public void AddController<T>(Action<IMiddlewareOptions>? options = null) where T : class, IHubconControllerContract
+        {
+            Builder.AddHubconController<T>(options);
+        }
+
+
+        public void AddController(Type controllerType, Action<IMiddlewareOptions>? options = null)
+        {
+            Builder.AddHubconController(controllerType, options);
         }
     }
 }

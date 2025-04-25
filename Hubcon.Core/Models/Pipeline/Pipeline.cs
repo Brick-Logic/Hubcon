@@ -4,7 +4,7 @@ namespace Hubcon.Core.Models.Pipeline
 {
     internal class Pipeline : IPipeline
     {
-        public Pipeline(Type controllerType, Func<Task<IMethodResponse>> pipelineReference)
+        public Pipeline(Func<Task<IMethodResponse>> pipelineReference)
         {
             pipelineMethod = pipelineReference!;
         }

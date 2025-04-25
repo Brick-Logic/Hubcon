@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,6 +13,11 @@ namespace HubconAnalyzer.SourceGenerators
     [Generator]
     public class CommunicationProxyGenerator : IIncrementalGenerator
     {
+        public CommunicationProxyGenerator()
+        {
+            
+        }
+
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
             var interfaces = context.SyntaxProvider
@@ -27,7 +33,7 @@ namespace HubconAnalyzer.SourceGenerators
                             return null;
 
                         var implementsContract = symbol.AllInterfaces
-                            .Any(i => i.Name == "ICommunicationContract"); // Puedes cambiar esto por el nombre completo
+                            .Any(i => i.Name == "IHubconControllerContract"); // Puedes cambiar esto por el nombre completo
 
                         return implementsContract ? symbol : null;
                     })
@@ -55,8 +61,10 @@ namespace HubconAnalyzer.SourceGenerators
             sb.AppendLine($"#nullable enable");
             sb.AppendLine($"using Castle.DynamicProxy;");
             sb.AppendLine($"using Hubcon.Core.Models.Invocation;");
+            sb.AppendLine($"using Hubcon.Core.Attributes;");
             sb.AppendLine($"using System.Reflection;");
             sb.AppendLine($"");
+            sb.AppendLine($"[HubconProxy]");
             sb.AppendLine($"public class {proxyName} : {iface.ToDisplayString()}");
             sb.AppendLine($"{{");
             sb.AppendLine($"    public AsyncInterceptorBase Interceptor;");

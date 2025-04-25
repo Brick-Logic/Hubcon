@@ -20,7 +20,7 @@
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="[7.0.0, 10.0.0)" />
 		<ProjectReference Include="..\Hubcon.Core\Hubcon.Core.csproj" />
         <ProjectReference Include="..\HubconAnalyzer.DiagnosticSuppressors\HubconAnalyzer.DiagnosticSuppressors.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-		<PackageReference Include="HubconAnalyzer.SourceGenerators" Version="1.0.33" />
+		<PackageReference Include="HubconAnalyzer.SourceGenerators" Version="1.0.36" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="./LICENSE.txt" Pack="true" PackagePath="" />

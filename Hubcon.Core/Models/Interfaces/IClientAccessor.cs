@@ -2,16 +2,15 @@
 {
     public interface IClientAccessor
     {
-        TICommunicationContract GetClient<TICommunicationContract>(string instanceId) where TICommunicationContract : ICommunicationContract;
+        TICommunicationContract GetClient<TICommunicationContract>(string instanceId) where TICommunicationContract : IHubconControllerContract;
         List<string> GetAllClients();
         void RemoveClient(string instanceId);
     }
 
 #pragma warning disable S2326 // Unused type parameters should be removed
-    public interface IClientAccessor<out TICommunicationContract, TIHubconController> : IClientAccessor
+    public interface IClientAccessor<out TICommunicationContract> : IClientAccessor
 #pragma warning restore S2326 // Unused type parameters should be removed
-        where TICommunicationContract : ICommunicationContract?
-        where TIHubconController : IBaseHubconController
+        where TICommunicationContract : IHubconControllerContract?
     {
         TICommunicationContract GetOrCreateClient(string instanceId);
     }

@@ -8,7 +8,7 @@ namespace Hubcon.Core.Models.Interfaces
 {
     public interface IHubconControllerManager
     {
-        public IRequestPipeline Pipeline { get; }
+        public IControllerInvocationHandler Pipeline { get; }
         public ICommunicationHandler CommunicationHandler { get; }
     }
 

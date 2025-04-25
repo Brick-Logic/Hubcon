@@ -7,14 +7,14 @@ namespace Hubcon.Core.Models
     [EditorBrowsable(EditorBrowsableState.Never)]
     public class MethodInvokeRequest
     {
-        public string? HandlerMethodName { get; }
+        public string ContractName { get; }
         public string MethodName { get; }
         public IEnumerable<JsonElement?> Args { get; private set; }
 
-        public MethodInvokeRequest(string methodName, string? handlerMethodName, IEnumerable<JsonElement?>? args = null)
+        public MethodInvokeRequest(string methodName, string contractName, IEnumerable<JsonElement?>? args = null)
         {
             MethodName = methodName;
-            HandlerMethodName = handlerMethodName;
+            ContractName = contractName;
             Args = args ?? new List<JsonElement?>();
         }
 

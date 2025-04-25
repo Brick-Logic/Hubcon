@@ -12,16 +12,15 @@ namespace Hubcon.Core.Connectors
     /// </summary>
     /// <typeparam name="TICommunicationHandler"></typeparam>
     /// <typeparam name="TICommunicationContract"></typeparam>
-    public class HubconClientConnector<TICommunicationContract, TIHubconController> : IClientAccessor<TICommunicationContract, TIHubconController>
-        where TICommunicationContract : ICommunicationContract
-        where TIHubconController : class, IBaseHubconController
+    public class HubconClientConnector<TICommunicationContract> : IClientAccessor<TICommunicationContract>
+        where TICommunicationContract : IHubconControllerContract
     {
         protected Dictionary<string, TICommunicationContract>? clients = new();
         private readonly ProxyRegistry proxyRegistry;
 
-        protected ClientControllerConnectorInterceptor<TIHubconController, ICommunicationHandler> Interceptor { get; set; }
+        protected ClientControllerConnectorInterceptor Interceptor { get; set; }
 
-        public HubconClientConnector(ClientControllerConnectorInterceptor<TIHubconController, ICommunicationHandler> interceptor, ProxyRegistry proxyRegistry)
+        public HubconClientConnector(ClientControllerConnectorInterceptor interceptor, ProxyRegistry proxyRegistry)
         {
             Interceptor = interceptor;
             this.proxyRegistry = proxyRegistry;
@@ -49,7 +48,6 @@ namespace Hubcon.Core.Connectors
             if (clients!.TryGetValue(instanceId, out var value))
                 return value;
 
-
             var client = BuildInstance(instanceId);
             clients.TryAdd(instanceId, client);
             return client;
@@ -66,9 +64,9 @@ namespace Hubcon.Core.Connectors
             clients?.Remove(instanceId, out _);
         }
 
-        public TCommunicationContract GetClient<TCommunicationContract>(string instanceId) where TCommunicationContract : ICommunicationContract
+        public TCommunicationContract GetClient<TCommunicationContract>(string instanceId) where TCommunicationContract : IHubconControllerContract
         {
-            return (TCommunicationContract)(ICommunicationContract)GetOrCreateClient(instanceId)!;
+            return (TCommunicationContract)(IHubconControllerContract)GetOrCreateClient(instanceId)!;
         }
     }
 }

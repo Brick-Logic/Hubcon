@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using Hubcon.Core.Extensions;
 using Hubcon.Core.Models.Middleware;
 using Hubcon.Core.Models.Pipeline.Interfaces;
 using Hubcon.Core.Tools;
@@ -11,12 +12,12 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.Models.Pipeline
 {
-    public class PipelineOptions : IMiddlewareOptions
+    public class MiddlewareOptions : IMiddlewareOptions
     {
         IPipelineBuilder _builder;
         public List<Action<ContainerBuilder>> ServicesToInject;
 
-        internal PipelineOptions(PipelineBuilder builder, List<Action<ContainerBuilder>> servicesToInject)
+        internal MiddlewareOptions(PipelineBuilder builder, List<Action<ContainerBuilder>> servicesToInject)
         {
             _builder = builder;
             ServicesToInject = servicesToInject;
@@ -24,8 +25,13 @@ namespace Hubcon.Core.Models.Pipeline
 
         public IMiddlewareOptions AddMiddleware<T>() where T : class, IMiddleware
         {
-            _builder.AddMiddleware<T>();
-            ServicesToInject.Add(x => x.RegisterWithInjector(y => y.RegisterType<T>()));
+            return AddMiddleware(typeof(T));
+        }
+
+        public IMiddlewareOptions AddMiddleware(Type middlewareType)
+        {
+            _builder.AddMiddleware(middlewareType);
+            ServicesToInject.Add(x => x.RegisterWithInjector(y => y.RegisterType(middlewareType)));
             return this;
         }
     }
@@ -37,37 +43,30 @@ namespace Hubcon.Core.Models.Pipeline
         private List<Type> AuthenticationMiddlewares { get; } = new();
         private List<Type> PreRequestMiddlewares { get; } = new();
         private List<Type> PostRequestMiddlewares { get; } = new();
-        private Type? ResponseMiddleware { get; set; } = null!;
+        private List<Type> ResponseMiddlewares { get; set; } = new();
 
-        public IPipelineBuilder AddMiddleware<T>() where T : IMiddleware
+        public IPipelineBuilder AddMiddleware(Type middlewareType)
         {
-            var type = typeof(T);
-
-            if (typeof(IExceptionMiddleware).IsAssignableFrom(type))
-                ExceptionMiddlewares.Add(type);
-            else if (typeof(ILoggingMiddleware).IsAssignableFrom(type))
-                LoggingMiddlewares.Add(type);
-            else if (typeof(IAuthenticationMiddleware).IsAssignableFrom(type))
-                AuthenticationMiddlewares.Add(type);
-            else if (typeof(IPreRequestMiddleware).IsAssignableFrom(type))
-                PreRequestMiddlewares.Add(type);
-            else if (typeof(IPostRequestMiddleware).IsAssignableFrom(type))
-                PostRequestMiddlewares.Add(type);
-            else if (typeof(IResponseMiddleware).IsAssignableFrom(type))
-            {
-                if (ResponseMiddleware != null)
-                    throw new NotImplementedException($"El tipo {ResponseMiddleware.FullName} ya está registrado como middleware de respuesta.");
-                else
-                    ResponseMiddleware = type;
-            }
+            if (typeof(IExceptionMiddleware).IsAssignableFrom(middlewareType))
+                ExceptionMiddlewares.Add(middlewareType);
+            else if (typeof(ILoggingMiddleware).IsAssignableFrom(middlewareType))
+                LoggingMiddlewares.Add(middlewareType);
+            else if (typeof(IAuthenticationMiddleware).IsAssignableFrom(middlewareType))
+                AuthenticationMiddlewares.Add(middlewareType);
+            else if (typeof(IPreRequestMiddleware).IsAssignableFrom(middlewareType))
+                PreRequestMiddlewares.Add(middlewareType);
+            else if (typeof(IPostRequestMiddleware).IsAssignableFrom(middlewareType))
+                PostRequestMiddlewares.Add(middlewareType);
+            else if (typeof(IResponseMiddleware).IsAssignableFrom(middlewareType))
+                ResponseMiddlewares.Add(middlewareType);
             else
-                throw new NotImplementedException($"El tipo {type.FullName} no es un middleware válido.");
-
+                throw new NotImplementedException($"El tipo {middlewareType.FullName} no es un middleware válido.");
 
             return this;
         }
+        public IPipelineBuilder AddMiddleware<T>() where T : IMiddleware => AddMiddleware(typeof(T));
 
-        public IPipeline Build(Type controllerType, MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler, ILifetimeScope serviceProvider)
+        public IPipeline Build(MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler, ILifetimeScope serviceProvider)
         {
             var preHandlerMiddlewares = new List<Type>();
             preHandlerMiddlewares.AddRange(ExceptionMiddlewares);
@@ -107,12 +106,13 @@ namespace Hubcon.Core.Models.Pipeline
                     {
                         response = await postMw.Execute(request, response!);
                     }
-
-                    if (ResponseMiddleware != null)
+                    
+                    foreach(var middleware in ResponseMiddlewares)
                     {
-                        var responseMw = (IResponseMiddleware)serviceProvider.Resolve(ResponseMiddleware);
+                        var responseMw = (IResponseMiddleware)serviceProvider.Resolve(middleware);
                         response = await responseMw.Execute(response!);
                     }
+                    
                 };
 
                 foreach (var logMw in loggingMiddlewares)
@@ -123,7 +123,7 @@ namespace Hubcon.Core.Models.Pipeline
                 return response;
             };
 
-            return new Pipeline(controllerType, wrapped!);
+            return new Pipeline(wrapped!);
         }
     }
 }

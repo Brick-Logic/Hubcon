@@ -25,7 +25,7 @@ namespace Hubcon.SignalR.Server
             IMethodResponse result;
             var client = hubContext.Clients.Client(TargetClientId);
 
-            result = await client.InvokeAsync<BaseMethodResponse>(request.HandlerMethodName!, request, cancellationToken);
+            result = await client.InvokeAsync<BaseMethodResponse>(request.MethodName!, request, cancellationToken);
             return result;                   
         }
 
@@ -33,7 +33,7 @@ namespace Hubcon.SignalR.Server
         {
             var client = hubContext.Clients.Client(TargetClientId);
 
-            await client.SendAsync(request.HandlerMethodName!, request, cancellationToken);
+            await client.SendAsync(request.MethodName!, request, cancellationToken);
         }
 
         public List<IClientReference> GetAllClients()
@@ -47,7 +47,7 @@ namespace Hubcon.SignalR.Server
 
             var code = Guid.NewGuid().ToString();
 
-            _ = client.SendAsync(request.HandlerMethodName!, code, request, cancellationToken);
+            _ = client.SendAsync(request.MethodName!, code, request, cancellationToken);
 
             var stream = await streamNotificationHandler.WaitStreamAsync<T>(code);
             return stream;

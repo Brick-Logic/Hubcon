@@ -1,7 +1,6 @@
 ﻿using Hubcon.Core.Converters;
 using Hubcon.Core.Models;
 using Microsoft.AspNetCore.SignalR.Client;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace Hubcon.SignalR.Extensions
@@ -14,7 +13,7 @@ namespace Hubcon.SignalR.Extensions
             DynamicConverter converter, 
             CancellationToken cancellationToken)
         {
-            var stream = connection.StreamAsync<JsonElement?>(request.HandlerMethodName!, request, cancellationToken);
+            var stream = connection.StreamAsync<JsonElement?>(request.MethodName!, request, cancellationToken);
 
             return await Task.FromResult(converter.ConvertStream<T>(stream, converter, cancellationToken));
         }

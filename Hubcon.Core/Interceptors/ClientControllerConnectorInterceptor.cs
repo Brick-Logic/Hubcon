@@ -6,9 +6,7 @@ using Hubcon.Core.Models.Interfaces;
 
 namespace Hubcon.Core.Interceptors
 {
-    public class ClientControllerConnectorInterceptor<TIHubController, TICommunicationHandler> : AsyncInterceptorBase
-        where TICommunicationHandler : ICommunicationHandler
-        where TIHubController : IBaseHubconController
+    public class ClientControllerConnectorInterceptor : AsyncInterceptorBase
     {
         private readonly DynamicConverter _converter;
 
@@ -16,9 +14,9 @@ namespace Hubcon.Core.Interceptors
 
         public ICommunicationHandler CommunicationHandler { get => HandlerFactory.Invoke(); }
 
-        public ClientControllerConnectorInterceptor(TIHubController handler, DynamicConverter converter)
+        public ClientControllerConnectorInterceptor(IHubconControllerManager hubconController, DynamicConverter converter)
         {
-            HandlerFactory = () => handler.HubconController.CommunicationHandler;
+            HandlerFactory = () => hubconController.CommunicationHandler;
             _converter = converter;
         }
 

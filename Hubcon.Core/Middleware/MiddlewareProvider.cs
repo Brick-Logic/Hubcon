@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Models.Middleware;
@@ -27,27 +28,31 @@ namespace Hubcon.Core.Middleware
             _serviceProvider = serviceProvider;
         }
 
-        public static void AddMiddlewares(Type controllerType, Action<IMiddlewareOptions> options, List<Action<ContainerBuilder>> servicesToInject)
+        public static void AddMiddlewares(Type controllerType, Action<IMiddlewareOptions>? options, List<Action<IMiddlewareOptions>> globalMiddlewares, List<Action<ContainerBuilder>> servicesToInject)
         {
             if (!PipelineBuilders.TryGetValue(controllerType, out PipelineBuilder? value))
             {
                 PipelineBuilders[controllerType] = value = new PipelineBuilder();
             }
-            var pipelineOptions = new PipelineOptions(value, servicesToInject);
+            var pipelineOptions = new MiddlewareOptions(value, servicesToInject);
+
+            foreach (var middlewareOptions in globalMiddlewares)
+                middlewareOptions?.Invoke(pipelineOptions);
+
             options?.Invoke(pipelineOptions);
         }
 
-        public static void AddMiddlewares<TController>(Action<IMiddlewareOptions> options, List<Action<ContainerBuilder>> servicesToInject) where TController : IBaseHubconController
+        public static void AddMiddlewares<TController>(Action<IMiddlewareOptions> options, List<Action<IMiddlewareOptions>> globalMiddlewares, List<Action<ContainerBuilder>> servicesToInject) where TController : IBaseHubconController
         {
-            AddMiddlewares(typeof(TController), options, servicesToInject);
+            AddMiddlewares(typeof(TController), options, globalMiddlewares, servicesToInject);
         }
 
-        public IPipeline GetPipeline(Type controllerType, MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler)
+        public IPipeline GetPipeline(HubconMethodInvoker methodInvoker, MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler)
         {
-            if (!PipelineBuilders.TryGetValue(controllerType, out PipelineBuilder? value))
-                PipelineBuilders[controllerType] = value = new PipelineBuilder();
+            if (!PipelineBuilders.TryGetValue(methodInvoker.ControllerType, out PipelineBuilder? value))
+                PipelineBuilders[methodInvoker.ControllerType] = value = new PipelineBuilder();
 
-            return PipelineBuilders[controllerType].Build(controllerType, request, handler, _serviceProvider);
+            return PipelineBuilders[methodInvoker.ControllerType].Build(request, handler, _serviceProvider);
         }
     }
 }

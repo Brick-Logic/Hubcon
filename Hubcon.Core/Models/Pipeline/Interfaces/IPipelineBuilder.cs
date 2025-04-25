@@ -11,6 +11,7 @@ namespace Hubcon.Core.Models.Pipeline.Interfaces
     public interface IPipelineBuilder
     {
         public IPipelineBuilder AddMiddleware<T>() where T : IMiddleware;
-        public IPipeline Build(Type controllerType, MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler, ILifetimeScope serviceProvider);
+        public IPipelineBuilder AddMiddleware(Type middlewareType);
+        public IPipeline Build(MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler, ILifetimeScope serviceProvider);
     }
 }

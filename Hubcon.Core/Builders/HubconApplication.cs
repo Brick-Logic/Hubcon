@@ -39,7 +39,7 @@ namespace Hubcon.Core.Builders
             throw new NotImplementedException();
         }
 
-        public TICommunicationContract GetConnector<TICommunicationContract>() where TICommunicationContract : ICommunicationContract
+        public TICommunicationContract GetConnector<TICommunicationContract>() where TICommunicationContract : IHubconControllerContract
         {
             throw new NotImplementedException();
         }

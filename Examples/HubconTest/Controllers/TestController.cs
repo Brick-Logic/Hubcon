@@ -4,7 +4,7 @@ using HubconTestDomain;
 
 namespace HubconTest.Controllers
 {
-    public class TestSignalRController : IServerHubContract
+    public class TestController : ITestServerHubContract
     {
         public async IAsyncEnumerable<string> GetMessages(int count)
         {

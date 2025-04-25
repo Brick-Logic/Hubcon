@@ -4,14 +4,17 @@ using Hubcon.Core;
 using Hubcon.Core.Connectors;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Converters;
+using Hubcon.Core.Extensions;
 using Hubcon.Core.Injectors;
 using Hubcon.Core.Interceptors;
+using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Middleware;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Models.Middleware;
 using Hubcon.Core.Models.Pipeline.Interfaces;
 using Hubcon.SignalR.Server;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +23,7 @@ using System.Threading.Channels;
 
 namespace Hubcon.SignalR.Client
 {
-    public abstract class BaseSignalRClientController : IHubconClientController<SignalRClientCommunicationHandler<HubConnection>>
+    public abstract class BaseSignalRClientController : IHubconEntrypoint
     {
         protected string _url = string.Empty;
         protected CancellationToken _token;
@@ -68,9 +71,6 @@ namespace Hubcon.SignalR.Client
 
                     ).As(typeof(HubConnection)).AsSingleton())
                     .RegisterWithInjector(x => x.RegisterGeneric(typeof(SignalRClientCommunicationHandler<>)).AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType(typeof(HubconControllerManager<SignalRClientCommunicationHandler<HubConnection>>)).As(typeof(IHubconControllerManager)).AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerConnectorInterceptor<,>)).AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<,>)).AsSingleton())
                     .RegisterWithInjector(x => x.RegisterInstance(this).As(GetType()).AsSingleton());
             }, options);
 
@@ -78,6 +78,7 @@ namespace Hubcon.SignalR.Client
             hub = serviceProvider.GetRequiredService<HubConnection>();
             HubconController = serviceProvider.GetRequiredService<IHubconControllerManager>()!;        
             _converter = serviceProvider.GetRequiredService<DynamicConverter>()!;
+            var _invokerProvider = serviceProvider.GetRequiredService<MethodInvokerProvider>()!;
 
 
             var derivedType = GetType();
@@ -86,25 +87,34 @@ namespace Hubcon.SignalR.Client
 
             _url = url;
 
-            HubconController.Pipeline.RegisterMethods(GetType(), (methodInvoker) =>
+
+            _invokerProvider.OnMethodRegistered += ((methodInvoker) =>
             {
                 if (typeof(IAsyncEnumerable<>).IsAssignableFrom(methodInvoker.InternalMethodInfo.ReturnType))
-                    hub?.On($"{methodInvoker.MethodSignature}", (Func<string, MethodInvokeRequest, Task>)StartStream);
+                    hub?.On($"{nameof(StartStream)}", (Func<string, MethodInvokeRequest, Task>)StartStream);
+
                 else if (methodInvoker.InternalMethodInfo.ReturnType == typeof(void))
-                    hub?.On($"{methodInvoker.MethodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithoutResultAsync(this, request));
+                    hub?.On($"{nameof(IControllerInvocationHandler.HandleWithoutResultAsync)}", (MethodInvokeRequest request)
+                        => GetControllerManager().Pipeline!.HandleWithoutResultAsync(request));
+
                 else if (methodInvoker.InternalMethodInfo.ReturnType.IsGenericType && methodInvoker.InternalMethodInfo.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
-                    hub?.On($"{methodInvoker.MethodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithResultAsync(this, request));
+                    hub?.On($"{nameof(IControllerInvocationHandler.HandleWithResultAsync)}", (MethodInvokeRequest request)
+                        => GetControllerManager().Pipeline!.HandleWithResultAsync(request));
+
                 else if (methodInvoker.InternalMethodInfo.ReturnType == typeof(Task))
-                    hub?.On($"{methodInvoker.MethodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithoutResultAsync(this, request));
+                    hub?.On($"{nameof(IControllerInvocationHandler.HandleWithoutResultAsync)}", (MethodInvokeRequest request)
+                        => GetControllerManager().Pipeline!.HandleWithoutResultAsync(request));
+
                 else
-                    hub?.On($"{methodInvoker.MethodSignature}", (MethodInvokeRequest request) => GetControllerManager().Pipeline!.HandleWithResultAsync(this, request));
+                    hub?.On($"{nameof(IControllerInvocationHandler.HandleWithResultAsync)}", (MethodInvokeRequest request)
+                        => GetControllerManager().Pipeline!.HandleWithResultAsync(request));
             });
 
             IsBuilt = true;
         }
 
         public TICommunicationContract GetConnector<TICommunicationContract>()
-            where TICommunicationContract : ICommunicationContract
+            where TICommunicationContract : IHubconControllerContract
 
         {
             Type connectorType = typeof(HubconServerConnector<,>).MakeGenericType(GetType(), typeof(SignalRClientCommunicationHandler<HubConnection>));
@@ -201,6 +211,11 @@ namespace Hubcon.SignalR.Client
             _ = hub?.StopAsync(_token);
         }
 
+        public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            await StartAsync(null, null, null, cancellationToken);
+        }
+
         public Task StartAsync(string? url = null, Action<ContainerBuilder>? additionalServices = null, Action<IMiddlewareOptions>? options = null, CancellationToken cancellationToken = default)
         {
             runningTask = Task.Run(async () => await StartAsync(url, Console.WriteLine, additionalServices, options, cancellationToken), cancellationToken);
@@ -212,11 +227,11 @@ namespace Hubcon.SignalR.Client
             return runningTask ?? Task.CompletedTask;
         }
 
-        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest info) => (BaseJsonResponse)await HubconController.Pipeline!.HandleWithResultAsync(this, info);
-        public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest info) => await HubconController.Pipeline!.HandleWithoutResultAsync(this, info);
+        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest info) => await GetControllerManager().Pipeline!.HandleWithResultAsync(info);
+        public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest info) => await GetControllerManager().Pipeline!.HandleWithoutResultAsync(info);
         public async Task<IResponse> StartStream(string methodCode, MethodInvokeRequest info)
         {
-            var reader = HubconController.Pipeline!.GetStream(this, info);
+            var reader = HubconController.Pipeline!.GetStream(info);
             var channel = Channel.CreateUnbounded<object>();
 
             // Simulamos un productor que escribe en el canal
@@ -229,19 +244,24 @@ namespace Hubcon.SignalR.Client
                 channel.Writer.Complete(); // Indica que no habrá más datos
             });
 
-            await hub!.SendAsync(nameof(IHubconServerController.ReceiveStream), methodCode, channel.Reader);
+            await hub!.SendAsync("ReceiveStream", methodCode, channel.Reader);
 
             return new BaseMethodResponse(true);
         }
-
-        public async Task StartAsync(CancellationToken cancellationToken)
+        
+        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest info)
         {
-            await StartAsync(null, null, null, cancellationToken);
+            throw new NotImplementedException();
+        }
+
+        public void Build(WebApplication? app = null)
+        {
+            
         }
     }
 
     public class BaseSignalRClientController<TICommunicationContract> : BaseSignalRClientController,  IHubconClientController<SignalRClientCommunicationHandler<HubConnection>>
-        where TICommunicationContract : ICommunicationContract
+        where TICommunicationContract : IHubconControllerContract
     {
         private TICommunicationContract? _server;
         public TICommunicationContract Server
