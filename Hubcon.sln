@@ -4,6 +4,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hubcon.Core", "Hubcon.Core\Hubcon.Core.csproj", "{4AE99066-0BD6-477B-82AB-E33D116CDB42}"
+	ProjectSection(ProjectDependencies) = postProject
+		{01008372-9C95-4DC2-A345-8054826873F7} = {01008372-9C95-4DC2-A345-8054826873F7}
+		{1EBB2346-5E76-29C2-D102-0753D1450B67} = {1EBB2346-5E76-29C2-D102-0753D1450B67}
+		{C5768F20-9F8C-0C5B-B440-9962F0C047BD} = {C5768F20-9F8C-0C5B-B440-9962F0C047BD}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hubcon.SignalR", "Hubcon.SignalR\Hubcon.SignalR.csproj", "{BF2813E8-D799-47CC-BE05-4DD37BF26CDE}"
 EndProject

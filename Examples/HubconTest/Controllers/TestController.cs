@@ -10,7 +10,7 @@ namespace HubconTest.Controllers
         {
             for (int i = 0; i < count; i++)
             {
-                yield return "hola2";
+                yield return await Task.Run(() => "hola2");
             }
         }
 
@@ -24,7 +24,6 @@ namespace HubconTest.Controllers
 
         public async Task ShowTempOnServerFromClient()
         {
-            //Console.WriteLine(Client.GetTemperature());
             await Task.CompletedTask;
         }
 

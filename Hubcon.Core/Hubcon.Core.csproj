@@ -13,6 +13,7 @@
 		<Authors>Ezesil</Authors>
 		<EnableTrimAnalyzer>false</EnableTrimAnalyzer>
 		<PublishTrimmed>false</PublishTrimmed>
+		<ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
 	</PropertyGroup>
 	<ItemGroup>
 	  <Compile Remove="ExceptionHandling\**" />
@@ -24,6 +25,8 @@
 		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
 		<PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<ProjectReference Include="..\HubconAnalyzer.DiagnosticSuppressors\HubconAnalyzer.DiagnosticSuppressors.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<PackageReference Include="HubconAnalyzer.SourceGenerators" Version="1.0.36" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />

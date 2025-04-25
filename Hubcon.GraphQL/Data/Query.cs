@@ -2,8 +2,10 @@
 {
     public class Query
     {
+        private readonly bool HealthValue = true;
+
         [UseProjection]
-        public async Task<HealthcheckResult> Healthcheck() => new HealthcheckResult(true);
+        public Task<HealthcheckResult> Healthcheck() => Task.FromResult(new HealthcheckResult(HealthValue));
 
         public record class HealthcheckResult(bool Result);
     }

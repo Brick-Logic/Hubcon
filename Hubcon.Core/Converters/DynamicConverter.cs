@@ -104,7 +104,7 @@ namespace Hubcon.Core.Converters
         // 3. Convierte un JsonElement a un objeto fuertemente tipado
         public object? DeserializeJsonElement(JsonElement? element, Type targetType)
         {
-            if (element is null || element?.ValueKind == JsonValueKind.Null)
+            if (element is null || element.Value.ValueKind == JsonValueKind.Null)
                 return null;
 
             return System.Text.Json.JsonSerializer.Deserialize(element.Value.GetRawText(), targetType);
@@ -113,7 +113,7 @@ namespace Hubcon.Core.Converters
         // 3. Convierte un JsonElement a un objeto fuertemente tipado
         public T? DeserializeJsonElement<T>(JsonElement? element)
         {
-            if (element is null || element?.ValueKind == JsonValueKind.Null)
+            if (element is null || element.Value.ValueKind == JsonValueKind.Null)
                 return default;
 
             var value = element!.Value;

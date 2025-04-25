@@ -13,7 +13,7 @@ namespace Hubcon.Core.MethodHandling
 {
     public class MethodInvokerProvider
     {
-        public event Action<HubconMethodInvoker> OnMethodRegistered;
+        public event Action<HubconMethodInvoker>? OnMethodRegistered;
 
         internal Dictionary<string, Dictionary<string, HubconMethodInvoker>> ControllerMethods = new();
 
@@ -51,13 +51,11 @@ namespace Hubcon.Core.MethodHandling
 
         public bool GetMethodInvoker(MethodInvokeRequest request, out HubconMethodInvoker? value)
         {
-            if (ControllerMethods.TryGetValue(request.ContractName, out Dictionary<string, HubconMethodInvoker>? methods))
+            if (ControllerMethods.TryGetValue(request.ContractName, out Dictionary<string, HubconMethodInvoker>? methods) 
+                && methods.TryGetValue(request.MethodName, out HubconMethodInvoker? methodInvoker))
             {
-                if (methods.TryGetValue(request.MethodName, out HubconMethodInvoker? methodInvoker))
-                {
-                    value = methodInvoker;
-                    return true;
-                }
+                value = methodInvoker;
+                return true;
             }
 
             value = null;

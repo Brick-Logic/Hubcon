@@ -33,14 +33,6 @@ namespace Hubcon.Core.Connectors
 
             var proxyType = proxyRegistry.TryGetProxy<TICommunicationContract>();
             return (TICommunicationContract)InstanceCreator.TryCreateInstance(proxyType, Interceptor)!;
-
-            ProxyGenerator ProxyGen = new();
-
-            return (TICommunicationContract)ProxyGen.CreateInterfaceProxyWithTarget(
-                typeof(TICommunicationContract),
-                (TICommunicationContract)DynamicImplementationCreator.CreateImplementation(typeof(TICommunicationContract)),
-                Interceptor
-            );
         }
 
         public TICommunicationContract GetOrCreateClient(string instanceId)

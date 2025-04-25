@@ -1,12 +1,4 @@
-﻿using Hubcon.Core.Injectors;
-using Hubcon.Core.Models.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Hubcon.Core.Models.Interfaces;
 
 namespace Hubcon.Core.Builders
 {
@@ -14,17 +6,16 @@ namespace Hubcon.Core.Builders
     {
         public IServiceProvider Services { get; }
 
-        public IHubconClientController<ICommunicationHandler> Controller { get; }
+        public IHubconClientController<ICommunicationHandler>? Controller { get; set; }
 
         internal HubconApplication(IServiceProvider services)
         {
             Services = services;
         }
 
-        public static IHubconApplicationBuilder CreateBuilder<T>(string[] args) where T : IHubconClientController<ICommunicationHandler>
+        public static IHubconApplicationBuilder CreateBuilder(string[] args)
         {
             var builder = new HubconApplicationBuilder();
-            //builder.Services.AddSingleton<>();
 
             return builder;
         }
@@ -34,7 +25,7 @@ namespace Hubcon.Core.Builders
             throw new NotImplementedException();
         }
 
-        public Task StopAsync(CancellationToken cancellationToken = default)
+        public Task StopAsync(CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

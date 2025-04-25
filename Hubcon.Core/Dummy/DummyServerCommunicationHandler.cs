@@ -22,7 +22,7 @@ namespace Hubcon.Core.Dummy
 
         public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken)
         {
-            return new BaseMethodResponse(true);
+            return await Task.FromResult(new BaseMethodResponse(true));
         }
 
         public Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, CancellationToken cancellationToken)

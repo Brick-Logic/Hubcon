@@ -6,11 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	<ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Hubcon.SignalR\Hubcon.SignalR.csproj" />
     <ProjectReference Include="..\HubconTestDomain\HubconTestDomain.csproj" />
-    <ProjectReference Include="..\HubconTest\HubconTest.csproj" />
   </ItemGroup>
 </Project>
