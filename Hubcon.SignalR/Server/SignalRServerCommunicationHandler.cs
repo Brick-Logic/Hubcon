@@ -5,6 +5,7 @@ using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Tools;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace Hubcon.SignalR.Server
 {
@@ -20,7 +21,7 @@ namespace Hubcon.SignalR.Server
         [HubconInject]
         private StreamNotificationHandler streamNotificationHandler { get; }
 
-        public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken) 
+        public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken) 
         { 
             IMethodResponse result;
             var client = hubContext.Clients.Client(TargetClientId);
@@ -29,7 +30,7 @@ namespace Hubcon.SignalR.Server
             return result;                   
         }
 
-        public async Task CallAsync(MethodInvokeRequest request, CancellationToken cancellationToken)
+        public async Task CallAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = hubContext.Clients.Client(TargetClientId);
 
@@ -41,7 +42,7 @@ namespace Hubcon.SignalR.Server
             return BaseHubController.GetClients(hubType).ToList();
         }
 
-        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, CancellationToken cancellationToken)
+        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = hubContext.Clients.Client(TargetClientId);
 

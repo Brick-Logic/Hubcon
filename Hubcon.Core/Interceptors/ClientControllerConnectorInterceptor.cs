@@ -21,27 +21,26 @@ namespace Hubcon.Core.Interceptors
         }
 
         protected override async Task<TResult> InterceptAsync<TResult>(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
-        {
-            
-            var handler = HandlerFactory.Invoke();
+        {      
             TResult? result;
 
-            if (typeof(TResult).IsGenericType && typeof(TResult).GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
-            {
-                // Obtener el tipo de los elementos de IAsyncEnumerable<T>
-                var itemType = typeof(TResult).GetGenericArguments()[0];
+            var handler = HandlerFactory.Invoke();
+            var methodName = invocation.Method.GetMethodSignature();
+            var contractName = invocation.Method.ReflectedType!.Name;
+            var resultType = typeof(TResult);
 
-                // Crear el método adecuado que se espera
+            if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
+            {
+                var itemType = resultType.GetGenericArguments()[0];
+
                 var streamMethod = handler
-                    .GetType() // Cambia 'Handler' por el tipo adecuado
-                    .GetMethod(nameof(handler.StreamAsync))! // Cambia 'StreamAsync' por el nombre correcto del método
+                    .GetType()
+                    .GetMethod(nameof(handler.StreamAsync))!
                     .MakeGenericMethod(itemType);
 
-                var methodName = invocation.Method.GetMethodSignature();
-
-                MethodInvokeRequest request = new MethodInvokeRequest(
+                MethodInvokeRequest request = new(
                     methodName,
-                    methodName,
+                    contractName,
                     _converter.SerializeArgsToJson(invocation.Arguments)
                 );
 
@@ -49,20 +48,19 @@ namespace Hubcon.Core.Interceptors
                 result = await (Task<TResult>)streamMethod.Invoke(handler, new object[]
                 {
                     request,
+                    invocation.Method,
                     new CancellationToken()
                 })!;
             }
             else
             {
-                var methodName = invocation.Method.GetMethodSignature();
-
-                MethodInvokeRequest request = new MethodInvokeRequest(
+                MethodInvokeRequest request = new(
                     methodName,
-                    methodName,
+                    contractName,
                     _converter.SerializeArgsToJson(invocation.Arguments)
                 );
 
-                var response = await handler.InvokeAsync(request, new CancellationToken());
+                var response = await handler.InvokeAsync(request, invocation.Method, new CancellationToken());
                 result = _converter.DeserializeData<TResult>(response.Data);
             }
 
@@ -73,16 +71,16 @@ namespace Hubcon.Core.Interceptors
         protected override async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task> proceed)
         {
             var handler = HandlerFactory.Invoke();
-
             var methodName = invocation.Method.GetMethodSignature();
+            var contractName = invocation.Method.ReflectedType!.Name;
 
-            MethodInvokeRequest request = new MethodInvokeRequest(
+            MethodInvokeRequest request = new(
                 methodName,
-                methodName,
+                contractName,
                 _converter.SerializeArgsToJson(invocation.Arguments)
             );
 
-            await handler.CallAsync(request, new CancellationToken());
+            await handler.CallAsync(request, invocation.Method, new CancellationToken());
         }
     }
 }

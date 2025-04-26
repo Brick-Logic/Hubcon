@@ -13,7 +13,7 @@ using System.Threading.Channels;
 
 namespace Hubcon.SignalR.Client
 {
-    //public abstract class BaseClientController : IHubconClientController<ClientCommunicationHandler>
+    //public abstract class BaseGraphQLClientController : IHubconClientController<ClientCommunicationHandler>
     //{
     //    protected string _url = string.Empty;
     //    protected CancellationToken _token;
@@ -59,7 +59,7 @@ namespace Hubcon.SignalR.Client
 
     //        lifetimeScope = serviceProvider.GetRequiredService<ILifetimeScope>();
     //        hub = serviceProvider.GetRequiredService<HubConnection>();
-    //        HubconController = serviceProvider.GetRequiredService<IHubconControllerManager>()!;        
+    //        HubconController = serviceProvider.GetRequiredService<IHubconControllerManager>()!;
     //        _converter = serviceProvider.GetRequiredService<DynamicConverter>()!;
 
 
@@ -96,10 +96,10 @@ namespace Hubcon.SignalR.Client
     //    }
 
     //    public async Task<BaseSignalRClientController> StartInstanceAsync(
-    //        string? url = null, 
-    //        Action<string>? consoleOutput = null, 
-    //        Action<ContainerBuilder>? additionalServices = null, 
-    //        Action<IMiddlewareOptions>? options = null, 
+    //        string? url = null,
+    //        Action<string>? consoleOutput = null,
+    //        Action<ContainerBuilder>? additionalServices = null,
+    //        Action<IMiddlewareOptions>? options = null,
     //        CancellationToken cancellationToken = default)
     //    {
     //        //await StartAsync(url, consoleOutput, cancellationToken);
@@ -126,10 +126,10 @@ namespace Hubcon.SignalR.Client
     //        }
     //    }
 
-    //    public async Task StartAsync(string? url = null, 
-    //        Action<string>? consoleOutput = null, 
-    //        Action<ContainerBuilder>? additionalServices = null, 
-    //        Action<IMiddlewareOptions>? options = null, 
+    //    public async Task StartAsync(string? url = null,
+    //        Action<string>? consoleOutput = null,
+    //        Action<ContainerBuilder>? additionalServices = null,
+    //        Action<IMiddlewareOptions>? options = null,
     //        CancellationToken cancellationToken = default)
     //    {
     //        if (!IsBuilt)
@@ -221,7 +221,7 @@ namespace Hubcon.SignalR.Client
     //    }
     //}
 
-    //public class BaseSignalRClientController<TICommunicationContract> : BaseSignalRClientController,  IHubconClientController<SignalRClientCommunicationHandler<HubConnection>>
+    //public class BaseSignalRClientController<TICommunicationContract> : BaseSignalRClientController, IHubconClientController<SignalRClientCommunicationHandler<HubConnection>>
     //    where TICommunicationContract : ICommunicationContract
     //{
     //    private TICommunicationContract? _server;

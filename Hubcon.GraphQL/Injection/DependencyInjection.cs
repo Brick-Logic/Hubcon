@@ -10,6 +10,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using Hubcon.Core.Extensions;
+using GraphQL.Client.Abstractions;
+using Hubcon.GraphQL.Models;
+using Hubcon.GraphQL.Client;
+using Hubcon.SignalR.Client;
 
 namespace Hubcon.GraphQL.Injection
 {
@@ -33,9 +37,11 @@ namespace Hubcon.GraphQL.Injection
                 .AddProjections()
                 .AddInMemorySubscriptions();
 
-            builder.AddHubcon(additionalServices, container =>
+            builder.AddHubconServer(additionalServices, container =>
             {
                 container.AddHubconEntrypoint<ControllerEntrypoint>();
+
+                container.RegisterWithInjector(x => x.RegisterType<HubconGraphQLClient>().As<IHubconGraphQLClient>().AsSingleton());
 
                 container.RegisterWithInjector(container => container.RegisterType<DummyCommunicationHandler>().As<ICommunicationHandler>().AsScoped());
 
@@ -49,6 +55,18 @@ namespace Hubcon.GraphQL.Injection
             controllerConfig.SetEntrypoint<ControllerEntrypoint>();
             controllerOptions?.Invoke(controllerConfig);
       
+            return builder;
+        }
+
+        public static WebApplicationBuilder AddHubconGraphQLClient(this WebApplicationBuilder builder)
+        {
+            builder.AddHubconClientServices(container =>
+            {
+                container.RegisterWithInjector(x => x.RegisterType<HubconGraphQLClient>().As<IHubconGraphQLClient>().AsSingleton());
+                container.RegisterWithInjector(x => x.RegisterType<ClientCommunicationHandler>().As<ICommunicationHandler>().AsSingleton());
+                container.RegisterWithInjector(x => x.RegisterType<HubconClientProvider>().AsSingleton());
+            });
+
             return builder;
         }
 

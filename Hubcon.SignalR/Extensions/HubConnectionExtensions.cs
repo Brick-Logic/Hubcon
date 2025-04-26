@@ -13,9 +13,8 @@ namespace Hubcon.SignalR.Extensions
             DynamicConverter converter, 
             CancellationToken cancellationToken)
         {
-            var stream = connection.StreamAsync<JsonElement?>(request.MethodName!, request, cancellationToken);
-
-            return await Task.FromResult(converter.ConvertStream<T>(stream, converter, cancellationToken));
+            var stream = connection.StreamAsync<JsonElement>(request.MethodName!, request, cancellationToken);
+            return await Task.FromResult(converter.ConvertStream<T>(stream, cancellationToken));
         }
     }
 }

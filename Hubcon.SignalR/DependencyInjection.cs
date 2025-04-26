@@ -18,7 +18,7 @@ namespace Hubcon.SignalR
         {
             e.Services.AddSignalR();
 
-            e.AddHubcon(container =>
+            e.AddHubconServer(container =>
             {
                 var commHandlerType = typeof(SignalRServerCommunicationHandler<>);
                 var hubControllerType = typeof(HubconControllerManager);

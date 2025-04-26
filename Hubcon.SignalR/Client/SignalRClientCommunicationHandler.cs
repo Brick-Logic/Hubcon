@@ -4,6 +4,7 @@ using Hubcon.Core.Models.Interfaces;
 using Hubcon.SignalR.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
+using System.Reflection;
 
 namespace Hubcon.SignalR.Client
 {
@@ -19,7 +20,7 @@ namespace Hubcon.SignalR.Client
             _converter = converter;
         }
 
-        public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken)
+        public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = _hubFactory.Invoke();
 
@@ -28,13 +29,13 @@ namespace Hubcon.SignalR.Client
             return await client.InvokeAsync<BaseMethodResponse>(request.MethodName!, request, cancellationToken);
         }
 
-        public async Task CallAsync(MethodInvokeRequest request, CancellationToken cancellationToken)
+        public async Task CallAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = _hubFactory.Invoke();
             await client.SendAsync(request.MethodName!, request, cancellationToken);
         }
         
-        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, CancellationToken cancellationToken)
+        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = _hubFactory.Invoke();
 

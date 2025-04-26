@@ -9,8 +9,8 @@ namespace Hubcon.Core.Models.Interfaces
 {
     public interface IBaseHubconController
     {
-        Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest info);
-        Task<IResponse> HandleMethodVoid(MethodInvokeRequest info);
+        Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest request);
+        Task<IResponse> HandleMethodVoid(MethodInvokeRequest request);
         public IHubconControllerManager HubconController { get; }
     }
 
@@ -31,12 +31,12 @@ namespace Hubcon.Core.Models.Interfaces
     public interface IHubconClientController<TICommunicationHandler> : IBaseHubconController<TICommunicationHandler>, IHostedService
          where TICommunicationHandler : ICommunicationHandler
     {
-        Task<IResponse> StartStream(string methodCode, MethodInvokeRequest info);
+        Task<IResponse> StartStream(string methodCode, MethodInvokeRequest request);
     }
 
     public interface IHubconEntrypoint : IBaseHubconController
     {
-        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest info);
+        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest request);
         public void Build(WebApplication? app = null);
     }
 

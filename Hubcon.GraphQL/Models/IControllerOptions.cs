@@ -1,7 +1,7 @@
 ﻿using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Models.Pipeline.Interfaces;
 
-namespace Hubcon.GraphQL.Injection
+namespace Hubcon.GraphQL.Models
 {
     public interface IControllerOptions
     {

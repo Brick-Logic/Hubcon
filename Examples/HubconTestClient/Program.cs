@@ -1,8 +1,12 @@
-﻿using Hubcon.Core.Middleware;
+﻿using GraphQL.Client.Http;
+using GraphQL.Client.Serializer.SystemTextJson;
+using Hubcon.GraphQL.Client;
+using Hubcon.GraphQL.Injection;
 using HubconTestDomain;
-using System.ComponentModel;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
-using System.Runtime.ExceptionServices;
 
 namespace HubconTestClient
 {
@@ -12,13 +16,53 @@ namespace HubconTestClient
 
         static async Task Main()
         {
-            var hubController = new TestHubController();
-            var server = await hubController.StartInstanceAsync(Url, Console.WriteLine, null, options => 
+            var builder = WebApplication.CreateBuilder();
+
+            builder.Services.AddSingleton(x =>
             {
-                options.AddMiddleware<LoggingMiddleware>();
+                var configuration = x.GetRequiredService<IConfiguration>();
+                var graphqlEndpoint = configuration["GraphQL:HttpEndpoint"] ?? "http://localhost:5000/graphql";
+                var graphqlWebSocketEndpoint = configuration["GraphQL:WebSocketEndpoint"] ?? "ws://localhost:5000/graphql";
+
+                var options = new GraphQLHttpClientOptions
+                {
+                    EndPoint = new Uri(graphqlEndpoint),
+                    WebSocketEndPoint = new Uri(graphqlWebSocketEndpoint)
+                };
+
+                return new GraphQLHttpClient(options, new SystemTextJsonSerializer());
             });
 
-            var connector = server.GetConnector<IServerHubContract>();
+            builder.AddHubconGraphQLClient();
+
+            var app = builder.Build();
+            var scope = app.Services.CreateScope();
+
+            var clientProvider = scope.ServiceProvider.GetRequiredService<HubconClientProvider>();
+            var client = clientProvider.GetClient<ITestServerHubContract>();
+
+            Console.WriteLine("Esperando interacción antes de continuar...");
+            Console.ReadKey();
+
+            Console.WriteLine("Enviando request...");
+            var temp = await client.GetTemperatureFromServer();
+            Console.WriteLine($"Datos recibidos: {temp}");
+            Console.ReadKey();
+            
+            Console.WriteLine("Enviando request...");
+            await client.ShowTempOnServerFromClient();
+            Console.WriteLine($"Request enviado, respuesta recibida.");
+            Console.ReadKey();
+
+
+
+            //TestHubController? hubController = new TestHubController();
+            //var server = await hubController.StartInstanceAsync(Url, Console.WriteLine, null, options => 
+            //{
+            //    options.AddMiddleware<LoggingMiddleware>();
+            //});
+
+            //var connector = hubController.GetConnector<IServerHubContract>();
 
             //Console.WriteLine("Running test: ShowTextOnServer... ");
             //await connector.ShowTextOnServer();
@@ -61,7 +105,7 @@ namespace HubconTestClient
             {
                 await Task.Run(async () =>
                 {
-                    int? response = await connector.GetTemperatureFromServer();
+                    int? response = await client.GetTemperatureFromServer();
 
                     if (response is null)
                         Interlocked.Add(ref errors, 1);

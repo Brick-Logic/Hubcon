@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.GraphQL.CustomAttributes
+namespace Hubcon.GraphQL.Models.CustomAttributes
 {
     public enum MethodType
     {
@@ -13,7 +13,7 @@ namespace Hubcon.GraphQL.CustomAttributes
         Subscription
     }
 
-    internal class HubconMethodAttribute : Attribute
+    public class HubconMethodAttribute : Attribute
     {
         public HubconMethodAttribute(MethodType methodType)
         {

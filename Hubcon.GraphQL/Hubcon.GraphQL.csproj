@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Hubcon.Core\Hubcon.Core.csproj" />
+    <PackageReference Include="GraphQL.Client" Version="6.1.0" />
+    <PackageReference Include="GraphQL.Client.Serializer.SystemTextJson" Version="6.1.0" />
 	<PackageReference Include="HotChocolate.AspNetCore" Version="15.1.3" />
 	<PackageReference Include="HotChocolate.Data" Version="15.1.3" />
 	<PackageReference Include="HotChocolate.Data.EntityFramework" Version="15.1.3" />

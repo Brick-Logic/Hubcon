@@ -1,29 +1,22 @@
-﻿using Castle.Core.Internal;
-using Castle.DynamicProxy;
+﻿using Castle.DynamicProxy;
 using Hubcon.Core.Converters;
 using Hubcon.Core.Extensions;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
-using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 
 namespace Hubcon.Core.Interceptors
 {
-    public class ServerConnectorInterceptor<TIHubController, TICommunicationHandler> : AsyncInterceptorBase
+    public class ServerConnectorInterceptor<TICommunicationHandler> : AsyncInterceptorBase
         where TICommunicationHandler : ICommunicationHandler
-        where TIHubController : IBaseHubconController
     {
         public readonly ICommunicationHandler CommunicationHandler;
         private readonly DynamicConverter _converter;
-        private readonly Type CommunicationContractType;
 
-        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ServerConnectorInterceptor<,>))]
-        public ServerConnectorInterceptor(TIHubController handler, DynamicConverter converter)
+        public ServerConnectorInterceptor(TICommunicationHandler handler, DynamicConverter converter)
         {
-            CommunicationHandler = handler.HubconController.CommunicationHandler;
-            CommunicationContractType = handler.GetType().GetInterfaces().Find(x => x.IsAssignableTo(typeof(IHubconControllerContract)));
+            CommunicationHandler = handler;
             _converter = converter;
         }
 
@@ -44,7 +37,7 @@ namespace Hubcon.Core.Interceptors
 
                 var request = new MethodInvokeRequest(
                     invocation.Method.GetMethodSignature(),
-                    CommunicationContractType.Name, 
+                    invocation.Method.ReflectedType!.Name, 
                     _converter.SerializeArgsToJson(invocation.Arguments)
                 );
 
@@ -59,12 +52,12 @@ namespace Hubcon.Core.Interceptors
             {
                 MethodInvokeRequest request = new MethodInvokeRequest(
                     invocation.Method.GetMethodSignature(),
-                    CommunicationContractType.Name,
+                    invocation.Method.ReflectedType!.Name,
                     _converter.SerializeArgsToJson(invocation.Arguments)
                 );
 
-                var response = await CommunicationHandler.InvokeAsync(request,new CancellationToken());
-                result = _converter.DeserializeJsonElement<TResult>((JsonElement?)response.Data)!;
+                var response = await CommunicationHandler.InvokeAsync(request, invocation.Method, new CancellationToken());
+                result = _converter.DeserializeJsonElement<TResult>((JsonElement)response.Data!)!;
             }
 
 
@@ -77,11 +70,11 @@ namespace Hubcon.Core.Interceptors
         {
             MethodInvokeRequest request = new MethodInvokeRequest(
                 invocation.Method.GetMethodSignature(),
-                CommunicationContractType.Name,
+                invocation.Method.ReflectedType!.Name,
                 _converter.SerializeArgsToJson(invocation.Arguments)
             );
 
-            await CommunicationHandler.CallAsync(request,new CancellationToken());
+            await CommunicationHandler.CallAsync(request, invocation.Method, new CancellationToken());
         }
     }
 }

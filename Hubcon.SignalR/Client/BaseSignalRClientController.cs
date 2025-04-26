@@ -1,17 +1,10 @@
 ﻿using Autofac;
-using Autofac.Core.Lifetime;
-using Hubcon.Core;
 using Hubcon.Core.Connectors;
-using Hubcon.Core.Controllers;
 using Hubcon.Core.Converters;
 using Hubcon.Core.Extensions;
-using Hubcon.Core.Injectors;
-using Hubcon.Core.Interceptors;
 using Hubcon.Core.MethodHandling;
-using Hubcon.Core.Middleware;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Models.Middleware;
 using Hubcon.Core.Models.Pipeline.Interfaces;
 using Hubcon.SignalR.Server;
 using Microsoft.AspNetCore.Builder;
@@ -117,7 +110,7 @@ namespace Hubcon.SignalR.Client
             where TICommunicationContract : IHubconControllerContract
 
         {
-            Type connectorType = typeof(HubconServerConnector<,>).MakeGenericType(GetType(), typeof(SignalRClientCommunicationHandler<HubConnection>));
+            Type connectorType = typeof(HubconServerConnector<>).MakeGenericType(GetType(), typeof(SignalRClientCommunicationHandler<HubConnection>));
             IServerConnector connector = (IServerConnector)serviceProvider.GetRequiredService(connectorType)!;
             return connector.GetClient<TICommunicationContract>();
         }
@@ -272,7 +265,7 @@ namespace Hubcon.SignalR.Client
                 {
                     Type communicationHandler = typeof(SignalRServerCommunicationHandler<>).MakeGenericType(GetType());
                     Type hubType = hub!.GetType().MakeGenericType(communicationHandler);
-                    Type communicationHandlerType = typeof(HubconServerConnector<,>).MakeGenericType(hubType, communicationHandler);
+                    Type communicationHandlerType = typeof(HubconServerConnector<>).MakeGenericType(hubType, communicationHandler);
                     return _server = ((IServerConnector)serviceProvider.GetRequiredService(communicationHandlerType)!).GetClient<TICommunicationContract>();
                 }
 

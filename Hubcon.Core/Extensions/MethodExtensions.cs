@@ -15,8 +15,6 @@ namespace Hubcon.Core.Extensions
             var registered = options?.Invoke(container);
             registered?.OnActivated(e =>
             {
-                //Console.WriteLine($"Instancia creada: {e?.Instance?.GetType().Name}");
-
                 List<PropertyInfo> props = new();
 
                 props.AddRange(e.Instance!.GetType()

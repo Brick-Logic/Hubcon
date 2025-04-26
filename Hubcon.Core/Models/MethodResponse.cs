@@ -1,5 +1,6 @@
 ﻿using Hubcon.Core.Converters;
 using System.ComponentModel;
+using System.Data.SqlTypes;
 using System.Text.Json;
 
 namespace Hubcon.Core.Models
@@ -45,6 +46,10 @@ namespace Hubcon.Core.Models
     {
         public object? Data { get; set; }
 
+        public BaseMethodResponse()
+        {
+            
+        }
 
         public BaseMethodResponse(bool success, object? data = null)
         {
@@ -55,6 +60,11 @@ namespace Hubcon.Core.Models
 
     public class BaseJsonResponse : BaseMethodResponse<JsonElement?>
     {
+        public BaseJsonResponse() : base(true, null)
+        {
+            
+        }
+
         public BaseJsonResponse(bool success, JsonElement? data = null) : base(success, data)
         {
         }

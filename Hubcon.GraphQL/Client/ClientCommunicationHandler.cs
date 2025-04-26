@@ -1,43 +1,41 @@
 ﻿using Hubcon.Core.Converters;
+using Hubcon.Core.Extensions;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
-using Microsoft.AspNetCore.SignalR;
+using Hubcon.GraphQL.Models;
+using System.Reflection;
+using System.Text.Json;
 
 namespace Hubcon.SignalR.Client
 {
-    //public class ClientCommunicationHandler : ICommunicationHandler
-    //{
-    //    protected Func<HubConnection> _hubFactory;
-    //    private readonly DynamicConverter _converter;
+    public class ClientCommunicationHandler : ICommunicationHandler
+    {
+        private readonly IHubconGraphQLClient _client;
+        private readonly DynamicConverter _converter;
 
-    //    public ClientCommunicationHandler(THubConnection hubFactory, DynamicConverter converter)
-    //    {
-    //        _hubFactory = () => hubFactory;
-    //        _converter = converter;
-    //    }
+        public ClientCommunicationHandler(IHubconGraphQLClient client, DynamicConverter converter)
+        {
+            _client = client;
+            _converter = converter;
+        }
 
-    //    public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken)
-    //    {
-    //        var client = _hubFactory.Invoke();
+        public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        {
 
-    //        if (client.State != HubConnectionState.Connected) await client.StartAsync(cancellationToken);
+            var response = await _client.SendRequestAsync(request, methodInfo, nameof(IHubconEntrypoint.HandleMethodTask));
+            return response;
+        }
 
-    //        return await client.InvokeAsync<BaseMethodResponse>(request.HandlerMethodName!, request, cancellationToken);
-    //    }
+        public async Task CallAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        {
+            _ = await _client.SendRequestAsync(request, methodInfo, nameof(IHubconEntrypoint.HandleMethodVoid));
+        }
 
-    //    public async Task CallAsync(MethodInvokeRequest request, CancellationToken cancellationToken)
-    //    {
-    //        var client = _hubFactory.Invoke();
-    //        await client.SendAsync(request.HandlerMethodName!, request, cancellationToken);
-    //    }
-        
-    //    public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, CancellationToken cancellationToken)
-    //    {
-    //        var client = _hubFactory.Invoke();
-
-    //        if (client.State != HubConnectionState.Connected) await client.StartAsync(cancellationToken);
-
-    //        return await client.StreamAsync<T>(request, _converter, cancellationToken);
-    //    }
-    //}
+        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        {
+            IAsyncEnumerable<JsonElement> stream;       
+            stream = _client.SubscribeToMessages(request, methodInfo, nameof(IHubconEntrypoint.HandleMethodStream));
+            return Task.FromResult(_converter.ConvertStream<T?>(stream, cancellationToken));
+        }
+    }
 }

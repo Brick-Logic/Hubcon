@@ -3,8 +3,8 @@ using Hubcon.Core.Injectors.Attributes;
 using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
-using Hubcon.GraphQL.CustomAttributes;
 using Hubcon.GraphQL.Data;
+using Hubcon.GraphQL.Models.CustomAttributes;
 using Microsoft.AspNetCore.Builder;
 using System;
 using System.Collections.Generic;
@@ -25,13 +25,13 @@ namespace Hubcon.GraphQL.Server
         public IHubconControllerManager HubconController { get; }
 
         [HubconMethod(MethodType.Mutation)]
-        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest info) => await HubconController.Pipeline.HandleWithResultAsync(info);    
+        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest request) => await HubconController.Pipeline.HandleWithResultAsync(request);    
 
         [HubconMethod(MethodType.Mutation)]
-        public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest info) => await HubconController.Pipeline.HandleWithoutResultAsync(info);
+        public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest request) => await HubconController.Pipeline.HandleWithoutResultAsync(request);
 
         [HubconMethod(MethodType.Subscription)]
-        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest info) => HubconController.Pipeline.GetStream(info);
+        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest request) => HubconController.Pipeline.GetStream(request);
 
         public void Build(WebApplication? app = null)
         {      

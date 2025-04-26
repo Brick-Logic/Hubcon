@@ -1,12 +1,13 @@
 ﻿using Hubcon.Core.Models;
+using System.Reflection;
 
 namespace Hubcon.Core.Models.Interfaces
 {
     public interface ICommunicationHandler
     {
-        public Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, CancellationToken cancellationToken);
-        public Task CallAsync(MethodInvokeRequest request, CancellationToken cancellationToken);
-        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, CancellationToken cancellationToken);
+        public Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken);
+        public Task CallAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken);
+        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken);
     }
 
     public interface IServerCommunicationHandler : ICommunicationHandler

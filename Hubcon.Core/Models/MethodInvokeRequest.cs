@@ -17,21 +17,5 @@ namespace Hubcon.Core.Models
             ContractName = contractName;
             Args = args ?? new List<JsonElement?>();
         }
-
-        //public MethodInvokeRequest SerializeArgs(Func<object?[], object?[]> serializer)
-        //{
-        //    Args = serializer.Invoke(Args!);
-        //    return this;
-        //}
-
-        //public object[] GetSerializedArgs(Func<object[], object[]> serializer)
-        //{
-        //    return serializer.Invoke(Args!);
-        //}
-
-        //public object?[] GetDeserializedArgs(Type[] types, Func<Type[], object?[], object?[]> deserializer)
-        //{
-        //    return deserializer.Invoke(types, Args!);
-        //}
     }
 }

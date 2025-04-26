@@ -17,17 +17,16 @@ namespace Hubcon.Core.Connectors
     /// the server's interface.
     /// </summary>
     /// <typeparam name="TIServerHubController"></typeparam>
-    public class HubconServerConnector<TIBaseHubconController, TICommunicationHandler> : IServerConnector
+    public class HubconServerConnector<TICommunicationHandler> : IServerConnector
         where TICommunicationHandler : ICommunicationHandler
-        where TIBaseHubconController : IBaseHubconController<TICommunicationHandler>
     {
         private IHubconControllerContract? _client = null!;
-        private readonly ServerConnectorInterceptor<TIBaseHubconController, TICommunicationHandler> Interceptor;
+        private readonly ServerConnectorInterceptor<TICommunicationHandler> Interceptor;
         private readonly ProxyRegistry proxyRegistry;
 
         public ICommunicationHandler Connection { get => Interceptor.CommunicationHandler; }
 
-        public HubconServerConnector(ServerConnectorInterceptor<TIBaseHubconController, TICommunicationHandler> interceptor, ProxyRegistry proxyRegistry) : base()
+        public HubconServerConnector(ServerConnectorInterceptor<TICommunicationHandler> interceptor, ProxyRegistry proxyRegistry) : base()
         {
             Interceptor = interceptor;
             this.proxyRegistry = proxyRegistry;

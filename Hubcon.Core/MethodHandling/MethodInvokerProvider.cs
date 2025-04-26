@@ -51,6 +51,12 @@ namespace Hubcon.Core.MethodHandling
 
         public bool GetMethodInvoker(MethodInvokeRequest request, out HubconMethodInvoker? value)
         {
+            if (request == null)
+            {
+                value = null;
+                return false;
+            }
+
             if (ControllerMethods.TryGetValue(request.ContractName, out Dictionary<string, HubconMethodInvoker>? methods) 
                 && methods.TryGetValue(request.MethodName, out HubconMethodInvoker? methodInvoker))
             {

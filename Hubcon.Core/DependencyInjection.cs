@@ -38,7 +38,7 @@ namespace Hubcon.Core
         private readonly static ProxyRegistry Proxies = new();
         private readonly static List<Type> ControllersToRegister = new();
 
-        public static WebApplicationBuilder AddHubcon(
+        public static WebApplicationBuilder AddHubconServer(
             this WebApplicationBuilder builder,
             params Action<ContainerBuilder>?[] additionalServices)
         {
@@ -159,8 +159,8 @@ namespace Hubcon.Core
                    .RegisterWithInjector(x => x.RegisterType<MiddlewareProvider>().As<IMiddlewareProvider>().AsScoped())
                    .RegisterWithInjector(x => x.RegisterType<ControllerInvocationHandler>().AsScoped())
                    .RegisterWithInjector(x => x.RegisterType(typeof(HubconControllerManager)).As(typeof(IHubconControllerManager)).AsScoped())
-                   .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerConnectorInterceptor<,>)).AsScoped())
-                   .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<,>)).AsScoped())
+                   .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerConnectorInterceptor<>)).AsScoped())
+                   .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<>)).AsScoped())
                    .RegisterWithInjector(x => x.RegisterInstance(iBaseHubconControllerInstance).As(iBaseHubconControllerInstance.GetType()).AsSingleton());
 
             additionalServices?.Invoke(container);
@@ -180,6 +180,45 @@ namespace Hubcon.Core
 
             return new AutofacServiceProvider(scope);
         }
+
+        public static WebApplicationBuilder AddHubconClientServices(
+            this WebApplicationBuilder builder,
+            params Action<ContainerBuilder>?[] additionalServices)
+        {
+            builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+            builder.Host.ConfigureContainer<ContainerBuilder>((context, container) =>
+            {
+                if (ServicesToInject.Count > 0)
+                    ServicesToInject.ForEach(x => x.Invoke(container));
+
+                // Registrás tus tipos
+                container
+                       .RegisterWithInjector(x => x.RegisterInstance(Proxies).AsSingleton())
+                       .RegisterWithInjector(x => x.RegisterType<MethodInvokerProvider>().AsSingleton())
+                       .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().AsSingleton())
+                       .RegisterWithInjector(x => x.RegisterType<MiddlewareProvider>().As<IMiddlewareProvider>().AsScoped())
+                       .RegisterWithInjector(x => x.RegisterType<ControllerInvocationHandler>().AsScoped())
+                       .RegisterWithInjector(x => x.RegisterType(typeof(HubconControllerManager)).As(typeof(IHubconControllerManager)).AsScoped())
+                       .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerConnectorInterceptor<>)).AsScoped())
+                       .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<>)).AsScoped());
+
+                foreach (var services in additionalServices)
+                    services?.Invoke(container);
+            });
+
+            return builder;
+        }
+
+
+
+
+
+
+
+
+
+
+
 
         public static WebApplicationBuilder AddHubconController<T>(this WebApplicationBuilder builder,Action<IMiddlewareOptions>? options = null)
             where T : class, IHubconControllerContract

@@ -111,13 +111,12 @@ namespace Hubcon.Core.Converters
         }
 
         // 3. Convierte un JsonElement a un objeto fuertemente tipado
-        public T? DeserializeJsonElement<T>(JsonElement? element)
+        public T? DeserializeJsonElement<T>(JsonElement element)
         {
-            if (element is null || element.Value.ValueKind == JsonValueKind.Null)
+            if ( element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
                 return default;
 
-            var value = element!.Value;
-            return (T?)System.Text.Json.JsonSerializer.Deserialize(value, typeof(T));
+            return (T?)System.Text.Json.JsonSerializer.Deserialize(element, typeof(T));
         }
 
         // 4. Convierte una lista de JsonElements a objetos, según tipos dados
@@ -134,7 +133,8 @@ namespace Hubcon.Core.Converters
 
             return list;
         }
-        public async IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement?> stream, DynamicConverter converter, [EnumeratorCancellation] CancellationToken cancellationToken)
+
+        public async IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement> stream, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             await foreach (var item in stream.WithCancellation(cancellationToken))
             {
@@ -144,7 +144,7 @@ namespace Hubcon.Core.Converters
                 }
                 else
                 {
-                    yield return converter.DeserializeJsonElement<T>(item)!;
+                    yield return DeserializeJsonElement<T>(item)!;
                 }
             }
         }
