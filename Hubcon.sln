@@ -37,6 +37,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HubconAnalyzers", "HubconAn
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hubcon.GraphQL", "Hubcon.GraphQL\Hubcon.GraphQL.csproj", "{80DBC372-062B-4A86-ABF3-B18E848DA4DE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hubcon.Core.Models", "Hubcon.Core.Models\Hubcon.Core.Models.csproj", "{2BF366BC-90CE-4C25-BB04-1A90C82C88D1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,10 @@ Global
 		{80DBC372-062B-4A86-ABF3-B18E848DA4DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{80DBC372-062B-4A86-ABF3-B18E848DA4DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{80DBC372-062B-4A86-ABF3-B18E848DA4DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BF366BC-90CE-4C25-BB04-1A90C82C88D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BF366BC-90CE-4C25-BB04-1A90C82C88D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BF366BC-90CE-4C25-BB04-1A90C82C88D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BF366BC-90CE-4C25-BB04-1A90C82C88D1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

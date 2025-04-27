@@ -7,6 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Hubcon.SignalR\Hubcon.SignalR.csproj" />
+    <ProjectReference Include="..\..\Hubcon.GraphQL\Hubcon.GraphQL.csproj" />
   </ItemGroup>
 </Project>

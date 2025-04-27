@@ -78,7 +78,7 @@ namespace Hubcon.SignalR.Server
     }
 
     public abstract class BaseHubController<TICommunicationContract> : BaseHubController
-        where TICommunicationContract : IHubconControllerContract
+        where TICommunicationContract : IControllerContract
     {
 
         private IClientAccessor _clientAccessor = null!;

@@ -1,6 +1,6 @@
 ﻿namespace Hubcon.Core.Models.Interfaces
 {
-    public interface IHubconControllerContract
+    public interface IControllerContract
     {
     }
 }

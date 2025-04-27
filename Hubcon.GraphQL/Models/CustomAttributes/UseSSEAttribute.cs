@@ -6,11 +6,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.GraphQL.Models.CustomAttributes
 {
-    public class HubconSubscriptionAttribute : HubconMethodAttribute
+    internal class UseSSEAttribute : Attribute
     {
-        public HubconSubscriptionAttribute() : base(MethodType.Subscription)
-        {
-
-        }
     }
 }

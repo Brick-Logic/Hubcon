@@ -9,7 +9,7 @@ namespace Hubcon.Core.Connectors
 {
     public interface IServerConnector
     {
-        public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : IHubconControllerContract;
+        public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : IControllerContract;
     }
 
     /// <summary>
@@ -20,7 +20,7 @@ namespace Hubcon.Core.Connectors
     public class HubconServerConnector<TICommunicationHandler> : IServerConnector
         where TICommunicationHandler : ICommunicationHandler
     {
-        private IHubconControllerContract? _client = null!;
+        private IControllerContract? _client = null!;
         private readonly ServerConnectorInterceptor<TICommunicationHandler> Interceptor;
         private readonly ProxyRegistry proxyRegistry;
 
@@ -32,7 +32,7 @@ namespace Hubcon.Core.Connectors
             this.proxyRegistry = proxyRegistry;
         }
 
-        public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : IHubconControllerContract
+        public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : IControllerContract
         {
             if (_client != null)
                 return (TICommunicationContract)_client;

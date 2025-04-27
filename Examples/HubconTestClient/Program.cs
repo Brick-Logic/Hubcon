@@ -39,7 +39,7 @@ namespace HubconTestClient
             var scope = app.Services.CreateScope();
 
             var clientProvider = scope.ServiceProvider.GetRequiredService<HubconClientProvider>();
-            var client = clientProvider.GetClient<ITestServerHubContract>();
+            var client = clientProvider.GetClient<ITestContract>();
 
             Console.WriteLine("Esperando interacción antes de continuar...");
             Console.ReadKey();
@@ -52,6 +52,13 @@ namespace HubconTestClient
             Console.WriteLine("Enviando request...");
             await client.ShowTempOnServerFromClient();
             Console.WriteLine($"Request enviado, respuesta recibida.");
+            Console.ReadKey();
+
+            Console.WriteLine("Enviando request...");
+            await foreach(var item in client.GetMessages(10))
+            {
+                Console.WriteLine($"Respuesta recibida: {item}");
+            }
             Console.ReadKey();
 
 

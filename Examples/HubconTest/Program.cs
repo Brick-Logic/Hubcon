@@ -13,19 +13,24 @@ namespace HubconTest
     {
         public static void Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);
 
+            var builder = WebApplication.CreateBuilder(args);
             // Add services to the container.
 
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 
             builder.Services.AddOpenApi();
+
             builder.AddHubconGraphQL(controllerOptions =>
             {
-                controllerOptions.AddGlobalMiddleware<LoggingMiddleware>();
+                //controllerOptions.AddGlobalMiddleware<LoggingMiddleware>();
 
-                controllerOptions.AddController<TestController>();
+                controllerOptions.AddController<TestController>(controllerMiddlewares =>
+                {
+                    // Middleware solo de este controller
+                    //controllerMiddlewares.AddMiddleware<LoggingMiddleware>();
+                });
             });
 
             builder.UseContractsFromAssembly(nameof(HubconTestDomain));

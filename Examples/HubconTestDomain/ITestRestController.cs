@@ -2,7 +2,7 @@
 
 namespace HubconTestDomain
 {
-    public interface ITestRestController : IHubconControllerContract
+    public interface ITestRestController : IControllerContract
     {
         Task<int> GetTemperature(string name);
     }

@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using Hubcon.Core.Models.Interfaces;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -13,11 +14,6 @@ namespace HubconAnalyzer.SourceGenerators
     [Generator]
     public class CommunicationProxyGenerator : IIncrementalGenerator
     {
-        public CommunicationProxyGenerator()
-        {
-            
-        }
-
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
             var interfaces = context.SyntaxProvider
@@ -33,7 +29,7 @@ namespace HubconAnalyzer.SourceGenerators
                             return null;
 
                         var implementsContract = symbol.AllInterfaces
-                            .Any(i => i.Name == "IHubconControllerContract"); // Puedes cambiar esto por el nombre completo
+                            .Any(i => i.Name == nameof(IControllerContract)); // Puedes cambiar esto por el nombre completo
 
                         return implementsContract ? symbol : null;
                     })
@@ -55,7 +51,6 @@ namespace HubconAnalyzer.SourceGenerators
         {
             var ns = iface.ContainingNamespace.ToDisplayString();
             var proxyName = iface.Name + "Proxy";
-
             var sb = new StringBuilder();
 
             sb.AppendLine($"#nullable enable");
@@ -63,11 +58,27 @@ namespace HubconAnalyzer.SourceGenerators
             sb.AppendLine($"using Hubcon.Core.Models.Invocation;");
             sb.AppendLine($"using Hubcon.Core.Attributes;");
             sb.AppendLine($"using System.Reflection;");
+            sb.AppendLine($"using Hubcon.GraphQL.Models;");
             sb.AppendLine($"");
             sb.AppendLine($"[HubconProxy]");
             sb.AppendLine($"public class {proxyName} : {iface.ToDisplayString()}");
             sb.AppendLine($"{{");
             sb.AppendLine($"    public AsyncInterceptorBase Interceptor;");
+            sb.AppendLine($"");
+
+
+            foreach(var property in iface.GetMembers().OfType<IPropertySymbol>())
+            {
+                var accessors = "get;";
+
+                if (property.SetMethod != null)
+                    accessors += " set;";
+
+                var type = $"    public {property.Type.ToString()} {property.Name} {{ {accessors} }}";
+
+                sb.AppendLine(type);
+            }
+
             sb.AppendLine($"");
             sb.AppendLine($"    public {proxyName}(AsyncInterceptorBase interceptor)");
             sb.AppendLine($"    {{");
@@ -75,7 +86,10 @@ namespace HubconAnalyzer.SourceGenerators
             sb.AppendLine($"    }}");
             sb.AppendLine($"");
 
-            foreach (var method in iface.GetMembers().OfType<IMethodSymbol>())
+            foreach (var method in iface
+                .GetMembers()
+                .OfType<IMethodSymbol>()
+                .Where(m => !m.Name.StartsWith("get_") && !m.Name.StartsWith("set_")))
             {
                 var returnType = method.ReturnType.ToDisplayString();
                 var methodName = method.Name;

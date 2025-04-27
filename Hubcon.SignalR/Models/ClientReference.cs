@@ -18,13 +18,13 @@ namespace Hubcon.SignalR.Models
             ClientInfo = clientInfo;
         }
 
-        public IClientReference<TICommunicationContract> WithController<TICommunicationContract>(TICommunicationContract clientController) where TICommunicationContract : IHubconControllerContract
+        public IClientReference<TICommunicationContract> WithController<TICommunicationContract>(TICommunicationContract clientController) where TICommunicationContract : IControllerContract
         {
             return new ClientReference<TICommunicationContract>(this, clientController);
         }
     }
     public class ClientReference<TICommunicationContract> : ClientReference, IClientReference<TICommunicationContract> 
-        where TICommunicationContract : IHubconControllerContract
+        where TICommunicationContract : IControllerContract
     {
         public TICommunicationContract ClientController { get; init; }
 

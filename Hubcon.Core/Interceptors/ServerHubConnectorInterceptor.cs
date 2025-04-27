@@ -45,6 +45,7 @@ namespace Hubcon.Core.Interceptors
                 result = await (Task<TResult>)streamMethod.Invoke(CommunicationHandler, new object[]
                 {
                     request,
+                    invocation.Method,
                     new CancellationToken()
                 })!;
             }

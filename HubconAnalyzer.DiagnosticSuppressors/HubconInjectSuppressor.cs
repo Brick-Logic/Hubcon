@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Immutable;
 using System.Linq;
+using Hubcon.Core.Injectors.Attributes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -53,11 +54,10 @@ namespace HubconAnalyzer.DiagnosticSuppressors
                     continue;
 
                 var hasAttr = sym.GetAttributes()
-                                 .Any(a => a.AttributeClass?.Name == "HubconInjectAttribute");
+                                 .Any(a => a.AttributeClass?.Name == nameof(HubconInjectAttribute));
                 if (!hasAttr)
                     continue;
 
-                // ¡Suprimimos!
                 context.ReportSuppression(Suppression.Create(Rule, diag));
             }
         }

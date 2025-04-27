@@ -218,7 +218,7 @@ namespace Hubcon.GraphQL.Injection
             Builder.AddGlobalMiddleware(middlewareType);
         }
 
-        public void AddController<T>(Action<IMiddlewareOptions>? options = null) where T : class, IHubconControllerContract
+        public void AddController<T>(Action<IMiddlewareOptions>? options = null) where T : class, IControllerContract
         {
             Builder.AddHubconController<T>(options);
         }

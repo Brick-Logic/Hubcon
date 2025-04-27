@@ -107,7 +107,7 @@ namespace Hubcon.SignalR.Client
         }
 
         public TICommunicationContract GetConnector<TICommunicationContract>()
-            where TICommunicationContract : IHubconControllerContract
+            where TICommunicationContract : IControllerContract
 
         {
             Type connectorType = typeof(HubconServerConnector<>).MakeGenericType(GetType(), typeof(SignalRClientCommunicationHandler<HubConnection>));
@@ -254,7 +254,7 @@ namespace Hubcon.SignalR.Client
     }
 
     public class BaseSignalRClientController<TICommunicationContract> : BaseSignalRClientController,  IHubconClientController<SignalRClientCommunicationHandler<HubConnection>>
-        where TICommunicationContract : IHubconControllerContract
+        where TICommunicationContract : IControllerContract
     {
         private TICommunicationContract? _server;
         public TICommunicationContract Server

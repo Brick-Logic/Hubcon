@@ -19,10 +19,10 @@ namespace Hubcon.Core.MethodHandling
 
         public void RegisterMethods(Type controllerType)
         {
-            if (!typeof(IHubconControllerContract).IsAssignableFrom(controllerType))
-                throw new NotImplementedException($"El tipo {controllerType.FullName} no implementa la interfaz {nameof(IHubconControllerContract)} o un tipo derivado.");
+            if (!typeof(IControllerContract).IsAssignableFrom(controllerType))
+                throw new NotImplementedException($"El tipo {controllerType.FullName} no implementa la interfaz {nameof(IControllerContract)} o un tipo derivado.");
 
-            var interfaces = controllerType.GetInterfaces().Where(x => typeof(IHubconControllerContract).IsAssignableFrom(x));
+            var interfaces = controllerType.GetInterfaces().Where(x => typeof(IControllerContract).IsAssignableFrom(x));
 
             foreach (var interfaceType in interfaces)
             {

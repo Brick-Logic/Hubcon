@@ -13,7 +13,7 @@ namespace Hubcon.Core.Connectors
     /// <typeparam name="TICommunicationHandler"></typeparam>
     /// <typeparam name="TICommunicationContract"></typeparam>
     public class HubconClientConnector<TICommunicationContract> : IClientAccessor<TICommunicationContract>
-        where TICommunicationContract : IHubconControllerContract
+        where TICommunicationContract : IControllerContract
     {
         protected Dictionary<string, TICommunicationContract>? clients = new();
         private readonly ProxyRegistry proxyRegistry;
@@ -56,9 +56,9 @@ namespace Hubcon.Core.Connectors
             clients?.Remove(instanceId, out _);
         }
 
-        public TCommunicationContract GetClient<TCommunicationContract>(string instanceId) where TCommunicationContract : IHubconControllerContract
+        public TCommunicationContract GetClient<TCommunicationContract>(string instanceId) where TCommunicationContract : IControllerContract
         {
-            return (TCommunicationContract)(IHubconControllerContract)GetOrCreateClient(instanceId)!;
+            return (TCommunicationContract)(IControllerContract)GetOrCreateClient(instanceId)!;
         }
     }
 }

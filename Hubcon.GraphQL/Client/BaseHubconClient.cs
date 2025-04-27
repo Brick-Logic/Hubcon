@@ -15,7 +15,7 @@ namespace Hubcon.GraphQL.Client
         }
 
         public TICommunicationContract GetClient<TICommunicationContract>()
-            where TICommunicationContract : IHubconControllerContract
+            where TICommunicationContract : IControllerContract
 
         {
             var connector = serviceProvider.GetRequiredService<HubconServerConnector<ICommunicationHandler>>();

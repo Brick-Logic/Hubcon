@@ -81,12 +81,12 @@ namespace Hubcon.Core
         {
             var contracts = assembly
                 .GetTypes()
-                .Where(t => t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t))
+                .Where(t => t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t))
                 .ToList();
 
             var controllers = assembly
                 .GetTypes()
-                .Where(t => !t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t) && t.IsDefined(typeof(HubconControllerAttribute)))
+                .Where(t => !t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t) && t.IsDefined(typeof(HubconControllerAttribute)))
                 .ToList();
 
             foreach (var controller in controllers)
@@ -104,12 +104,12 @@ namespace Hubcon.Core
 
             var contracts = assembly
                 .GetTypes()
-                .Where(t => t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t))
+                .Where(t => t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t))
                 .ToList();
 
             var proxies = assembly
                 .GetTypes()
-                .Where(t => !t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t) && t.IsDefined(typeof(HubconProxyAttribute)))
+                .Where(t => !t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t) && t.IsDefined(typeof(HubconProxyAttribute)))
                 .ToList();
 
             foreach (var contract in contracts)
@@ -130,12 +130,12 @@ namespace Hubcon.Core
 
             var contracts = assembly
                 .GetTypes()
-                .Where(t => t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t))
+                .Where(t => t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t))
                 .ToList();
 
             var classes = assembly
                 .GetTypes()
-                .Where(t => !t.IsInterface && typeof(IHubconControllerContract).IsAssignableFrom(t))
+                .Where(t => !t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t))
                 .ToList();
 
             foreach(var contract in contracts)
@@ -221,7 +221,7 @@ namespace Hubcon.Core
 
 
         public static WebApplicationBuilder AddHubconController<T>(this WebApplicationBuilder builder,Action<IMiddlewareOptions>? options = null)
-            where T : class, IHubconControllerContract
+            where T : class, IControllerContract
                 => AddHubconController(builder, typeof(T), options);
 
         public static void AddGlobalMiddleware<TMiddleware>(this WebApplicationBuilder builder) => AddGlobalMiddleware(builder, typeof(TMiddleware));
@@ -250,12 +250,12 @@ namespace Hubcon.Core
             Type controllerType,
             Action<IMiddlewareOptions>? options = null)
         {
-            if (!controllerType.IsAssignableTo(typeof(IHubconControllerContract)))
-                throw new ArgumentException($"El tipo {controllerType.Name} no implementa la interfaz {nameof(IHubconControllerContract)}");
+            if (!controllerType.IsAssignableTo(typeof(IControllerContract)))
+                throw new ArgumentException($"El tipo {controllerType.Name} no implementa la interfaz {nameof(IControllerContract)}");
 
             List<Type> implementationTypes = controllerType
                 .GetInterfaces()
-                .Where(x => typeof(IHubconControllerContract).IsAssignableFrom(x))
+                .Where(x => typeof(IControllerContract).IsAssignableFrom(x))
                 .ToList();
 
             if (implementationTypes.Count == 0)

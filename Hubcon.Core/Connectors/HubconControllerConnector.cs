@@ -10,7 +10,7 @@ namespace Hubcon.Core.Connectors
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
     public class HubconClientBuilder<TICommunicationContract>
-        where TICommunicationContract : IHubconControllerContract
+        where TICommunicationContract : IControllerContract
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
            "Major Code Smell",
@@ -32,8 +32,8 @@ namespace Hubcon.Core.Connectors
                 if (!TType.IsInterface)
                     throw new ArgumentException($"El tipo {typeof(TICommunicationContract).FullName} no es una interfaz.");
 
-                if (!typeof(IHubconControllerContract).IsAssignableFrom(TType))
-                    throw new NotImplementedException($"El tipo {TType.FullName} no implementa la interfaz {nameof(IHubconControllerContract)} ni es un tipo derivado.");
+                if (!typeof(IControllerContract).IsAssignableFrom(TType))
+                    throw new NotImplementedException($"El tipo {TType.FullName} no implementa la interfaz {nameof(IControllerContract)} ni es un tipo derivado.");
 
                 foreach (var method in TType.GetMethods())
                 {

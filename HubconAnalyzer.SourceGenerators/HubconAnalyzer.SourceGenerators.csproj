@@ -12,7 +12,7 @@
 		<!-- Empaquetar como NuGet -->
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageId>HubconAnalyzer.SourceGenerators</PackageId>
-		<Version>1.0.36</Version>
+		<Version>1.0.49</Version>
 		<Authors>TuNombre</Authors>
 		<Company>TuEmpresa</Company>
 		<Description>Analyzer que genera proxies para interfaces que implementan ICommunicationContract</Description>
@@ -37,5 +37,9 @@
 
 	<ItemGroup>
 		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Hubcon.Core.Models\Hubcon.Core.Models.csproj" />
 	</ItemGroup>
 </Project>
