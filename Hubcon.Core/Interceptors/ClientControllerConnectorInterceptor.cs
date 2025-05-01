@@ -6,15 +6,15 @@ using Hubcon.Core.Models.Interfaces;
 
 namespace Hubcon.Core.Interceptors
 {
-    public class ClientControllerConnectorInterceptor : AsyncInterceptorBase
+    public class ClientControllerConnectorInterceptor : AsyncInterceptorBase, IClientControllerConnectorInterceptor
     {
-        private readonly DynamicConverter _converter;
+        private readonly IDynamicConverter _converter;
 
         private Func<ICommunicationHandler> HandlerFactory { get; set; }
 
         public ICommunicationHandler CommunicationHandler { get => HandlerFactory.Invoke(); }
 
-        public ClientControllerConnectorInterceptor(IHubconControllerManager hubconController, DynamicConverter converter)
+        public ClientControllerConnectorInterceptor(IHubconControllerManager hubconController, IDynamicConverter converter)
         {
             HandlerFactory = () => hubconController.CommunicationHandler;
             _converter = converter;

@@ -23,7 +23,7 @@ namespace Hubcon.SignalR.Client
         protected Task? runningTask = null;
         protected HubConnection? hub = null;
         protected IServiceProvider serviceProvider = null!;
-        protected DynamicConverter _converter = null!;
+        protected IDynamicConverter _converter = null!;
         bool connectedInvoked = false;
 
 
@@ -70,8 +70,8 @@ namespace Hubcon.SignalR.Client
             lifetimeScope = serviceProvider.GetRequiredService<ILifetimeScope>();
             hub = serviceProvider.GetRequiredService<HubConnection>();
             HubconController = serviceProvider.GetRequiredService<IHubconControllerManager>()!;        
-            _converter = serviceProvider.GetRequiredService<DynamicConverter>()!;
-            var _invokerProvider = serviceProvider.GetRequiredService<MethodInvokerProvider>()!;
+            _converter = serviceProvider.GetRequiredService<IDynamicConverter>()!;
+            var _invokerProvider = serviceProvider.GetRequiredService<IMethodDescriptorProvider>()!;
 
 
             var derivedType = GetType();
@@ -81,20 +81,20 @@ namespace Hubcon.SignalR.Client
             _url = url;
 
 
-            _invokerProvider.OnMethodRegistered += ((methodInvoker) =>
+            _invokerProvider.OnMethodRegistered += ((MethodDescriptor descriptor) =>
             {
-                if (typeof(IAsyncEnumerable<>).IsAssignableFrom(methodInvoker.InternalMethodInfo.ReturnType))
+                if (typeof(IAsyncEnumerable<>).IsAssignableFrom(descriptor.InternalMethodInfo.ReturnType))
                     hub?.On($"{nameof(StartStream)}", (Func<string, MethodInvokeRequest, Task>)StartStream);
 
-                else if (methodInvoker.InternalMethodInfo.ReturnType == typeof(void))
+                else if (descriptor.InternalMethodInfo.ReturnType == typeof(void))
                     hub?.On($"{nameof(IControllerInvocationHandler.HandleWithoutResultAsync)}", (MethodInvokeRequest request)
                         => GetControllerManager().Pipeline!.HandleWithoutResultAsync(request));
 
-                else if (methodInvoker.InternalMethodInfo.ReturnType.IsGenericType && methodInvoker.InternalMethodInfo.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
+                else if (descriptor.InternalMethodInfo.ReturnType.IsGenericType && descriptor.InternalMethodInfo.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
                     hub?.On($"{nameof(IControllerInvocationHandler.HandleWithResultAsync)}", (MethodInvokeRequest request)
                         => GetControllerManager().Pipeline!.HandleWithResultAsync(request));
 
-                else if (methodInvoker.InternalMethodInfo.ReturnType == typeof(Task))
+                else if (descriptor.InternalMethodInfo.ReturnType == typeof(Task))
                     hub?.On($"{nameof(IControllerInvocationHandler.HandleWithoutResultAsync)}", (MethodInvokeRequest request)
                         => GetControllerManager().Pipeline!.HandleWithoutResultAsync(request));
 
@@ -250,6 +250,16 @@ namespace Hubcon.SignalR.Client
         public void Build(WebApplication? app = null)
         {
             
+        }
+
+        public IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request)
+        {
+            throw new NotImplementedException();
         }
     }
 

@@ -1,11 +1,12 @@
 ﻿using Hubcon.Core.Connectors;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.GraphQL.Models;
 using Hubcon.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.GraphQL.Client
 {
-    public class HubconClientProvider
+    public class HubconClientProvider : IHubconClientProvider
     {
         private readonly IServiceProvider serviceProvider;
 
@@ -18,7 +19,7 @@ namespace Hubcon.GraphQL.Client
             where TICommunicationContract : IControllerContract
 
         {
-            var connector = serviceProvider.GetRequiredService<HubconServerConnector<ICommunicationHandler>>();
+            var connector = serviceProvider.GetRequiredService<IHubconServerConnector<ICommunicationHandler>>();
             return connector.GetClient<TICommunicationContract>();
         }      
     }

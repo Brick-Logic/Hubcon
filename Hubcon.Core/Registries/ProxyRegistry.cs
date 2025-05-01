@@ -1,15 +1,9 @@
 ﻿using Castle.Core.Internal;
 using Hubcon.Core.Models.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Hubcon.Core.Registries
 {
-    public class ProxyRegistry
+    public class ProxyRegistry : IProxyRegistry
     {
         private Dictionary<Type, Type> ProxyTypes { get; } = new();
 
@@ -25,7 +19,10 @@ namespace Hubcon.Core.Registries
         }
 
         public void TryRegisterProxyByContract<T>() where T : IControllerContract
-            => TryRegisterProxyByContract(typeof(T));
+        {
+            TryRegisterProxyByContract(typeof(T));
+        }
+
         public void TryRegisterProxyByContract(Type contractType)
         {
             if (contractType.IsAssignableTo(typeof(IControllerContract)))

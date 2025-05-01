@@ -1,30 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace Hubcon.GraphQL.Models
+namespace Hubcon.Core.Models
 {
     public class AsyncObserver<T> : IObserver<T>
     {
-        private readonly Channel<T> _channel = Channel.CreateUnbounded<T>();
+        private readonly Channel<T?> _channel = Channel.CreateUnbounded<T?>();
         private TaskCompletionSource<bool> _completed = new TaskCompletionSource<bool>();
 
-        public async Task WriteToChannelAsync(T item)
+        public async Task WriteToChannelAsync(T? item)
         {
             await _channel.Writer.WriteAsync(item);
         }
 
-        public IAsyncEnumerable<T> GetAsyncEnumerable()
+        public IAsyncEnumerable<T> GetAsyncEnumerable(CancellationToken cancellationToken)
         {
-            return ReadAsync();
+            return ReadAsync(cancellationToken);
         }
 
-        private async IAsyncEnumerable<T> ReadAsync()
+        private async IAsyncEnumerable<T> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            await foreach (var item in _channel.Reader.ReadAllAsync())
+            await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
             {
                 yield return item;
             }

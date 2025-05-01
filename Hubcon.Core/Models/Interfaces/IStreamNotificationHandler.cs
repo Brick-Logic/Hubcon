@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Core.Models
+namespace Hubcon.Core.Models.Interfaces
 {
-    internal class MethodStreamRequest
+    internal interface IStreamNotificationHandler
     {
     }
 }

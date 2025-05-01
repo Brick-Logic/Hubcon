@@ -2,18 +2,18 @@
 using Hubcon.Core;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Dummy;
+using Hubcon.Core.Extensions;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.GraphQL.Client;
 using Hubcon.GraphQL.Data;
+using Hubcon.GraphQL.Models;
 using Hubcon.GraphQL.Server;
+using Hubcon.GraphQL.Subscriptions;
+using Hubcon.SignalR.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
-using Hubcon.Core.Extensions;
-using GraphQL.Client.Abstractions;
-using Hubcon.GraphQL.Models;
-using Hubcon.GraphQL.Client;
-using Hubcon.SignalR.Client;
 
 namespace Hubcon.GraphQL.Injection
 {
@@ -41,9 +41,20 @@ namespace Hubcon.GraphQL.Injection
             {
                 container.AddHubconEntrypoint<ControllerEntrypoint>();
 
-                container.RegisterWithInjector(x => x.RegisterType<HubconGraphQLClient>().As<IHubconGraphQLClient>().AsSingleton());
+                container.RegisterWithInjector(x => x
+                    .RegisterType<HubconGraphQLClient>()
+                    .As<IHubconGraphQLClient>()
+                    .AsSingleton());
 
-                container.RegisterWithInjector(container => container.RegisterType<DummyCommunicationHandler>().As<ICommunicationHandler>().AsScoped());
+                container.RegisterWithInjector(container => container
+                    .RegisterType<DummyCommunicationHandler>()
+                    .As<ICommunicationHandler>()
+                    .AsScoped());
+
+                container.RegisterWithInjector(x => x
+                    .RegisterType(typeof(ServerSubscriptionHandler))
+                    .As(typeof(ISubscription))
+                    .AsTransient());
 
                 container.RegisterWithInjector(x => x
                     .RegisterType(typeof(HubconControllerManager))
@@ -62,9 +73,25 @@ namespace Hubcon.GraphQL.Injection
         {
             builder.AddHubconClientServices(container =>
             {
-                container.RegisterWithInjector(x => x.RegisterType<HubconGraphQLClient>().As<IHubconGraphQLClient>().AsSingleton());
-                container.RegisterWithInjector(x => x.RegisterType<ClientCommunicationHandler>().As<ICommunicationHandler>().AsSingleton());
-                container.RegisterWithInjector(x => x.RegisterType<HubconClientProvider>().AsSingleton());
+                container.RegisterWithInjector(x => x
+                    .RegisterType<HubconGraphQLClient>()
+                    .As<IHubconGraphQLClient>()
+                    .AsSingleton());
+
+                container.RegisterWithInjector(x => x
+                    .RegisterType<ClientCommunicationHandler>()
+                    .As<ICommunicationHandler>()
+                    .AsSingleton());
+
+                container.RegisterWithInjector(x => x
+                    .RegisterType<HubconClientProvider>()
+                    .As<IHubconClientProvider>()
+                    .AsSingleton());
+
+                container.RegisterWithInjector(x => x
+                    .RegisterType(typeof(ClientSubscriptionHandler))
+                    .As(typeof(ISubscription))
+                    .AsTransient());
             });
 
             return builder;

@@ -9,7 +9,7 @@ namespace Hubcon.Core.Controllers
         public IControllerInvocationHandler Pipeline { get; set; }
         public ICommunicationHandler CommunicationHandler { get; }
 
-        public HubconControllerManager(ICommunicationHandler communicationHandler, ControllerInvocationHandler requestPipeline)
+        public HubconControllerManager(ICommunicationHandler communicationHandler, IControllerInvocationHandler requestPipeline)
         {
             Pipeline = requestPipeline;
             CommunicationHandler = communicationHandler;

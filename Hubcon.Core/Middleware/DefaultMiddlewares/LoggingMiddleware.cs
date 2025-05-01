@@ -4,7 +4,7 @@ using Hubcon.Core.Models.Middleware;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 
-namespace Hubcon.Core.Middleware
+namespace Hubcon.Core.Middleware.DefaultMiddlewares
 {
     public class LoggingMiddleware : ILoggingMiddleware
     {
@@ -12,7 +12,7 @@ namespace Hubcon.Core.Middleware
 
         public LoggingMiddleware()
         {
-            sw = Stopwatch.StartNew();
+            sw = new Stopwatch();
         }
 
         public async Task<IMethodResponse?> Execute(MethodInvokeRequest request, Func<Task<IMethodResponse?>> next)

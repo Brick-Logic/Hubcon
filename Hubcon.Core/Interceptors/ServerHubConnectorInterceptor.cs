@@ -8,13 +8,13 @@ using System.Text.Json;
 
 namespace Hubcon.Core.Interceptors
 {
-    public class ServerConnectorInterceptor<TICommunicationHandler> : AsyncInterceptorBase
+    public class ServerConnectorInterceptor<TICommunicationHandler> : AsyncInterceptorBase, IServerConnectorInterceptor<TICommunicationHandler>
         where TICommunicationHandler : ICommunicationHandler
     {
-        public readonly ICommunicationHandler CommunicationHandler;
-        private readonly DynamicConverter _converter;
+        public ICommunicationHandler CommunicationHandler { get; }
+        private readonly IDynamicConverter _converter;
 
-        public ServerConnectorInterceptor(TICommunicationHandler handler, DynamicConverter converter)
+        public ServerConnectorInterceptor(TICommunicationHandler handler, IDynamicConverter converter)
         {
             CommunicationHandler = handler;
             _converter = converter;

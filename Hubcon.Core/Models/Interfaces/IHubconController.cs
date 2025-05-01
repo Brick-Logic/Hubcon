@@ -38,6 +38,7 @@ namespace Hubcon.Core.Models.Interfaces
     {
         public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest request);
         public void Build(WebApplication? app = null);
+        IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request);
     }
 
     public interface IHubconClientEntrypoint : IBaseHubconController

@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Hubcon.Core.Models.Interfaces;
+using Newtonsoft.Json;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -6,7 +7,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Hubcon.Core.Converters
 {
-    public class DynamicConverter
+    public class DynamicConverter : IDynamicConverter
     {
         public Dictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 

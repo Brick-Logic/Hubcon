@@ -1,11 +1,16 @@
 using Hubcon.Core;
 using Hubcon.Core.Middleware;
+using Hubcon.Core.Middleware.DefaultMiddlewares;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.GraphQL.Injection;
 using Hubcon.SignalR;
 using HubconTest.Controllers;
 using HubconTestDomain;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using System.Text;
 
 namespace HubconTest
 {
@@ -24,16 +29,35 @@ namespace HubconTest
 
             builder.AddHubconGraphQL(controllerOptions =>
             {
-                //controllerOptions.AddGlobalMiddleware<LoggingMiddleware>();
+                controllerOptions.AddGlobalMiddleware<LoggingMiddleware>();
+                controllerOptions.AddGlobalMiddleware<AuthenticationMiddleware>();
 
                 controllerOptions.AddController<TestController>(controllerMiddlewares =>
                 {
-                    // Middleware solo de este controller
                     //controllerMiddlewares.AddMiddleware<LoggingMiddleware>();
                 });
             });
 
+            builder.Services.AddHttpContextAccessor();
             builder.UseContractsFromAssembly(nameof(HubconTestDomain));
+
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = "clave",
+                        ValidAudience = "clave",
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("clave"))
+                    };
+                });
+
+            builder.Services.AddAuthorization(); // también necesaria
+
 
             //builder.UseHubconSignalR();
             //builder.AddHubconController<TestSignalRController>(options =>

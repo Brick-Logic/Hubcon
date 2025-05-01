@@ -12,9 +12,9 @@ namespace Hubcon.SignalR.Client
     public class ClientCommunicationHandler : ICommunicationHandler
     {
         private readonly IHubconGraphQLClient _client;
-        private readonly DynamicConverter _converter;
+        private readonly IDynamicConverter _converter;
 
-        public ClientCommunicationHandler(IHubconGraphQLClient client, DynamicConverter converter)
+        public ClientCommunicationHandler(IHubconGraphQLClient client, IDynamicConverter converter)
         {
             _client = client;
             _converter = converter;

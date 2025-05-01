@@ -47,12 +47,12 @@ namespace Hubcon.Core.Middleware
             AddMiddlewares(typeof(TController), options, globalMiddlewares, servicesToInject);
         }
 
-        public IPipeline GetPipeline(HubconMethodInvoker methodInvoker, MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler)
+        public IPipeline GetPipeline(MethodDescriptor descriptor, MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler)
         {
-            if (!PipelineBuilders.TryGetValue(methodInvoker.ControllerType, out PipelineBuilder? value))
-                PipelineBuilders[methodInvoker.ControllerType] = value = new PipelineBuilder();
+            if (!PipelineBuilders.TryGetValue(descriptor.ControllerType, out PipelineBuilder? value))
+                PipelineBuilders[descriptor.ControllerType] = value = new PipelineBuilder();
 
-            return PipelineBuilders[methodInvoker.ControllerType].Build(request, handler, _serviceProvider);
+            return PipelineBuilders[descriptor.ControllerType].Build(request, handler, _serviceProvider);
         }
     }
 }

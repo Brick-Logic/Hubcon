@@ -4,7 +4,6 @@ using System.Text.Json;
 
 namespace Hubcon.Core.Models
 {
-    [EditorBrowsable(EditorBrowsableState.Never)]
     public class MethodInvokeRequest
     {
         public string ContractName { get; }

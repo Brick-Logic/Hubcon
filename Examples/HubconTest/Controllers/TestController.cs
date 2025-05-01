@@ -1,13 +1,17 @@
-﻿using Hubcon.GraphQL.Models;
-using Hubcon.GraphQL.Server;
-using Hubcon.SignalR.Server;
+﻿using Hubcon.Core.Models.Interfaces;
+using Hubcon.GraphQL.Models;
 using HubconTestDomain;
 
 namespace HubconTest.Controllers
 {
     public class TestController : ITestContract
     {
-        public ISubscriptionHandler<int>? OnEventCreated { get; }
+        public ISubscription OnEventCreated { get; }
+
+        public TestController()
+        {
+            
+        }
 
         public async Task<int> GetTemperatureFromServer() 
             => await Task.Run(() => new Random().Next(-10, 50));
@@ -28,6 +32,7 @@ namespace HubconTest.Controllers
 
         public async Task ShowTempOnServerFromClient()
         {
+            OnEventCreated?.Emit("Evento de prueba");
             await Task.CompletedTask;
         }
 

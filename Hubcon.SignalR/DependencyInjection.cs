@@ -25,7 +25,7 @@ namespace Hubcon.SignalR
 
                 container
                     .RegisterWithInjector(x => x.RegisterGeneric(commHandlerType).AsScoped())
-                    .RegisterWithInjector(x => x.RegisterGeneric(hubControllerType).As(typeof(IHubconControllerManager<>)).AsScoped())
+                    .RegisterWithInjector(x => x.RegisterType<HubconControllerManager>().As<IHubconControllerManager>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterType(typeof(HubConnectionBuilder)).AsScoped())
                     .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconHubActivator<>)).As(typeof(IHubActivator<>)).AsScoped());
             });

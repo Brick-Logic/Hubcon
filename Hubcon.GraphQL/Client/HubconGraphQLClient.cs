@@ -1,15 +1,10 @@
 ﻿using GraphQL;
-using GraphQL.Client.Abstractions;
 using GraphQL.Client.Http;
-using Hubcon.Core.Converters;
 using Hubcon.Core.Models;
+using Hubcon.Core.Models.Interfaces;
 using Hubcon.GraphQL.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Net.Http.Json;
-using System.Net.WebSockets;
-using System.Reactive;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -21,13 +16,13 @@ namespace Hubcon.GraphQL.Client
     public class HubconGraphQLClient : IHubconGraphQLClient
     {
         private readonly GraphQLHttpClient _graphQLHttpClient;
-        private readonly ILogger<HubconGraphQLClient> _logger;
-        private readonly DynamicConverter converter;
+        private readonly ILogger<IHubconGraphQLClient> _logger;
+        private readonly IDynamicConverter converter;
 
         public HubconGraphQLClient(
             GraphQLHttpClient graphQLHttpClient, 
-            ILogger<HubconGraphQLClient> logger, 
-            DynamicConverter converter,
+            ILogger<HubconGraphQLClient> logger,
+            IDynamicConverter converter,
             IConfiguration configuration)
         {
             _graphQLHttpClient = graphQLHttpClient;
@@ -41,12 +36,12 @@ namespace Hubcon.GraphQL.Client
             var response = await _graphQLHttpClient.SendMutationAsync<JsonElement>(craftedRequest);
             var result = response.Data.GetProperty(resolver);
 
-            if(!result.TryGetProperty("success", out JsonElement successValue))
+            if(!result.TryGetProperty(nameof(BaseMethodResponse.Success).ToLower(), out JsonElement successValue))
             {
                 return new BaseMethodResponse(false);
             }
 
-            result.TryGetProperty("data", out JsonElement dataValue);
+            result.TryGetProperty(nameof(BaseMethodResponse.Data).ToLower(), out JsonElement dataValue);
 
             return new BaseMethodResponse(
                 converter.DeserializeJsonElement<bool>(successValue),
@@ -56,6 +51,24 @@ namespace Hubcon.GraphQL.Client
 
         public async IAsyncEnumerable<JsonElement> GetStream(MethodInvokeRequest request, string resolver, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            var graphQLRequest = BuildStream(request, resolver);
+            IObservable<GraphQLResponse<JsonElement>> observable = _graphQLHttpClient.CreateSubscriptionStream<JsonElement>(graphQLRequest);
+
+            var observer = new AsyncObserver<GraphQLResponse<JsonElement>>();
+
+            using (observable.Subscribe(observer))
+            {
+                await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
+                {
+                     var result = newEvent.Data.GetProperty(resolver);
+
+                    yield return result;
+                }
+            }
+        }
+
+        public async IAsyncEnumerable<JsonElement> GetSubscription(SubscriptionRequest request, string resolver, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
             var graphQLRequest = BuildSubscription(request, resolver);
             IObservable<GraphQLResponse<JsonElement>> observable = _graphQLHttpClient.CreateSubscriptionStream<JsonElement>(graphQLRequest);
 
@@ -63,9 +76,9 @@ namespace Hubcon.GraphQL.Client
 
             using (observable.Subscribe(observer))
             {
-                await foreach (var newEvent in observer.GetAsyncEnumerable())
+                await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
                 {
-                     var result = newEvent.Data.GetProperty(resolver);
+                    var result = newEvent.Data.GetProperty(resolver);
 
                     yield return result;
                 }
@@ -105,7 +118,7 @@ namespace Hubcon.GraphQL.Client
             return invokeRequest;
         }
 
-        private GraphQLRequest BuildSubscription(MethodInvokeRequest request, string resolver)
+        private GraphQLRequest BuildStream(MethodInvokeRequest request, string resolver)
         {
             var sb = new StringBuilder();
 
@@ -123,5 +136,25 @@ namespace Hubcon.GraphQL.Client
 
             return invokeRequest;
         }
+
+        private GraphQLRequest BuildSubscription(SubscriptionRequest request, string resolver)
+        {
+            var sb = new StringBuilder();
+
+            sb.Append($"subscription(${nameof(request)}: {nameof(SubscriptionRequest)}Input!) {{");
+            sb.Append($"{resolver}({nameof(request)}: $request) }}");
+
+            var invokeRequest = new GraphQLRequest()
+            {
+                Query = sb.ToString(),
+                Variables = new
+                {
+                    request
+                },
+            };
+
+            return invokeRequest;
+        }
     }
 }
+

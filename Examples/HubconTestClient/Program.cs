@@ -1,7 +1,10 @@
 ﻿using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
+using Hubcon.Core;
+using Hubcon.Core.Models.Interfaces;
 using Hubcon.GraphQL.Client;
 using Hubcon.GraphQL.Injection;
+using Hubcon.GraphQL.Models;
 using HubconTestDomain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -34,16 +37,31 @@ namespace HubconTestClient
             });
 
             builder.AddHubconGraphQLClient();
+            builder.UseContractsFromAssembly(nameof(HubconTestDomain));
 
             var app = builder.Build();
+
+
             var scope = app.Services.CreateScope();
 
-            var clientProvider = scope.ServiceProvider.GetRequiredService<HubconClientProvider>();
+            var clientProvider = scope.ServiceProvider.GetRequiredService<IHubconClientProvider>();
             var client = clientProvider.GetClient<ITestContract>();
+
 
             Console.WriteLine("Esperando interacción antes de continuar...");
             Console.ReadKey();
 
+            Console.WriteLine("Conectando evento...");
+
+            HubconEventHandler handler = (input) =>
+            {
+                Console.WriteLine(input);
+            };
+
+            client.OnEventCreated.AddHandler(handler);
+            client.OnEventCreated.Subscribe();
+
+            Console.ReadKey();
             Console.WriteLine("Enviando request...");
             var temp = await client.GetTemperatureFromServer();
             Console.WriteLine($"Datos recibidos: {temp}");

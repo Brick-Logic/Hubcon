@@ -4,7 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Core.MethodHandling
+namespace Hubcon.Core.Models.Interfaces
 {
-    public delegate object? MethodInvokerDelegate(object? instance, object[] args);
+    internal interface IClientControllerConnectorInterceptor
+    {
+    }
 }

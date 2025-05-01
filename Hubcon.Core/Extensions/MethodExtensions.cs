@@ -1,8 +1,10 @@
-﻿using Autofac.Builder;
-using Autofac;
-using System.ComponentModel;
-using System.Reflection;
+﻿using Autofac;
+using Autofac.Builder;
+using Castle.Core.Internal;
 using Hubcon.Core.Injectors.Attributes;
+using Hubcon.Core.Models.CustomAttributes.Subscriptions;
+using Hubcon.Core.Models.Interfaces;
+using System.Reflection;
 
 namespace Hubcon.Core.Extensions
 {
@@ -13,18 +15,19 @@ namespace Hubcon.Core.Extensions
             Func<ContainerBuilder, IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle>>? options = null)
         {
             var registered = options?.Invoke(container);
+
             registered?.OnActivated(e =>
             {
                 List<PropertyInfo> props = new();
 
                 props.AddRange(e.Instance!.GetType()
                     .GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
-                    .Where(prop => Attribute.IsDefined(prop, typeof(HubconInjectAttribute)))
+                    .Where(prop => Attribute.IsDefined(prop, typeof(HubconInjectAttribute)) || prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
                     .ToList());
 
                 props.AddRange(e.Instance!.GetType().BaseType!
                     .GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy)
-                    .Where(p => p.IsDefined(typeof(HubconInjectAttribute), false))
+                    .Where(prop => prop.IsDefined(typeof(HubconInjectAttribute), false) || prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
                     .ToList());
 
                 foreach (PropertyInfo prop in props!)
@@ -32,10 +35,35 @@ namespace Hubcon.Core.Extensions
                     if (prop.GetValue(e.Instance) != null)
                         continue;
 
-                    var resolved = e.Context.ResolveOptional(prop.PropertyType);
+                    object? resolved = null!;
+
+                    if (prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
+                    {
+                        var sub = e.Context.ResolveOptional<ISubscriptionRegistry>();
+                        var contract = prop.ReflectedType!.GetInterfaces().Find(x => x.IsAssignableTo(typeof(IControllerContract))).Name;
+                        resolved = sub?.GetHandler("test", contract, prop.Name);
+
+                        if (resolved == null)
+                        {
+                            resolved = e.Context.ResolveOptional(prop.PropertyType);
+                            sub?.RegisterHandler("test", contract, prop.Name, (ISubscription)resolved!);
+                        }
+
+                        var resolvedSubscription = (ISubscription)resolved!;
+
+                        if (resolvedSubscription.Property == null)
+                        {
+                            var field = resolvedSubscription!.GetType().GetField($"<{nameof(resolvedSubscription.Property)}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+                            field?.SetValue(resolvedSubscription, prop);
+                        }
+
+                        resolvedSubscription.Build();
+                    }
+
+                    resolved ??= e.Context.ResolveOptional(prop.PropertyType);
 
                     if (resolved == null)
-                        continue;
+                        return;
 
                     var instance = e.Instance;
 

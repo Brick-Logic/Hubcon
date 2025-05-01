@@ -14,5 +14,6 @@ namespace Hubcon.GraphQL.Models
     {
         Task<BaseMethodResponse> SendRequestAsync(MethodInvokeRequest request, MethodInfo methodInfo, string resolver, CancellationToken cancellationToken = default);
         IAsyncEnumerable<JsonElement> GetStream(MethodInvokeRequest request, string resolver, CancellationToken cancellationToken = default);
+        IAsyncEnumerable<JsonElement> GetSubscription(SubscriptionRequest request, string resolver, CancellationToken cancellationToken = default);
     }
 }

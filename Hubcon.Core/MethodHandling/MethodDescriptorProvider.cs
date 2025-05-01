@@ -1,21 +1,16 @@
 ﻿using Hubcon.Core.Extensions;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hubcon.Core.MethodHandling
 {
-    public class MethodInvokerProvider
+    public class MethodDescriptorProvider : IMethodDescriptorProvider
     {
-        public event Action<HubconMethodInvoker>? OnMethodRegistered;
+        public event Action<MethodDescriptor>? OnMethodRegistered;
 
-        internal Dictionary<string, Dictionary<string, HubconMethodInvoker>> ControllerMethods = new();
+        internal Dictionary<string, Dictionary<string, MethodDescriptor>> ControllerMethods = new();
 
         public void RegisterMethods(Type controllerType)
         {
@@ -29,7 +24,7 @@ namespace Hubcon.Core.MethodHandling
                 if (interfaceType.GetMethods().Length == 0)
                     continue;
 
-                if (!ControllerMethods.TryGetValue(interfaceType.Name, out Dictionary<string, HubconMethodInvoker>? contractMethods))
+                if (!ControllerMethods.TryGetValue(interfaceType.Name, out Dictionary<string, MethodDescriptor>? contractMethods))
                     contractMethods = ControllerMethods[interfaceType.Name] = new();
 
                 if (contractMethods.Count > 0)
@@ -37,19 +32,19 @@ namespace Hubcon.Core.MethodHandling
 
                 foreach (var method in interfaceType.GetMethods())
                 {
-                    var action = CreateMethodInvoker(method);
+                    var action = CreateMethodDescriptor(method);
 
                     var methodSignature = method.GetMethodSignature();
 
-                    var methodInvokerInfo = new HubconMethodInvoker(methodSignature, method, action, interfaceType, controllerType);
-                    contractMethods.TryAdd($"{methodInvokerInfo.MethodSignature}", methodInvokerInfo);
-                    OnMethodRegistered?.Invoke(methodInvokerInfo);
+                    var methodDescriptor = new MethodDescriptor(methodSignature, method, action, interfaceType, controllerType);
+                    contractMethods.TryAdd($"{methodDescriptor.MethodSignature}", methodDescriptor);
+                    OnMethodRegistered?.Invoke(methodDescriptor);
                 }
             }
             
         }
 
-        public bool GetMethodInvoker(MethodInvokeRequest request, out HubconMethodInvoker? value)
+        public bool GetMethodDescriptor(MethodInvokeRequest request, out MethodDescriptor? value)
         {
             if (request == null)
             {
@@ -57,10 +52,10 @@ namespace Hubcon.Core.MethodHandling
                 return false;
             }
 
-            if (ControllerMethods.TryGetValue(request.ContractName, out Dictionary<string, HubconMethodInvoker>? methods) 
-                && methods.TryGetValue(request.MethodName, out HubconMethodInvoker? methodInvoker))
+            if (ControllerMethods.TryGetValue(request.ContractName, out Dictionary<string, MethodDescriptor>? descriptors) 
+                && descriptors.TryGetValue(request.MethodName, out MethodDescriptor? descriptor))
             {
-                value = methodInvoker;
+                value = descriptor;
                 return true;
             }
 
@@ -68,7 +63,7 @@ namespace Hubcon.Core.MethodHandling
             return false;
         }
 
-        private MethodInvokerDelegate CreateMethodInvoker(MethodInfo method)
+        private MethodDelegate CreateMethodDescriptor(MethodInfo method)
         {
             var instanceParam = Expression.Parameter(typeof(object), "instance");
             var argsParam = Expression.Parameter(typeof(object[]), "args");
@@ -94,7 +89,7 @@ namespace Hubcon.Core.MethodHandling
                 ? Expression.Block(call, Expression.Constant(null, typeof(object)))
                 : Expression.Convert(call, typeof(object));
 
-            var lambda = Expression.Lambda<MethodInvokerDelegate>(body, instanceParam, argsParam);
+            var lambda = Expression.Lambda<MethodDelegate>(body, instanceParam, argsParam);
             return lambda.Compile();
         }
     }

@@ -75,6 +75,11 @@ namespace Hubcon.SignalR.Server
         {
             throw new NotImplementedException();
         }
+
+        public IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public abstract class BaseHubController<TICommunicationContract> : BaseHubController

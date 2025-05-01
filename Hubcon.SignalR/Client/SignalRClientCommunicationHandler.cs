@@ -12,9 +12,9 @@ namespace Hubcon.SignalR.Client
         where THubConnection : HubConnection
     {
         protected Func<HubConnection> _hubFactory;
-        private readonly DynamicConverter _converter;
+        private readonly IDynamicConverter _converter;
 
-        public SignalRClientCommunicationHandler(THubConnection hubFactory, DynamicConverter converter)
+        public SignalRClientCommunicationHandler(THubConnection hubFactory, IDynamicConverter converter)
         {
             _hubFactory = () => hubFactory;
             _converter = converter;

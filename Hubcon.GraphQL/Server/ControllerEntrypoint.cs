@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
@@ -25,13 +26,20 @@ namespace Hubcon.GraphQL.Server
         public IHubconControllerManager HubconController { get; }
 
         [HubconMethod(MethodType.Mutation)]
-        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest request) => await HubconController.Pipeline.HandleWithResultAsync(request);    
+        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest request) 
+            => await HubconController.Pipeline.HandleWithResultAsync(request);    
 
         [HubconMethod(MethodType.Mutation)]
-        public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest request) => await HubconController.Pipeline.HandleWithoutResultAsync(request);
+        public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest request) 
+            => await HubconController.Pipeline.HandleWithoutResultAsync(request);
 
         [HubconMethod(MethodType.Subscription)]
-        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest request) => HubconController.Pipeline.GetStream(request);
+        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest request) 
+            => HubconController.Pipeline.GetStream(request);
+
+        [HubconMethod(MethodType.Subscription)]
+        public IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request) 
+            => HubconController.Pipeline.GetSubscription(request);
 
         public void Build(WebApplication? app = null)
         {      

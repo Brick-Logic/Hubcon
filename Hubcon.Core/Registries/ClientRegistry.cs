@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.Registries
 {
-    public class ClientRegistry
+    public class ClientRegistry : IClientRegistry
     {
         private Dictionary<Type, Dictionary<string, IControllerContract>> Clients { get; } = new();
 

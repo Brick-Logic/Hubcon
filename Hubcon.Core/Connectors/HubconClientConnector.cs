@@ -16,11 +16,11 @@ namespace Hubcon.Core.Connectors
         where TICommunicationContract : IControllerContract
     {
         protected Dictionary<string, TICommunicationContract>? clients = new();
-        private readonly ProxyRegistry proxyRegistry;
+        private readonly IProxyRegistry proxyRegistry;
 
         protected ClientControllerConnectorInterceptor Interceptor { get; set; }
 
-        public HubconClientConnector(ClientControllerConnectorInterceptor interceptor, ProxyRegistry proxyRegistry)
+        public HubconClientConnector(ClientControllerConnectorInterceptor interceptor, IProxyRegistry proxyRegistry)
         {
             Interceptor = interceptor;
             this.proxyRegistry = proxyRegistry;

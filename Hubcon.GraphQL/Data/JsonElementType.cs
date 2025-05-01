@@ -1,5 +1,6 @@
 ﻿using HotChocolate.Language;
 using Hubcon.Core.Converters;
+using Hubcon.Core.Models.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ namespace Hubcon.GraphQL.Data
 {
     public class JsonScalarType : ScalarType<JsonElement?, StringValueNode>
     {
-        private readonly DynamicConverter _converter = new DynamicConverter();
+        private readonly IDynamicConverter _converter = new DynamicConverter();
 
         public JsonScalarType() : base("JsonScalarType") { }
 

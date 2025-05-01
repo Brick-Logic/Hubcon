@@ -5,6 +5,6 @@ namespace Hubcon.Core.Models.Interfaces
 {
     public interface IMiddlewareProvider
     {
-        public IPipeline GetPipeline(HubconMethodInvoker methodInvoker, MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler);
+        public IPipeline GetPipeline(MethodDescriptor descriptor, MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler);
     }
 }

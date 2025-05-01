@@ -41,9 +41,7 @@ namespace Hubcon.GraphQL.Injection
 
             ExecutorBuilder.AddMutationType(descriptor =>
             {
-                Console.WriteLine("hello1");
                 RegisterMethods(controllerType, descriptor, mutations);
-                Console.WriteLine("hello2");
             });
             
             ExecutorBuilder.AddSubscriptionType(descriptor => RegisterSubscriptions(controllerType, descriptor, subscriptions));
@@ -112,21 +110,18 @@ namespace Hubcon.GraphQL.Injection
 
             foreach (var method in methods)
             {
-                var fieldDescriptor = descriptor.Field(method.Name!) // Usa el nombre real del método
+                var fieldDescriptor = descriptor.Field(method.Name!)
                     .Type<JsonScalarType>()
                     .Subscribe(context =>
                     {
-                        // Instancia del controlador
                         var controller = (IHubconEntrypoint)context.Service<ILifetimeScope>().Resolve(controllerType);
 
                         controller.Build();
 
-                        // Prepara argumentos desde el contexto
                         var args = method.GetParameters().Select(p =>
                             context.ArgumentValue<object>(p.Name!)
                         ).ToArray();
 
-                        // Llama al método
                         var result = method.Invoke(controller, args);
 
                         if (result is IAsyncEnumerable<JsonElement?> asyncStream)
@@ -143,15 +138,13 @@ namespace Hubcon.GraphQL.Injection
                         return "null";
                     });
 
-                // Agrega los argumentos como siempre
                 foreach (var parameter in method.GetParameters())
                 {
                     fieldDescriptor.Argument(parameter.Name!, x => x.Type(parameter.ParameterType));
                 }
 
-                // Resolver tipo de retorno
-                var returnType = UnwrapReturnType(method.ReturnType); // ya deberías tener esto implementado
-                var gqlOutputType = GetGraphQLOutputType(returnType); // lo mismo
+                var returnType = UnwrapReturnType(method.ReturnType);
+                var gqlOutputType = GetGraphQLOutputType(returnType);
 
                 if (gqlOutputType != null)
                     fieldDescriptor.Type(gqlOutputType);
@@ -179,11 +172,11 @@ namespace Hubcon.GraphQL.Injection
             if (type == typeof(string))
                 return new NamedTypeNode("String");
             if (type == typeof(JsonElement) || type == typeof(JsonElement?))
-                return new NamedTypeNode("JsonScalarType"); // necesitás un tipo escalar personalizado para esto
+                return new NamedTypeNode("JsonScalarType");
             if (type == typeof(BaseJsonResponse))
                 return new NamedTypeNode("BaseJsonResponse");
             if (type == typeof(IResponse))
-                return new NamedTypeNode("IResponse"); // asumimos que está registrado como ObjectType<IResponse>
+                return new NamedTypeNode("IResponse");
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
             {
                 var inner = GetGraphQLOutputType(type.GetGenericArguments()[0]);
@@ -200,7 +193,7 @@ namespace Hubcon.GraphQL.Injection
             if (type == typeof(int))
                 return new NamedTypeNode("Int");
             if (type == typeof(JsonElement) || type == typeof(JsonElement?))
-                return new NamedTypeNode("JsonScalarType"); // también necesitás escalar personalizado acá
+                return new NamedTypeNode("JsonScalarType");
             if (type == typeof(MethodInvokeRequest))
                 return new NamedTypeNode("MethodInvokeRequest");
 

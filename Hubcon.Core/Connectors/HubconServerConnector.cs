@@ -1,9 +1,13 @@
-﻿using Castle.DynamicProxy;
+﻿using Autofac;
+using Autofac.Core;
+using Castle.DynamicProxy;
+using Hubcon.Core.Injectors;
 using Hubcon.Core.Injectors.Attributes;
 using Hubcon.Core.Interceptors;
 using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Registries;
 using Hubcon.Core.Tools;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Core.Connectors
 {
@@ -17,19 +21,25 @@ namespace Hubcon.Core.Connectors
     /// the server's interface.
     /// </summary>
     /// <typeparam name="TIServerHubController"></typeparam>
-    public class HubconServerConnector<TICommunicationHandler> : IServerConnector
+    public class HubconServerConnector<TICommunicationHandler> : IServerConnector, IHubconServerConnector<TICommunicationHandler>
         where TICommunicationHandler : ICommunicationHandler
     {
         private IControllerContract? _client = null!;
-        private readonly ServerConnectorInterceptor<TICommunicationHandler> Interceptor;
-        private readonly ProxyRegistry proxyRegistry;
+        private readonly IServerConnectorInterceptor<TICommunicationHandler> Interceptor;
+        private readonly IProxyRegistry proxyRegistry;
 
         public ICommunicationHandler Connection { get => Interceptor.CommunicationHandler; }
 
-        public HubconServerConnector(ServerConnectorInterceptor<TICommunicationHandler> interceptor, ProxyRegistry proxyRegistry) : base()
+        private ILifetimeScope _lifetimeScope { get; }
+
+        public HubconServerConnector(
+            IServerConnectorInterceptor<TICommunicationHandler> interceptor,
+            IProxyRegistry proxyRegistry,
+            ILifetimeScope lifetimeScoped) : base()
         {
             Interceptor = interceptor;
             this.proxyRegistry = proxyRegistry;
+            _lifetimeScope = lifetimeScoped;
         }
 
         public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : IControllerContract
@@ -38,7 +48,11 @@ namespace Hubcon.Core.Connectors
                 return (TICommunicationContract)_client;
 
             var proxyType = proxyRegistry.TryGetProxy<TICommunicationContract>();
-            _client = (TICommunicationContract)InstanceCreator.TryCreateInstance(proxyType, Interceptor)!;
+            _client = (TICommunicationContract)_lifetimeScope.Resolve(proxyType, new[]
+            {
+                new TypedParameter(typeof(AsyncInterceptorBase), Interceptor)
+            });
+
             return (TICommunicationContract)_client;
         }
     }

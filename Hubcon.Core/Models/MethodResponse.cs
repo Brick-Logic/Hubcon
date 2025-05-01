@@ -1,4 +1,5 @@
 ﻿using Hubcon.Core.Converters;
+using Hubcon.Core.Models.Interfaces;
 using System.ComponentModel;
 using System.Data.SqlTypes;
 using System.Text.Json;
@@ -26,7 +27,7 @@ namespace Hubcon.Core.Models
             };
         }
 
-        public IMethodResponse<JsonElement?> ToJsonElement(DynamicConverter converter)
+        public IMethodResponse<JsonElement?> ToJsonElement(IDynamicConverter converter)
         {
             return new BaseMethodResponse<JsonElement?>(this.Success, converter.SerializeObject(this.Data)!);
         }

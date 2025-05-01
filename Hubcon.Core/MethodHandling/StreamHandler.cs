@@ -12,12 +12,12 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.MethodHandling
 {
-    public class StreamNotificationHandler
+    public class StreamNotificationHandler : IStreamNotificationHandler
     {
-        private DynamicConverter _converter;
+        private IDynamicConverter _converter;
         private Dictionary<string, IOnStreamReceived> StreamWaitList = new();
 
-        public StreamNotificationHandler(DynamicConverter converter)
+        public StreamNotificationHandler(IDynamicConverter converter)
         {
             _converter = converter;
         }
