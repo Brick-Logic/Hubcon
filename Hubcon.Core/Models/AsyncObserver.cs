@@ -18,12 +18,20 @@ namespace Hubcon.Core.Models
             await _channel.Writer.WriteAsync(item);
         }
 
-        public IAsyncEnumerable<T> GetAsyncEnumerable(CancellationToken cancellationToken)
+        public IAsyncEnumerable<T?> GetAsyncEnumerable(CancellationToken cancellationToken)
         {
-            return ReadAsync(cancellationToken);
+            try
+            {
+                return ReadAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                OnError(ex);
+                throw;
+            }
         }
 
-        private async IAsyncEnumerable<T> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+        private async IAsyncEnumerable<T?> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken)
         {
             await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
             {
