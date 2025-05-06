@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using Hubcon.Core.Middleware;
 using Hubcon.Core.Models.Middleware;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,6 @@ namespace Hubcon.Core.Models.Pipeline.Interfaces
     {
         public IPipelineBuilder AddMiddleware<T>() where T : IMiddleware;
         public IPipelineBuilder AddMiddleware(Type middlewareType);
-        public IPipeline Build(MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler, ILifetimeScope serviceProvider);
+        public IPipeline Build(MethodInvokeRequest request, InvocationDelegate handler, ILifetimeScope serviceProvider);
     }
 }

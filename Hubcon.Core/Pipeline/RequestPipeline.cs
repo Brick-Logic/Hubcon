@@ -1,5 +1,6 @@
 ﻿using Hubcon.Core.Converters;
 using Hubcon.Core.MethodHandling;
+using Hubcon.Core.Middleware;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
 using Microsoft.AspNetCore.Http;
@@ -129,15 +130,19 @@ namespace Hubcon.Core.Handlers
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var accessor = _serviceProvider.GetRequiredService<IHttpContextAccessor>();
-            var jwtToken = ExtractTokenFromHeader(accessor.HttpContext!);
 
-            var jwtHandler = new JwtSecurityTokenHandler();
+            if (accessor == null || accessor.HttpContext == null)
+                throw new InvalidOperationException("Las suscripciones requieren de un contexto HTTP activo.");
+
+            //var jwtToken = ExtractTokenFromHeader(accessor.HttpContext!);
+
+            //var jwtHandler = new JwtSecurityTokenHandler();
 
             //if (!jwtHandler.CanReadToken(jwtToken))
             //    throw new UnauthorizedAccessException();
 
             //JwtSecurityToken? token = jwtHandler.ReadJwtToken(jwtToken);
-            //var userIdClaim = token.Claims.FirstOrDefault(c =>c.Type == ClaimTypes.NameIdentifier || c.Type == "sub");
+            //var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub");
 
             //if (userIdClaim?.Value is not string userId)
             //    throw new UnauthorizedAccessException("No se encontró el ID de usuario en el token.");
@@ -194,7 +199,7 @@ namespace Hubcon.Core.Handlers
 
             var controller = _serviceProvider.GetRequiredService(descriptor!.ControllerType);
 
-            Func<Task<IMethodResponse>> method = async () =>
+            InvocationDelegate method = async () =>
             {
                 object?[] args = _converter.DeserializeJsonArgs(request.Args, descriptor!.ParameterTypes).ToArray();
                 object? result = descriptor.Method?.DynamicInvoke(controller, args);

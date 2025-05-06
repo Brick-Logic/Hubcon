@@ -15,8 +15,8 @@ namespace Hubcon.GraphQL.Subscriptions
         private CancellationTokenSource _tokenSource;
 
 
-        private bool _isSubscribed = false;
-        public bool IsSubscribed { get => _isSubscribed; }
+        private bool _connected = false;
+        public bool Connected { get => _connected; }
 
         public PropertyInfo Property { get; } = null!;
 
@@ -37,12 +37,15 @@ namespace Hubcon.GraphQL.Subscriptions
             OnEventReceived -= handler;
         }
 
-        public void Subscribe()
+        public async Task Subscribe()
         {
-            if(_tokenSource.IsCancellationRequested == false && _isSubscribed == true)
+            if(_tokenSource.IsCancellationRequested == false && _connected == true)
                 return;
 
             _tokenSource = new CancellationTokenSource();
+
+            var tcs = new TaskCompletionSource();
+
             _ = Task.Run(async () =>
             {
                 IAsyncEnumerable<JsonElement> eventSource = null!;
@@ -52,7 +55,9 @@ namespace Hubcon.GraphQL.Subscriptions
 
                 eventSource = _client.GetSubscription(request, nameof(IHubconEntrypoint.HandleSubscription), _tokenSource.Token);
                 await using var enumerator = eventSource.GetAsyncEnumerator(_tokenSource.Token);
-                _isSubscribed = true;
+                _connected = true;
+
+                tcs.SetResult();
 
                 while (await enumerator.MoveNextAsync())
                 {
@@ -60,13 +65,18 @@ namespace Hubcon.GraphQL.Subscriptions
                     OnEventReceived?.Invoke(result);
                 };
 
-                _isSubscribed = false;
+                _connected = false;
             });
+
+            await tcs.Task;
         }
 
-        public void Unsubscribe()
+        public async Task Unsubscribe()
         {
-            _tokenSource.Cancel();      
+            while (_connected)
+            {
+                await Task.Delay(100);
+            }
         }
 
         public void Build()

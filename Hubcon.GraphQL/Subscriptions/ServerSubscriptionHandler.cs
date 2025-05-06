@@ -22,7 +22,7 @@ namespace Hubcon.GraphQL.Subscriptions
 
 
         private bool _isSubscribed = false;
-        public bool IsSubscribed { get => _isSubscribed; }
+        public bool Connected { get => _isSubscribed; }
 
         public event HubconEventHandler? OnEventReceived;
 
@@ -40,12 +40,14 @@ namespace Hubcon.GraphQL.Subscriptions
             OnEventReceived -= handler;
         }
 
-        public void Subscribe()
-        {           
+        public async Task Subscribe()
+        {
+            await Task.CompletedTask;
         }
 
-        public void Unsubscribe()
-        {                
+        public async Task Unsubscribe()
+        {
+            await Task.CompletedTask;
         }
 
         public void Build()

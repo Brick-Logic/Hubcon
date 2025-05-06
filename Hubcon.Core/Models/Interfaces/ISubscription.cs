@@ -9,9 +9,9 @@ namespace Hubcon.Core.Models.Interfaces
         public event HubconEventHandler? OnEventReceived;
         PropertyInfo Property { get; }
         void Build();
-        void Subscribe();
-        void Unsubscribe();
-        public bool IsSubscribed { get; }
+        Task Subscribe();
+        Task Unsubscribe();
+        public bool Connected { get; }
         public void AddHandler(HubconEventHandler handler);
         public void RemoveHandler(HubconEventHandler handler);
         public void Emit(object? eventValue);

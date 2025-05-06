@@ -1,4 +1,5 @@
-﻿using Hubcon.Core.Models.Interfaces;
+﻿using HotChocolate.Authorization;
+using Hubcon.Core.Models.Interfaces;
 using Hubcon.GraphQL.Models;
 using HubconTestDomain;
 
@@ -6,7 +7,7 @@ namespace HubconTest.Controllers
 {
     public class TestController : ITestContract
     {
-        public ISubscription OnEventCreated { get; }
+        public ISubscription OnUserCreated { get; }
 
         public TestController()
         {
@@ -30,9 +31,10 @@ namespace HubconTest.Controllers
             await Task.CompletedTask;
         }
 
-        public async Task ShowTempOnServerFromClient()
+        [Authorize(Roles = ["Admin"])]
+        public async Task CreateUser()
         {
-            OnEventCreated?.Emit("Evento de prueba");
+            OnUserCreated?.Emit(Random.Shared.Next(-10, 50));
             await Task.CompletedTask;
         }
 

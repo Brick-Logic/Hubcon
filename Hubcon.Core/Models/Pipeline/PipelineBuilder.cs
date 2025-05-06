@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using Hubcon.Core.Extensions;
+using Hubcon.Core.Middleware;
 using Hubcon.Core.Models.Middleware;
 using Hubcon.Core.Models.Pipeline.Interfaces;
 using Hubcon.Core.Tools;
@@ -66,7 +67,7 @@ namespace Hubcon.Core.Models.Pipeline
         }
         public IPipelineBuilder AddMiddleware<T>() where T : IMiddleware => AddMiddleware(typeof(T));
 
-        public IPipeline Build(MethodInvokeRequest request, Func<Task<IMethodResponse?>> handler, ILifetimeScope serviceProvider)
+        public IPipeline Build(MethodInvokeRequest request, InvocationDelegate handler, ILifetimeScope serviceProvider)
         {
             var preHandlerMiddlewares = new List<Type>();
             preHandlerMiddlewares.AddRange(ExceptionMiddlewares);
@@ -87,7 +88,7 @@ namespace Hubcon.Core.Models.Pipeline
                 loggingMiddlewares.Add((ILoggingMiddleware)serviceProvider.Resolve(mw));
 
 
-            Func<Task<IMethodResponse?>> final = () => handler(); // el método original
+            InvocationDelegate final = () => handler(); // el método original
 
             foreach (var mw in middlewares.Reverse<IMiddleware>())
             {

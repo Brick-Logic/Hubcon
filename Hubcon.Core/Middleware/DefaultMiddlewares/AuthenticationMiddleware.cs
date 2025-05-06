@@ -26,10 +26,10 @@ namespace Hubcon.Core.Middleware.DefaultMiddlewares
             _methodDescriptorProvider = methodDescriptorProvider;
         }
 
-        public async Task<IMethodResponse?> Execute(MethodInvokeRequest request, Func<Task<IMethodResponse?>> next)
+        public async Task<IMethodResponse?> Execute(MethodInvokeRequest request, InvocationDelegate next)
         {
             if (!_methodDescriptorProvider.GetMethodDescriptor(request, out MethodDescriptor? value))
-                return new BaseMethodResponse(false, "Bad request: Called method does not exist.");
+                return new BaseMethodResponse(false, "Bad reques.");
 
             if (value!.RequiresAuthorization)
             {

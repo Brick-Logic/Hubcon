@@ -15,7 +15,7 @@ namespace Hubcon.Core.Middleware.DefaultMiddlewares
             sw = new Stopwatch();
         }
 
-        public async Task<IMethodResponse?> Execute(MethodInvokeRequest request, Func<Task<IMethodResponse?>> next)
+        public async Task<IMethodResponse?> Execute(MethodInvokeRequest request, InvocationDelegate next)
         {
             sw.Restart();
 

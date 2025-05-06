@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hubcon.Core.Middleware;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,7 @@ namespace Hubcon.Core.Models.Middleware
 {
     public interface IMiddleware
     {
-        public Task<IMethodResponse?> Execute(MethodInvokeRequest request, Func<Task<IMethodResponse?>> next);
+        public Task<IMethodResponse?> Execute(MethodInvokeRequest request, InvocationDelegate next);
     }
 
     public interface IExceptionMiddleware : IMiddleware

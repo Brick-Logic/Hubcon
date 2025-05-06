@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 
 namespace HubconTestClient
 {
@@ -45,6 +46,7 @@ namespace HubconTestClient
             var scope = app.Services.CreateScope();
 
             var clientProvider = scope.ServiceProvider.GetRequiredService<IHubconClientProvider>();
+
             var client = clientProvider.GetClient<ITestContract>();
 
 
@@ -55,11 +57,12 @@ namespace HubconTestClient
 
             HubconEventHandler handler = (input) =>
             {
-                Console.WriteLine(input);
+                Console.WriteLine($"Evento recibido: {input}");
             };
 
-            client.OnEventCreated.AddHandler(handler);
-            client.OnEventCreated.Subscribe();
+            client.OnUserCreated.AddHandler(handler);
+            await client.OnUserCreated.Subscribe();
+            Console.WriteLine("Evento conectado.");
 
             Console.ReadKey();
             Console.WriteLine("Enviando request...");
@@ -68,7 +71,7 @@ namespace HubconTestClient
             Console.ReadKey();
             
             Console.WriteLine("Enviando request...");
-            await client.ShowTempOnServerFromClient();
+            await client.CreateUser();
             Console.WriteLine($"Request enviado, respuesta recibida.");
             Console.ReadKey();
 
@@ -130,12 +133,9 @@ namespace HubconTestClient
             {
                 await Task.Run(async () =>
                 {
-                    int? response = await client.GetTemperatureFromServer();
+                    await client.CreateUser();
 
-                    if (response is null)
-                        Interlocked.Add(ref errors, 1);
-                    else
-                        Interlocked.Add(ref finishedRequestsCount, 1);
+                    Interlocked.Add(ref finishedRequestsCount, 1);
                 });
             }
 
