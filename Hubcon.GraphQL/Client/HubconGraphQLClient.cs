@@ -60,7 +60,7 @@ namespace Hubcon.GraphQL.Client
             {
                 await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
                 {
-                     var result = newEvent.Data.GetProperty(resolver);
+                     var result = newEvent!.Data.GetProperty(resolver).Clone();
 
                     yield return result;
                 }

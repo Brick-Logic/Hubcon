@@ -55,10 +55,10 @@ namespace HubconTestClient
 
             Console.WriteLine("Conectando evento...");
 
-            HubconEventHandler handler = (input) =>
+            static void handler(object? input)
             {
                 Console.WriteLine($"Evento recibido: {input}");
-            };
+            }
 
             client.OnUserCreated.AddHandler(handler);
             await client.OnUserCreated.Subscribe();
@@ -134,6 +134,7 @@ namespace HubconTestClient
                 await Task.Run(async () =>
                 {
                     await client.CreateUser();
+                    //await Task.Delay(1000);
 
                     Interlocked.Add(ref finishedRequestsCount, 1);
                 });
