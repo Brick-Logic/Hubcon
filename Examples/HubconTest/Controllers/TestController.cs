@@ -31,7 +31,7 @@ namespace HubconTest.Controllers
             await Task.CompletedTask;
         }
 
-        [Authorize(Roles = ["Admin"])]
+        //[Authorize(Roles = ["Admin"])]
         public async Task CreateUser()
         {
             OnUserCreated?.Emit(Random.Shared.Next(-10, 50));

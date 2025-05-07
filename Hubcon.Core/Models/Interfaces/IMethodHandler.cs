@@ -11,6 +11,6 @@ namespace Hubcon.Core.Models.Interfaces
         public Task<BaseJsonResponse> HandleWithResultAsync(MethodInvokeRequest request);
 
         public IAsyncEnumerable<JsonElement?> GetStream(MethodInvokeRequest request);
-        IAsyncEnumerable<JsonElement?> GetSubscription(SubscriptionRequest request, CancellationToken cancellationToken = default);
+        IAsyncEnumerable<JsonElement?> GetSubscription(SubscriptionRequest request, string userId, CancellationToken cancellationToken = default);
     }
 }

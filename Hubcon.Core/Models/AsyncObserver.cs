@@ -47,8 +47,7 @@ namespace Hubcon.Core.Models
 
         public void OnError(Exception error)
         {
-            // Manejar el error si es necesario
-            _channel.Writer.Complete(error); // También cerramos el canal en caso de error.
+            _channel.Writer.Complete(error);
             _completed.SetException(error);
         }
 

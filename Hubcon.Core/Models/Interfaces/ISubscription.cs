@@ -11,7 +11,7 @@ namespace Hubcon.Core.Models.Interfaces
         void Build();
         Task Subscribe();
         Task Unsubscribe();
-        public bool Connected { get; }
+        public SubscriptionState Connected { get; }
         public void AddHandler(HubconEventHandler handler);
         public void RemoveHandler(HubconEventHandler handler);
         public void Emit(object? eventValue);

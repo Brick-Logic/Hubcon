@@ -41,12 +41,12 @@ namespace Hubcon.Core.Extensions
                     {
                         var sub = e.Context.ResolveOptional<ISubscriptionRegistry>();
                         var contract = prop.ReflectedType!.GetInterfaces().Find(x => x.IsAssignableTo(typeof(IControllerContract))).Name;
-                        resolved = sub?.GetHandler("test", contract, prop.Name);
+                        resolved = sub?.GetHandler("broadcast", contract, prop.Name);
 
                         if (resolved == null)
                         {
                             resolved = e.Context.ResolveOptional(prop.PropertyType);
-                            sub?.RegisterHandler("test", contract, prop.Name, (ISubscription)resolved!);
+                            sub?.RegisterHandler("broadcast", contract, prop.Name, (ISubscription)resolved!);
                         }
 
                         var resolvedSubscription = (ISubscription)resolved!;

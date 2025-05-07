@@ -31,7 +31,8 @@ namespace HubconTestClient
                 var options = new GraphQLHttpClientOptions
                 {
                     EndPoint = new Uri(graphqlEndpoint),
-                    WebSocketEndPoint = new Uri(graphqlWebSocketEndpoint)
+                    WebSocketEndPoint = new Uri(graphqlWebSocketEndpoint),
+                    WebSocketProtocol = "graphql-transport-ws"
                 };
 
                 return new GraphQLHttpClient(options, new SystemTextJsonSerializer());
@@ -55,17 +56,18 @@ namespace HubconTestClient
 
             Console.WriteLine("Conectando evento...");
 
-            static void handler(object? input)
+            void handler(object? input)
             {
                 Console.WriteLine($"Evento recibido: {input}");
             }
 
             client.OnUserCreated.AddHandler(handler);
             await client.OnUserCreated.Subscribe();
+            await client.CreateUser();
             Console.WriteLine("Evento conectado.");
 
             Console.ReadKey();
-            Console.WriteLine("Enviando request...");
+            Console.WriteLine("Enviando request GetTemperatureFromServer...");
             var temp = await client.GetTemperatureFromServer();
             Console.WriteLine($"Datos recibidos: {temp}");
             Console.ReadKey();

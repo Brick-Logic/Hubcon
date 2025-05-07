@@ -15,8 +15,8 @@ namespace Hubcon.GraphQL.Subscriptions
         private CancellationTokenSource _tokenSource;
 
 
-        private bool _connected = false;
-        public bool Connected { get => _connected; }
+        private SubscriptionState _connected = SubscriptionState.Disconnected;
+        public SubscriptionState Connected { get => _connected; }
 
         public PropertyInfo Property { get; } = null!;
 
@@ -39,7 +39,7 @@ namespace Hubcon.GraphQL.Subscriptions
 
         public async Task Subscribe()
         {
-            if(_tokenSource.IsCancellationRequested == false && _connected == true)
+            if (_tokenSource.IsCancellationRequested == false && (_connected == SubscriptionState.Connected || _connected == SubscriptionState.Reconnecting))
                 return;
 
             _tokenSource = new CancellationTokenSource();
@@ -48,24 +48,43 @@ namespace Hubcon.GraphQL.Subscriptions
 
             _ = Task.Run(async () =>
             {
-                IAsyncEnumerable<JsonElement> eventSource = null!;
-
-                var contract = Property.ReflectedType!.GetInterfaces().Find(x => x.IsAssignableTo(typeof(IControllerContract)));
-                var request = new SubscriptionRequest(Property.Name, contract.Name);
-
-                eventSource = _client.GetSubscription(request, nameof(IHubconEntrypoint.HandleSubscription), _tokenSource.Token);
-                await using var enumerator = eventSource.GetAsyncEnumerator(_tokenSource.Token);
-                _connected = true;
-
-                tcs.SetResult();
-
-                while (await enumerator.MoveNextAsync())
+                while (!_tokenSource.IsCancellationRequested)
                 {
-                    var result = _converter.DeserializeJsonElement<object>(enumerator.Current);
-                    OnEventReceived?.Invoke(result);
-                };
+                    try
+                    {
+                        IAsyncEnumerable<JsonElement> eventSource = null!;
 
-                _connected = false;
+                        var contract = Property.ReflectedType!.GetInterfaces().Find(x => x.IsAssignableTo(typeof(IControllerContract)));
+                        var request = new SubscriptionRequest(Property.Name, contract.Name);
+
+                        eventSource = _client.GetSubscription(request, nameof(IHubconEntrypoint.HandleSubscription), _tokenSource.Token);
+                        await using var enumerator = eventSource.GetAsyncEnumerator(_tokenSource.Token);
+                        _connected = SubscriptionState.Connected;
+
+                        if (tcs.Task.IsCompleted == false)
+                        {
+                            Console.WriteLine("Subscription connected.");
+                            tcs.SetResult();
+                        }
+                        else
+                        {
+                            Console.WriteLine("Subscription reconnected.");
+                        }
+
+                        while (await enumerator.MoveNextAsync())
+                        {
+                            var result = _converter.DeserializeJsonElement<object>(enumerator.Current);
+                            OnEventReceived?.Invoke(result);
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        _connected = SubscriptionState.Reconnecting;
+                        Console.WriteLine(ex);
+                        Console.WriteLine("Reconnecting...");
+                    }
+                }
+                _connected = SubscriptionState.Disconnected;
             });
 
             await tcs.Task;
@@ -73,7 +92,7 @@ namespace Hubcon.GraphQL.Subscriptions
 
         public async Task Unsubscribe()
         {
-            while (_connected)
+            while (_connected == SubscriptionState.Connected || _connected == SubscriptionState.Reconnecting)
             {
                 await Task.Delay(100);
             }

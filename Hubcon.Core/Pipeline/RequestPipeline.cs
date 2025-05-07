@@ -127,27 +127,13 @@ namespace Hubcon.Core.Handlers
 
         public async IAsyncEnumerable<JsonElement?> GetSubscription(
             SubscriptionRequest request,
+            string userId,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var accessor = _serviceProvider.GetRequiredService<IHttpContextAccessor>();
 
             if (accessor == null || accessor.HttpContext == null)
                 throw new InvalidOperationException("Las suscripciones requieren de un contexto HTTP activo.");
-
-            //var jwtToken = ExtractTokenFromHeader(accessor.HttpContext!);
-
-            //var jwtHandler = new JwtSecurityTokenHandler();
-
-            //if (!jwtHandler.CanReadToken(jwtToken))
-            //    throw new UnauthorizedAccessException();
-
-            //JwtSecurityToken? token = jwtHandler.ReadJwtToken(jwtToken);
-            //var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub");
-
-            //if (userIdClaim?.Value is not string userId)
-            //    throw new UnauthorizedAccessException("No se encontró el ID de usuario en el token.");
-
-            var userId = "test";
 
             var handler = _subscriptionRegistry.GetHandler(userId, request.ContractName, request.SubscriptionName);
 
@@ -157,17 +143,17 @@ namespace Hubcon.Core.Handlers
 
                 if (handler is null)
                     throw new InvalidOperationException($"No se encontró un servicio que implemente la interfaz {nameof(ISubscription)}.");
- 
+
                 _subscriptionRegistry.RegisterHandler(userId, request.ContractName, request.SubscriptionName, handler);
             }
 
             var observer = new AsyncObserver<object>();
-            
+
             HubconEventHandler hubconEventHandler = async (eventValue) =>
             {
                 try
                 {
-                    await observer.WriteToChannelAsync(eventValue!);
+                    await observer.WriteToChannelAsync(eventValue!);               
                 }
                 catch (Exception ex)
                 {
