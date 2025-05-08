@@ -3,6 +3,7 @@ using Hubcon.Core.Injectors.Attributes;
 using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Models;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Tools;
 using Hubcon.GraphQL.Data;
 using Hubcon.GraphQL.Models.CustomAttributes;
 using Microsoft.AspNetCore.Builder;
@@ -44,53 +45,8 @@ namespace Hubcon.GraphQL.Server
         [HubconMethod(MethodType.Subscription)]
         public IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request)
         {
-            var accessor = ServiceProvider.ResolveOptional<IHttpContextAccessor>();
-
-            string? userId = "broadcast";
-            string? jwtToken = ExtractTokenFromHeader(accessor?.HttpContext!);
-
-            if (jwtToken is not null)
-            {
-                var jwtHandler = new JwtSecurityTokenHandler();
-
-                if (!jwtHandler.CanReadToken(jwtToken))
-                    throw new UnauthorizedAccessException();
-
-                JwtSecurityToken? token = jwtHandler.ReadJwtToken(jwtToken);
-                var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub");
-
-                if (userIdClaim?.Value is not null)
-                    throw new UnauthorizedAccessException("No se encontró el ID de usuario en el token.");
-
-                userId = userIdClaim?.Value ?? "broadcast";
-            }
-
-            return HubconController.Pipeline.GetSubscription(request, userId);
-        }
-
-        static string? ExtractTokenFromHeader(HttpContext? httpContext)
-        {
-            try
-            {
-                if (httpContext is null)
-                    return null;
-
-                var authHeader = httpContext.Request.Headers["Authorization"].ToString();
-
-                if (authHeader is null)
-                    return null;
-
-                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                {
-                    return authHeader.Substring("Bearer ".Length).Trim();
-                }
-            }
-            catch
-            {
-                return null;
-            }
-
-            return null;
+            Console.WriteLine($"Subscription {request.SubscriptionName} handled.");
+            return HubconController.Pipeline.GetSubscription(request);
         }
 
         public void Build(WebApplication? app = null)

@@ -1,9 +1,12 @@
 ﻿using Autofac;
 using Autofac.Builder;
 using Castle.Core.Internal;
+using Hubcon.Core.Attributes;
 using Hubcon.Core.Injectors.Attributes;
-using Hubcon.Core.Models.CustomAttributes.Subscriptions;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Tools;
+using Microsoft.AspNetCore.Http;
+using Microsoft.CodeAnalysis;
 using System.Reflection;
 
 namespace Hubcon.Core.Extensions
@@ -34,31 +37,48 @@ namespace Hubcon.Core.Extensions
                 {
                     if (prop.GetValue(e.Instance) != null)
                         continue;
-
                     object? resolved = null!;
 
-                    if (prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
+                    if (prop.PropertyType.IsAssignableTo(typeof(ISubscription)) && e.Context.ResolveOptional<ISubscriptionRegistry>() is ISubscriptionRegistry sub)
                     {
-                        var sub = e.Context.ResolveOptional<ISubscriptionRegistry>();
+                        var accessor = e.Context.ResolveOptional<IHttpContextAccessor>();
+
                         var contract = prop.ReflectedType!.GetInterfaces().Find(x => x.IsAssignableTo(typeof(IControllerContract))).Name;
-                        resolved = sub?.GetHandler("broadcast", contract, prop.Name);
 
-                        if (resolved == null)
+                        ISubscriptionDescriptor? descriptor = null!;
+                        var metadata = sub.GetSubscriptionMetadata(contract, prop.Name);
+
+                        if (metadata != null && accessor?.HttpContext != null)
                         {
-                            resolved = e.Context.ResolveOptional(prop.PropertyType);
-                            sub?.RegisterHandler("broadcast", contract, prop.Name, (ISubscription)resolved!);
-                        }
+                            if (metadata.HasCustomAttribute<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>())
+                            {
+                                var token = JwtHelper.ExtractTokenFromHeader(accessor?.HttpContext);
+                                var userId = JwtHelper.GetUserId(token);
+                                descriptor = sub?.GetHandler(userId!, contract, prop.Name);
+                            }
+                            else if (metadata.HasCustomAttribute<AllowAnonymousAttribute>())
+                            {
+                                descriptor ??= sub?.GetHandler("", contract, prop.Name);
+                            }
+                        }                        
 
-                        var resolvedSubscription = (ISubscription)resolved!;
+                        resolved = descriptor?.Subscription;
+                    }
+                    else if (prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
+                    {
+                        resolved ??= e.Context.ResolveOptional(prop.PropertyType);
 
-                        if (resolvedSubscription.Property == null)
+                        var resolvedSubscription = (ISubscription?)resolved!;
+
+                        if (resolvedSubscription?.Property == null)
                         {
                             var field = resolvedSubscription!.GetType().GetField($"<{nameof(resolvedSubscription.Property)}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
                             field?.SetValue(resolvedSubscription, prop);
                         }
 
-                        resolvedSubscription.Build();
+                        resolvedSubscription?.Build();
                     }
+
 
                     resolved ??= e.Context.ResolveOptional(prop.PropertyType);
 
@@ -76,7 +96,6 @@ namespace Hubcon.Core.Extensions
                     {
                         // Si no tiene setter, usamos el campo backing
                         var field = prop!.DeclaringType?.GetField($"<{prop.Name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
-
                         field?.SetValue(instance, resolved);
                     }
                 }

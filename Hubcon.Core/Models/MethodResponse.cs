@@ -17,69 +17,57 @@ namespace Hubcon.Core.Models
     }
 
     public interface IMethodResponse : IMethodResponse<object>, IResponse
-    {
-        public IMethodResponse<T> ToGeneric<T>() where T : class, IMethodResponse<T>, new()
-        {
-            return new T()
-            {
-                Success = this.Success,
-                Data = (T?)this.Data
-            };
-        }
-
-        public IMethodResponse<JsonElement?> ToJsonElement(IDynamicConverter converter)
-        {
-            return new BaseMethodResponse<JsonElement?>(this.Success, converter.SerializeObject(this.Data)!);
-        }
-
-        public IMethodResponse<object?> FromGeneric()
-        {
-            return new BaseMethodResponse(this.Success, this.Data)!;
-        }
+    {       
     }
 
     public interface IMethodResponse<T> : IResponse
     { 
-        public T? Data { get; set; }
+        public T? Data { get; }
+        public string? Error { get; }
     }
 
     public class BaseMethodResponse : BaseResponse, IMethodResponse, IResponse
     {
-        public object? Data { get; set; }
+        public object? Data { get; }
+
+        public string? Error { get; }
 
         public BaseMethodResponse()
         {
             
         }
 
-        public BaseMethodResponse(bool success, object? data = null)
+        public BaseMethodResponse(bool success, object? data = null, string? error = null)
         {
             Success = success;
             Data = data;
+            Error = error;
         }
     }
 
     public class BaseJsonResponse : BaseMethodResponse<JsonElement?>
     {
-        public BaseJsonResponse() : base(true, null)
+        public BaseJsonResponse() : base(true, null, null)
         {
             
         }
 
-        public BaseJsonResponse(bool success, JsonElement? data = null) : base(success, data)
+        public BaseJsonResponse(bool success, JsonElement? data = null, string? error = null) : base(success, data, error)
         {
+
         }
     }
 
     public class BaseMethodResponse<T> : BaseResponse, IMethodResponse<T>, IResponse
     {
-        public T? Data { get; set; }
+        public T? Data { get; }
+        public string? Error { get; }
 
-
-        public BaseMethodResponse(bool success, T? data = default)
+        public BaseMethodResponse(bool success, T? data = default, string? error = null)
         {
             Success = success;
             Data = data;
+            Error = error;
         }
     }
 }

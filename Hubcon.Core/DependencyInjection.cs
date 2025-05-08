@@ -26,6 +26,7 @@ namespace Hubcon.Core
         private static List<Action<IMiddlewareOptions>> GlobalMiddlewares { get; } = new();
 
         private readonly static IProxyRegistry Proxies = new ProxyRegistry();
+        private readonly static ISubscriptionRegistry SubscriptionRegistry = new SubscriptionRegistry();
         private readonly static List<Type> ProxiesToRegister = new();
         private readonly static List<Type> ControllersToRegister = new();
 
@@ -44,7 +45,7 @@ namespace Hubcon.Core
 
                 container
                     .RegisterWithInjector(x => x.RegisterInstance(Proxies).As<IProxyRegistry>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<SubscriptionRegistry>().As<ISubscriptionRegistry>().AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterInstance(SubscriptionRegistry).As<ISubscriptionRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().As<IDynamicConverter>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<MethodDescriptorProvider>().As<IMethodDescriptorProvider>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<StreamNotificationHandler>().As<IStreamNotificationHandler>().AsSingleton())
@@ -241,22 +242,29 @@ namespace Hubcon.Core
             Type controllerType,
             Action<IMiddlewareOptions>? options = null)
         {
-            if (!controllerType.IsAssignableTo(typeof(IControllerContract)))
-                throw new ArgumentException($"El tipo {controllerType.Name} no implementa la interfaz {nameof(IControllerContract)}");
-
             List<Type> implementationTypes = controllerType
                 .GetInterfaces()
                 .Where(x => typeof(IControllerContract).IsAssignableFrom(x))
                 .ToList();
 
             if (implementationTypes.Count == 0)
-                throw new InvalidOperationException($"Controller {controllerType.Name} does not implement ICommunicationContract.");
+                throw new InvalidOperationException($"Class {controllerType.Name} does not implement interface {nameof(IControllerContract)}.");
 
 
             Action<ContainerBuilder> injector = (ContainerBuilder x) => x.RegisterWithInjector(x => x.RegisterType(controllerType).AsScoped());
 
             ServicesToInject.Add(injector);
             ControllersToRegister.Add(controllerType);
+            
+            foreach(var type in implementationTypes)
+            {
+                foreach(var property in type.GetProperties().Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription))))
+                {
+                    var controllerProp = controllerType.GetProperty(property.Name);
+
+                    SubscriptionRegistry.RegisterSubscriptionMetadata(property.ReflectedType!.Name, property.Name, controllerProp!);
+                }
+            }
 
             if (options != null || GlobalMiddlewares.Count > 0)
             {

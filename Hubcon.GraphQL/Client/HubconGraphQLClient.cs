@@ -31,84 +31,89 @@ namespace Hubcon.GraphQL.Client
             _logger = logger;
             this.converter = converter;
 
-            //Task _runnerTask = Task.CompletedTask;
+            Task _runnerTask = Task.CompletedTask;
 
-            //var runner = async () =>
-            //{
-            //    var sw = new Stopwatch();
-            //    var timer = new System.Timers.Timer(5000);
+            var runner = async () =>
+            {
+                var sw = new Stopwatch();
+                var timer = new System.Timers.Timer(5000);
 
-            //    timer.Elapsed += async (object? sender, ElapsedEventArgs e) =>
-            //    {
-            //        // Si han pasado más de 30 segundos desde el último PONG, intentamos reconectar.
-            //        if (sw.ElapsedMilliseconds > 30000)
-            //        {
-            //            Console.WriteLine("Disconnected. Reconnecting...");
-            //            sw.Restart();
-            //            await _graphQLHttpClient.InitializeWebsocketConnection();
-            //        }
-            //    };
+                timer.Elapsed += async (object? sender, ElapsedEventArgs e) =>
+                {
+                    // Si han pasado más de 30 segundos desde el último PONG, intentamos reconectar.
+                    if (sw.ElapsedMilliseconds > 30000)
+                    {
+                        Console.WriteLine("Disconnected. Reconnecting...");
+                        sw.Restart();
+                        await _graphQLHttpClient.InitializeWebsocketConnection();
+                    }
+                };
 
-            //    while (true)
-            //    {
-            //        try
-            //        {
-            //            // Conectamos y nos suscribimos al nuevo PongStream.
-            //            await _graphQLHttpClient.InitializeWebsocketConnection();
-            //            IObservable<object?> observable = _graphQLHttpClient.PongStream;
-            //            var observer = new AsyncObserver<object?>();
+                while (true)
+                {
+                    try
+                    {
+                        IObservable<object?> observable = _graphQLHttpClient.PongStream;
+                        var observer = new AsyncObserver<object?>();
 
-            //            using (observable.Subscribe(observer))
-            //            {
-            //                sw.Start();
-            //                timer.Start();
-            //                await foreach (var newEvent in observer.GetAsyncEnumerable(new CancellationToken()))
-            //                {
-            //                    // Reiniciamos el temporizador cada vez que recibimos un PONG.
-            //                    sw.Restart();
-            //                    Console.WriteLine($"PONG received. Payload: {newEvent}");
-            //                }
-            //            }
-            //        }
-            //        catch (Exception ex)
-            //        {
-            //            // En caso de error, imprimimos el error y reiniciamos el proceso.
-            //            Console.WriteLine($"Error: {ex.Message}");
-            //        }
-            //    }
-            //};
+                        using (observable.Subscribe(observer))
+                        {
+                            sw.Start();
+                            timer.Start();
+                            await foreach (var newEvent in observer.GetAsyncEnumerable(new CancellationToken()))
+                            {
+                                // Reiniciamos el temporizador cada vez que recibimos un PONG.
+                                sw.Restart();
+                                Console.WriteLine($"PONG received. Payload: {newEvent}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // En caso de error, imprimimos el error y reiniciamos el proceso.
+                        Console.WriteLine($"Error: {ex.Message}");
+                    }
+                }
+            };
 
-            //_ = Task.Run(async () =>
-            //{
-            //    // Evitar iniciar múltiples runners al mismo tiempo
-            //    if (_runnerTask == null || _runnerTask.IsCompleted)
-            //    {
-            //        _runnerTask = Task.Run(runner);
-            //    }
+            _ = Task.Run(async () =>
+            {
+                // Evitar iniciar múltiples runners al mismo tiempo
+                if (_runnerTask == null || _runnerTask.IsCompleted)
+                {
+                    _runnerTask = Task.Run(runner);
+                }
 
-            //    while (true)
-            //    {
-            //        try
-            //        {
-            //            // Enviar PING cada segundo para mantener la conexión
-            //            while (true)
-            //            {
-            //                await Task.Delay(1000);
-            //                await _graphQLHttpClient.SendPingAsync("MyPayload");
-            //            }
-            //        }
-            //        catch (Exception ex)
-            //        {
-            //            // Si ocurre un error, reiniciamos el runner
-            //            Console.WriteLine($"Error: {ex.Message}");
-            //            if (_runnerTask != null && !_runnerTask.IsCompleted)
-            //            {
-            //                _runnerTask.Dispose();
-            //            }
-            //            _runnerTask = Task.Run(runner); // Reiniciar el runner.
-            //        }
-            //    }
-            //});
+                while (true)
+                {
+                    try
+                    {
+                        // Enviar PING cada segundo para mantener la conexión
+                        while (true)
+                        {
+                            try
+                            {
+                                await Task.Delay(1000);
+                                await _graphQLHttpClient.SendPingAsync("MyPayload");
+                            }
+                            catch(Exception ex)
+                            {
+                                Console.WriteLine(ex.Message);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Si ocurre un error, reiniciamos el runner
+                        Console.WriteLine($"Error: {ex.Message}");
+                        if (_runnerTask != null && !_runnerTask.IsCompleted)
+                        {
+                            _runnerTask.Dispose();
+                        }
+                        _runnerTask = Task.Run(runner); // Reiniciar el runner.
+                    }
+                }
+            });
 
         }
 

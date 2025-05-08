@@ -1,15 +1,15 @@
-﻿using Hubcon.Core.Converters;
+﻿using Hubcon.Core.Attributes;
+using Hubcon.Core.Extensions;
 using Hubcon.Core.MethodHandling;
 using Hubcon.Core.Middleware;
 using Hubcon.Core.Models;
+using Hubcon.Core.Models.Exceptions;
 using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Tools;
 using Microsoft.AspNetCore.Http;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
-using System.IdentityModel.Tokens.Jwt;
 using System.Runtime.CompilerServices;
-using System.Security.Claims;
 using System.Text.Json;
 
 namespace Hubcon.Core.Handlers
@@ -127,24 +127,53 @@ namespace Hubcon.Core.Handlers
 
         public async IAsyncEnumerable<JsonElement?> GetSubscription(
             SubscriptionRequest request,
-            string userId,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            var accessor = _serviceProvider.GetRequiredService<IHttpContextAccessor>();
+            string clientId = "";
 
-            if (accessor == null || accessor.HttpContext == null)
-                throw new InvalidOperationException("Las suscripciones requieren de un contexto HTTP activo.");
+            var info = _subscriptionRegistry.GetSubscriptionMetadata(request.ContractName, request.SubscriptionName);
 
-            var handler = _subscriptionRegistry.GetHandler(userId, request.ContractName, request.SubscriptionName);
+            if (info == null) throw new HubconRemoteException($"Suscripcion no encontrada.");
 
-            if (handler == null)
+            ISubscriptionDescriptor? subDescriptor = null;
+
+            if (info.HasCustomAttribute<AllowAnonymousAttribute>())
             {
-                handler = _serviceProvider.GetRequiredService<ISubscription>();
+                clientId = "";
 
-                if (handler is null)
-                    throw new InvalidOperationException($"No se encontró un servicio que implemente la interfaz {nameof(ISubscription)}.");
+                subDescriptor = _subscriptionRegistry.GetHandler(clientId, request.ContractName, request.SubscriptionName);
 
-                _subscriptionRegistry.RegisterHandler(userId, request.ContractName, request.SubscriptionName, handler);
+                if (subDescriptor == null)
+                {
+                    var subscription = _serviceProvider.GetRequiredService<ISubscription>();
+
+                    subDescriptor = _subscriptionRegistry.RegisterHandler(clientId, request.ContractName, request.SubscriptionName, subscription);
+                }
+            }
+            else
+            {
+                var accessor = _serviceProvider.GetService<IHttpContextAccessor>();
+                string? jwtToken = JwtHelper.ExtractTokenFromHeader(accessor?.HttpContext!);
+                string? userId = JwtHelper.GetUserId(jwtToken);
+
+                if (userId == null)
+                    throw new UnauthorizedAccessException();
+
+                clientId = userId ;
+
+                subDescriptor = _subscriptionRegistry.GetHandler(userId, request.ContractName, request.SubscriptionName);
+
+
+                if (subDescriptor == null)
+                {
+                    var subscription = _serviceProvider.GetRequiredService<ISubscription>();
+
+                    if (subscription is null)
+                        throw new InvalidOperationException($"No se encontró un servicio que implemente la interfaz {nameof(ISubscription)}.");
+
+
+                    subDescriptor = _subscriptionRegistry.RegisterHandler(userId, request.ContractName, request.SubscriptionName, subscription);
+                }
             }
 
             var observer = new AsyncObserver<object>();
@@ -161,10 +190,9 @@ namespace Hubcon.Core.Handlers
                 }
             };
 
-            handler += hubconEventHandler;
-
             try
             {
+                subDescriptor.Subscription.AddHandler(hubconEventHandler);
                 await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
                 {
                     yield return _converter.SerializeObject(newEvent);
@@ -172,8 +200,8 @@ namespace Hubcon.Core.Handlers
             }
             finally
             {
-                _subscriptionRegistry.RemoveHandler(userId, request.ContractName, request.SubscriptionName);
-                handler -= hubconEventHandler;
+                _subscriptionRegistry.RemoveHandler(clientId, request.ContractName, request.SubscriptionName);
+                subDescriptor.Subscription.RemoveHandler(hubconEventHandler);
             }
         }
 

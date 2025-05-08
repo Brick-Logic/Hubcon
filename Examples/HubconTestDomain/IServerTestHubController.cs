@@ -14,7 +14,7 @@ namespace HubconTestDomain
 
     public interface ITestContract : IControllerContract
     {
-        ISubscription OnUserCreated { get; }
+        ISubscription? OnUserCreated { get; }
 
         Task<int> GetTemperatureFromServer();
         IAsyncEnumerable<string> GetMessages(int count);

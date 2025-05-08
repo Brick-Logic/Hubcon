@@ -13,12 +13,16 @@ namespace Hubcon.Core.Extensions
 
         public static bool HasCustomAttribute<TCustomAttribute>(this PropertyInfo method) where TCustomAttribute : Attribute
         {
-            var methodName = $"{method.ReflectedType!.Name}_{method.Name}";
-            if (!_attributeCache.TryGetValue(methodName, out var hasAttribute))
+            var methodName = $"{method.ReflectedType!.Name}_{method.Name}_{typeof(TCustomAttribute).FullName}";
+
+            var result = _attributeCache.TryGetValue(methodName, out var hasAttribute);
+
+            if (!result)
             {
                 hasAttribute = method.IsDefined(typeof(TCustomAttribute), false);
                 _attributeCache[methodName] = hasAttribute;
             }
+
             return hasAttribute;
         }
     }

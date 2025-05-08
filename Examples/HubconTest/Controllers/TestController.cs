@@ -1,18 +1,13 @@
-﻿using HotChocolate.Authorization;
+﻿using Hubcon.Core.Attributes;
 using Hubcon.Core.Models.Interfaces;
-using Hubcon.GraphQL.Models;
 using HubconTestDomain;
 
 namespace HubconTest.Controllers
 {
     public class TestController : ITestContract
     {
-        public ISubscription OnUserCreated { get; }
-
-        public TestController()
-        {
-            
-        }
+        [AllowAnonymous]
+        public ISubscription? OnUserCreated { get; }
 
         public async Task<int> GetTemperatureFromServer() 
             => await Task.Run(() => new Random().Next(-10, 50));
