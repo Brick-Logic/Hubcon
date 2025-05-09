@@ -1,17 +1,13 @@
-﻿using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Invocation;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace Hubcon.Core.Dummy
 {
     public class DummyServerCommunicationHandler : IServerCommunicationHandler
     {
-        public Task CallAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public Task CallAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             return Task.FromResult(0);
         }
@@ -21,12 +17,12 @@ namespace Hubcon.Core.Dummy
             return Array.Empty<IClientReference>().ToList();
         }
 
-        public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task<IMethodResponse<JsonElement>> InvokeAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
-            return await Task.FromResult(new BaseMethodResponse(true));
+            return await Task.FromResult(new BaseJsonResponse(true));
         }
 
-        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             return Task.FromResult<IAsyncEnumerable<T?>>(null!);
         }

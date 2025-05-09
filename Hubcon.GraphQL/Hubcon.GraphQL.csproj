@@ -8,6 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+	<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	<ProjectReference Include="..\Hubcon.Core.Builders\Hubcon.Core.Builders.csproj" />
     <ProjectReference Include="..\Hubcon.Core\Hubcon.Core.csproj" />
     <PackageReference Include="GraphQL.Client" Version="6.1.0" />
     <PackageReference Include="GraphQL.Client.Serializer.SystemTextJson" Version="6.1.0" />
@@ -15,8 +17,9 @@
 	<PackageReference Include="HotChocolate.Data" Version="15.1.3" />
 	<PackageReference Include="HotChocolate.Data.EntityFramework" Version="15.1.3" />
 	<ProjectReference Include="..\HubconAnalyzer.DiagnosticSuppressors\HubconAnalyzer.DiagnosticSuppressors.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-	<PackageReference Include="HubconAnalyzer.SourceGenerators" Version="1.0.49" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-	<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	<PackageReference Include="HubconAnalyzer.SourceGenerators" Version="1.0.50" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	<ProjectReference Include="..\Hubcon.Core.Abstractions.Standard\Hubcon.Core.Abstractions.Standard.csproj" />
+	<ProjectReference Include="..\Hubcon.Core.Abstractions\Hubcon.Core.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

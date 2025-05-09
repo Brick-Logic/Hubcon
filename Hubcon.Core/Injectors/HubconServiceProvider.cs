@@ -1,11 +1,5 @@
-﻿using Hubcon.Core.Models.Interfaces;
+﻿using Hubcon.Core.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace Hubcon.Core.Injectors
 {
@@ -25,14 +19,14 @@ namespace Hubcon.Core.Injectors
             return this;
         }
 
-        public object GetService<TInstanceType>(Type type, Action<DependencyInjector<TInstanceType, object?>>? options = null) => GetService(type, options);
+        public object GetService<TInstanceType>(Type type, Action<IDependencyInjector<TInstanceType, object?>>? options = null) => GetService(type, options);
 
-        public T GetServiceWithInjector<T>(Action<DependencyInjector<T, object?>>? options = null)
+        public T GetServiceWithInjector<T>(Action<IDependencyInjector<T, object?>>? options = null)
         {
             return (T)GetServiceWithInjector(typeof(T))!;
         }
 
-        public object? GetServiceWithInjector(Type type, Action<DependencyInjector<object, object?>>? options = null)
+        public object? GetServiceWithInjector(Type type, Action<IDependencyInjector<object, object?>>? options = null)
         {
             var instance = _innerService.GetRequiredService(type);
 

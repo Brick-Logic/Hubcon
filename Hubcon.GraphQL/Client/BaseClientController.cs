@@ -1,17 +1,4 @@
-﻿using Autofac;
-using Hubcon.Core;
-using Hubcon.Core.Connectors;
-using Hubcon.Core.Controllers;
-using Hubcon.Core.Converters;
-using Hubcon.Core.Interceptors;
-using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Models.Pipeline.Interfaces;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Channels;
-
-namespace Hubcon.SignalR.Client
+﻿namespace Hubcon.GraphQL.Client
 {
     //public abstract class BaseGraphQLClientController : IHubconClientController<ClientCommunicationHandler>
     //{

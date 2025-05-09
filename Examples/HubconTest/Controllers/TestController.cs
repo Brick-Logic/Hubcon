@@ -1,5 +1,5 @@
-﻿using Hubcon.Core.Attributes;
-using Hubcon.Core.Models.Interfaces;
+﻿using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Attributes;
 using HubconTestDomain;
 
 namespace HubconTest.Controllers

@@ -1,9 +1,9 @@
 ﻿using Autofac;
-using Hubcon.Core.Injectors.Attributes;
-using Hubcon.Core.MethodHandling;
-using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Registries;
+using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Attributes;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
+using Hubcon.Core.Invocation;
+using Hubcon.Core.Subscriptions;
 using Hubcon.SignalR.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
@@ -12,7 +12,7 @@ using System.Threading.Channels;
 
 namespace Hubcon.SignalR.Server
 {
-    public abstract class BaseHubController : Hub, IHubconEntrypoint
+    public abstract class BaseHubController : Hub
     {
         // Events
         public static event OnClientConnectedEventHandler? OnClientConnected;
@@ -40,12 +40,12 @@ namespace Hubcon.SignalR.Server
         }
 
         [HubconInject]
-        public StreamNotificationHandler StreamNotificationHandler { get; }
+        public IStreamNotificationHandler StreamNotificationHandler { get; }
 
         [HubconInject]
         public ILifetimeScope ServiceProvider { get; }
 
-        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest info) 
+        public async Task<IMethodResponse<JsonElement>> HandleMethodTask(MethodInvokeRequest info) 
             => await HubconController.Pipeline.HandleWithResultAsync(info);
         public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest info) 
             => await HubconController.Pipeline.HandleWithoutResultAsync(info);
@@ -108,7 +108,7 @@ namespace Hubcon.SignalR.Server
 
 
         [HubconInject]
-        private ClientRegistry ClientRegistry { get; } = null!;
+        private IClientRegistry ClientRegistry { get; } = null!;
 
         public override Task OnConnectedAsync()
         {

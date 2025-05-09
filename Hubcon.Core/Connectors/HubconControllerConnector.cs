@@ -1,9 +1,8 @@
-﻿using Castle.DynamicProxy;
-using Hubcon.Core.Converters;
+﻿using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
 using Hubcon.Core.Extensions;
-using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
-using System;
+using Hubcon.Core.Invocation;
+using Hubcon.Core.Serialization;
 using System.ComponentModel;
 
 namespace Hubcon.Core.Connectors
@@ -16,7 +15,7 @@ namespace Hubcon.Core.Connectors
            "Major Code Smell",
            "S2743:Static fields should not be used in generic types",
            Justification = "The static field by T type is intended.")]
-        protected Dictionary<string, MethodInvokeRequest> AvailableMethods { get; } = new();
+        protected Dictionary<string, IMethodInvokeRequest> AvailableMethods { get; } = new();
 
         protected HubconClientBuilder()
         {

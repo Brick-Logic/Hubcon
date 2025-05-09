@@ -1,16 +1,16 @@
 ﻿using Autofac;
-using Hubcon.Core;
+using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Builders;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Dummy;
 using Hubcon.Core.Extensions;
-using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Invocation;
+using Hubcon.Core.Subscriptions;
 using Hubcon.GraphQL.Client;
 using Hubcon.GraphQL.Data;
 using Hubcon.GraphQL.Models;
 using Hubcon.GraphQL.Server;
 using Hubcon.GraphQL.Subscriptions;
-using Hubcon.SignalR.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
@@ -31,9 +31,10 @@ namespace Hubcon.GraphQL.Injection
                 .AddType<BaseMethodResponse>()
                 .AddType<BaseJsonResponse>()
                 .AddType<JsonScalarType>()
-                .AddType<ObjectType<IResponse>>()    // Registra tipos como ObjectType si es necesario
-                .AddType<ObjectType<IMethodResponse<JsonElement?>>>()    // Registra tipos como ObjectType si es necesario
-                .AddType<InputObjectType<MethodInvokeRequest>>()  // Para cualquier tipo de entrada
+                .AddType<ObjectType<IResponse>>()
+                .AddType<ObjectType<IMethodResponse<JsonElement?>>>()
+                .AddType<InputObjectType<MethodInvokeRequest>>()
+                .AddType<InputObjectType<SubscriptionRequest>>()
                 .AddProjections()
                 .AddInMemorySubscriptions();
 
@@ -43,7 +44,7 @@ namespace Hubcon.GraphQL.Injection
 
                 container.RegisterWithInjector(x => x
                     .RegisterType<HubconGraphQLClient>()
-                    .As<IHubconGraphQLClient>()
+                    .As<IHubconClient>()
                     .AsSingleton());
 
                 container.RegisterWithInjector(container => container
@@ -75,7 +76,7 @@ namespace Hubcon.GraphQL.Injection
             {
                 container.RegisterWithInjector(x => x
                     .RegisterType<HubconGraphQLClient>()
-                    .As<IHubconGraphQLClient>()
+                    .As<IHubconClient>()
                     .AsSingleton());
 
                 container.RegisterWithInjector(x => x

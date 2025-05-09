@@ -1,6 +1,4 @@
-﻿using Hubcon.Core.Converters;
-using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
+﻿using Hubcon.Core.Abstractions.Interfaces;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Text.Json;
 
@@ -10,7 +8,7 @@ namespace Hubcon.SignalR.Extensions
     {
         public static async Task<IAsyncEnumerable<T>> StreamAsync<T>(
             this HubConnection connection, 
-            MethodInvokeRequest request,
+            IMethodInvokeRequest request,
             IDynamicConverter converter, 
             CancellationToken cancellationToken)
         {

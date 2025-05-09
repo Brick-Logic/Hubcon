@@ -1,4 +1,4 @@
-﻿using Hubcon.Core.Models;
+﻿using Hubcon.Core.Abstractions.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +16,7 @@ namespace Hubcon.GraphQL.Data
     //    }
     //}
 
-    public interface IGraphMethodResponse : IMethodResponse
+    public interface IGraphMethodResponse : IObjectMethodResponse
     {
         [GraphQLType(typeof(AnyType))]
         public new object? Data { get; set; }

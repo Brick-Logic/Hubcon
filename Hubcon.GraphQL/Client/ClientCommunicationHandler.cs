@@ -1,24 +1,23 @@
-﻿using Hubcon.Core.Models;
-using Hubcon.Core.Models.Exceptions;
-using Hubcon.Core.Models.Interfaces;
-using Hubcon.GraphQL.Models;
+﻿using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Exceptions;
+using Hubcon.Core.Invocation;
 using System.Reflection;
 using System.Text.Json;
 
-namespace Hubcon.SignalR.Client
+namespace Hubcon.GraphQL.Client
 {
     public class ClientCommunicationHandler : ICommunicationHandler
     {
-        private readonly IHubconGraphQLClient _client;
+        private readonly IHubconClient _client;
         private readonly IDynamicConverter _converter;
 
-        public ClientCommunicationHandler(IHubconGraphQLClient client, IDynamicConverter converter)
+        public ClientCommunicationHandler(IHubconClient client, IDynamicConverter converter)
         {
             _client = client;
             _converter = converter;
         }
 
-        public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task<IMethodResponse<JsonElement>> InvokeAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             try
             {
@@ -33,12 +32,11 @@ namespace Hubcon.SignalR.Client
             }
             catch (Exception ex)
             {
-                // logging
                 throw new HubconGenericException(ex.Message);
             }
         }
 
-        public async Task CallAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task CallAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             try
             {
@@ -51,12 +49,11 @@ namespace Hubcon.SignalR.Client
             }
             catch (Exception ex)
             {
-                // logging
                 throw new HubconGenericException(ex.Message);
             }
         }
 
-        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             try
             {

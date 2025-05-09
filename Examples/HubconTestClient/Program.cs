@@ -1,16 +1,13 @@
 ﻿using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
-using Hubcon.Core;
-using Hubcon.Core.Models.Interfaces;
-using Hubcon.GraphQL.Client;
+using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.GraphQL.Injection;
-using Hubcon.GraphQL.Models;
+using Hubcon.Core.Builders;
 using HubconTestDomain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
 
 namespace HubconTestClient
 {

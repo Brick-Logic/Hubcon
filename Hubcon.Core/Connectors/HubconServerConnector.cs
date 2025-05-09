@@ -1,21 +1,10 @@
 ﻿using Autofac;
-using Autofac.Core;
 using Castle.DynamicProxy;
-using Hubcon.Core.Injectors;
-using Hubcon.Core.Injectors.Attributes;
-using Hubcon.Core.Interceptors;
-using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Registries;
-using Hubcon.Core.Tools;
-using Microsoft.Extensions.DependencyInjection;
+using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.Core.Connectors
 {
-    public interface IServerConnector
-    {
-        public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : IControllerContract;
-    }
-
     /// <summary>
     /// The ServerHubConnector allows a client to connect itself to a ServerHub and control its methods given its URL and
     /// the server's interface.

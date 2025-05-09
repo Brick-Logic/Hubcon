@@ -1,7 +1,6 @@
-﻿using Castle.DynamicProxy;
+﻿using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
 using Hubcon.Core.Interceptors;
-using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Registries;
 using Hubcon.Core.Tools;
 
 namespace Hubcon.Core.Connectors

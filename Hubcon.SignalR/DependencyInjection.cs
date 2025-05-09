@@ -1,8 +1,8 @@
 ﻿using Autofac;
-using Hubcon.Core;
+using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Builders;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Extensions;
-using Hubcon.Core.Models.Interfaces;
 using Hubcon.SignalR.HubActivator;
 using Hubcon.SignalR.Server;
 using Microsoft.AspNetCore.Builder;

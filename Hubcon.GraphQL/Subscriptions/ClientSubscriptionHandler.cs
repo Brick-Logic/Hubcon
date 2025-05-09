@@ -1,6 +1,9 @@
 ﻿using Castle.Core.Internal;
-using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Abstractions.Enums;
+using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
+using Hubcon.Core.Invocation;
+using Hubcon.Core.Subscriptions;
 using Hubcon.GraphQL.Models;
 using System.Reflection;
 using System.Text.Json;
@@ -10,7 +13,7 @@ namespace Hubcon.GraphQL.Subscriptions
     public class ClientSubscriptionHandler : ISubscription
     {
         public event HubconEventHandler? OnEventReceived;
-        private readonly IHubconGraphQLClient _client;
+        private readonly IHubconClient _client;
         private readonly IDynamicConverter _converter;
         private CancellationTokenSource _tokenSource;
 
@@ -20,7 +23,7 @@ namespace Hubcon.GraphQL.Subscriptions
 
         public PropertyInfo Property { get; } = null!;
 
-        public ClientSubscriptionHandler(IHubconGraphQLClient client, IDynamicConverter converter)
+        public ClientSubscriptionHandler(IHubconClient client, IDynamicConverter converter)
         {
             _client = client;
             _converter = converter;

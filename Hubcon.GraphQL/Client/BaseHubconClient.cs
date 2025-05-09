@@ -1,7 +1,5 @@
-﻿using Hubcon.Core.Connectors;
-using Hubcon.Core.Models.Interfaces;
-using Hubcon.GraphQL.Models;
-using Hubcon.SignalR.Client;
+﻿using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.GraphQL.Client

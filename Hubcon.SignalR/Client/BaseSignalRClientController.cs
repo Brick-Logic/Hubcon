@@ -1,11 +1,10 @@
 ﻿using Autofac;
+using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
 using Hubcon.Core.Connectors;
-using Hubcon.Core.Converters;
 using Hubcon.Core.Extensions;
-using Hubcon.Core.MethodHandling;
-using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Models.Pipeline.Interfaces;
+using Hubcon.Core.Invocation;
+using Hubcon.Core.Subscriptions;
 using Hubcon.SignalR.Server;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
@@ -16,7 +15,7 @@ using System.Threading.Channels;
 
 namespace Hubcon.SignalR.Client
 {
-    public abstract class BaseSignalRClientController : IHubconEntrypoint
+    public abstract class BaseSignalRClientController
     {
         protected string _url = string.Empty;
         protected CancellationToken _token;
@@ -53,19 +52,19 @@ namespace Hubcon.SignalR.Client
             if (IsBuilt)
                 return;
 
-            serviceProvider = Hubcon.Core.DependencyInjection.CreateHubconServiceProvider(this, container =>
-            {
-                container.RegisterWithInjector(x => x.RegisterInstance
-                (
-                    new HubConnectionBuilder()
-                        .WithUrl(url)
-                        .WithAutomaticReconnect()
-                        .Build()
+            //serviceProvider = Hubcon.Core.Builders.DependencyInjection.CreateHubconServiceProvider(this, container =>
+            //{
+            //    container.RegisterWithInjector(x => x.RegisterInstance
+            //    (
+            //        new HubConnectionBuilder()
+            //            .WithUrl(url)
+            //            .WithAutomaticReconnect()
+            //            .Build()
 
-                    ).As(typeof(HubConnection)).AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(SignalRClientCommunicationHandler<>)).AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterInstance(this).As(GetType()).AsSingleton());
-            }, options);
+            //        ).As(typeof(HubConnection)).AsSingleton())
+            //        .RegisterWithInjector(x => x.RegisterGeneric(typeof(SignalRClientCommunicationHandler<>)).AsSingleton())
+            //        .RegisterWithInjector(x => x.RegisterInstance(this).As(GetType()).AsSingleton());
+            //}, options);
 
             lifetimeScope = serviceProvider.GetRequiredService<ILifetimeScope>();
             hub = serviceProvider.GetRequiredService<HubConnection>();
@@ -81,7 +80,7 @@ namespace Hubcon.SignalR.Client
             _url = url;
 
 
-            _invokerProvider.OnMethodRegistered += ((MethodDescriptor descriptor) =>
+            _invokerProvider.OnMethodRegistered += ((IMethodDescriptor descriptor) =>
             {
                 if (typeof(IAsyncEnumerable<>).IsAssignableFrom(descriptor.InternalMethodInfo.ReturnType))
                     hub?.On($"{nameof(StartStream)}", (Func<string, MethodInvokeRequest, Task>)StartStream);
@@ -110,7 +109,7 @@ namespace Hubcon.SignalR.Client
             where TICommunicationContract : IControllerContract
 
         {
-            Type connectorType = typeof(HubconServerConnector<>).MakeGenericType(GetType(), typeof(SignalRClientCommunicationHandler<HubConnection>));
+            Type connectorType = typeof(IHubconServerConnector<>).MakeGenericType(GetType(), typeof(SignalRClientCommunicationHandler<HubConnection>));
             IServerConnector connector = (IServerConnector)serviceProvider.GetRequiredService(connectorType)!;
             return connector.GetClient<TICommunicationContract>();
         }
@@ -220,9 +219,9 @@ namespace Hubcon.SignalR.Client
             return runningTask ?? Task.CompletedTask;
         }
 
-        public async Task<BaseJsonResponse> HandleMethodTask(MethodInvokeRequest info) => await GetControllerManager().Pipeline!.HandleWithResultAsync(info);
-        public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest info) => await GetControllerManager().Pipeline!.HandleWithoutResultAsync(info);
-        public async Task<IResponse> StartStream(string methodCode, MethodInvokeRequest info)
+        public async Task<IMethodResponse<JsonElement>> HandleMethodTask(IMethodInvokeRequest info) => await GetControllerManager().Pipeline!.HandleWithResultAsync(info);
+        public async Task<IResponse> HandleMethodVoid(IMethodInvokeRequest info) => await GetControllerManager().Pipeline!.HandleWithoutResultAsync(info);
+        public async Task<IResponse> StartStream(string methodCode, IMethodInvokeRequest info)
         {
             var reader = HubconController.Pipeline!.GetStream(info);
             var channel = Channel.CreateUnbounded<object>();
@@ -242,7 +241,7 @@ namespace Hubcon.SignalR.Client
             return new BaseMethodResponse(true);
         }
         
-        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest info)
+        public IAsyncEnumerable<JsonElement?> HandleMethodStream(IMethodInvokeRequest info)
         {
             throw new NotImplementedException();
         }
@@ -252,18 +251,13 @@ namespace Hubcon.SignalR.Client
             
         }
 
-        public IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request)
+        public IAsyncEnumerable<JsonElement?> HandleSubscription(ISubscriptionRequest request)
         {
             throw new NotImplementedException();
         }
     }
 
-    public class BaseSignalRClientController<TICommunicationContract> : BaseSignalRClientController,  IHubconClientController<SignalRClientCommunicationHandler<HubConnection>>
+    public class BaseSignalRClientController<TICommunicationContract> : BaseSignalRClientController/*,  IHubconClientController<SignalRClientCommunicationHandler<HubConnection>>*/
         where TICommunicationContract : IControllerContract
     {
         private TICommunicationContract? _server;

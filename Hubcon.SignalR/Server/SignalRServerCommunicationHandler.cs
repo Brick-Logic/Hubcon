@@ -1,11 +1,9 @@
-﻿using Hubcon.Core.Injectors.Attributes;
-using Hubcon.Core.MethodHandling;
-using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Tools;
+﻿using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Attributes;
+using Hubcon.Core.Invocation;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
+using System.Text.Json;
 
 namespace Hubcon.SignalR.Server
 {
@@ -19,18 +17,18 @@ namespace Hubcon.SignalR.Server
         private Type hubType { get => hubContext.GetType().GetGenericArguments()[0]; }
 
         [HubconInject]
-        private StreamNotificationHandler streamNotificationHandler { get; }
+        private IStreamNotificationHandler streamNotificationHandler { get; }
 
-        public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken) 
+        public async Task<IMethodResponse<JsonElement>> InvokeAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken) 
         { 
-            IMethodResponse result;
+            IMethodResponse<JsonElement> result;
             var client = hubContext.Clients.Client(TargetClientId);
 
-            result = await client.InvokeAsync<BaseMethodResponse>(request.MethodName!, request, cancellationToken);
+            result = await client.InvokeAsync<BaseJsonResponse>(request.MethodName!, request, cancellationToken);
             return result;                   
         }
 
-        public async Task CallAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task CallAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = hubContext.Clients.Client(TargetClientId);
 
@@ -42,7 +40,7 @@ namespace Hubcon.SignalR.Server
             return BaseHubController.GetClients(hubType).ToList();
         }
 
-        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = hubContext.Clients.Client(TargetClientId);
 

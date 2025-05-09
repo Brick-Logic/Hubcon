@@ -1,11 +1,9 @@
-﻿using Hubcon.Core.Handlers;
-using Hubcon.Core.Models.Interfaces;
+﻿using Hubcon.Core.Abstractions.Interfaces;
 
 namespace Hubcon.Core.Controllers
 {
     public class HubconControllerManager : IHubconControllerManager
     {
-        // Handlers
         public IControllerInvocationHandler Pipeline { get; set; }
         public ICommunicationHandler CommunicationHandler { get; }
 

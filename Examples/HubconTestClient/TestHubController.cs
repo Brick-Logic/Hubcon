@@ -1,8 +1,4 @@
-﻿using Hubcon.SignalR.Client;
-using HubconTestDomain;
-using System;
-
-namespace HubconTestClient
+﻿namespace HubconTestClient
 {
     //public class TestHubController : BaseSignalRClientController<IServerHubContract>, ITestClientController
     //{

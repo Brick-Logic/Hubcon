@@ -1,13 +1,10 @@
-using Hubcon.Core;
-using Hubcon.Core.Middleware;
-using Hubcon.Core.Middleware.DefaultMiddlewares;
-using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Middlewares.DefaultMiddlewares;
+using Hubcon.Core.Builders;
 using Hubcon.GraphQL.Injection;
-using Hubcon.SignalR;
 using HubconTest.Controllers;
 using HubconTestDomain;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Text;
@@ -57,7 +54,6 @@ namespace HubconTest
                 });
 
             builder.Services.AddAuthorization(); // también necesaria
-
 
             //builder.UseHubconSignalR();
             //builder.AddHubconController<TestSignalRController>(options =>

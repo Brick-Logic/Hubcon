@@ -1,8 +1,7 @@
 ﻿using Castle.DynamicProxy;
-using Hubcon.Core.Converters;
+using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Extensions;
-using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
+using Hubcon.Core.Invocation;
 
 namespace Hubcon.Core.Interceptors
 {

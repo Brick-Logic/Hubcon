@@ -1,5 +1,5 @@
-﻿using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
+﻿using Hubcon.Core.Abstractions.Enums;
+using Hubcon.Core.Abstractions.Interfaces;
 using System.Reflection;
 
 namespace Hubcon.GraphQL.Subscriptions

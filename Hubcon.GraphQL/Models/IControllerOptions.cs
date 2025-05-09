@@ -1,5 +1,5 @@
-﻿using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Models.Pipeline.Interfaces;
+﻿using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.GraphQL.Models
 {

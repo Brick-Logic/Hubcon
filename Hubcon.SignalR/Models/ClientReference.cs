@@ -1,4 +1,5 @@
-﻿using Hubcon.Core.Models.Interfaces;
+﻿using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.SignalR.Models
 {

@@ -1,10 +1,10 @@
-﻿using Hubcon.Core.Converters;
-using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
+﻿using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Invocation;
 using Hubcon.SignalR.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Reflection;
+using System.Text.Json;
 
 namespace Hubcon.SignalR.Client
 {
@@ -20,22 +20,22 @@ namespace Hubcon.SignalR.Client
             _converter = converter;
         }
 
-        public async Task<IMethodResponse> InvokeAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task<IMethodResponse<JsonElement>> InvokeAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = _hubFactory.Invoke();
 
             if (client.State != HubConnectionState.Connected) await client.StartAsync(cancellationToken);
 
-            return await client.InvokeAsync<BaseMethodResponse>(request.MethodName!, request, cancellationToken);
+            return await client.InvokeAsync<BaseJsonResponse>(request.MethodName!, request, cancellationToken);
         }
 
-        public async Task CallAsync(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task CallAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = _hubFactory.Invoke();
             await client.SendAsync(request.MethodName!, request, cancellationToken);
         }
         
-        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(MethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = _hubFactory.Invoke();
 

@@ -2,10 +2,10 @@
 using Castle.Core.Internal;
 using HotChocolate.Execution.Configuration;
 using HotChocolate.Language;
-using Hubcon.Core;
-using Hubcon.Core.Models;
-using Hubcon.Core.Models.Interfaces;
-using Hubcon.Core.Models.Pipeline.Interfaces;
+using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
+using Hubcon.Core.Builders;
+using Hubcon.Core.Invocation;
 using Hubcon.GraphQL.Data;
 using Hubcon.GraphQL.Models;
 using Hubcon.GraphQL.Models.CustomAttributes;
@@ -177,6 +177,8 @@ namespace Hubcon.GraphQL.Injection
                 return new NamedTypeNode("BaseJsonResponse");
             if (type == typeof(IResponse))
                 return new NamedTypeNode("IResponse");
+            if (type == typeof(IMethodResponse<JsonElement>))
+                return new NamedTypeNode("BaseJsonResponse");
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
             {
                 var inner = GetGraphQLOutputType(type.GetGenericArguments()[0]);
@@ -185,7 +187,7 @@ namespace Hubcon.GraphQL.Injection
 
             throw new NotSupportedException($"No se puede mapear el tipo de salida {type.Name}");
         }
-
+        
         private static ITypeNode GetGraphQLInputType(Type type)
         {
             if (type == typeof(string))
@@ -194,8 +196,6 @@ namespace Hubcon.GraphQL.Injection
                 return new NamedTypeNode("Int");
             if (type == typeof(JsonElement) || type == typeof(JsonElement?))
                 return new NamedTypeNode("JsonScalarType");
-            if (type == typeof(MethodInvokeRequest))
-                return new NamedTypeNode("MethodInvokeRequest");
 
             throw new NotSupportedException($"No se puede mapear el tipo de entrada {type.Name}");
         }

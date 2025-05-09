@@ -1,9 +1,10 @@
 ﻿using Autofac;
 using Autofac.Builder;
 using Castle.Core.Internal;
+using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Abstractions.Standard.Attributes;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
 using Hubcon.Core.Attributes;
-using Hubcon.Core.Injectors.Attributes;
-using Hubcon.Core.Models.Interfaces;
 using Hubcon.Core.Tools;
 using Microsoft.AspNetCore.Http;
 using Microsoft.CodeAnalysis;
