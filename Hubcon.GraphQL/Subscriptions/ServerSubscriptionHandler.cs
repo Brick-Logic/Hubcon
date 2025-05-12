@@ -4,29 +4,49 @@ using System.Reflection;
 
 namespace Hubcon.GraphQL.Subscriptions
 {
-    public class ServerSubscriptionHandler : ISubscription
+    public class ServerSubscriptionHandler<T> : ISubscription<T>
     {
         public PropertyInfo Property { get; } = null!;
 
 
         private SubscriptionState _connected = SubscriptionState.Emitter;
         public SubscriptionState Connected => _connected;
-        
 
-        public event HubconEventHandler? OnEventReceived;
+        public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
+
+        public event HubconEventHandler<object>? OnEventReceived;
 
         public ServerSubscriptionHandler()
         {
+            Handlers = new();
         }
 
-        public void AddHandler(HubconEventHandler handler)
+        public void AddHandler(HubconEventHandler<T> handler)
         {
-            OnEventReceived += handler;
+            HubconEventHandler<object> internalHandler = async (value) => await handler.Invoke((T?)value!);
+            Handlers[handler] = internalHandler;
+            OnEventReceived += internalHandler;
         }
 
-        public void RemoveHandler(HubconEventHandler handler)
+        public void AddGenericHandler(HubconEventHandler<object> handler)
         {
-            OnEventReceived -= handler;
+            HubconEventHandler<object> internalHandler = async (object? value) => await handler.Invoke((T?)value!);
+            Handlers[handler] = internalHandler;
+            OnEventReceived += internalHandler;
+        }
+
+        public void RemoveHandler(HubconEventHandler<T> handler)
+        {
+            var internalHandler = Handlers[handler];
+            OnEventReceived -= internalHandler;
+            Handlers.Remove(handler);
+        }
+
+        public void RemoveGenericHandler(HubconEventHandler<object> handler)
+        {
+            var internalHandler = Handlers[handler];
+            OnEventReceived -= internalHandler;
+            Handlers.Remove(handler);
         }
 
         public async Task Subscribe()
@@ -43,9 +63,14 @@ namespace Hubcon.GraphQL.Subscriptions
         {
         }
 
-        public void Emit(object? eventValue)
+        public void Emit(T? eventValue)
         {
             OnEventReceived?.Invoke(eventValue);
+        }
+
+        public void EmitGeneric(object? eventValue)
+        {
+            OnEventReceived?.Invoke((T?)eventValue);
         }
     }
 }

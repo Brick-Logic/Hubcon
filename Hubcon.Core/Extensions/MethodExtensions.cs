@@ -46,7 +46,7 @@ namespace Hubcon.Core.Extensions
 
                         var contract = prop.ReflectedType!.GetInterfaces().Find(x => x.IsAssignableTo(typeof(IControllerContract))).Name;
 
-                        ISubscriptionDescriptor? descriptor = null!;
+                        ISubscriptionDescriptor? descriptor = null;
                         var metadata = sub.GetSubscriptionMetadata(contract, prop.Name);
 
                         if (metadata != null && accessor?.HttpContext != null)
@@ -55,11 +55,11 @@ namespace Hubcon.Core.Extensions
                             {
                                 var token = JwtHelper.ExtractTokenFromHeader(accessor?.HttpContext);
                                 var userId = JwtHelper.GetUserId(token);
-                                descriptor = sub?.GetHandler(userId!, contract, prop.Name);
+                                descriptor = sub.GetHandler(userId!, contract, prop.Name);
                             }
                             else if (metadata.HasCustomAttribute<AllowAnonymousAttribute>())
                             {
-                                descriptor ??= sub?.GetHandler("", contract, prop.Name);
+                                descriptor ??= sub.GetHandler("", contract, prop.Name);
                             }
                         }                        
 
@@ -77,7 +77,7 @@ namespace Hubcon.Core.Extensions
                             field?.SetValue(resolvedSubscription, prop);
                         }
 
-                        resolvedSubscription?.Build();
+                        resolvedSubscription.Build();
                     }
 
 

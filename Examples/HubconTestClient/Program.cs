@@ -53,9 +53,12 @@ namespace HubconTestClient
 
             Console.WriteLine("Conectando evento...");
 
-            void handler(object? input)
+            int eventosRecibidos = 0;
+
+            async Task handler(int input)
             {
                 Console.WriteLine($"Evento recibido: {input}");
+                Interlocked.Add(ref eventosRecibidos, 1);
             }
 
             client.OnUserCreated.AddHandler(handler);
@@ -68,14 +71,14 @@ namespace HubconTestClient
             var temp = await client.GetTemperatureFromServer();
             Console.WriteLine($"Datos recibidos: {temp}");
             Console.ReadKey();
-            
+
             Console.WriteLine("Enviando request...");
             await client.CreateUser();
             Console.WriteLine($"Request enviado, respuesta recibida.");
             Console.ReadKey();
 
             Console.WriteLine("Enviando request...");
-            await foreach(var item in client.GetMessages(10))
+            await foreach (var item in client.GetMessages(10))
             {
                 Console.WriteLine($"Respuesta recibida: {item}");
             }
@@ -120,7 +123,7 @@ namespace HubconTestClient
             {
                 var avgRequestsPerSec = finishedRequestsCount - lastRequests;
                 var nanosecs = (double)sw.ElapsedTicks / Stopwatch.Frequency * 1_000;
-                Console.WriteLine($"Requests: {finishedRequestsCount}. Avg requests/s:{avgRequestsPerSec}. Last request time: {nanosecs / avgRequestsPerSec}");
+                Console.WriteLine($"Requests: {finishedRequestsCount} | Avg requests/s:{avgRequestsPerSec} | Received events: {eventosRecibidos} | Avg request time: {nanosecs / avgRequestsPerSec}");
                 lastRequests = finishedRequestsCount;
                 sw.Restart();
             };

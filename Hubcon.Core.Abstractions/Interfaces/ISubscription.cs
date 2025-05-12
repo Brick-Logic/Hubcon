@@ -3,29 +3,67 @@ using System.Reflection;
 
 namespace Hubcon.Core.Abstractions.Interfaces
 {
-    public delegate void HubconEventHandler(object? eventValue);
+    //public delegate Task HubconEventHandler(object? eventValue);
+    public delegate Task HubconEventHandler<in T>(T? eventValue);
 
     public interface ISubscription
     {
-        public event HubconEventHandler? OnEventReceived;
         PropertyInfo Property { get; }
-        void Build();
-        Task Subscribe();
-        Task Unsubscribe();
-        public SubscriptionState Connected { get; }
-        public void AddHandler(HubconEventHandler handler);
-        public void RemoveHandler(HubconEventHandler handler);
-        public void Emit(object? eventValue);
 
-        public static ISubscription operator +(ISubscription handler, HubconEventHandler hubconEventHandler)
+        public void AddGenericHandler(HubconEventHandler<object> handler);
+        public void RemoveGenericHandler(HubconEventHandler<object> handler);
+        public void EmitGeneric(object? eventValue);
+
+        void Build();
+
+        public static ISubscription operator +(ISubscription handler, HubconEventHandler<object> hubconEventHandler)
         {
-            handler.OnEventReceived += hubconEventHandler;
+            handler.AddGenericHandler(hubconEventHandler);
             return handler;
         }
 
-        public static ISubscription operator -(ISubscription handler, HubconEventHandler hubconEventHandler)
+        public static ISubscription operator -(ISubscription handler, HubconEventHandler<object> hubconEventHandler)
         {
-            handler.OnEventReceived -= hubconEventHandler;
+            handler.RemoveGenericHandler(hubconEventHandler);
+            return handler;
+        }
+    }
+
+    public interface ISubscription<T> : ISubscription
+    {
+        public event HubconEventHandler<object>? OnEventReceived;
+        public SubscriptionState Connected { get; }
+
+        Task Subscribe();
+        Task Unsubscribe();
+
+        public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
+
+        public void AddHandler(HubconEventHandler<T> handler);
+        public void RemoveHandler(HubconEventHandler<T> handler);
+        public void Emit(T? eventValue);
+
+        public static ISubscription<T> operator +(ISubscription<T> handler, HubconEventHandler<T> hubconEventHandler)
+        {
+            handler.AddHandler(hubconEventHandler);
+            return handler;
+        }
+
+        public static ISubscription<T> operator +(ISubscription<T> handler, HubconEventHandler<object> hubconEventHandler)
+        {
+            handler.AddGenericHandler(hubconEventHandler);
+            return handler;
+        }
+
+        public static ISubscription<T> operator -(ISubscription<T> handler, HubconEventHandler<T> hubconEventHandler)
+        {
+            handler.RemoveHandler(hubconEventHandler);
+            return handler;
+        }
+
+        public static ISubscription<T> operator -(ISubscription<T> handler, HubconEventHandler<object> hubconEventHandler)
+        {
+            handler.RemoveGenericHandler(hubconEventHandler);
             return handler;
         }
     }

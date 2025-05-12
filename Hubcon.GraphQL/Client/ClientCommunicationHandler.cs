@@ -32,7 +32,7 @@ namespace Hubcon.GraphQL.Client
             }
             catch (Exception ex)
             {
-                throw new HubconGenericException(ex.Message);
+                throw new HubconGenericException(ex.Message, ex);
             }
         }
 

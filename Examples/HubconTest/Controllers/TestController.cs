@@ -7,7 +7,7 @@ namespace HubconTest.Controllers
     public class TestController : ITestContract
     {
         [AllowAnonymous]
-        public ISubscription? OnUserCreated { get; }
+        public ISubscription<int>? OnUserCreated { get; }
 
         public async Task<int> GetTemperatureFromServer() 
             => await Task.Run(() => new Random().Next(-10, 50));
@@ -29,7 +29,8 @@ namespace HubconTest.Controllers
         //[Authorize(Roles = ["Admin"])]
         public async Task CreateUser()
         {
-            OnUserCreated?.Emit(Random.Shared.Next(-10, 50));
+            var number = Random.Shared.Next(-10, 50);
+            OnUserCreated?.Emit(number);
             await Task.CompletedTask;
         }
 

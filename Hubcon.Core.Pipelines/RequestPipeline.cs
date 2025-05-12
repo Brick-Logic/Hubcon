@@ -146,7 +146,7 @@ namespace Hubcon.Core.Pipelines
 
                 if (subDescriptor == null)
                 {
-                    var subscription = _serviceProvider.GetRequiredService<ISubscription>();
+                    var subscription = (ISubscription)_serviceProvider.GetRequiredService(info.PropertyType);
 
                     subDescriptor = _subscriptionRegistry.RegisterHandler(clientId, request.ContractName, request.SubscriptionName, subscription);
                 }
@@ -167,10 +167,10 @@ namespace Hubcon.Core.Pipelines
 
                 if (subDescriptor == null)
                 {
-                    var subscription = _serviceProvider.GetRequiredService<ISubscription>();
+                    var subscription = (ISubscription)_serviceProvider.GetRequiredService(info.PropertyType);
 
                     if (subscription is null)
-                        throw new InvalidOperationException($"No se encontró un servicio que implemente la interfaz {nameof(ISubscription)}.");
+                        throw new InvalidOperationException($"No se encontró ningun servicio de suscripción.");
 
 
                     subDescriptor = _subscriptionRegistry.RegisterHandler(userId, request.ContractName, request.SubscriptionName, subscription);
@@ -179,7 +179,7 @@ namespace Hubcon.Core.Pipelines
 
             var observer = new AsyncObserver<object>();
 
-            HubconEventHandler hubconEventHandler = async (eventValue) =>
+            HubconEventHandler<object> hubconEventHandler = async (eventValue) =>
             {
                 try
                 {
@@ -193,7 +193,7 @@ namespace Hubcon.Core.Pipelines
 
             try
             {
-                subDescriptor.Subscription.AddHandler(hubconEventHandler);
+                subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
                 await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
                 {
                     yield return _converter.SerializeObject(newEvent);
@@ -201,8 +201,7 @@ namespace Hubcon.Core.Pipelines
             }
             finally
             {
-                _subscriptionRegistry.RemoveHandler(clientId, request.ContractName, request.SubscriptionName);
-                subDescriptor.Subscription.RemoveHandler(hubconEventHandler);
+                subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
             }
         }
 

@@ -27,14 +27,11 @@ namespace Hubcon.Core.Subscriptions
 
             DescriptorSignature = sourceProperty.Name;
             ContractName = contractName;
+            
+            Authorizations = sourceProperty.GetCustomAttributes<AuthorizeAttribute>().ToList();
 
-            if (sourceProperty != null)
-            {
-                Authorizations = sourceProperty.GetCustomAttributes<AuthorizeAttribute>().ToList();
-
-                if (Authorizations.Count > 0) 
-                    NeedsAuthorization = true;
-            }
+            if (Authorizations.Count > 0) 
+                NeedsAuthorization = true;      
         }
     }
 }

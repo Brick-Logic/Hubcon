@@ -10,9 +10,9 @@ using System.Text.Json;
 
 namespace Hubcon.GraphQL.Subscriptions
 {
-    public class ClientSubscriptionHandler : ISubscription
+    public class ClientSubscriptionHandler<T> : ISubscription<T>
     {
-        public event HubconEventHandler? OnEventReceived;
+        public event HubconEventHandler<object>? OnEventReceived;
         private readonly IHubconClient _client;
         private readonly IDynamicConverter _converter;
         private CancellationTokenSource _tokenSource;
@@ -23,21 +23,42 @@ namespace Hubcon.GraphQL.Subscriptions
 
         public PropertyInfo Property { get; } = null!;
 
+        public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
+
         public ClientSubscriptionHandler(IHubconClient client, IDynamicConverter converter)
         {
             _client = client;
             _converter = converter;
             _tokenSource = new CancellationTokenSource();
+            Handlers = new(); 
         }
 
-        public void AddHandler(HubconEventHandler handler)
+        public void AddHandler(HubconEventHandler<T> handler)
         {
-            OnEventReceived += handler;
+            HubconEventHandler<object> internalHandler = async (value) => await handler.Invoke((T?)value!);
+            Handlers[handler] = internalHandler;
+            OnEventReceived += internalHandler;
         }
 
-        public void RemoveHandler(HubconEventHandler handler)
+        public void AddGenericHandler(HubconEventHandler<object> handler)
         {
-            OnEventReceived -= handler;
+            HubconEventHandler<object> internalHandler = async (object? value) => await handler.Invoke((T?)value!);
+            Handlers[handler] = internalHandler;
+            OnEventReceived += internalHandler;
+        }
+
+        public void RemoveHandler(HubconEventHandler<T> handler)
+        {
+            var internalHandler = Handlers[handler];
+            OnEventReceived -= internalHandler;
+            Handlers.Remove(handler);
+        }
+
+        public void RemoveGenericHandler(HubconEventHandler<object> handler)
+        {
+            var internalHandler = Handlers[handler];
+            OnEventReceived -= internalHandler;
+            Handlers.Remove(handler);
         }
 
         public async Task Subscribe()
@@ -76,7 +97,7 @@ namespace Hubcon.GraphQL.Subscriptions
 
                         while (await enumerator.MoveNextAsync())
                         {
-                            var result = _converter.DeserializeJsonElement<object>(enumerator.Current);
+                            var result = _converter.DeserializeJsonElement<T>(enumerator.Current);
                             OnEventReceived?.Invoke(result);
                         };
                     }
@@ -105,9 +126,14 @@ namespace Hubcon.GraphQL.Subscriptions
         {
         }
 
-        public void Emit(object? eventValue)
+        public void Emit(T? eventValue)
         {
             OnEventReceived?.Invoke(eventValue);
+        }
+
+        public void EmitGeneric(object? eventValue)
+        {
+            OnEventReceived?.Invoke((T?)eventValue);
         }
     }
 }

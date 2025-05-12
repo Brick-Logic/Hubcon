@@ -53,8 +53,8 @@ namespace Hubcon.GraphQL.Injection
                     .AsScoped());
 
                 container.RegisterWithInjector(x => x
-                    .RegisterType(typeof(ServerSubscriptionHandler))
-                    .As(typeof(ISubscription))
+                    .RegisterGeneric(typeof(ServerSubscriptionHandler<>))
+                    .As(typeof(ISubscription<>))
                     .AsTransient());
 
                 container.RegisterWithInjector(x => x
@@ -90,8 +90,8 @@ namespace Hubcon.GraphQL.Injection
                     .AsSingleton());
 
                 container.RegisterWithInjector(x => x
-                    .RegisterType(typeof(ClientSubscriptionHandler))
-                    .As(typeof(ISubscription))
+                    .RegisterGeneric(typeof(ClientSubscriptionHandler<>))
+                    .As(typeof(ISubscription<>))
                     .AsTransient());
             });
 
