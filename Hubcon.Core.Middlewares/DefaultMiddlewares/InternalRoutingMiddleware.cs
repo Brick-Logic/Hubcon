@@ -51,7 +51,7 @@ namespace Hubcon.Core.Middlewares.DefaultMiddlewares
 
                     if (subDescriptor == null)
                     {
-                        var subscription = context.RequestServices.GetRequiredService<ISubscription>();
+                        var subscription = (ISubscription)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
 
                         subDescriptor = liveSubscriptionRegistry.RegisterHandler(clientId, request.ContractName, request.OperationName, subscription);
                     }
@@ -72,7 +72,7 @@ namespace Hubcon.Core.Middlewares.DefaultMiddlewares
 
                     if (subDescriptor == null)
                     {
-                        var subscription = context.RequestServices.GetRequiredService<ISubscription>();
+                        var subscription = (ISubscription)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
 
                         if (subscription is null)
                             throw new InvalidOperationException($"No se encontró un servicio que implemente la interfaz {nameof(ISubscription)}.");
@@ -84,7 +84,7 @@ namespace Hubcon.Core.Middlewares.DefaultMiddlewares
 
                 var observer = new AsyncObserver<object>();
 
-                HubconEventHandler hubconEventHandler = async (eventValue) =>
+                HubconEventHandler<object> hubconEventHandler = async (eventValue) =>
                 {
                     try
                     {
@@ -100,7 +100,7 @@ namespace Hubcon.Core.Middlewares.DefaultMiddlewares
                 {
                     try
                     {
-                        subDescriptor.Subscription.AddHandler(hubconEventHandler);
+                        subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
                         await foreach (var newEvent in observer.GetAsyncEnumerable(context.RequestAborted))
                         {
                             yield return dynamicConverter.SerializeObject(newEvent);
@@ -109,7 +109,7 @@ namespace Hubcon.Core.Middlewares.DefaultMiddlewares
                     finally
                     {
                         liveSubscriptionRegistry.RemoveHandler(clientId, request.ContractName, request.OperationName);
-                        subDescriptor.Subscription.RemoveHandler(hubconEventHandler);
+                        subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
                     };
                 };
 

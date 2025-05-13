@@ -28,12 +28,12 @@ namespace HubconTest
 
             builder.AddHubconGraphQL(controllerOptions =>
             {
-                controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
+                //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
                 controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
 
                 controllerOptions.AddController<TestController>(controllerMiddlewares =>
                 {
-                    controllerMiddlewares.AddMiddleware<LocalLoggingMiddleware>();
+                    //controllerMiddlewares.AddMiddleware<LocalLoggingMiddleware>();
                     controllerMiddlewares.UseGlobalMiddlewaresFirst(true);
                 });
             });

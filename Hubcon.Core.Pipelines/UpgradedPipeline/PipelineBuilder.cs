@@ -161,7 +161,7 @@ namespace Hubcon.Core.Pipelines.UpgradedPipeline
                     currentDelegate = async () =>
                     {
                         var middleware = (IInternalRoutingMiddleware)serviceProvider.GetRequiredService(middlewareType);
-                        await middleware.Execute(request, context, resultHandler,  next);
+                        await middleware.Execute(request, context, resultHandler, next);
                     };
                 }
                 else

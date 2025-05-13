@@ -5,7 +5,7 @@ namespace Hubcon.GraphQL.TypeResolvers
 {
     public class SubscriptionRequestResolver
     {
-        public ISubscriptionRequest ResolveISubscriptionRequest(SubscriptionRequest request)
+        public IOperationRequest ResolveISubscriptionRequest(SubscriptionRequest request)
         {
             return request;
         }
