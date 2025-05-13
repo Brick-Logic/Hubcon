@@ -17,7 +17,7 @@ namespace Hubcon.GraphQL.Client
             _converter = converter;
         }
 
-        public async Task<IMethodResponse<JsonElement>> InvokeAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task<IOperationResponse<JsonElement>> InvokeAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             try
             {
@@ -25,7 +25,7 @@ namespace Hubcon.GraphQL.Client
 
                 if (!response.Success)
                 {
-                    throw new HubconRemoteException($"Server message: {response.Data}");
+                    throw new HubconRemoteException($"Server message: {response.Error}");
                 }
 
                 return response;
@@ -36,7 +36,7 @@ namespace Hubcon.GraphQL.Client
             }
         }
 
-        public async Task CallAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             try
             {
@@ -44,7 +44,7 @@ namespace Hubcon.GraphQL.Client
 
                 if (!response.Success)
                 {
-                    throw new HubconRemoteException($"Server message: {response.Data}");
+                    throw new HubconRemoteException($"Server message: {response.Error}");
                 }
             }
             catch (Exception ex)
@@ -53,7 +53,7 @@ namespace Hubcon.GraphQL.Client
             }
         }
 
-        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             try
             {

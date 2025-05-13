@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Text;
+using Hubcon.Core.Builders.Extensions;
+using HubconTest.Middlewares;
 
 namespace HubconTest
 {
@@ -26,16 +28,16 @@ namespace HubconTest
 
             builder.AddHubconGraphQL(controllerOptions =>
             {
-                controllerOptions.AddGlobalMiddleware<LoggingMiddleware>();
-                controllerOptions.AddGlobalMiddleware<AuthenticationMiddleware>();
+                controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
+                controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
 
                 controllerOptions.AddController<TestController>(controllerMiddlewares =>
                 {
-                    //controllerMiddlewares.AddMiddleware<LoggingMiddleware>();
+                    controllerMiddlewares.AddMiddleware<LocalLoggingMiddleware>();
+                    controllerMiddlewares.UseGlobalMiddlewaresFirst(true);
                 });
             });
 
-            builder.Services.AddHttpContextAccessor();
             builder.UseContractsFromAssembly(nameof(HubconTestDomain));
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -53,13 +55,7 @@ namespace HubconTest
                     };
                 });
 
-            builder.Services.AddAuthorization(); // también necesaria
-
-            //builder.UseHubconSignalR();
-            //builder.AddHubconController<TestSignalRController>(options =>
-            //{
-            //    options.AddMiddleware<LoggingMiddleware>();
-            //});
+            builder.Services.AddAuthorization();
 
             var app = builder.Build();
 
@@ -73,33 +69,8 @@ namespace HubconTest
             app.UseAuthorization();
 
             app.MapControllers();
-            //app.MapHub<TestSignalRController>("/clienthub");
 
-            app.MapHubconControllers();
             app.MapHubconGraphQL("/graphql");
-
-            //app.MapHubconRestControllers();
-
-            //Just a test endpoint, it can also be injected in a controller.
-            app.MapGet("/test", async (IClientAccessor<ITestClientController> clientAccessor) =>
-            {
-                // Getting some connected clientId
-                var clientId = clientAccessor.GetAllClients().FirstOrDefault()!;
-
-                //Gets a client instance
-                var client = clientAccessor.GetOrCreateClient(clientId);
-
-                Console.WriteLine(await client.GetTemperature());
-
-                //var test = client.ShowAndReturnMessage("hello");
-
-                //var messages = client.GetMessages(10);
-
-                //await foreach (var item in messages)
-                //{
-                //    Console.WriteLine(item);
-                //}
-            });
 
             app.Run();
         }

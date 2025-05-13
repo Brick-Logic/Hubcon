@@ -7,7 +7,7 @@ namespace Hubcon.Core.Invocation
 {
     public interface IBaseHubconController
     {
-        Task<IMethodResponse<JsonElement>> HandleMethodTask(MethodInvokeRequest request);
+        Task<IOperationResponse<JsonElement>> HandleMethodTask(MethodInvokeRequest request);
         Task<IResponse> HandleMethodVoid(MethodInvokeRequest request);
         public IHubconControllerManager HubconController { get; }
     }

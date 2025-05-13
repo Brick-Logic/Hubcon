@@ -18,14 +18,16 @@ namespace Hubcon.GraphQL.Injection
 {
     public class ControllerOptions : IControllerOptions
     {
-        public ControllerOptions(IRequestExecutorBuilder executorBuilder, WebApplicationBuilder builder)
+        public ControllerOptions(IRequestExecutorBuilder executorBuilder, WebApplicationBuilder builder, HubconBuilder hubconBuilder)
         {
             ExecutorBuilder = executorBuilder;
             Builder = builder;
+            HubconBuilder = hubconBuilder;
         }
 
         public IRequestExecutorBuilder ExecutorBuilder { get; }
         public WebApplicationBuilder Builder { get; }
+        public HubconBuilder HubconBuilder { get; }
 
         public void SetEntrypoint(Type controllerType)
         {
@@ -177,7 +179,7 @@ namespace Hubcon.GraphQL.Injection
                 return new NamedTypeNode("BaseJsonResponse");
             if (type == typeof(IResponse))
                 return new NamedTypeNode("IResponse");
-            if (type == typeof(IMethodResponse<JsonElement>))
+            if (type == typeof(IOperationResponse<JsonElement>))
                 return new NamedTypeNode("BaseJsonResponse");
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
             {
@@ -200,26 +202,25 @@ namespace Hubcon.GraphQL.Injection
             throw new NotSupportedException($"No se puede mapear el tipo de entrada {type.Name}");
         }
 
-
         public void AddGlobalMiddleware<T>()
         {
-            Builder.AddGlobalMiddleware<T>();
+            HubconBuilder.AddGlobalMiddleware<T>();
         }
 
         public void AddGlobalMiddleware(Type middlewareType)
         {
-            Builder.AddGlobalMiddleware(middlewareType);
+            HubconBuilder.AddGlobalMiddleware(middlewareType);
         }
 
         public void AddController<T>(Action<IMiddlewareOptions>? options = null) where T : class, IControllerContract
         {
-            Builder.AddHubconController<T>(options);
+            HubconBuilder.AddHubconController<T>(Builder, options);
         }
 
 
         public void AddController(Type controllerType, Action<IMiddlewareOptions>? options = null)
         {
-            Builder.AddHubconController(controllerType, options);
+            HubconBuilder.AddHubconController(Builder, controllerType, options);
         }
     }
 }

@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.Abstractions.TypeBindings
 {
-    public class MethodResponseBinding : ObjectType<IMethodResponse<JsonElement>>
+    public class MethodResponseBinding : ObjectType<IOperationResponse<JsonElement>>
     {
-        protected override void Configure(IObjectTypeDescriptor<IMethodResponse<JsonElement>> descriptor)
+        protected override void Configure(IObjectTypeDescriptor<IOperationResponse<JsonElement>> descriptor)
         {
             descriptor.Name("IMethodResponse");
             descriptor.Field(x => x.Success).Type<BooleanType>();

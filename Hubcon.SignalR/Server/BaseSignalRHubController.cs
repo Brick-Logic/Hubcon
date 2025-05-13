@@ -45,7 +45,7 @@ namespace Hubcon.SignalR.Server
         [HubconInject]
         public ILifetimeScope ServiceProvider { get; }
 
-        public async Task<IMethodResponse<JsonElement>> HandleMethodTask(MethodInvokeRequest info) 
+        public async Task<IOperationResponse<JsonElement>> HandleMethodTask(MethodInvokeRequest info) 
             => await HubconController.Pipeline.HandleWithResultAsync(info);
         public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest info) 
             => await HubconController.Pipeline.HandleWithoutResultAsync(info);

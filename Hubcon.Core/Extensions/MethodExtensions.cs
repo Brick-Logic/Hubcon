@@ -40,7 +40,7 @@ namespace Hubcon.Core.Extensions
                         continue;
                     object? resolved = null!;
 
-                    if (prop.PropertyType.IsAssignableTo(typeof(ISubscription)) && e.Context.ResolveOptional<ISubscriptionRegistry>() is ISubscriptionRegistry sub)
+                    if (prop.PropertyType.IsAssignableTo(typeof(ISubscription)) && e.Context.ResolveOptional<ILiveSubscriptionRegistry>() is ILiveSubscriptionRegistry sub)
                     {
                         var accessor = e.Context.ResolveOptional<IHttpContextAccessor>();
 

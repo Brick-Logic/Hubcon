@@ -16,7 +16,7 @@ namespace Hubcon.GraphQL.Data
     //    }
     //}
 
-    public interface IGraphMethodResponse : IObjectMethodResponse
+    public interface IGraphMethodResponse : IObjectOperationResponse
     {
         [GraphQLType(typeof(AnyType))]
         public new object? Data { get; set; }

@@ -7,17 +7,17 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.Abstractions.Interfaces
 {
-    public interface IMethodResponse : IResponse
+    public interface IOperationResult : IResponse
     {
         public object? Data { get; }
     }
 
-    public interface IMethodResponse<T> : IMethodResponse
+    public interface IOperationResponse<T> : IOperationResult
     {
         public new T? Data { get; }
     }
 
-    public interface IObjectMethodResponse : IMethodResponse<object>, IResponse
+    public interface IObjectOperationResponse : IOperationResponse<object>, IOperationResult, IResponse
     {
     }
 }

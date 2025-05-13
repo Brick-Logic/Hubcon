@@ -1,16 +1,20 @@
 ﻿using Hubcon.Core.Abstractions.Interfaces;
+using System.Text.Json;
 
 namespace Hubcon.Core.Subscriptions
 {
-    public class SubscriptionRequest : ISubscriptionRequest
+    public class SubscriptionRequest : IOperationRequest
     {
         public string ContractName { get; }
-        public string SubscriptionName { get; }
+        public string OperationName { get; }
 
-        public SubscriptionRequest(string subscriptionName, string contractName)
+        public IEnumerable<JsonElement?> Args { get; }
+
+        public SubscriptionRequest(string operationName, string contractName, IEnumerable<JsonElement?>? args = null)
         {
-            SubscriptionName = subscriptionName;
+            OperationName = operationName;
             ContractName = contractName;
+            Args = args ?? Array.Empty<JsonElement?>();
         }
     }
 }

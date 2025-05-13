@@ -11,48 +11,50 @@ namespace Hubcon.Core.Middlewares.DefaultMiddlewares
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
-        private readonly IMethodDescriptorProvider _methodDescriptorProvider;
 
-        public AuthenticationMiddleware(IHttpContextAccessor accessor, IAuthorizationService authService, IMethodDescriptorProvider methodDescriptorProvider)
+        public AuthenticationMiddleware(IHttpContextAccessor accessor, IAuthorizationService authService)
         {
             _httpContextAccessor = accessor;
             _authorizationService = authService;
-            _methodDescriptorProvider = methodDescriptorProvider;
         }
 
-        public async Task<IObjectMethodResponse?> Execute(IMethodInvokeRequest request, InvocationDelegate next)
+        public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
-            if (!_methodDescriptorProvider.GetMethodDescriptor(request, out IMethodDescriptor? value))
-                return new BaseMethodResponse(false, "Bad request");
-
-            if (value!.RequiresAuthorization)
+            if (context.Blueprint.RequiresAuthorization)
             {
                 var user = _httpContextAccessor.HttpContext?.User;
 
                 if (user?.Identity == null || !user.Identity.IsAuthenticated)
-                    return new BaseMethodResponse(false, "Access denied");
+                {
+                    context.Result = new BaseOperationResponse(false, "Access denied");
+                    return;
+                }
 
-                var authorizeAttributes = value.InternalMethodInfo.GetCustomAttributes<AuthorizeAttribute>();
-
-                foreach (var attr in authorizeAttributes)
+                foreach (var attr in context.Blueprint.AuthorizationAttributes)
                 {
                     if (!string.IsNullOrWhiteSpace(attr.Policy))
                     {
                         var result = await _authorizationService.AuthorizeAsync(user, null, attr.Policy);
                         if (!result.Succeeded)
-                            return new BaseMethodResponse(false, "Access denied");
+                        {
+                            context.Result = new BaseOperationResponse(false, "Access denied");
+                            return;
+                        }
                     }
 
                     if (!string.IsNullOrWhiteSpace(attr.Roles))
                     {
                         var roles = attr.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                         if (!roles.Any(user.IsInRole))
-                            return new BaseMethodResponse(false, "Access denied");
+                        {
+                            context.Result = new BaseOperationResponse(false, "Access denied");
+                            return;
+                        }
                     }
                 }
             }
 
-            return await next();
+            await next();
         }
     }
 }

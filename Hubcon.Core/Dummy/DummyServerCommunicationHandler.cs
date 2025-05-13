@@ -7,7 +7,7 @@ namespace Hubcon.Core.Dummy
 {
     public class DummyServerCommunicationHandler : IServerCommunicationHandler
     {
-        public Task CallAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             return Task.FromResult(0);
         }
@@ -17,12 +17,12 @@ namespace Hubcon.Core.Dummy
             return Array.Empty<IClientReference>().ToList();
         }
 
-        public async Task<IMethodResponse<JsonElement>> InvokeAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task<IOperationResponse<JsonElement>> InvokeAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             return await Task.FromResult(new BaseJsonResponse(true));
         }
 
-        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public Task<IAsyncEnumerable<T?>> StreamAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             return Task.FromResult<IAsyncEnumerable<T?>>(null!);
         }

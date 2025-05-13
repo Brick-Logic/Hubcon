@@ -4,35 +4,43 @@ namespace Hubcon.Core.Abstractions.Interfaces
 {
     public interface IMiddleware
     {
-        public Task<IObjectMethodResponse?> Execute(IMethodInvokeRequest request, InvocationDelegate next);
     }
 
-    public interface IExceptionMiddleware : IMiddleware
+    public interface IExecutableMiddleware : IMiddleware
     {
-
+        public Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next);
     }
 
-    public interface IAuthenticationMiddleware : IMiddleware
-    {
-
-    }
-
-    public interface ILoggingMiddleware : IMiddleware
-    {
-        public Task Execute(IMethodInvokeRequest request, IObjectMethodResponse response, Func<Task> next);
-    }
-
-    public interface IPreRequestMiddleware : IMiddleware
+    public interface IExceptionMiddleware : IExecutableMiddleware
     {
     }
 
-    public interface IPostRequestMiddleware : IMiddleware
+    public interface IInternalExceptionMiddleware : IExecutableMiddleware
     {
-        public Task<IObjectMethodResponse?> Execute(IMethodInvokeRequest request, IObjectMethodResponse response);
     }
 
-    public interface IResponseMiddleware : IMiddleware
+    public interface IAuthenticationMiddleware : IExecutableMiddleware
     {
-        public Task<IObjectMethodResponse?> Execute(IObjectMethodResponse response);
+    }
+
+    public interface ILoggingMiddleware : IExecutableMiddleware
+    {
+    }
+
+    public interface IPreRequestMiddleware : IExecutableMiddleware
+    {
+    }
+
+    public interface IInternalRoutingMiddleware : IMiddleware
+    {
+        public Task Execute(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, PipelineDelegate next);
+    }
+
+    public interface IPostRequestMiddleware : IExecutableMiddleware
+    {
+    }
+
+    public interface IResponseMiddleware : IExecutableMiddleware
+    {
     }
 }

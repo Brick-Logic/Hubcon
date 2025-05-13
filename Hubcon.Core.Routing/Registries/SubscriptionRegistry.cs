@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace Hubcon.Core.Routing.Registries
 {
-    public class SubscriptionRegistry : ISubscriptionRegistry
+    public class LiveSubscriptionRegistry : ILiveSubscriptionRegistry
     {
         private Dictionary<string, Dictionary<string, Dictionary<string, ISubscriptionDescriptor>>> _contractHandlers = new();
         private Dictionary<string, Dictionary<string, PropertyInfo>> _descriptorMetadata = new();

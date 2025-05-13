@@ -8,11 +8,11 @@ namespace Hubcon.SignalR.Extensions
     {
         public static async Task<IAsyncEnumerable<T>> StreamAsync<T>(
             this HubConnection connection, 
-            IMethodInvokeRequest request,
+            IOperationRequest request,
             IDynamicConverter converter, 
             CancellationToken cancellationToken)
         {
-            var stream = connection.StreamAsync<JsonElement>(request.MethodName!, request, cancellationToken);
+            var stream = connection.StreamAsync<JsonElement>(request.OperationName!, request, cancellationToken);
             return await Task.FromResult(converter.ConvertStream<T>(stream, cancellationToken));
         }
     }

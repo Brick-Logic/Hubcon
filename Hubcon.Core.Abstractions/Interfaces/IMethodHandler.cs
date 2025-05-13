@@ -2,15 +2,15 @@
 
 namespace Hubcon.Core.Abstractions.Interfaces
 {
-    public interface IControllerInvocationHandler
+    public interface IRequestHandler
     {
-        public Task<IResponse> HandleSynchronous(IMethodInvokeRequest request);
-        public Task<IResponse> HandleWithoutResultAsync(IMethodInvokeRequest request);
+        public Task<IResponse> HandleSynchronous(IOperationRequest request);
+        public Task<IResponse> HandleWithoutResultAsync(IOperationRequest request);
 
-        public Task<IMethodResponse<JsonElement>> HandleSynchronousResult(IMethodInvokeRequest request);
-        public Task<IMethodResponse<JsonElement>> HandleWithResultAsync(IMethodInvokeRequest request);
+        public Task<IOperationResponse<JsonElement>> HandleSynchronousResult(IOperationRequest request);
+        public Task<IOperationResponse<JsonElement>> HandleWithResultAsync(IOperationRequest request);
 
-        public IAsyncEnumerable<JsonElement?> GetStream(IMethodInvokeRequest request);
-        IAsyncEnumerable<JsonElement?> GetSubscription(ISubscriptionRequest request, CancellationToken cancellationToken = default);
+        public IAsyncEnumerable<JsonElement?> GetStream(IOperationRequest request);
+        IAsyncEnumerable<JsonElement?> GetSubscription(IOperationRequest request, CancellationToken cancellationToken = default);
     }
 }

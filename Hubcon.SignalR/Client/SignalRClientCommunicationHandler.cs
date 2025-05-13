@@ -20,22 +20,22 @@ namespace Hubcon.SignalR.Client
             _converter = converter;
         }
 
-        public async Task<IMethodResponse<JsonElement>> InvokeAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task<IOperationResponse<JsonElement>> InvokeAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = _hubFactory.Invoke();
 
             if (client.State != HubConnectionState.Connected) await client.StartAsync(cancellationToken);
 
-            return await client.InvokeAsync<BaseJsonResponse>(request.MethodName!, request, cancellationToken);
+            return await client.InvokeAsync<BaseJsonResponse>(request.OperationName!, request, cancellationToken);
         }
 
-        public async Task CallAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = _hubFactory.Invoke();
-            await client.SendAsync(request.MethodName!, request, cancellationToken);
+            await client.SendAsync(request.OperationName!, request, cancellationToken);
         }
         
-        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = _hubFactory.Invoke();
 

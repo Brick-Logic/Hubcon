@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.Invocation
 {
-    public class BaseMethodResponse : BaseResponse, IObjectMethodResponse, IResponse
+    public class BaseOperationResponse : BaseResponse, IObjectOperationResponse, IResponse
     {
         public object? Data { get; }
 
@@ -15,7 +15,7 @@ namespace Hubcon.Core.Invocation
 
         public override string? Error { get; }
 
-        public BaseMethodResponse(bool success, object? data = null, string? error = null)
+        public BaseOperationResponse(bool success, object? data = null, string? error = null)
         {
             Success = success;
             Data = data;
@@ -23,14 +23,14 @@ namespace Hubcon.Core.Invocation
         }
     }
 
-    public class BaseMethodResponse<T> : BaseResponse, IMethodResponse, IMethodResponse<T>, IResponse
+    public class BaseOperationResponse<T> : BaseResponse, IOperationResult, IOperationResponse<T>, IResponse
     {
         public override bool Success { get; }
         public override string? Error { get; }
         public T? Data { get; }
-        object? IMethodResponse.Data => Data;
+        object? IOperationResult.Data => Data;
 
-        public BaseMethodResponse(bool success, T? data = default, string? error = null)
+        public BaseOperationResponse(bool success, T? data = default, string? error = null)
         {
             Success = success;
             Data = data;

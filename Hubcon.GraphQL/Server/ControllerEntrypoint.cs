@@ -17,13 +17,21 @@ namespace Hubcon.GraphQL.Server
         [HubconInject]
         public IHubconControllerManager HubconController { get; }
 
+        public ControllerEntrypoint()
+        {
+            
+        }
+
         [HubconMethod(MethodType.Mutation)]
-        public async Task<IMethodResponse<JsonElement>> HandleMethodTask(MethodInvokeRequest request)
+        public async Task<IOperationResponse<JsonElement>> HandleMethodTask(MethodInvokeRequest request)
             => await HubconController.Pipeline.HandleWithResultAsync(request);
 
         [HubconMethod(MethodType.Mutation)]
         public async Task<IResponse> HandleMethodVoid(MethodInvokeRequest request)
-            => await HubconController.Pipeline.HandleWithoutResultAsync(request);
+        {
+            var res = await HubconController.Pipeline.HandleWithoutResultAsync(request);
+            return res;
+        }
 
         [HubconMethod(MethodType.Subscription)]
         public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest request)
@@ -32,7 +40,8 @@ namespace Hubcon.GraphQL.Server
         [HubconMethod(MethodType.Subscription)]
         public IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request)
         {
-            Console.WriteLine($"Subscription {request.SubscriptionName} handled.");
+            Console.WriteLine($"Subscription {request.OperationName} handled.");
+            
             return HubconController.Pipeline.GetSubscription(request);
         }
 

@@ -26,5 +26,11 @@ namespace Hubcon.Core.Middlewares
             ServicesToInject.Add(x => x.RegisterWithInjector(y => y.RegisterType(middlewareType)));
             return this;
         }
+
+        public IMiddlewareOptions UseGlobalMiddlewaresFirst(bool? value = null)
+        {
+            _builder.UseGlobalMiddlewaresFirst(value);
+            return this;
+        }
     }
 }
