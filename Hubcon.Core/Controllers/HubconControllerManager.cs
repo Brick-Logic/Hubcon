@@ -4,10 +4,10 @@ namespace Hubcon.Core.Controllers
 {
     public class HubconControllerManager : IHubconControllerManager
     {
-        public IControllerInvocationHandler Pipeline { get; set; }
+        public IRequestHandler Pipeline { get; set; }
         public ICommunicationHandler CommunicationHandler { get; }
 
-        public HubconControllerManager(ICommunicationHandler communicationHandler, IControllerInvocationHandler requestPipeline)
+        public HubconControllerManager(ICommunicationHandler communicationHandler, IRequestHandler requestPipeline)
         {
             Pipeline = requestPipeline;
             CommunicationHandler = communicationHandler;

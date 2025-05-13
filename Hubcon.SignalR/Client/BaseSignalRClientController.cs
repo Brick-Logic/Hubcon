@@ -86,19 +86,19 @@ namespace Hubcon.SignalR.Client
                     hub?.On($"{nameof(StartStream)}", (Func<string, MethodInvokeRequest, Task>)StartStream);
 
                 else if (descriptor.InternalMethodInfo.ReturnType == typeof(void))
-                    hub?.On($"{nameof(IControllerInvocationHandler.HandleWithoutResultAsync)}", (MethodInvokeRequest request)
+                    hub?.On($"{nameof(IRequestHandler.HandleWithoutResultAsync)}", (MethodInvokeRequest request)
                         => GetControllerManager().Pipeline!.HandleWithoutResultAsync(request));
 
                 else if (descriptor.InternalMethodInfo.ReturnType.IsGenericType && descriptor.InternalMethodInfo.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
-                    hub?.On($"{nameof(IControllerInvocationHandler.HandleWithResultAsync)}", (MethodInvokeRequest request)
+                    hub?.On($"{nameof(IRequestHandler.HandleWithResultAsync)}", (MethodInvokeRequest request)
                         => GetControllerManager().Pipeline!.HandleWithResultAsync(request));
 
                 else if (descriptor.InternalMethodInfo.ReturnType == typeof(Task))
-                    hub?.On($"{nameof(IControllerInvocationHandler.HandleWithoutResultAsync)}", (MethodInvokeRequest request)
+                    hub?.On($"{nameof(IRequestHandler.HandleWithoutResultAsync)}", (MethodInvokeRequest request)
                         => GetControllerManager().Pipeline!.HandleWithoutResultAsync(request));
 
                 else
-                    hub?.On($"{nameof(IControllerInvocationHandler.HandleWithResultAsync)}", (MethodInvokeRequest request)
+                    hub?.On($"{nameof(IRequestHandler.HandleWithResultAsync)}", (MethodInvokeRequest request)
                         => GetControllerManager().Pipeline!.HandleWithResultAsync(request));
             });
 
@@ -219,9 +219,9 @@ namespace Hubcon.SignalR.Client
             return runningTask ?? Task.CompletedTask;
         }
 
-        public async Task<IMethodResponse<JsonElement>> HandleMethodTask(IMethodInvokeRequest info) => await GetControllerManager().Pipeline!.HandleWithResultAsync(info);
-        public async Task<IResponse> HandleMethodVoid(IMethodInvokeRequest info) => await GetControllerManager().Pipeline!.HandleWithoutResultAsync(info);
-        public async Task<IResponse> StartStream(string methodCode, IMethodInvokeRequest info)
+        public async Task<IOperationResponse<JsonElement>> HandleMethodTask(IOperationRequest info) => await GetControllerManager().Pipeline!.HandleWithResultAsync(info);
+        public async Task<IResponse> HandleMethodVoid(IOperationRequest info) => await GetControllerManager().Pipeline!.HandleWithoutResultAsync(info);
+        public async Task<IResponse> StartStream(string methodCode, IOperationRequest info)
         {
             var reader = HubconController.Pipeline!.GetStream(info);
             var channel = Channel.CreateUnbounded<object>();
@@ -238,10 +238,10 @@ namespace Hubcon.SignalR.Client
 
             await hub!.SendAsync("ReceiveStream", methodCode, channel.Reader);
 
-            return new BaseMethodResponse(true);
+            return new BaseOperationResponse(true);
         }
         
-        public IAsyncEnumerable<JsonElement?> HandleMethodStream(IMethodInvokeRequest info)
+        public IAsyncEnumerable<JsonElement?> HandleMethodStream(IOperationRequest info)
         {
             throw new NotImplementedException();
         }

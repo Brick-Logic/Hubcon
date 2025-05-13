@@ -46,7 +46,7 @@ namespace Hubcon.Core.Routing.MethodHandling
             
         }
 
-        public bool GetMethodDescriptor(IMethodInvokeRequest request, out IMethodDescriptor? value)
+        public bool GetMethodDescriptor(IOperationRequest request, out IMethodDescriptor? value)
         {
             if (request == null)
             {
@@ -55,7 +55,7 @@ namespace Hubcon.Core.Routing.MethodHandling
             }
 
             if (ControllerMethods.TryGetValue(request.ContractName, out Dictionary<string, IMethodDescriptor>? descriptors) 
-                && descriptors.TryGetValue(request.MethodName, out IMethodDescriptor? descriptor))
+                && descriptors.TryGetValue(request.OperationName, out IMethodDescriptor? descriptor))
             {
                 value = descriptor;
                 return true;

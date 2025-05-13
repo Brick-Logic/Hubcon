@@ -3,10 +3,10 @@ using System.Text.Json;
 
 namespace Hubcon.Core.Abstractions.Interfaces
 {
-    public interface IMethodInvokeRequest
+    public interface IOperationRequest
     {
         IEnumerable<JsonElement?> Args { get; }
         string ContractName { get; }
-        string MethodName { get; }
+        string OperationName { get; }
     }
 }

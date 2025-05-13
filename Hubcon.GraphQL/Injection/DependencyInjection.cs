@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Builders;
+using Hubcon.Core.Builders.Extensions;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Dummy;
 using Hubcon.Core.Extensions;
@@ -28,19 +29,20 @@ namespace Hubcon.GraphQL.Injection
                 .AddGraphQLServer()
                 .AddQueryType<Query>()
                 .AddType<BaseResponse>()
-                .AddType<BaseMethodResponse>()
+                .AddType<BaseOperationResponse>()
                 .AddType<BaseJsonResponse>()
                 .AddType<JsonScalarType>()
                 .AddType<ObjectType<IResponse>>()
-                .AddType<ObjectType<IMethodResponse<JsonElement?>>>()
+                .AddType<ObjectType<IOperationResponse<JsonElement?>>>()
                 .AddType<InputObjectType<MethodInvokeRequest>>()
                 .AddType<InputObjectType<SubscriptionRequest>>()
                 .AddProjections()
                 .AddInMemorySubscriptions();
 
-            builder.AddHubconServer(additionalServices, container =>
+
+            HubconBuilder.Current.AddHubconServer(builder, additionalServices, container =>
             {
-                container.AddHubconEntrypoint<ControllerEntrypoint>();
+                container.RegisterWithInjector(x => x.RegisterType<ControllerEntrypoint>());
 
                 container.RegisterWithInjector(x => x
                     .RegisterType<HubconGraphQLClient>()
@@ -63,7 +65,8 @@ namespace Hubcon.GraphQL.Injection
                     .AsScoped());
             });
 
-            var controllerConfig = new ControllerOptions(executorBuilder, builder);
+
+            var controllerConfig = new ControllerOptions(executorBuilder, builder, HubconBuilder.Current);
             controllerConfig.SetEntrypoint<ControllerEntrypoint>();
             controllerOptions?.Invoke(controllerConfig);
       
@@ -72,7 +75,7 @@ namespace Hubcon.GraphQL.Injection
 
         public static WebApplicationBuilder AddHubconGraphQLClient(this WebApplicationBuilder builder)
         {
-            builder.AddHubconClientServices(container =>
+            HubconBuilder.Current.AddHubconClientServices(builder, container =>
             {
                 container.RegisterWithInjector(x => x
                     .RegisterType<HubconGraphQLClient>()

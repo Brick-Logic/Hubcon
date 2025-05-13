@@ -6,31 +6,31 @@ namespace Hubcon.Core.Invocation
     public static class Response
     {
         // Create
-        public static IMethodResponse<T> Create<T>(bool success) => new BaseMethodResponse<T>(success, default, null);
-        public static IMethodResponse<T> Create<T>(bool success, T? data) => new BaseMethodResponse<T>(success, data, null);
-        public static IMethodResponse<T> Create<T>(bool success, T? data, string error) => new BaseMethodResponse<T>(success, data, error);
+        public static IOperationResponse<T> Create<T>(bool success) => new BaseOperationResponse<T>(success, default, null);
+        public static IOperationResponse<T> Create<T>(bool success, T? data) => new BaseOperationResponse<T>(success, data, null);
+        public static IOperationResponse<T> Create<T>(bool success, T? data, string error) => new BaseOperationResponse<T>(success, data, error);
 
         // OK
-        public static IMethodResponse Ok() => new BaseMethodResponse(true, null, null);
-        public static IMethodResponse<T> Ok<T>(T? data) => new BaseMethodResponse<T>(true, data, null);
-        public static IMethodResponse<JsonElement> Ok(JsonElement data) => new BaseJsonResponse(true, data, null);     
+        public static IOperationResult Ok() => new BaseOperationResponse(true, null, null);
+        public static IOperationResponse<T> Ok<T>(T? data) => new BaseOperationResponse<T>(true, data, null);
+        public static IOperationResponse<JsonElement> Ok(JsonElement data) => new BaseJsonResponse(true, data, null);     
         
 
         // Error
-        public static IMethodResponse Error() => new BaseMethodResponse(false, null, "Unkown error");
-        public static IMethodResponse Error(string error) => new BaseMethodResponse(false, null, error);
+        public static IOperationResult Error() => new BaseOperationResponse(false, null, "Unkown error");
+        public static IOperationResult Error(string error) => new BaseOperationResponse(false, null, error);
 
 
         // Unauthorized
-        public static IMethodResponse Unauthorized() => new BaseMethodResponse(false, null, "Unauthorized");
-        public static IMethodResponse Unauthorized(string error) => new BaseMethodResponse(false, null, error);
+        public static IOperationResult Unauthorized() => new BaseOperationResponse(false, null, "Unauthorized");
+        public static IOperationResult Unauthorized(string error) => new BaseOperationResponse(false, null, error);
 
         // Bad request
-        public static IMethodResponse BadRequest() => new BaseMethodResponse(false, null, "Bad request");
-        public static IMethodResponse BadRequest(string error) => new BaseMethodResponse(false, null, error);
+        public static IOperationResult BadRequest() => new BaseOperationResponse(false, null, "Bad request");
+        public static IOperationResult BadRequest(string error) => new BaseOperationResponse(false, null, error);
 
         // Not found
-        public static IMethodResponse NotFound() => new BaseMethodResponse(false, null, "Not found");
-        public static IMethodResponse NotFound(string error) => new BaseMethodResponse(false, null, error);
+        public static IOperationResult NotFound() => new BaseOperationResponse(false, null, "Not found");
+        public static IOperationResult NotFound(string error) => new BaseOperationResponse(false, null, error);
     }
 }

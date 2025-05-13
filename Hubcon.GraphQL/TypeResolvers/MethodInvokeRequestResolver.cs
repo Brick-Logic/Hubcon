@@ -5,7 +5,7 @@ namespace Hubcon.GraphQL.TypeResolvers
 {
     public class MethodInvokeRequestResolver
     {
-        public IMethodInvokeRequest ResolveMethodInvokeRequest(MethodInvokeRequest request)
+        public IOperationRequest ResolveMethodInvokeRequest(MethodInvokeRequest request)
         {
             return request;
         }

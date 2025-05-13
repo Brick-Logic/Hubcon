@@ -19,20 +19,20 @@ namespace Hubcon.SignalR.Server
         [HubconInject]
         private IStreamNotificationHandler streamNotificationHandler { get; }
 
-        public async Task<IMethodResponse<JsonElement>> InvokeAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken) 
+        public async Task<IOperationResponse<JsonElement>> InvokeAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken) 
         { 
-            IMethodResponse<JsonElement> result;
+            IOperationResponse<JsonElement> result;
             var client = hubContext.Clients.Client(TargetClientId);
 
-            result = await client.InvokeAsync<BaseJsonResponse>(request.MethodName!, request, cancellationToken);
+            result = await client.InvokeAsync<BaseJsonResponse>(request.OperationName!, request, cancellationToken);
             return result;                   
         }
 
-        public async Task CallAsync(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = hubContext.Clients.Client(TargetClientId);
 
-            await client.SendAsync(request.MethodName!, request, cancellationToken);
+            await client.SendAsync(request.OperationName!, request, cancellationToken);
         }
 
         public List<IClientReference> GetAllClients()
@@ -40,13 +40,13 @@ namespace Hubcon.SignalR.Server
             return BaseHubController.GetClients(hubType).ToList();
         }
 
-        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(IMethodInvokeRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task<IAsyncEnumerable<T?>> StreamAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var client = hubContext.Clients.Client(TargetClientId);
 
             var code = Guid.NewGuid().ToString();
 
-            _ = client.SendAsync(request.MethodName!, code, request, cancellationToken);
+            _ = client.SendAsync(request.OperationName!, code, request, cancellationToken);
 
             var stream = await streamNotificationHandler.WaitStreamAsync<T>(code);
             return stream;

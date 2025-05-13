@@ -29,7 +29,7 @@ namespace Hubcon.Core.Routing.MethodHandling
                 value.GetCurrentEvent()?.DynamicInvoke(reader);
             }
 
-            return new BaseMethodResponse(true);
+            return new BaseOperationResponse(true);
         }
 
         public Task<IAsyncEnumerable<T>> WaitStreamAsync<T>(string code)

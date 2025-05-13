@@ -7,6 +7,7 @@ namespace Hubcon.Core.Abstractions.Interfaces
     {
         public IPipelineBuilder AddMiddleware<T>() where T : IMiddleware;
         public IPipelineBuilder AddMiddleware(Type middlewareType);
-        public IPipeline Build(IMethodInvokeRequest request, InvocationDelegate handler, ILifetimeScope serviceProvider);
+        public IPipelineExecutor Build(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, IServiceProvider serviceProvider);
+        public void UseGlobalMiddlewaresFirst(bool? value = null);
     }
 }

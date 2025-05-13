@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.Abstractions.Interfaces
 {
-    public interface ISubscriptionRegistry
+    public interface ILiveSubscriptionRegistry
     {
         ISubscriptionDescriptor? GetHandler(string clientId, string contractName, string subscriptionName);
         PropertyInfo? GetSubscriptionMetadata(string contractName, string descriptorSignature);

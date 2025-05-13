@@ -3,7 +3,7 @@
     public interface IMethodDescriptorProvider
     {
         event Action<IMethodDescriptor>? OnMethodRegistered;
-        bool GetMethodDescriptor(IMethodInvokeRequest request, out IMethodDescriptor? value);
+        bool GetMethodDescriptor(IOperationRequest request, out IMethodDescriptor? value);
         void RegisterMethods(Type controllerType);
     }
 }

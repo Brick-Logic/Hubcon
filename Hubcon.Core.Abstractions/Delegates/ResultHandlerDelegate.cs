@@ -7,5 +7,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.Abstractions.Delegates
 {
-    public delegate Task<IObjectMethodResponse?> InvocationDelegate();
+    public delegate Task<IOperationResult> ResultHandlerDelegate(object? result);
 }

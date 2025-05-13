@@ -15,7 +15,7 @@ namespace Hubcon.Core.Connectors
            "Major Code Smell",
            "S2743:Static fields should not be used in generic types",
            Justification = "The static field by T type is intended.")]
-        protected Dictionary<string, IMethodInvokeRequest> AvailableMethods { get; } = new();
+        protected Dictionary<string, IOperationRequest> AvailableMethods { get; } = new();
 
         protected HubconClientBuilder()
         {

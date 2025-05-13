@@ -4,5 +4,6 @@
     {
         public IMiddlewareOptions AddMiddleware<T>() where T : class, IMiddleware;
         public IMiddlewareOptions AddMiddleware(Type middlewareType);
+        public IMiddlewareOptions UseGlobalMiddlewaresFirst(bool? value = null);
     }
 }

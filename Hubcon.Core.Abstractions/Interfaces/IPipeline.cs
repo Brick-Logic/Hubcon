@@ -8,6 +8,6 @@ namespace Hubcon.Core.Abstractions.Interfaces
 {
     public interface IPipeline
     {
-        public Task<IObjectMethodResponse> Execute();
+        public Task<IObjectOperationResponse> Execute();
     }
 }

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.Invocation
 {
-    public class BaseJsonResponse : BaseMethodResponse<JsonElement>, IMethodResponse<JsonElement>
+    public class BaseJsonResponse : BaseOperationResponse<JsonElement>, IOperationResponse<JsonElement>
     {
         public BaseJsonResponse() : base(true, default, null)
         {
