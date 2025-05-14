@@ -19,7 +19,7 @@ namespace HubconTestClient
         {
             var builder = WebApplication.CreateBuilder();
 
-            builder.Services.AddSingleton(x =>
+            builder.Services.AddSingleton<GraphQLHttpClient>(x =>
             {
                 var configuration = x.GetRequiredService<IConfiguration>();
                 var graphqlEndpoint = configuration["GraphQL:HttpEndpoint"] ?? "http://localhost:5000/graphql";
@@ -61,7 +61,7 @@ namespace HubconTestClient
                 Interlocked.Add(ref eventosRecibidos, 1);
             }
 
-            client.OnUserCreated.AddHandler(handler);
+            client.OnUserCreated!.AddHandler(handler);
             await client.OnUserCreated.Subscribe();
             await client.CreateUser();
             Console.WriteLine("Evento conectado.");

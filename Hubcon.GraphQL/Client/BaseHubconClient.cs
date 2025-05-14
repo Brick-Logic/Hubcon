@@ -1,24 +1,43 @@
-﻿using Hubcon.Core.Abstractions.Interfaces;
+﻿using Autofac;
+using Autofac.Core.Lifetime;
+using Castle.DynamicProxy;
+using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Abstractions.Standard.Interfaces;
+using Hubcon.Core.Routing.Registries;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.GraphQL.Client
 {
     public class HubconClientProvider : IHubconClientProvider
     {
-        private readonly IServiceProvider serviceProvider;
+        private readonly ILifetimeScope _lifetimeScope;
+        private IControllerContract? _client = null!;
+        private readonly IServerConnectorInterceptor<ICommunicationHandler> Interceptor;
+        private readonly IProxyRegistry _proxyRegistry;
+        public ICommunicationHandler Connection { get => Interceptor.CommunicationHandler; }
 
-        public HubconClientProvider(IServiceProvider serviceProvider)
+        public HubconClientProvider(
+            IServerConnectorInterceptor<ICommunicationHandler> interceptor,
+            IProxyRegistry proxyRegistry,
+            ILifetimeScope lifetimeScope) : base()
         {
-            this.serviceProvider = serviceProvider;
+            Interceptor = interceptor;
+            _proxyRegistry = proxyRegistry;
+            _lifetimeScope = lifetimeScope;
         }
 
-        public TICommunicationContract GetClient<TICommunicationContract>()
-            where TICommunicationContract : IControllerContract
-
+        public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : IControllerContract
         {
-            var connector = serviceProvider.GetRequiredService<IHubconServerConnector<ICommunicationHandler>>();
-            return connector.GetClient<TICommunicationContract>();
-        }      
+            if (_client != null)
+                return (TICommunicationContract)_client;
+
+            var proxyType = _proxyRegistry.TryGetProxy<TICommunicationContract>();
+            _client = (TICommunicationContract)_lifetimeScope.Resolve(proxyType, new[]
+            {
+                new TypedParameter(typeof(AsyncInterceptorBase), Interceptor)
+            });
+
+            return (TICommunicationContract)_client;
+        }
     }
 }

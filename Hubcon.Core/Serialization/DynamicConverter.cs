@@ -117,7 +117,7 @@ namespace Hubcon.Core.Serialization
             if ( element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
                 return default;
 
-            return (T?)element.Deserialize(typeof(T));
+            return (T?)element.Deserialize<T>();
         }
 
         // 4. Convierte una lista de JsonElements a objetos, según tipos dados

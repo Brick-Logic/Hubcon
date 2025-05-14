@@ -3,7 +3,6 @@ using GraphQL.Client.Http;
 using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Invocation;
 using Hubcon.Core.Subscriptions;
-using Hubcon.GraphQL.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -20,7 +19,7 @@ namespace Hubcon.GraphQL.Client
     {
         private readonly GraphQLHttpClient _graphQLHttpClient;
         private readonly ILogger<IHubconClient> _logger;
-        private readonly IDynamicConverter converter;
+        private readonly IDynamicConverter _converter;
 
         public HubconGraphQLClient(
             GraphQLHttpClient graphQLHttpClient, 
@@ -30,7 +29,7 @@ namespace Hubcon.GraphQL.Client
         {
             _graphQLHttpClient = graphQLHttpClient;
             _logger = logger;
-            this.converter = converter;
+            _converter = converter;
 
             Task _runnerTask = Task.CompletedTask;
 
@@ -128,9 +127,9 @@ namespace Hubcon.GraphQL.Client
             result.TryGetProperty(nameof(BaseOperationResponse.Error).ToLower(), out JsonElement errorValue);
 
             return new BaseJsonResponse(
-                converter.DeserializeJsonElement<bool>(successValue),
+                _converter.DeserializeJsonElement<bool>(successValue),
                 dataValue,
-                converter.DeserializeJsonElement<string>(errorValue)
+                _converter.DeserializeJsonElement<string>(errorValue)
             );
         }
 
