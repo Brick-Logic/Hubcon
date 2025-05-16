@@ -9,12 +9,10 @@ namespace Hubcon.Core.Middlewares.DefaultMiddlewares
 {
     public class AuthenticationMiddleware : IPreRequestMiddleware
     {
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
 
-        public AuthenticationMiddleware(IHttpContextAccessor accessor, IAuthorizationService authService)
+        public AuthenticationMiddleware(IAuthorizationService authService)
         {
-            _httpContextAccessor = accessor;
             _authorizationService = authService;
         }
 
@@ -22,7 +20,7 @@ namespace Hubcon.Core.Middlewares.DefaultMiddlewares
         {
             if (context.Blueprint.RequiresAuthorization)
             {
-                var user = _httpContextAccessor.HttpContext?.User;
+                var user = context.HttpContext!.User;
 
                 if (user?.Identity == null || !user.Identity.IsAuthenticated)
                 {

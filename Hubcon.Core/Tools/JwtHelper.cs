@@ -24,7 +24,7 @@ namespace Hubcon.Core.Tools
             JwtSecurityToken? token = jwtHandler.ReadJwtToken(jwtToken);
             var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub");
 
-            if (userIdClaim?.Value is not null)
+            if (userIdClaim?.Value is null)
                 throw new UnauthorizedAccessException("No se encontró el ID de usuario en el token.");
 
             return userIdClaim?.Value;

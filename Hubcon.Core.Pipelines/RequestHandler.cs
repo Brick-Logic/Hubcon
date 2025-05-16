@@ -25,23 +25,20 @@ namespace Hubcon.Core.Pipelines
         private readonly IOperationRegistry _operationRegistry;
         private readonly IDynamicConverter _converter;
         private readonly IServiceProvider _serviceProvider;
-        private readonly ILiveSubscriptionRegistry _subscriptionRegistry;
 
         public RequestHandler(
             IOperationRegistry operationRegistry,
             IDynamicConverter dynamicConverter,
-            IServiceProvider serviceProvider,
-            ILiveSubscriptionRegistry subscriptionRegistry)
+            IServiceProvider serviceProvider)
         {
             _operationRegistry = operationRegistry;
             _converter = dynamicConverter;
-            _serviceProvider = serviceProvider;/*.CreateScope().ServiceProvider;*/
-            _subscriptionRegistry = subscriptionRegistry;
+            _serviceProvider = serviceProvider;
         }
 
         public async Task<IResponse> HandleWithoutResultAsync(IOperationRequest request)
         {
-            if (!_operationRegistry.GetOperationDescriptor(request, out IOperationBlueprint? blueprint))
+            if (!_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint))
                 return new BaseOperationResponse(false);
 
             IOperationContext context = BuildContext(request, blueprint!);
@@ -61,12 +58,12 @@ namespace Hubcon.Core.Pipelines
 
         public async Task<IOperationResponse<JsonElement>> HandleSynchronousResult(IOperationRequest request)
         {
-            if (!(_operationRegistry.GetOperationDescriptor(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
                 return new BaseJsonResponse(false);
 
             var controller = _serviceProvider.GetRequiredService(blueprint!.ControllerType);
 
-            IOperationContext context = new OperationContext();
+            IOperationContext context = BuildContext(request, blueprint);
 
             Task<IOperationResult> ResultHandler(object? result)
             {
@@ -86,7 +83,7 @@ namespace Hubcon.Core.Pipelines
 
         public async Task<IResponse> HandleSynchronous(IOperationRequest request)
         {
-            if (!(_operationRegistry.GetOperationDescriptor(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
                 return new BaseOperationResponse(false);
 
             IOperationContext context = BuildContext(request, blueprint);
@@ -106,7 +103,7 @@ namespace Hubcon.Core.Pipelines
 
         public IAsyncEnumerable<JsonElement?> GetStream(IOperationRequest request)
         {
-            if (!(_operationRegistry.GetOperationDescriptor(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
                 return null!;
 
             static Task<IOperationResult> ResultHandler(object? result)
@@ -127,7 +124,7 @@ namespace Hubcon.Core.Pipelines
             IOperationRequest request,
             CancellationToken cancellationToken = default)
         {
-            if (!(_operationRegistry.GetOperationDescriptor(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Subscription))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Subscription))
                 throw new EntryPointNotFoundException();
 
             static Task<IOperationResult> ResultHandler(object? result)
@@ -139,13 +136,13 @@ namespace Hubcon.Core.Pipelines
             var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
             var pipelineTask = pipeline.Execute();
             pipelineTask.Wait();
-            return (IAsyncEnumerable<JsonElement?>)pipelineTask.Result.Result!.Data!;        
+            return (IAsyncEnumerable<JsonElement?>)pipelineTask.Result.Result!.Data!;
         }
 
 
         public async Task<IOperationResponse<JsonElement>> HandleWithResultAsync(IOperationRequest request)
         {
-            if (!(_operationRegistry.GetOperationDescriptor(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
                 return null!;
 
             var controller = _serviceProvider.GetRequiredService(blueprint!.ControllerType);

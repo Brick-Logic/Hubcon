@@ -77,7 +77,7 @@ namespace Hubcon.Core.Routing.Registries
             }
         }
 
-        public bool GetOperationDescriptor(IOperationRequest request, out IOperationBlueprint? value)
+        public bool GetOperationBlueprint(IOperationRequest request, out IOperationBlueprint? value)
         {
             if (request == null)
             {
@@ -85,8 +85,19 @@ namespace Hubcon.Core.Routing.Registries
                 return false;
             }
 
-            if (AvailableOperations.TryGetValue(request.ContractName, out Dictionary<string, IOperationBlueprint>? descriptors)
-                && descriptors.TryGetValue(request.OperationName, out IOperationBlueprint? descriptor))
+            return GetOperationBlueprint(request.ContractName, request.OperationName, out value);
+        }
+
+        public bool GetOperationBlueprint(string contractName, string operationName, out IOperationBlueprint? value)
+        {
+            if (string.IsNullOrEmpty(contractName) || string.IsNullOrEmpty(operationName))
+            {
+                value = null;
+                return false;
+            }
+
+            if (AvailableOperations.TryGetValue(contractName, out Dictionary<string, IOperationBlueprint>? descriptors)
+                && descriptors.TryGetValue(operationName, out IOperationBlueprint? descriptor))
             {
                 value = descriptor;
                 return true;

@@ -101,6 +101,17 @@ namespace Hubcon.GraphQL.Injection
             return builder;
         }
 
+        public static WebApplicationBuilder AddAuthenticationManager<T>(this WebApplicationBuilder builder) => AddAuthenticationManager(builder, typeof(T));
+        public static WebApplicationBuilder AddAuthenticationManager(this WebApplicationBuilder builder, Type authenticationManagerType)
+        {
+            return builder;
+
+            if(authenticationManagerType == null)
+            {
+
+            }
+        }
+
         public static WebApplication MapHubconGraphQL(this WebApplication app, string path)
         {
             app.UseWebSockets();

@@ -1,21 +1,13 @@
-﻿using GreenDonut;
-using Hubcon.Core.Abstractions.Delegates;
+﻿using Hubcon.Core.Abstractions.Delegates;
 using Hubcon.Core.Abstractions.Enums;
 using Hubcon.Core.Abstractions.Interfaces;
-using Hubcon.Core.Attributes;
 using Hubcon.Core.Exceptions;
 using Hubcon.Core.Invocation;
 using Hubcon.Core.Subscriptions;
 using Hubcon.Core.Tools;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Hubcon.Core.Middlewares.DefaultMiddlewares
 {
@@ -47,19 +39,18 @@ namespace Hubcon.Core.Middlewares.DefaultMiddlewares
 
                 if (!context.Blueprint.RequiresAuthorization)
                 {
-                    subDescriptor = liveSubscriptionRegistry.GetHandler(clientId, request.ContractName, request.OperationName);
+                    subDescriptor = liveSubscriptionRegistry.GetHandler("", request.ContractName, request.OperationName);
 
                     if (subDescriptor == null)
                     {
-                        var subscription = (ISubscription)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
+                        var subscription = (ISubscription?)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
 
-                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(clientId, request.ContractName, request.OperationName, subscription);
+                        subDescriptor = liveSubscriptionRegistry.RegisterHandler("", request.ContractName, request.OperationName, subscription);
                     }
                 }
                 else
                 {
-                    var accessor = context.RequestServices.GetService<IHttpContextAccessor>();
-                    string? jwtToken = JwtHelper.ExtractTokenFromHeader(accessor?.HttpContext!);
+                    string? jwtToken = JwtHelper.ExtractTokenFromHeader(context.HttpContext);
                     string? userId = JwtHelper.GetUserId(jwtToken);
 
                     if (userId == null)
@@ -96,12 +87,13 @@ namespace Hubcon.Core.Middlewares.DefaultMiddlewares
                     }
                 };
 
+                subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
+
                 async IAsyncEnumerable<JsonElement?> SubDelegate()
                 {
                     try
                     {
-                        subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
-                        await foreach (var newEvent in observer.GetAsyncEnumerable(context.RequestAborted))
+                        await foreach (var newEvent in observer.GetAsyncEnumerable(new()))
                         {
                             yield return dynamicConverter.SerializeObject(newEvent);
                         }
