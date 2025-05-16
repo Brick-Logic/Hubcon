@@ -1,10 +1,11 @@
 ﻿using Hubcon.Core.Abstractions.Delegates;
 using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Invocation;
+using Microsoft.Extensions.Logging;
 
 namespace HubconTest.Middlewares
 {
-    public class ExceptionMiddleware : IExceptionMiddleware
+    public class ExceptionMiddleware(ILogger<ExceptionMiddleware> logger) : IExceptionMiddleware
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
@@ -16,7 +17,7 @@ namespace HubconTest.Middlewares
 			{
 				context.Result = new BaseOperationResponse(false, null, ex.Message);
 				context.Exception = ex;
-				Console.WriteLine(ex.ToString());
+                logger.LogInformation(ex.ToString());
 				return;
 			}
         }

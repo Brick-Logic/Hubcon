@@ -136,7 +136,8 @@ namespace Hubcon.Core.Pipelines
             var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
             var pipelineTask = pipeline.Execute();
             pipelineTask.Wait();
-            return (IAsyncEnumerable<JsonElement?>)pipelineTask.Result.Result!.Data!;
+            var res = pipelineTask.Result.Result!.Data!;
+            return (IAsyncEnumerable<JsonElement?>)res;
         }
 
 

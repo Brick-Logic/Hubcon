@@ -1,7 +1,9 @@
 ﻿using GraphQL;
 using GraphQL.Client.Http;
 using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Authentication;
 using Hubcon.Core.Invocation;
+using Hubcon.Core.Middlewares.MessageHandlers;
 using Hubcon.Core.Subscriptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -20,33 +22,47 @@ namespace Hubcon.GraphQL.Client
         private readonly GraphQLHttpClient _graphQLHttpClient;
         private readonly ILogger<IHubconClient> _logger;
         private readonly IDynamicConverter _converter;
+        private readonly IAuthenticationManager? _authenticationManager;
 
         public HubconGraphQLClient(
             GraphQLHttpClient graphQLHttpClient, 
             ILogger<HubconGraphQLClient> logger,
             IDynamicConverter converter,
-            IConfiguration configuration)
+            IAuthenticationManager? authenticationManager = null)
         {
             _graphQLHttpClient = graphQLHttpClient;
             _logger = logger;
             _converter = converter;
-
+            _authenticationManager = authenticationManager;
             Task _runnerTask = Task.CompletedTask;
+
+            _graphQLHttpClient.Options.ConfigureWebsocketOptions = (x) =>
+            {
+                if (authenticationManager is not null && authenticationManager.IsSessionActive)
+                    x.SetRequestHeader("Authorization", $"Bearer {authenticationManager?.AccessToken}");
+            };
 
             var runner = async () =>
             {
                 var sw = new Stopwatch();
-                var timer = new System.Timers.Timer(5000);
+                var timer1 = new System.Timers.Timer(5000);
 
-                timer.Elapsed += async (object? sender, ElapsedEventArgs e) =>
-                {
-                    if (sw.ElapsedMilliseconds > 30000)
-                    {
-                        Console.WriteLine("Disconnected. Reconnecting...");
-                        sw.Restart();
-                        await _graphQLHttpClient.InitializeWebsocketConnection();
-                    }
-                };
+                //timer.Elapsed += async (object? sender, ElapsedEventArgs e) =>
+                //{
+                //    try
+                //    {
+                //        if (sw.ElapsedMilliseconds > 30000)
+                //        {
+                //            logger.LogInformation("Disconnected. Reconnecting...");
+                //            sw.Restart();
+                //            //await _graphQLHttpClient.InitializeWebsocketConnection();
+                //        }
+                //    }
+                //    finally
+                //    {
+                        
+                //    }
+                //};
 
                 while (true)
                 {
@@ -58,17 +74,17 @@ namespace Hubcon.GraphQL.Client
                         using (observable.Subscribe(observer))
                         {
                             sw.Start();
-                            timer.Start();
+                            //timer.Start();
                             await foreach (var newEvent in observer.GetAsyncEnumerable(new CancellationToken()))
                             {
                                 sw.Restart();
-                                Console.WriteLine($"PONG received. Payload: {newEvent}");
+                                logger.LogInformation($"PONG received. Payload: {newEvent}");
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error: {ex.Message}");
+                        logger.LogInformation($"Error: {ex.Message}");
                     }
                 }
             };
@@ -93,13 +109,13 @@ namespace Hubcon.GraphQL.Client
                             }
                             catch(Exception ex)
                             {
-                                Console.WriteLine(ex.Message);
+                                logger.LogError(ex.Message);
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error: {ex.Message}");
+                        logger.LogError($"Error: {ex.Message}");
                         if (_runnerTask != null && !_runnerTask.IsCompleted)
                         {
                             _runnerTask.Dispose();
@@ -113,7 +129,7 @@ namespace Hubcon.GraphQL.Client
 
         public async Task<IOperationResponse<JsonElement>> SendRequestAsync(IOperationRequest request, MethodInfo methodInfo, string resolver, CancellationToken cancellationToken = default)
         {
-            var craftedRequest = BuildRequest(request, methodInfo, resolver);
+          GraphQLRequest? craftedRequest = BuildRequest(request, methodInfo, resolver);
             var response = await _graphQLHttpClient.SendMutationAsync<JsonElement>(craftedRequest);
             var result = response.Data.GetProperty(resolver);
 
@@ -153,6 +169,9 @@ namespace Hubcon.GraphQL.Client
 
         public async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, string resolver, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            //if(_authenticationManager == null)
+            //    throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
+
             var graphQLRequest = BuildSubscription(request, resolver);
             IObservable<GraphQLResponse<JsonElement>> observable = _graphQLHttpClient.CreateSubscriptionStream<JsonElement>(graphQLRequest);
 

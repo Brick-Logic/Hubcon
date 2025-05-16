@@ -1,27 +1,23 @@
 ﻿using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Exceptions;
 using Hubcon.Core.Invocation;
+using Microsoft.Extensions.Logging;
 using System.Reflection;
 using System.Text.Json;
 
 namespace Hubcon.GraphQL.Client
 {
-    public class ClientCommunicationHandler : ICommunicationHandler
+    public class ClientCommunicationHandler(
+        IHubconClient client, 
+        IDynamicConverter converter,
+        ILogger<ClientCommunicationHandler> logger
+        ) : ICommunicationHandler
     {
-        private readonly IHubconClient _client;
-        private readonly IDynamicConverter _converter;
-
-        public ClientCommunicationHandler(IHubconClient client, IDynamicConverter converter)
-        {
-            _client = client;
-            _converter = converter;
-        }
-
         public async Task<IOperationResponse<JsonElement>> InvokeAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             try
             {
-                var response = await _client.SendRequestAsync(request, methodInfo, nameof(IHubconEntrypoint.HandleMethodTask), cancellationToken);
+                var response = await client.SendRequestAsync(request, methodInfo, nameof(IHubconEntrypoint.HandleMethodTask), cancellationToken);
 
                 if (!response.Success)
                 {
@@ -32,7 +28,8 @@ namespace Hubcon.GraphQL.Client
             }
             catch (Exception ex)
             {
-                throw new HubconGenericException(ex.Message, ex);
+                logger.LogError(ex.Message);
+                return null!;
             }
         }
 
@@ -40,7 +37,7 @@ namespace Hubcon.GraphQL.Client
         {
             try
             {
-                var response = await _client.SendRequestAsync(request, methodInfo, nameof(IHubconEntrypoint.HandleMethodVoid), cancellationToken);
+                var response = await client.SendRequestAsync(request, methodInfo, nameof(IHubconEntrypoint.HandleMethodVoid), cancellationToken);
 
                 if (!response.Success)
                 {
@@ -49,7 +46,7 @@ namespace Hubcon.GraphQL.Client
             }
             catch (Exception ex)
             {
-                throw new HubconGenericException(ex.Message);
+                logger.LogError(ex.Message);
             }
         }
 
@@ -58,13 +55,14 @@ namespace Hubcon.GraphQL.Client
             try
             {
                 IAsyncEnumerable<JsonElement> stream;
-                stream = _client.GetStream(request, nameof(IHubconEntrypoint.HandleMethodStream), cancellationToken);
-                return Task.FromResult(_converter.ConvertStream<T?>(stream, cancellationToken));
+                stream = client.GetStream(request, nameof(IHubconEntrypoint.HandleMethodStream), cancellationToken);
+                return Task.FromResult(converter.ConvertStream<T?>(stream, cancellationToken));
             }
             catch (Exception ex)
             {
                 // logging
-                throw new HubconGenericException(ex.Message);
+                logger.LogError(ex.Message);
+                return null!;
             }
         }
     }

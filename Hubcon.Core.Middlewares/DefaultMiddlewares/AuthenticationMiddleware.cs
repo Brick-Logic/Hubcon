@@ -1,27 +1,34 @@
-﻿using Hubcon.Core.Abstractions.Delegates;
+﻿using Castle.Core.Logging;
+using HotChocolate;
+using Hubcon.Core.Abstractions.Delegates;
+using Hubcon.Core.Abstractions.Enums;
 using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Invocation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using System.Reflection;
 
 namespace Hubcon.Core.Middlewares.DefaultMiddlewares
 {
-    public class AuthenticationMiddleware : IPreRequestMiddleware
+    public class AuthenticationMiddleware(
+        IAuthorizationService _authorizationService, 
+        ILogger<AuthenticationMiddleware> logger) : IAuthenticationMiddleware
     {
-        private readonly IAuthorizationService _authorizationService;
-
-        public AuthenticationMiddleware(IAuthorizationService authService)
-        {
-            _authorizationService = authService;
-        }
-
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
+            var user = context.HttpContext?.User;
+
+            //if ((context.Blueprint.Kind == OperationKind.Subscription || context.Blueprint.Kind == OperationKind.Stream) 
+            //    && user?.Identity?.IsAuthenticated != true)
+            //{
+            //    logger.LogError($"Server: Subscriptions are required to be authenticated. Source IP: {context.HttpContext?.Connection.RemoteIpAddress}.");
+            //    context.HttpContext?.Connection.RequestClose();
+            //    return;
+            //}
+
             if (context.Blueprint.RequiresAuthorization)
             {
-                var user = context.HttpContext!.User;
-
                 if (user?.Identity == null || !user.Identity.IsAuthenticated)
                 {
                     context.Result = new BaseOperationResponse(false, "Access denied");

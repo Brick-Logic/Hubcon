@@ -28,8 +28,9 @@ namespace HubconTest
 
             builder.AddHubconGraphQL(controllerOptions =>
             {
-                //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
+                controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
                 controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
+                controllerOptions.AddGlobalMiddleware<AuthenticationMiddleware>();
 
                 controllerOptions.AddController<TestController>(controllerMiddlewares =>
                 {
@@ -39,7 +40,6 @@ namespace HubconTest
             });
 
             builder.UseContractsFromAssembly(nameof(HubconTestDomain));
-
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {

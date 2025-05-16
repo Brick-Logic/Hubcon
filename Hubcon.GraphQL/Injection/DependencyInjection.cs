@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Authentication;
 using Hubcon.Core.Builders;
 using Hubcon.Core.Builders.Extensions;
 using Hubcon.Core.Controllers;
@@ -101,15 +102,17 @@ namespace Hubcon.GraphQL.Injection
             return builder;
         }
 
-        public static WebApplicationBuilder AddAuthenticationManager<T>(this WebApplicationBuilder builder) => AddAuthenticationManager(builder, typeof(T));
-        public static WebApplicationBuilder AddAuthenticationManager(this WebApplicationBuilder builder, Type authenticationManagerType)
+        public static WebApplicationBuilder UseAuthenticationManager<T>(this WebApplicationBuilder builder)
+            where T : IAuthenticationManager
         {
+            HubconBuilder.Current.UseAuthenticationManager<T>();
             return builder;
 
-            if(authenticationManagerType == null)
-            {
-
-            }
+        }
+        public static WebApplicationBuilder UseAuthenticationManager(this WebApplicationBuilder builder, Type authenticationManagerType)
+        {
+            HubconBuilder.Current.UseAuthenticationManager(authenticationManagerType);
+            return builder;
         }
 
         public static WebApplication MapHubconGraphQL(this WebApplication app, string path)

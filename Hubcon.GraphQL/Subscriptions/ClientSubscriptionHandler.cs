@@ -5,6 +5,7 @@ using Hubcon.Core.Abstractions.Standard.Interfaces;
 using Hubcon.Core.Invocation;
 using Hubcon.Core.Subscriptions;
 using Hubcon.GraphQL.Models;
+using Microsoft.Extensions.Logging;
 using System.Reflection;
 using System.Text.Json;
 
@@ -15,6 +16,7 @@ namespace Hubcon.GraphQL.Subscriptions
         public event HubconEventHandler<object>? OnEventReceived;
         private readonly IHubconClient _client;
         private readonly IDynamicConverter _converter;
+        private readonly ILogger<ClientSubscriptionHandler<T>> logger;
         private CancellationTokenSource _tokenSource;
 
 
@@ -25,10 +27,11 @@ namespace Hubcon.GraphQL.Subscriptions
 
         public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
 
-        public ClientSubscriptionHandler(IHubconClient client, IDynamicConverter converter)
+        public ClientSubscriptionHandler(IHubconClient client, IDynamicConverter converter, ILogger<ClientSubscriptionHandler<T>> logger)
         {
             _client = client;
             _converter = converter;
+            this.logger = logger;
             _tokenSource = new CancellationTokenSource();
             Handlers = new(); 
         }
@@ -72,6 +75,8 @@ namespace Hubcon.GraphQL.Subscriptions
 
             _ = Task.Run(async () =>
             {
+                int retry = 0;
+
                 while (!_tokenSource.IsCancellationRequested)
                 {
                     try
@@ -87,25 +92,36 @@ namespace Hubcon.GraphQL.Subscriptions
 
                         if (tcs.Task.IsCompleted == false)
                         {
-                            Console.WriteLine("Subscription connected.");
+                            logger.LogInformation("Subscription connected.");
                             tcs.SetResult();
                         }
                         else
                         {
-                            Console.WriteLine("Subscription reconnected.");
+                            logger.LogInformation("Subscription reconnected.");
                         }
+
 
                         while (await enumerator.MoveNextAsync())
                         {
+                            if (retry > 0) retry = 0;
                             var result = _converter.DeserializeJsonElement<T>(enumerator.Current);
                             OnEventReceived?.Invoke(result);
                         };
                     }
                     catch (Exception ex)
                     {
+                        retry += 1;
                         _connected = SubscriptionState.Reconnecting;
-                        Console.WriteLine(ex);
-                        Console.WriteLine("Reconnecting...");
+                        logger.LogInformation("Reconnecting...");
+
+                        int baseReconnectionDelay = 1000;
+                        int maxReconnectionDelay = 30000;
+
+                        int expDelay = baseReconnectionDelay * (int)Math.Pow(2, retry);
+                        int jitter = Random.Shared.Next(0, 1000);
+                        int delay = Math.Min(expDelay + jitter, maxReconnectionDelay);
+
+                        await Task.Delay(delay);
                     }
                 }
                 _connected = SubscriptionState.Disconnected;

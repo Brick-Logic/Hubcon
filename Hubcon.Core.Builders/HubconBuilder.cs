@@ -3,6 +3,7 @@ using Autofac.Extensions.DependencyInjection;
 using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Abstractions.Standard.Interfaces;
 using Hubcon.Core.Attributes;
+using Hubcon.Core.Authentication;
 using Hubcon.Core.Connectors;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Extensions;
@@ -83,6 +84,25 @@ namespace Hubcon.Core.Builders
             builder.Services.AddHttpContextAccessor();
 
             return this;
+        }
+
+        private bool AuthManagerIsRegistered { get; set; }
+
+        public void UseAuthenticationManager<T>() where T : IAuthenticationManager
+            => UseAuthenticationManager(typeof(T));
+        public void UseAuthenticationManager(Type authenticationManagerType)
+        {
+            if(AuthManagerIsRegistered)
+                return;
+
+            ServicesToInject.Add(container => container
+                .RegisterWithInjector(x => x
+                    .RegisterType(authenticationManagerType)
+                    .As<IAuthenticationManager>()
+                    .AsSingleton()
+            ));
+
+            AuthManagerIsRegistered = true;
         }
 
         public ContainerBuilder AddHubconControllersFromAssembly(ContainerBuilder container, Assembly assembly, Action<IMiddlewareOptions>? globalMiddlewareOptions = null)

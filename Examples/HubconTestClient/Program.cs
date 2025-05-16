@@ -8,6 +8,11 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
+using Hubcon.Core.Middlewares.MessageHandlers;
+using Microsoft.AspNetCore.Authentication;
+using Hubcon.Core.Authentication;
+using Castle.Core.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace HubconTestClient
 {
@@ -22,6 +27,7 @@ namespace HubconTestClient
             builder.Services.AddSingleton<GraphQLHttpClient>(x =>
             {
                 var configuration = x.GetRequiredService<IConfiguration>();
+                var authManager = x.GetService<IAuthenticationManager>();
                 var graphqlEndpoint = configuration["GraphQL:HttpEndpoint"] ?? "http://localhost:5000/graphql";
                 var graphqlWebSocketEndpoint = configuration["GraphQL:WebSocketEndpoint"] ?? "ws://localhost:5000/graphql";
 
@@ -29,12 +35,12 @@ namespace HubconTestClient
                 {
                     EndPoint = new Uri(graphqlEndpoint),
                     WebSocketEndPoint = new Uri(graphqlWebSocketEndpoint),
-                    WebSocketProtocol = "graphql-transport-ws"
+                    WebSocketProtocol = "graphql-transport-ws",
+                    HttpMessageHandler = new HttpClientMessageHandler(authManager)
                 };
 
                 return new GraphQLHttpClient(options, new SystemTextJsonSerializer());
             });
-
             builder.AddHubconGraphQLClient();
             builder.UseContractsFromAssembly(nameof(HubconTestDomain));
 
@@ -44,43 +50,42 @@ namespace HubconTestClient
             var scope = app.Services.CreateScope();
 
             var clientProvider = scope.ServiceProvider.GetRequiredService<IHubconClientProvider>();
-
             var client = clientProvider.GetClient<ITestContract>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<ITestContract>>();
 
 
-            Console.WriteLine("Esperando interacción antes de continuar...");
+            logger.LogInformation("Esperando interacción antes de continuar...");
             Console.ReadKey();
-
-            Console.WriteLine("Conectando evento...");
+            logger.LogDebug("Conectando evento...");
 
             int eventosRecibidos = 0;
 
             async Task handler(int input)
             {
-                Console.WriteLine($"Evento recibido: {input}");
+                logger.LogInformation($"Evento recibido: {input}");
                 Interlocked.Add(ref eventosRecibidos, 1);
             }
 
             client.OnUserCreated!.AddHandler(handler);
-            await client.OnUserCreated.Subscribe();
+            //await client.OnUserCreated.Subscribe();
             await client.CreateUser();
-            Console.WriteLine("Evento conectado.");
+            logger.LogInformation("Evento conectado.");
 
             Console.ReadKey();
-            Console.WriteLine("Enviando request GetTemperatureFromServer...");
+            logger.LogInformation("Enviando request GetTemperatureFromServer...");
             var temp = await client.GetTemperatureFromServer();
-            Console.WriteLine($"Datos recibidos: {temp}");
+            logger.LogInformation($"Datos recibidos: {temp}");
             Console.ReadKey();
 
-            Console.WriteLine("Enviando request...");
+            logger.LogInformation("Enviando request...");
             await client.CreateUser();
-            Console.WriteLine($"Request enviado, respuesta recibida.");
+            logger.LogInformation($"Request enviado, respuesta recibida.");
             Console.ReadKey();
 
-            Console.WriteLine("Enviando request...");
+            logger.LogInformation("Enviando request...");
             await foreach (var item in client.GetMessages(10))
             {
-                Console.WriteLine($"Respuesta recibida: {item}");
+                logger.LogInformation($"Respuesta recibida: {item}");
             }
             Console.ReadKey();
 
@@ -115,6 +120,7 @@ namespace HubconTestClient
             int finishedRequestsCount = 0;
             int errors = 0;
             int lastRequests = 0;
+            int maxReqs = 0; 
             var sw = new Stopwatch();
             var worker = new System.Timers.Timer();
             worker.Interval = 1000;
@@ -123,7 +129,8 @@ namespace HubconTestClient
             {
                 var avgRequestsPerSec = finishedRequestsCount - lastRequests;
                 var nanosecs = (double)sw.ElapsedTicks / Stopwatch.Frequency * 1_000;
-                Console.WriteLine($"Requests: {finishedRequestsCount} | Avg requests/s:{avgRequestsPerSec} | Received events: {eventosRecibidos} | Avg request time: {nanosecs / avgRequestsPerSec}");
+                maxReqs = maxReqs < avgRequestsPerSec ? avgRequestsPerSec : maxReqs;
+                logger.LogInformation($"Requests: {finishedRequestsCount} | Avg requests/s:{avgRequestsPerSec} | Max req/s: {maxReqs}| Received events: {eventosRecibidos} | Avg request time: {nanosecs / avgRequestsPerSec}");
                 lastRequests = finishedRequestsCount;
                 sw.Restart();
             };

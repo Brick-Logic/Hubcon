@@ -28,9 +28,16 @@ namespace Hubcon.Core.Subscriptions
 
         private async IAsyncEnumerable<T?> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
+            try
             {
-                yield return item;
+                await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
+                {
+                    yield return item;
+                }
+            }
+            finally
+            {
+
             }
         }
 

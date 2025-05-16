@@ -39,11 +39,8 @@ namespace Hubcon.GraphQL.Server
 
         [HubconMethod(MethodType.Subscription)]
         public IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request)
-        {
-            Console.WriteLine($"Subscription {request.OperationName} handled.");
-            
-            return HubconController.Pipeline.GetSubscription(request);
-        }
+            => HubconController.Pipeline.GetSubscription(request);
+        
 
         public void Build(WebApplication? app = null)
         {

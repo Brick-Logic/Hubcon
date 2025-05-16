@@ -1,10 +1,11 @@
 ﻿using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Attributes;
 using HubconTestDomain;
+using Microsoft.Extensions.Logging;
 
 namespace HubconTest.Controllers
 {
-    public class TestController : ITestContract
+    public class TestController(ILogger<TestController> logger) : ITestContract
     {
         [AllowAnonymous]
         public ISubscription<int>? OnUserCreated { get; }
@@ -22,7 +23,7 @@ namespace HubconTest.Controllers
 
         public async Task PrintMessage(string message)
         {
-            Console.WriteLine(message);
+            logger.LogInformation(message);
             await Task.CompletedTask;
         }
 
@@ -36,7 +37,7 @@ namespace HubconTest.Controllers
 
         public Task ShowTextOnServer()
         {
-            Console.WriteLine("Mostrando texto");
+            logger.LogInformation("Mostrando texto");
             return Task.CompletedTask;
         }
     }
