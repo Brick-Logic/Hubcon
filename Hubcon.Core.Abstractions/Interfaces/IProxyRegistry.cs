@@ -11,7 +11,7 @@ namespace Hubcon.Core.Abstractions.Interfaces
     {
         void RegisterProxy(Type interfaceType, Type proxyType);
         Type TryGetProxy<T>() where T : IControllerContract;
-        Type? TryGetProxy(Type interfaceType);
+        Type TryGetProxy(Type interfaceType);
         void TryRegisterProxyByContract(Type contractType);
     }
 }

@@ -1,9 +1,4 @@
-﻿using GreenDonut;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Hubcon.Core.Abstractions.Interfaces;
 
 namespace Hubcon.Core.Authentication
 {
@@ -18,7 +13,7 @@ namespace Hubcon.Core.Authentication
             AccessTokenExpiresAt.HasValue &&
             DateTime.UtcNow < AccessTokenExpiresAt.Value;
 
-        public async Task<Result> LoginAsync(string username, string password)
+        public async Task<IResult> LoginAsync(string username, string password)
         {
             var auth = await AuthenticateAsync(username, password);
 
@@ -34,7 +29,7 @@ namespace Hubcon.Core.Authentication
             return Result.Success();
         }
 
-        public async Task<Result> TryRefreshSessionAsync()
+        public async Task<IResult> TryRefreshSessionAsync()
         {
             if (string.IsNullOrEmpty(RefreshToken))
                 return Result.Failure("No refresh token available.");
@@ -63,7 +58,7 @@ namespace Hubcon.Core.Authentication
             await ClearSessionAsync();
         }
 
-        public async Task<Result> LoadSessionAsync()
+        public async Task<IResult> LoadSessionAsync()
         {
             var session = await LoadPersistedSessionAsync();
             if (session is not null)
@@ -78,24 +73,24 @@ namespace Hubcon.Core.Authentication
             return Result.Failure();
         }
 
-        protected abstract Task<AuthResult> AuthenticateAsync(string username, string password);
+        protected abstract Task<IAuthResult> AuthenticateAsync(string username, string password);
         protected abstract Task<AuthResult> RefreshSessionAsync(string refreshToken);
         protected abstract Task SaveSessionAsync();
         protected abstract Task ClearSessionAsync();
         protected abstract Task<PersistedSession?> LoadPersistedSessionAsync();
     }
 
-    public class Result
+    public class Result : IResult
     {
         public bool IsSuccess { get; private set; }
         public string? ErrorMessage { get; private set; }
         public bool IsFailure => !IsSuccess;
 
-        public static Result Success() => new Result { IsSuccess = true };
-        public static Result Failure(string? message = null) => new Result { IsSuccess = false, ErrorMessage = message ?? "" };
+        public static IResult Success() => new Result { IsSuccess = true };
+        public static IResult Failure(string? message = null) => new Result { IsSuccess = false, ErrorMessage = message ?? "" };
     }
 
-    public class AuthResult
+    public class AuthResult : IAuthResult
     {
         public bool IsSuccess { get; set; }
         public bool IsFailure => !IsFailure;
@@ -104,14 +99,14 @@ namespace Hubcon.Core.Authentication
         public int ExpiresInSeconds { get; private set; }
         public string? ErrorMessage { get; private set; }
 
-        public static AuthResult Success(string accessToken, string refreshToken, int expiresInSeconds) =>
-            new() { IsSuccess = true, AccessToken = accessToken, RefreshToken = refreshToken, ExpiresInSeconds = expiresInSeconds };
+        public static IAuthResult Success(string accessToken, string refreshToken, int expiresInSeconds) =>
+            new AuthResult() { IsSuccess = true, AccessToken = accessToken, RefreshToken = refreshToken, ExpiresInSeconds = expiresInSeconds };
 
-        public static AuthResult Failure(string? errorMessage) =>
-            new() { IsSuccess = false, ErrorMessage = errorMessage ?? "" };
+        public static IAuthResult Failure(string? errorMessage) =>
+            new AuthResult() { IsSuccess = false, ErrorMessage = errorMessage ?? "" };
     }
 
-    public class PersistedSession
+    public class PersistedSession : IPersistedSession
     {
         public string AccessToken { get; set; } = default!;
         public string RefreshToken { get; set; } = default!;

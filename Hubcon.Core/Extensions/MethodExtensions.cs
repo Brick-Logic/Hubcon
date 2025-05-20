@@ -52,9 +52,9 @@ namespace Hubcon.Core.Extensions
                                 .GetInterfaces()
                                 .Find(x => x.IsAssignableTo(typeof(IControllerContract))).Name;
 
-                            var operationRegistry = e.Context.ResolveOptional<IOperationRegistry>();
+                            var operationRegistry = e.Context.Resolve<IOperationRegistry>();
 
-                            if (!operationRegistry!.GetOperationBlueprint(contract, prop.Name, out IOperationBlueprint? blueprint))
+                            if (!operationRegistry.GetOperationBlueprint(contract, prop.Name, out IOperationBlueprint? blueprint))
                                 continue;
 
                             if (blueprint?.Kind != OperationKind.Subscription)

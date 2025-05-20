@@ -1,5 +1,6 @@
-﻿
-namespace Hubcon.Core.Authentication
+﻿using Hubcon.Core.Authentication;
+
+namespace Hubcon.Core.Abstractions.Interfaces
 {
     public interface IAuthenticationManager
     {
@@ -8,9 +9,9 @@ namespace Hubcon.Core.Authentication
         bool IsSessionActive { get; }
         string? RefreshToken { get; }
 
-        Task<Result> LoadSessionAsync();
-        Task<Result> LoginAsync(string username, string password);
+        Task<IResult> LoadSessionAsync();
+        Task<IResult> LoginAsync(string username, string password);
         Task LogoutAsync();
-        Task<Result> TryRefreshSessionAsync();
+        Task<IResult> TryRefreshSessionAsync();
     }
 }

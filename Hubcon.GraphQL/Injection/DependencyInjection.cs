@@ -21,7 +21,7 @@ namespace Hubcon.GraphQL.Injection
 {
     public static class DependencyInjection
     {
-        public static WebApplicationBuilder AddHubconGraphQL(
+        public static WebApplicationBuilder AddHubcon(
             this WebApplicationBuilder builder,
             Action<IControllerOptions>? controllerOptions = null,
             Action<ContainerBuilder>? additionalServices = null)
@@ -74,34 +74,6 @@ namespace Hubcon.GraphQL.Injection
             return builder;
         }
 
-        public static WebApplicationBuilder AddHubconGraphQLClient(this WebApplicationBuilder builder)
-        {
-            HubconBuilder.Current.AddHubconClientServices(builder, container =>
-            {
-                container.RegisterWithInjector(x => x
-                    .RegisterType<HubconGraphQLClient>()
-                    .As<IHubconClient>()
-                    .AsSingleton());
-
-                container.RegisterWithInjector(x => x
-                    .RegisterType<ClientCommunicationHandler>()
-                    .As<ICommunicationHandler>()
-                    .AsSingleton());
-
-                container.RegisterWithInjector(x => x
-                    .RegisterType<HubconClientProvider>()
-                    .As<IHubconClientProvider>()
-                    .AsSingleton());
-
-                container.RegisterWithInjector(x => x
-                    .RegisterGeneric(typeof(ClientSubscriptionHandler<>))
-                    .As(typeof(ISubscription<>))
-                    .AsTransient());
-            });
-
-            return builder;
-        }
-
         public static WebApplicationBuilder UseAuthenticationManager<T>(this WebApplicationBuilder builder)
             where T : IAuthenticationManager
         {
@@ -109,6 +81,7 @@ namespace Hubcon.GraphQL.Injection
             return builder;
 
         }
+
         public static WebApplicationBuilder UseAuthenticationManager(this WebApplicationBuilder builder, Type authenticationManagerType)
         {
             HubconBuilder.Current.UseAuthenticationManager(authenticationManagerType);

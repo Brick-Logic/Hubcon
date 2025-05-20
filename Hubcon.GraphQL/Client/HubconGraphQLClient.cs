@@ -3,9 +3,7 @@ using GraphQL.Client.Http;
 using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Authentication;
 using Hubcon.Core.Invocation;
-using Hubcon.Core.Middlewares.MessageHandlers;
 using Hubcon.Core.Subscriptions;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Reactive.Linq;
@@ -13,7 +11,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using System.Timers;
 
 namespace Hubcon.GraphQL.Client
 {
@@ -133,13 +130,8 @@ namespace Hubcon.GraphQL.Client
             var response = await _graphQLHttpClient.SendMutationAsync<JsonElement>(craftedRequest);
             var result = response.Data.GetProperty(resolver);
 
-            if(!result.TryGetProperty(nameof(IObjectOperationResponse.Success).ToLower(), out JsonElement successValue))
-            {
-                return new BaseJsonResponse(false);
-            }
-
+            result.TryGetProperty(nameof(IObjectOperationResponse.Success).ToLower(), out JsonElement successValue);
             result.TryGetProperty(nameof(BaseOperationResponse.Data).ToLower(), out JsonElement dataValue);
-
             result.TryGetProperty(nameof(BaseOperationResponse.Error).ToLower(), out JsonElement errorValue);
 
             return new BaseJsonResponse(

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Core.Abstractions.Interfaces
 {
-    public interface IServerConnectorInterceptor<T>
+    public interface IContractInterceptor
     {
         ICommunicationHandler CommunicationHandler { get; }
     }

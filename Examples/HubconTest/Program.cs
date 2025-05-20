@@ -26,7 +26,7 @@ namespace HubconTest
 
             builder.Services.AddOpenApi();
 
-            builder.AddHubconGraphQL(controllerOptions =>
+            builder.AddHubcon(controllerOptions =>
             {
                 controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
                 controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();

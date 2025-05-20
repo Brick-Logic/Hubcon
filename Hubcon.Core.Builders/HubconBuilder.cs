@@ -27,9 +27,7 @@ namespace Hubcon.Core.Builders
         private IProxyRegistry Proxies { get; } = new ProxyRegistry();
         private ILiveSubscriptionRegistry SubscriptionRegistry { get; } = new LiveSubscriptionRegistry();
         private IOperationRegistry OperationRegistry { get; } = new OperationRegistry();
-
         private List<Action<ContainerBuilder>> ServicesToInject { get; } = new();
-
         private List<Type> ProxiesToRegister { get; } = new();
 
 
@@ -246,7 +244,7 @@ namespace Hubcon.Core.Builders
                    //.RegisterWithInjector(x => x.RegisterType<MiddlewareProvider>().As<IMiddlewareProvider>().AsScoped())
                    .RegisterWithInjector(x => x.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped())
                    .RegisterWithInjector(x => x.RegisterType(typeof(HubconControllerManager)).As(typeof(IHubconControllerManager)).AsScoped())
-                   .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerConnectorInterceptor<>)).As(typeof(IServerConnectorInterceptor<>)).AsScoped())
+                   .RegisterWithInjector(x => x.RegisterType(typeof(ServerConnectorInterceptor)).As(typeof(IContractInterceptor)).AsScoped())
                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<>)).As(typeof(IHubconServerConnector<>)).AsScoped())
                    .RegisterWithInjector(x => x.RegisterInstance(iBaseHubconControllerInstance).As(iBaseHubconControllerInstance.GetType()).AsSingleton());
 
@@ -266,35 +264,6 @@ namespace Hubcon.Core.Builders
             var scope = builtContainer.BeginLifetimeScope();
 
             return new AutofacServiceProvider(scope);
-        }
-
-        public WebApplicationBuilder AddHubconClientServices(
-            WebApplicationBuilder builder,
-            params Action<ContainerBuilder>?[] additionalServices)
-        {
-            builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
-            builder.Host.ConfigureContainer<ContainerBuilder>((context, container) =>
-            {
-                if (ServicesToInject.Count > 0)
-                    ServicesToInject.ForEach(x => x.Invoke(container));
-
-                if (ProxiesToRegister.Count > 0)
-                    ProxiesToRegister.ForEach(x => container.RegisterWithInjector(y => y.RegisterType(x).AsTransient()));
-
-                container
-                       .RegisterWithInjector(x => x.RegisterInstance(Proxies).As<IProxyRegistry>().AsSingleton())
-                       .RegisterWithInjector(x => x.RegisterType<MethodDescriptorProvider>().As<IMethodDescriptorProvider>().AsSingleton())
-                       .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().As<IDynamicConverter>().AsSingleton())
-                       .RegisterWithInjector(x => x.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped())
-                       .RegisterWithInjector(x => x.RegisterType(typeof(HubconControllerManager)).As(typeof(IHubconControllerManager)).AsScoped())
-                       .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerConnectorInterceptor<>)).As(typeof(IServerConnectorInterceptor<>)).AsScoped())
-                       .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<>)).As(typeof(IHubconServerConnector<>)).AsScoped());
-
-                foreach (var services in additionalServices)
-                    services?.Invoke(container);
-            });
-
-            return builder;
         }
     }
 }

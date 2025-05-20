@@ -43,29 +43,28 @@ namespace Hubcon.Core.Routing.Registries
 
         public Type TryGetProxy<T>() where T : IControllerContract
         {
-            if (ProxyTypes.TryGetValue(typeof(T), out Type? proxy))
+            return TryGetProxy(typeof(T))!;
+        }
+        
+        public Type TryGetProxy(Type interfaceType)
+        {
+            if (interfaceType.IsAssignableFrom(typeof(IControllerContract)))
+                throw new ArgumentException($"El tipo '{interfaceType.Name}' no implementa {nameof(IControllerContract)}.");
+
+            if (ProxyTypes.TryGetValue(interfaceType, out Type? proxy))
                 return proxy;
 
-            var assembly = typeof(T).Assembly;
+            var assembly = interfaceType.Assembly;
 
             var implementation = assembly
                 .GetTypes()
-                .Find(t => !t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t) && t.Name == typeof(T).Name + "Proxy");
+                .Find(t => !t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t) && t.Name == interfaceType.Name + "Proxy");
 
-            RegisterProxy(typeof(T), implementation);
+            RegisterProxy(interfaceType, implementation);
 
             if (implementation != null) return implementation;
 
             return default!;
-        }
-        
-        public Type? TryGetProxy(Type interfaceType)
-        {
-
-            if (ProxyTypes.TryGetValue(interfaceType, out Type? proxy))
-                return proxy;
-            
-            return default;
         }
     }
 }

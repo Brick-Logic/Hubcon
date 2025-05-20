@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\Hubcon.Core.Abstractions\Hubcon.Core.Abstractions.csproj" />
+    <ProjectReference Include="..\Hubcon.Core.Routing\Hubcon.Core.Routing.csproj" />
+    <ProjectReference Include="..\Hubcon.GraphQL\Hubcon.GraphQL.csproj" />
+    <PackageReference Include="GraphQL.Client" Version="6.1.0" />
+	<PackageReference Include="GraphQL.Client.Serializer.SystemTextJson" Version="6.1.0" />
+  </ItemGroup>
+
+</Project>

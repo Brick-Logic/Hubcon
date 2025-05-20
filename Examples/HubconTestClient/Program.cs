@@ -1,18 +1,11 @@
-﻿using GraphQL.Client.Http;
-using GraphQL.Client.Serializer.SystemTextJson;
-using Hubcon.Core.Abstractions.Interfaces;
-using Hubcon.GraphQL.Injection;
+﻿using Hubcon.Client;
 using Hubcon.Core.Builders;
+using HubconTestClient.Modules;
 using HubconTestDomain;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Diagnostics;
-using Hubcon.Core.Middlewares.MessageHandlers;
-using Microsoft.AspNetCore.Authentication;
-using Hubcon.Core.Authentication;
-using Castle.Core.Logging;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace HubconTestClient
 {
@@ -24,33 +17,13 @@ namespace HubconTestClient
         {
             var builder = WebApplication.CreateBuilder();
 
-            builder.Services.AddSingleton<GraphQLHttpClient>(x =>
-            {
-                var configuration = x.GetRequiredService<IConfiguration>();
-                var authManager = x.GetService<IAuthenticationManager>();
-                var graphqlEndpoint = configuration["GraphQL:HttpEndpoint"] ?? "http://localhost:5000/graphql";
-                var graphqlWebSocketEndpoint = configuration["GraphQL:WebSocketEndpoint"] ?? "ws://localhost:5000/graphql";
-
-                var options = new GraphQLHttpClientOptions
-                {
-                    EndPoint = new Uri(graphqlEndpoint),
-                    WebSocketEndPoint = new Uri(graphqlWebSocketEndpoint),
-                    WebSocketProtocol = "graphql-transport-ws",
-                    HttpMessageHandler = new HttpClientMessageHandler(authManager)
-                };
-
-                return new GraphQLHttpClient(options, new SystemTextJsonSerializer());
-            });
-            builder.AddHubconGraphQLClient();
-            builder.UseContractsFromAssembly(nameof(HubconTestDomain));
+            builder.AddHubconClient();
+            builder.AddRemoteServerModule<TestModule>();
 
             var app = builder.Build();
-
-
             var scope = app.Services.CreateScope();
 
-            var clientProvider = scope.ServiceProvider.GetRequiredService<IHubconClientProvider>();
-            var client = clientProvider.GetClient<ITestContract>();
+            var client = scope.ServiceProvider.GetRequiredService<ITestContract>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<ITestContract>>();
 
 
@@ -83,10 +56,12 @@ namespace HubconTestClient
             Console.ReadKey();
 
             logger.LogInformation("Enviando request...");
+
             await foreach (var item in client.GetMessages(10))
             {
                 logger.LogInformation($"Respuesta recibida: {item}");
             }
+
             Console.ReadKey();
 
 

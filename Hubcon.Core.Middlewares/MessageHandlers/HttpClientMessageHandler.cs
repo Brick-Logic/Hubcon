@@ -1,4 +1,5 @@
-﻿using Hubcon.Core.Authentication;
+﻿using Hubcon.Core.Abstractions.Interfaces;
+using Hubcon.Core.Authentication;
 using System;
 using System.Collections.Generic;
 using System.Linq;

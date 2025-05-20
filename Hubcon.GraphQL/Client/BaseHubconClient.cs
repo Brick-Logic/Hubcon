@@ -12,12 +12,12 @@ namespace Hubcon.GraphQL.Client
     {
         private readonly ILifetimeScope _lifetimeScope;
         private IControllerContract? _client = null!;
-        private readonly IServerConnectorInterceptor<ICommunicationHandler> Interceptor;
+        private readonly IContractInterceptor Interceptor;
         private readonly IProxyRegistry _proxyRegistry;
         public ICommunicationHandler Connection { get => Interceptor.CommunicationHandler; }
 
         public HubconClientProvider(
-            IServerConnectorInterceptor<ICommunicationHandler> interceptor,
+            IContractInterceptor interceptor,
             IProxyRegistry proxyRegistry,
             ILifetimeScope lifetimeScope) : base()
         {

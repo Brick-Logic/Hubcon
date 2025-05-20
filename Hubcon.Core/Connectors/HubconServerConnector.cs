@@ -14,7 +14,7 @@ namespace Hubcon.Core.Connectors
         where TICommunicationHandler : ICommunicationHandler
     {
         private IControllerContract? _client = null!;
-        private readonly IServerConnectorInterceptor<TICommunicationHandler> Interceptor;
+        private readonly IContractInterceptor Interceptor;
         private readonly IProxyRegistry proxyRegistry;
 
         public ICommunicationHandler Connection { get => Interceptor.CommunicationHandler; }
@@ -22,7 +22,7 @@ namespace Hubcon.Core.Connectors
         private ILifetimeScope _lifetimeScope { get; }
 
         public HubconServerConnector(
-            IServerConnectorInterceptor<TICommunicationHandler> interceptor,
+            IContractInterceptor interceptor,
             IProxyRegistry proxyRegistry,
             ILifetimeScope lifetimeScoped) : base()
         {
@@ -37,6 +37,7 @@ namespace Hubcon.Core.Connectors
                 return (TICommunicationContract)_client;
 
             var proxyType = proxyRegistry.TryGetProxy<TICommunicationContract>();
+
             _client = (TICommunicationContract)_lifetimeScope.Resolve(proxyType, new[]
             {
                 new TypedParameter(typeof(AsyncInterceptorBase), Interceptor)
