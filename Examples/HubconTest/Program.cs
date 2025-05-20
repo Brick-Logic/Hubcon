@@ -37,6 +37,12 @@ namespace HubconTest
                     //controllerMiddlewares.AddMiddleware<LocalLoggingMiddleware>();
                     controllerMiddlewares.UseGlobalMiddlewaresFirst(true);
                 });
+
+                controllerOptions.AddController<SecondTestController>(controllerMiddlewares =>
+                {
+                    //controllerMiddlewares.AddMiddleware<LocalLoggingMiddleware>();
+                    controllerMiddlewares.UseGlobalMiddlewaresFirst(true);
+                });
             });
 
             builder.UseContractsFromAssembly(nameof(HubconTestDomain));

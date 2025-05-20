@@ -3,7 +3,6 @@ using Autofac.Extensions.DependencyInjection;
 using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Abstractions.Standard.Interfaces;
 using Hubcon.Core.Attributes;
-using Hubcon.Core.Builders;
 using Hubcon.Core.Connectors;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Extensions;

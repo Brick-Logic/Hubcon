@@ -188,7 +188,7 @@ namespace Hubcon.GraphQL.Client
             sb.Append($"{resolver}({nameof(request)}: $request) {{");
 
 
-            if(methodInfo.ReturnType == typeof(Task))
+            if(methodInfo.ReturnType == typeof(Task) || methodInfo.ReturnType == typeof(void))
             {
                 sb.Append($"success ");
                 sb.Append($"error ");

@@ -17,11 +17,6 @@ namespace Hubcon.GraphQL.Server
         [HubconInject]
         public IHubconControllerManager HubconController { get; }
 
-        public ControllerEntrypoint()
-        {
-            
-        }
-
         [HubconMethod(MethodType.Mutation)]
         public async Task<IOperationResponse<JsonElement>> HandleMethodTask(MethodInvokeRequest request)
             => await HubconController.Pipeline.HandleWithResultAsync(request);

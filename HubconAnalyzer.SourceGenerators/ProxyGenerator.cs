@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using System;
 using System.Linq;
 using System.Text;
 
@@ -98,9 +99,17 @@ namespace HubconAnalyzer.SourceGenerators
                 sb.AppendLine($"    public {returnType} {methodName}({parameters})");
                 sb.AppendLine($"    {{");
 
-                sb.AppendLine($"        MethodInfo method = typeof({iface.ToDisplayString()}).GetMethod(\"{methodName}\")!;");
+                if(method.Parameters.Length  > 0)
+                {
+                    var parameterTypes = string.Join(", ", method.Parameters.Select(p => $"typeof({p.Type.ToDisplayString()})"));
+                    sb.AppendLine($"        MethodInfo method = typeof({iface.ToDisplayString()}).GetMethod(\"{methodName}\", new Type[] {{ {parameterTypes.Replace("?", "")} }})!;");        
+                }
+                else
+                {
+                    sb.AppendLine($"        MethodInfo method = typeof({iface.ToDisplayString()}).GetMethod(\"{methodName}\", Type.EmptyTypes)!;");
+                }
 
-                if(paramNames.Any())
+                if (paramNames.Any())
                     sb.AppendLine($"        SimpleInvocation invocation = new SimpleInvocation(this, Interceptor, method, {string.Join(",", paramNames)});");
                 else
                     sb.AppendLine($"        SimpleInvocation invocation = new SimpleInvocation(this, Interceptor, method);");

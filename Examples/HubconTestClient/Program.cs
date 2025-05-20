@@ -24,11 +24,19 @@ namespace HubconTestClient
             var scope = app.Services.CreateScope();
 
             var client = scope.ServiceProvider.GetRequiredService<ITestContract>();
+            var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<ITestContract>>();
 
 
             logger.LogInformation("Esperando interacción antes de continuar...");
             Console.ReadKey();
+
+            var text = client2.TestReturn();
+
+
+            logger.LogInformation($"TestVoid llamado. Texto recibido: {text}");
+            Console.ReadKey();
+
             logger.LogDebug("Conectando evento...");
 
             int eventosRecibidos = 0;
@@ -40,7 +48,7 @@ namespace HubconTestClient
             }
 
             client.OnUserCreated!.AddHandler(handler);
-            //await client.OnUserCreated.Subscribe();
+            await client.OnUserCreated.Subscribe();
             await client.CreateUser();
             logger.LogInformation("Evento conectado.");
 

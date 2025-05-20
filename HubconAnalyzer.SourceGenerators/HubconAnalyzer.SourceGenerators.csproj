@@ -12,10 +12,10 @@
 		<!-- Empaquetar como NuGet -->
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageId>HubconAnalyzer.SourceGenerators</PackageId>
-		<Version>1.0.50</Version>
+		<Version>1.0.57</Version>
 		<Authors>TuNombre</Authors>
 		<Company>TuEmpresa</Company>
-		<Description>Analyzer que genera proxies para interfaces que implementan ICommunicationContract</Description>
+		<Description>Analyzer que genera proxies para interfaces que implementan IControllerContract</Description>
 		<PackageTags>analyzer;source-generator</PackageTags>
 		<PackageOutputPath>../nupkgs</PackageOutputPath>
 
