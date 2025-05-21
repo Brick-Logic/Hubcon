@@ -241,7 +241,7 @@ namespace Hubcon.SignalR.Client
             return new BaseOperationResponse(true);
         }
         
-        public IAsyncEnumerable<JsonElement?> HandleMethodStream(IOperationRequest info)
+        public IAsyncEnumerable<JsonElement> HandleMethodStream(IOperationRequest info)
         {
             throw new NotImplementedException();
         }
@@ -251,7 +251,7 @@ namespace Hubcon.SignalR.Client
             
         }
 
-        public IAsyncEnumerable<JsonElement?> HandleSubscription(ISubscriptionRequest request)
+        public IAsyncEnumerable<JsonElement> HandleSubscription(ISubscriptionRequest request)
         {
             throw new NotImplementedException();
         }

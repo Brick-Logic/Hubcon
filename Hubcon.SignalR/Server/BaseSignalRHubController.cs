@@ -51,7 +51,7 @@ namespace Hubcon.SignalR.Server
             => await HubconController.Pipeline.HandleWithoutResultAsync(info);
         public async Task<IResponse> ReceiveStream(string code, ChannelReader<object> reader) 
             => await StreamNotificationHandler.NotifyStream(code, reader);
-        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest info) 
+        public IAsyncEnumerable<JsonElement> HandleMethodStream(MethodInvokeRequest info) 
             => HubconController.Pipeline.GetStream(info);
 
         protected IEnumerable<IClientReference> GetClients() => ClientReferences[GetType()].Values;
@@ -76,7 +76,7 @@ namespace Hubcon.SignalR.Server
             throw new NotImplementedException();
         }
 
-        public IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request)
+        public IAsyncEnumerable<JsonElement> HandleSubscription(SubscriptionRequest request)
         {
             throw new NotImplementedException();
         }

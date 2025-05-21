@@ -3,13 +3,21 @@ using Newtonsoft.Json;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Hubcon.Core.Serialization
 {
     public class DynamicConverter : IDynamicConverter
     {
         public Dictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
+
+        private readonly JsonSerializerOptions jsonSerializerOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+            MaxDepth = 64,
+
+        };
 
         public object?[] SerializeArgs(object?[] args)
         {
@@ -85,15 +93,15 @@ namespace Hubcon.Core.Serialization
 
 
         // 1. Convierte un objeto a JsonElement
-        public JsonElement? SerializeObject(object? value)
+        public JsonElement SerializeObject(object? value)
         {
-            return value is null ? null : System.Text.Json.JsonSerializer.SerializeToElement(value);
+            return value is null ? default : System.Text.Json.JsonSerializer.SerializeToElement(value, jsonSerializerOptions);
         }
 
         // 2. Convierte una colección de objetos a JsonElements
-        public IEnumerable<JsonElement?> SerializeArgsToJson(IEnumerable<object?> values)
+        public IEnumerable<JsonElement> SerializeArgsToJson(IEnumerable<object?> values)
         {
-            List<JsonElement?> results = new();
+            List<JsonElement> results = new();
             foreach (var val in values)
             {
                 results.Add(SerializeObject(val));
@@ -103,12 +111,12 @@ namespace Hubcon.Core.Serialization
         }
 
         // 3. Convierte un JsonElement a un objeto fuertemente tipado
-        public object? DeserializeJsonElement(JsonElement? element, Type targetType)
+        public object? DeserializeJsonElement(JsonElement element, Type targetType)
         {
-            if (element is null || element.Value.ValueKind == JsonValueKind.Null)
+            if (element.ValueKind == JsonValueKind.Null)
                 return null;
 
-            return System.Text.Json.JsonSerializer.Deserialize(element.Value.GetRawText(), targetType);
+            return element.Clone().Deserialize(targetType, jsonSerializerOptions);
         }
 
         // 3. Convierte un JsonElement a un objeto fuertemente tipado
@@ -117,11 +125,11 @@ namespace Hubcon.Core.Serialization
             if ( element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
                 return default;
 
-            return (T?)element.Deserialize<T>();
+            return element.Clone().Deserialize<T>(jsonSerializerOptions);
         }
 
         // 4. Convierte una lista de JsonElements a objetos, según tipos dados
-        public IEnumerable<object?> DeserializeJsonArgs(IEnumerable<JsonElement?> elements, IEnumerable<Type> types)
+        public IEnumerable<object?> DeserializeJsonArgs(IEnumerable<JsonElement> elements, IEnumerable<Type> types)
         {
             List<object?> list = new();
             using var elementEnum = elements.GetEnumerator();
@@ -150,7 +158,7 @@ namespace Hubcon.Core.Serialization
             }
         }
 
-        public async IAsyncEnumerable<JsonElement?> ConvertToJsonElementStream(IAsyncEnumerable<object?> stream, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<JsonElement> ConvertToJsonElementStream(IAsyncEnumerable<object?> stream, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             await foreach (var item in stream.WithCancellation(cancellationToken))
             {

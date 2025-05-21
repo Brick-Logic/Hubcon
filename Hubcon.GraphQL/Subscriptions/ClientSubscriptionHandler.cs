@@ -84,7 +84,7 @@ namespace Hubcon.GraphQL.Subscriptions
                         IAsyncEnumerable<JsonElement> eventSource = null!;
 
                         var contract = Property.ReflectedType!.GetInterfaces().Find(x => x.IsAssignableTo(typeof(IControllerContract)));
-                        var request = new SubscriptionRequest(Property.Name, contract.Name);
+                        var request = new SubscriptionRequest(Property.Name, contract.Name, null);
 
                         eventSource = _client.GetSubscription(request, nameof(IHubconEntrypoint.HandleSubscription), _tokenSource.Token);
                         await using var enumerator = eventSource.GetAsyncEnumerator(_tokenSource.Token);

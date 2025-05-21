@@ -32,7 +32,7 @@ namespace Hubcon.GraphQL.Injection
                 .AddType<BaseJsonResponse>()
                 .AddType<JsonScalarType>()
                 .AddType<ObjectType<IResponse>>()
-                .AddType<ObjectType<IOperationResponse<JsonElement?>>>()
+                .AddType<ObjectType<IOperationResponse<JsonElement>>>()
                 .AddType<InputObjectType<MethodInvokeRequest>>()
                 .AddType<InputObjectType<SubscriptionRequest>>()
                 .AddProjections()

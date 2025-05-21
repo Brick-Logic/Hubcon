@@ -7,8 +7,8 @@ namespace Hubcon.Core.Invocation
 {
     public interface IHubconEntrypoint : IBaseHubconController
     {
-        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest request);
+        public IAsyncEnumerable<JsonElement> HandleMethodStream(MethodInvokeRequest request);
         public void Build(WebApplication? app = null);
-        IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request);
+        IAsyncEnumerable<JsonElement> HandleSubscription(SubscriptionRequest request);
     }
 }

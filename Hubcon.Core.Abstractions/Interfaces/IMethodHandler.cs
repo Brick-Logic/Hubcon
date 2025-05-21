@@ -10,7 +10,7 @@ namespace Hubcon.Core.Abstractions.Interfaces
         public Task<IOperationResponse<JsonElement>> HandleSynchronousResult(IOperationRequest request);
         public Task<IOperationResponse<JsonElement>> HandleWithResultAsync(IOperationRequest request);
 
-        public IAsyncEnumerable<JsonElement?> GetStream(IOperationRequest request);
-        IAsyncEnumerable<JsonElement?> GetSubscription(IOperationRequest request, CancellationToken cancellationToken = default);
+        public IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request);
+        IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, CancellationToken cancellationToken = default);
     }
 }

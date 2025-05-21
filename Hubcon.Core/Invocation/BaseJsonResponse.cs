@@ -15,7 +15,7 @@ namespace Hubcon.Core.Invocation
 
         }
 
-        public BaseJsonResponse(bool success, JsonElement? data = null, string? error = null) : base(success, data ?? default, error)
+        public BaseJsonResponse(bool success, JsonElement data = default, string? error = null) : base(success, data, error)
         {
 
         }

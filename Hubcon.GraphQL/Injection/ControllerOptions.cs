@@ -126,10 +126,10 @@ namespace Hubcon.GraphQL.Injection
 
                         var result = method.Invoke(controller, args);
 
-                        if (result is IAsyncEnumerable<JsonElement?> asyncStream)
+                        if (result is IAsyncEnumerable<JsonElement> asyncStream)
                             return asyncStream;
 
-                        return (IAsyncEnumerable<JsonElement?>)result!;
+                        return (IAsyncEnumerable<JsonElement>)result!;
                     })
                     .Resolve(ctx =>
                     {
@@ -173,7 +173,7 @@ namespace Hubcon.GraphQL.Injection
                 return new NamedTypeNode("Int");
             if (type == typeof(string))
                 return new NamedTypeNode("String");
-            if (type == typeof(JsonElement) || type == typeof(JsonElement?))
+            if (type == typeof(JsonElement) || type == typeof(JsonElement))
                 return new NamedTypeNode("JsonScalarType");
             if (type == typeof(BaseJsonResponse))
                 return new NamedTypeNode("BaseJsonResponse");
@@ -196,7 +196,7 @@ namespace Hubcon.GraphQL.Injection
                 return new NamedTypeNode("String");
             if (type == typeof(int))
                 return new NamedTypeNode("Int");
-            if (type == typeof(JsonElement) || type == typeof(JsonElement?))
+            if (type == typeof(JsonElement) || type == typeof(JsonElement))
                 return new NamedTypeNode("JsonScalarType");
 
             throw new NotSupportedException($"No se puede mapear el tipo de entrada {type.Name}");

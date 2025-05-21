@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 
 namespace HubconTestClient
 {
@@ -42,7 +43,7 @@ namespace HubconTestClient
 
             async Task handler(int input)
             {
-                logger.LogInformation($"Evento recibido: {input}");
+                logger.LogDebug($"Evento recibido: {input}");
                 Interlocked.Add(ref eventosRecibidos, 1);
             }
 
@@ -102,7 +103,7 @@ namespace HubconTestClient
             int finishedRequestsCount = 0;
             int errors = 0;
             int lastRequests = 0;
-            int maxReqs = 0; 
+            int maxReqs = 0;
             var sw = new Stopwatch();
             var worker = new System.Timers.Timer();
             worker.Interval = 1000;
@@ -120,17 +121,16 @@ namespace HubconTestClient
             worker.Start();
             sw.Start();
 
-            while (true)
+            var tasks = Enumerable.Range(0, 5).Select(_ => Task.Run(async () =>
             {
-                await Task.Run(async () =>
+                while (true)
                 {
                     await client.CreateUser();
-                    //await Task.Delay(1000);
-
                     Interlocked.Add(ref finishedRequestsCount, 1);
-                });
-            }
+                }
+            })).ToArray();
 
+            await Task.WhenAll(tasks);
 
 
 

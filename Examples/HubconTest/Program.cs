@@ -25,9 +25,9 @@ namespace HubconTest
 
             builder.AddHubcon(controllerOptions =>
             {
-                controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
+                //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
                 controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
-                controllerOptions.AddGlobalMiddleware<AuthenticationMiddleware>();
+                //controllerOptions.AddGlobalMiddleware<AuthenticationMiddleware>();
 
                 controllerOptions.AddController<TestController>(controllerMiddlewares =>
                 {

@@ -56,7 +56,7 @@ namespace Hubcon.Core.Interceptors
                 );
 
                 var response = await CommunicationHandler.InvokeAsync(request, invocation.Method, new CancellationToken());
-                result = _converter.DeserializeJsonElement<TResult>((JsonElement)response.Data!)!;
+                result = _converter.DeserializeJsonElement<TResult>(response.Data!)!;
             }
 
 

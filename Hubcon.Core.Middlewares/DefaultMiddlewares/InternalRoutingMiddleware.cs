@@ -89,7 +89,7 @@ namespace Hubcon.Core.Middlewares.DefaultMiddlewares
 
                 subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
 
-                async IAsyncEnumerable<JsonElement?> SubDelegate()
+                async IAsyncEnumerable<JsonElement> SubDelegate()
                 {
                     try
                     {

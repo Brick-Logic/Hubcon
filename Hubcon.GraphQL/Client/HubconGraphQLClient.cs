@@ -240,7 +240,7 @@ namespace Hubcon.GraphQL.Client
         {
             var sb = new StringBuilder();
 
-            var request = new SubscriptionRequest(invokeRequest.OperationName, invokeRequest.ContractName);
+            var request = new SubscriptionRequest(invokeRequest.OperationName, invokeRequest.ContractName, null);
 
             sb.Append($"subscription(${nameof(request)}: {nameof(SubscriptionRequest)}Input!) {{");
             sb.Append($"{resolver}({nameof(request)}: $request) }}");

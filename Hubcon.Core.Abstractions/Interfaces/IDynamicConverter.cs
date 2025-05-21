@@ -12,17 +12,17 @@ namespace Hubcon.Core.Abstractions.Interfaces
         Dictionary<Delegate, Type[]> TypeCache { get; }
 
         IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement> stream, CancellationToken cancellationToken);
-        IAsyncEnumerable<JsonElement?> ConvertToJsonElementStream(IAsyncEnumerable<object?> stream, CancellationToken cancellationToken = default);
+        IAsyncEnumerable<JsonElement> ConvertToJsonElementStream(IAsyncEnumerable<object?> stream, CancellationToken cancellationToken = default);
         object?[] DeserializeArgs(Type[] types, object?[] args);
         object?[] DeserializedArgs(Delegate del, object?[] args);
         object? DeserializeData(Type type, object data);
         T? DeserializeData<T>(object? data);
-        IEnumerable<object?> DeserializeJsonArgs(IEnumerable<JsonElement?> elements, IEnumerable<Type> types);
-        object? DeserializeJsonElement(JsonElement? element, Type targetType);
+        IEnumerable<object?> DeserializeJsonArgs(IEnumerable<JsonElement> elements, IEnumerable<Type> types);
+        object? DeserializeJsonElement(JsonElement element, Type targetType);
         T? DeserializeJsonElement<T>(JsonElement element);
         object?[] SerializeArgs(object?[] args);
-        IEnumerable<JsonElement?> SerializeArgsToJson(IEnumerable<object?> values);
+        IEnumerable<JsonElement> SerializeArgsToJson(IEnumerable<object?> values);
         string? SerializeData(object? data);
-        JsonElement? SerializeObject(object? value);
+        JsonElement SerializeObject(object? value);
     }
 }

@@ -101,7 +101,7 @@ namespace Hubcon.Core.Pipelines
             return pipelineResult.Result!;
         }
 
-        public IAsyncEnumerable<JsonElement?> GetStream(IOperationRequest request)
+        public IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
                 return null!;
@@ -120,7 +120,7 @@ namespace Hubcon.Core.Pipelines
             return _converter.ConvertToJsonElementStream(pipelineResult);
         }
 
-        public IAsyncEnumerable<JsonElement?> GetSubscription(
+        public IAsyncEnumerable<JsonElement> GetSubscription(
             IOperationRequest request,
             CancellationToken cancellationToken = default)
         {
@@ -137,7 +137,7 @@ namespace Hubcon.Core.Pipelines
             var pipelineTask = pipeline.Execute();
             pipelineTask.Wait();
             var res = pipelineTask.Result.Result!.Data!;
-            return (IAsyncEnumerable<JsonElement?>)res;
+            return (IAsyncEnumerable<JsonElement>)res;
         }
 
 

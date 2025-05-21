@@ -29,11 +29,11 @@ namespace Hubcon.GraphQL.Server
         }
 
         [HubconMethod(MethodType.Subscription)]
-        public IAsyncEnumerable<JsonElement?> HandleMethodStream(MethodInvokeRequest request)
+        public IAsyncEnumerable<JsonElement> HandleMethodStream(MethodInvokeRequest request)
             => HubconController.Pipeline.GetStream(request);
 
         [HubconMethod(MethodType.Subscription)]
-        public IAsyncEnumerable<JsonElement?> HandleSubscription(SubscriptionRequest request)
+        public IAsyncEnumerable<JsonElement> HandleSubscription(SubscriptionRequest request)
             => HubconController.Pipeline.GetSubscription(request);
         
 
