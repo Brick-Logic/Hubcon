@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net8;net9</TargetFrameworks>
+		<TargetFrameworks>net8</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
@@ -21,8 +21,6 @@
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="[8.0.0, 10.0.0)" />
 		<ProjectReference Include="..\Hubcon.Core.Builders\Hubcon.Core.Builders.csproj" />
 		<ProjectReference Include="..\Hubcon.Core\Hubcon.Core.csproj" />
-        <ProjectReference Include="..\HubconAnalyzer.DiagnosticSuppressors\HubconAnalyzer.DiagnosticSuppressors.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-		<PackageReference Include="HubconAnalyzer.SourceGenerators" Version="1.0.36" />
 		<ProjectReference Include="..\Hubcon.Core.Abstractions.Standard\Hubcon.Core.Abstractions.Standard.csproj" />
 		<ProjectReference Include="..\Hubcon.Core.Abstractions\Hubcon.Core.Abstractions.csproj" />
 	</ItemGroup>

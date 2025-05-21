@@ -1,9 +1,14 @@
-﻿using HubconTestDomain;
+﻿using Hubcon.Core.Abstractions.Standard.Attributes;
+using Hubcon.Core.Abstractions.Standard.Interfaces;
+using HubconTestDomain;
 
 namespace HubconTest.Controllers
 {
     public class SecondTestController(ILogger<SecondTestController> logger) : ISecondTestContract
     {
+        [HubconInject]
+        public string MyProperty { get; set; }
+
         public async Task TestMethod()
         {
             logger.LogInformation("TestMethod called");
@@ -22,7 +27,7 @@ namespace HubconTest.Controllers
 
         public void TestVoid()
         {
-            logger.LogInformation("TestVoid called.");         
+            logger.LogInformation("TestVoid called.");
         }
 
         public string TestReturn()

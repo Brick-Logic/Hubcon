@@ -5,12 +5,8 @@ using Hubcon.Core.Abstractions.Enums;
 using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Abstractions.Standard.Attributes;
 using Hubcon.Core.Abstractions.Standard.Interfaces;
-using Hubcon.Core.Attributes;
 using Hubcon.Core.Tools;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.CodeAnalysis;
-using System.Diagnostics.Contracts;
 using System.Reflection;
 
 namespace Hubcon.Core.Extensions

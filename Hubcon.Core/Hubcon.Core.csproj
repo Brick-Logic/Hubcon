@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>net8;net9</TargetFrameworks>
+		<TargetFrameworks>net8.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
@@ -29,7 +29,11 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="HotChocolate.Types" Version="15.1.3" />
+		<PackageReference Include="HubconAnalyzer" Version="1.0.*" />
+		<PackageReference Include="HubconAnalyzer.CodeFixes" Version="1.0.*" />
+		<PackageReference Include="HubconAnalyzer.DiagnosticSupressors" Version="1.0.*" />
 		<ProjectReference Include="..\Hubcon.Core.Abstractions.Standard\Hubcon.Core.Abstractions.Standard.csproj" />
 		<ProjectReference Include="..\Hubcon.Core.Abstractions\Hubcon.Core.Abstractions.csproj" />
+		<ProjectReference Include="..\HubconAnalyzer.SourceGenerators\HubconAnalyzer.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 </Project>

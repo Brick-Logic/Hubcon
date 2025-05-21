@@ -6,6 +6,19 @@
 		<RootNamespace>HubconAnalyzer.DiagnosticSuppressors</RootNamespace>
 		<!-- Necesario para que Roslyn cargue supresores -->
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<PackageOutputPath>../nupkgs</PackageOutputPath>
+
+		<IsPackable>true</IsPackable>
+
+		<!-- Empaquetar como NuGet -->
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<PackageId>HubconAnalyzer.DiagnosticSupressors</PackageId>
+		<Version>1.0.1</Version>
+		<Authors>TuNombre</Authors>
+		<Company>TuEmpresa</Company>
+		<Description>Analyzer que genera proxies para interfaces que implementan IControllerContract</Description>
+		<PackageTags>analyzer</PackageTags>
+		<PackageOutputPath>../nupkgs</PackageOutputPath>
 	</PropertyGroup>
 	<ItemGroup>
 		<!-- Las APIs de Roslyn -->

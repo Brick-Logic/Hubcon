@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net9</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 	<ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
@@ -15,7 +15,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Hubcon.Core.Abstractions.Standard\Hubcon.Core.Abstractions.Standard.csproj" />
     <ProjectReference Include="..\..\Hubcon.GraphQL\Hubcon.GraphQL.csproj" />
+    <ProjectReference Include="..\..\Hubcon.Core\Hubcon.Core.csproj" />
     <ProjectReference Include="..\..\Hubcon.SignalR\Hubcon.SignalR.csproj" />
     <ProjectReference Include="..\HubconTestDomain\HubconTestDomain.csproj" />
   </ItemGroup>
