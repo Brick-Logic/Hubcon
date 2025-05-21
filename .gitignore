@@ -396,3 +396,7 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+/dump_20250521_013548.dmp
+/dump_20250521_015807.dmp
+/dump_20250521_023145.dmp
+/HubconTestClient.exe_20250521_012834.nettrace
