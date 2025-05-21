@@ -20,9 +20,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
-namespace Hubcon.Core.Builders
+namespace Hubcon.Server
 {
-    public class HubconBuilder
+    public class HubconServerBuilder
     {
         private IProxyRegistry Proxies { get; } = new ProxyRegistry();
         private ILiveSubscriptionRegistry SubscriptionRegistry { get; } = new LiveSubscriptionRegistry();
@@ -31,21 +31,21 @@ namespace Hubcon.Core.Builders
         private List<Type> ProxiesToRegister { get; } = new();
 
 
-        private static HubconBuilder _current = null!;
-        public static HubconBuilder Current
+        private static HubconServerBuilder _current = null!;
+        public static HubconServerBuilder Current
         {
             get
             {
-                _current ??= new HubconBuilder();
+                _current ??= new HubconServerBuilder();
                 return _current;
             }
         }
 
-        private HubconBuilder()
+        private HubconServerBuilder()
         {              
         }
 
-        public HubconBuilder AddHubconServer(
+        public HubconServerBuilder AddHubconServer(
             WebApplicationBuilder builder,
             params Action<ContainerBuilder>?[] additionalServices)
         {

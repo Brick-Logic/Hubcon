@@ -1,8 +1,5 @@
 ﻿using Autofac;
 using Hubcon.Core.Abstractions.Interfaces;
-using Hubcon.Core.Authentication;
-using Hubcon.Core.Builders;
-using Hubcon.Core.Builders.Extensions;
 using Hubcon.Core.Controllers;
 using Hubcon.Core.Dummy;
 using Hubcon.Core.Extensions;
@@ -13,6 +10,7 @@ using Hubcon.GraphQL.Data;
 using Hubcon.GraphQL.Models;
 using Hubcon.GraphQL.Server;
 using Hubcon.GraphQL.Subscriptions;
+using Hubcon.Server;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
@@ -41,7 +39,7 @@ namespace Hubcon.GraphQL.Injection
                 .AddInMemorySubscriptions();
 
 
-            HubconBuilder.Current.AddHubconServer(builder, additionalServices, container =>
+            HubconServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
             {
                 container.RegisterWithInjector(x => x.RegisterType<ControllerEntrypoint>());
 
@@ -67,7 +65,7 @@ namespace Hubcon.GraphQL.Injection
             });
 
 
-            var controllerConfig = new ControllerOptions(executorBuilder, builder, HubconBuilder.Current);
+            var controllerConfig = new ControllerOptions(executorBuilder, builder, HubconServerBuilder.Current);
             controllerConfig.SetEntrypoint<ControllerEntrypoint>();
             controllerOptions?.Invoke(controllerConfig);
       
@@ -77,14 +75,14 @@ namespace Hubcon.GraphQL.Injection
         public static WebApplicationBuilder UseAuthenticationManager<T>(this WebApplicationBuilder builder)
             where T : IAuthenticationManager
         {
-            HubconBuilder.Current.UseAuthenticationManager<T>();
+            HubconServerBuilder.Current.UseAuthenticationManager<T>();
             return builder;
 
         }
 
         public static WebApplicationBuilder UseAuthenticationManager(this WebApplicationBuilder builder, Type authenticationManagerType)
         {
-            HubconBuilder.Current.UseAuthenticationManager(authenticationManagerType);
+            HubconServerBuilder.Current.UseAuthenticationManager(authenticationManagerType);
             return builder;
         }
 

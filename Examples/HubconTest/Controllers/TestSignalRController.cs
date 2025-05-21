@@ -1,6 +1,4 @@
-﻿using Hubcon.GraphQL.Server;
-using Hubcon.SignalR.Server;
-using HubconTestDomain;
+﻿using HubconTestDomain;
 
 namespace HubconTest.Controllers
 {

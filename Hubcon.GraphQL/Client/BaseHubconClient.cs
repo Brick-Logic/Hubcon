@@ -1,10 +1,7 @@
 ﻿using Autofac;
-using Autofac.Core.Lifetime;
 using Castle.DynamicProxy;
 using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Abstractions.Standard.Interfaces;
-using Hubcon.Core.Routing.Registries;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.GraphQL.Client
 {

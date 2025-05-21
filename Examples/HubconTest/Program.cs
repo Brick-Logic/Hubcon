@@ -1,15 +1,12 @@
-using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Middlewares.DefaultMiddlewares;
-using Hubcon.Core.Builders;
 using Hubcon.GraphQL.Injection;
 using HubconTest.Controllers;
-using HubconTestDomain;
+using HubconTest.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Text;
-using Hubcon.Core.Builders.Extensions;
-using HubconTest.Middlewares;
+using Hubcon.Server;
 
 namespace HubconTest
 {

@@ -1,6 +1,5 @@
 ﻿using Autofac;
 using Hubcon.Core.Abstractions.Interfaces;
-using Hubcon.Core.Builders;
 using Hubcon.Core.Extensions;
 using Hubcon.GraphQL.Client;
 using Hubcon.GraphQL.Subscriptions;

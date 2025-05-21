@@ -1,5 +1,4 @@
 ﻿using Hubcon.Client;
-using Hubcon.Core.Builders;
 using HubconTestClient.Modules;
 using HubconTestDomain;
 using Microsoft.AspNetCore.Builder;
@@ -48,7 +47,7 @@ namespace HubconTestClient
             }
 
             client.OnUserCreated!.AddHandler(handler);
-            await client.OnUserCreated.Subscribe();
+            //await client.OnUserCreated.Subscribe();
             await client.CreateUser();
             logger.LogInformation("Evento conectado.");
 

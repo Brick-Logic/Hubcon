@@ -4,11 +4,11 @@ using HotChocolate.Execution.Configuration;
 using HotChocolate.Language;
 using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Abstractions.Standard.Interfaces;
-using Hubcon.Core.Builders;
 using Hubcon.Core.Invocation;
 using Hubcon.GraphQL.Data;
 using Hubcon.GraphQL.Models;
 using Hubcon.GraphQL.Models.CustomAttributes;
+using Hubcon.Server;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
@@ -18,16 +18,16 @@ namespace Hubcon.GraphQL.Injection
 {
     public class ControllerOptions : IControllerOptions
     {
-        public ControllerOptions(IRequestExecutorBuilder executorBuilder, WebApplicationBuilder builder, HubconBuilder hubconBuilder)
+        public ControllerOptions(IRequestExecutorBuilder executorBuilder, WebApplicationBuilder builder, HubconServerBuilder hubconBuilder)
         {
             ExecutorBuilder = executorBuilder;
             Builder = builder;
-            HubconBuilder = hubconBuilder;
+            HubconServerBuilder = hubconBuilder;
         }
 
         public IRequestExecutorBuilder ExecutorBuilder { get; }
         public WebApplicationBuilder Builder { get; }
-        public HubconBuilder HubconBuilder { get; }
+        public HubconServerBuilder HubconServerBuilder { get; }
 
         public void SetEntrypoint(Type controllerType)
         {
@@ -204,23 +204,23 @@ namespace Hubcon.GraphQL.Injection
 
         public void AddGlobalMiddleware<T>()
         {
-            HubconBuilder.AddGlobalMiddleware<T>();
+            HubconServerBuilder.AddGlobalMiddleware<T>();
         }
 
         public void AddGlobalMiddleware(Type middlewareType)
         {
-            HubconBuilder.AddGlobalMiddleware(middlewareType);
+            HubconServerBuilder.AddGlobalMiddleware(middlewareType);
         }
 
         public void AddController<T>(Action<IMiddlewareOptions>? options = null) where T : class, IControllerContract
         {
-            HubconBuilder.AddHubconController<T>(Builder, options);
+            HubconServerBuilder.AddHubconController<T>(Builder, options);
         }
 
 
         public void AddController(Type controllerType, Action<IMiddlewareOptions>? options = null)
         {
-            HubconBuilder.AddHubconController(Builder, controllerType, options);
+            HubconServerBuilder.AddHubconController(Builder, controllerType, options);
         }
     }
 }

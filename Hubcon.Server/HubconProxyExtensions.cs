@@ -9,24 +9,23 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Core.Builders
+namespace Hubcon.Server
 {
-
     public static class HubconProxyExtensions
     {
         public static WebApplicationBuilder UseContractsFromAssembly(this WebApplicationBuilder e, string assemblyName)
         {
-            return HubconBuilder.Current.UseContractsFromAssembly(e, assemblyName);
+            return HubconServerBuilder.Current.UseContractsFromAssembly(e, assemblyName);
         }
 
         public static IServiceProvider AddContractsFromAssembly(this IServiceProvider serviceProvider, string assemblyName)
         {
-            return HubconBuilder.Current.AddContractsFromAssembly(serviceProvider, assemblyName);
+            return HubconServerBuilder.Current.AddContractsFromAssembly(serviceProvider, assemblyName);
         }
 
         public static IServiceProvider AddContractsFromAssembly(this IServiceProvider serviceProvider, Assembly assembly)
         {
-            return HubconBuilder.Current.AddContractsFromAssembly(serviceProvider, assembly);
+            return HubconServerBuilder.Current.AddContractsFromAssembly(serviceProvider, assembly);
         }
     }
 }

@@ -1,16 +1,4 @@
-﻿using Autofac;
-using Hubcon.Core.Abstractions.Interfaces;
-using Hubcon.Core.Builders;
-using Hubcon.Core.Controllers;
-using Hubcon.Core.Extensions;
-using Hubcon.SignalR.HubActivator;
-using Hubcon.SignalR.Server;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.DependencyInjection;
-
-namespace Hubcon.SignalR
+﻿namespace Hubcon.SignalR
 {
     public static class DependencyInjection
     {
