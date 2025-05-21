@@ -117,8 +117,21 @@ namespace HubconTestClient
                 lastRequests = finishedRequestsCount;
                 sw.Restart();
             };
-
             worker.Start();
+
+            var worker2 = new System.Timers.Timer();
+            worker2.Interval = 10000;
+            worker2.Elapsed += (sender, eventArgs)
+                =>
+            {
+                logger.LogInformation($"Called GC collection.");
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                logger.LogInformation($"GC collection finished.");
+            };
+            worker2.Start();
+
             sw.Start();
 
             var tasks = Enumerable.Range(0, 5).Select(_ => Task.Run(async () =>

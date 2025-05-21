@@ -95,13 +95,14 @@ namespace Hubcon.Core.Serialization
         // 1. Convierte un objeto a JsonElement
         public JsonElement SerializeObject(object? value)
         {
-            return value is null ? default : System.Text.Json.JsonSerializer.SerializeToElement(value, jsonSerializerOptions);
+            return System.Text.Json.JsonSerializer.SerializeToElement(value, jsonSerializerOptions).Clone();
         }
 
         // 2. Convierte una colección de objetos a JsonElements
         public IEnumerable<JsonElement> SerializeArgsToJson(IEnumerable<object?> values)
         {
             List<JsonElement> results = new();
+
             foreach (var val in values)
             {
                 results.Add(SerializeObject(val));
@@ -164,7 +165,7 @@ namespace Hubcon.Core.Serialization
             {
                 if (item is JsonElement typedItem)
                 {
-                    yield return typedItem;
+                    yield return typedItem.Clone();
                 }
                 else
                 {

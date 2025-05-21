@@ -128,16 +128,16 @@ namespace Hubcon.GraphQL.Client
         {
           GraphQLRequest? craftedRequest = BuildRequest(request, methodInfo, resolver);
             var response = await _graphQLHttpClient.SendMutationAsync<JsonElement>(craftedRequest);
-            var result = response.Data.GetProperty(resolver);
+            var result = response.Data.Clone().GetProperty(resolver);
 
             result.TryGetProperty(nameof(IObjectOperationResponse.Success).ToLower(), out JsonElement successValue);
             result.TryGetProperty(nameof(BaseOperationResponse.Data).ToLower(), out JsonElement dataValue);
             result.TryGetProperty(nameof(BaseOperationResponse.Error).ToLower(), out JsonElement errorValue);
 
             return new BaseJsonResponse(
-                _converter.DeserializeJsonElement<bool>(successValue),
+                _converter.DeserializeJsonElement<bool>(successValue.Clone()),
                 dataValue,
-                _converter.DeserializeJsonElement<string>(errorValue)
+                _converter.DeserializeJsonElement<string>(errorValue.Clone())
             );
         }
 
@@ -152,7 +152,7 @@ namespace Hubcon.GraphQL.Client
             {
                 await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
                 {
-                     var result = newEvent!.Data.GetProperty(resolver).Clone();
+                     var result = newEvent!.Data.Clone().GetProperty(resolver);
 
                     yield return result;
                 }
@@ -173,7 +173,7 @@ namespace Hubcon.GraphQL.Client
             {
                 await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
                 {
-                    var result = newEvent!.Data.GetProperty(resolver);
+                    var result = newEvent!.Data.Clone().GetProperty(resolver).Clone();
                     yield return result;
                 }
             }
