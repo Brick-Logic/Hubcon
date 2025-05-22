@@ -1,358 +1,195 @@
-﻿using Autofac;
-using GraphQL;
-using GraphQL.Client.Http;
-using GraphQL.Client.Serializer.SystemTextJson;
-using Hubcon.Core.Abstractions.Interfaces;
-using Hubcon.Core.Authentication;
-using Hubcon.Core.Invocation;
-using Hubcon.Core.Middlewares.MessageHandlers;
-using Hubcon.Core.Subscriptions;
-using Microsoft.Extensions.Logging;
-using System.Diagnostics;
-using System.Reactive.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
+﻿using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 
 namespace Hubcon.GraphQL.Client
 {
-    public class HubconGraphQLClient : IHubconClient
+    public class HubconGraphQLClient : IDisposable
     {
-        private GraphQLHttpClient? _graphQLHttpClient;
-        private IAuthenticationManager? _authenticationManager;
-        private GraphQLHttpClientOptions? _graphQLHttpClientOptions;
+        private readonly HttpClient _httpClient;
+        private readonly Uri _httpEndpoint;
+        private readonly Uri _wsEndpoint;
 
-        private Func<GraphQLHttpClient>? _graphQLHttpClientFactory;
-        private Func<IAuthenticationManager?>? _authenticationManagerFactory;
-        private Func<GraphQLHttpClientOptions>? _graphQLHttpClientOptionsFactory;
+        private ClientWebSocket? _webSocket;
+        public ClientWebSocket? WebSocket => _webSocket;
 
-        private readonly ILogger<IHubconClient> _logger;
-        private readonly IDynamicConverter _converter;
+        private CancellationTokenSource? _cts;
 
-        public HubconGraphQLClient(ILogger<HubconGraphQLClient> logger, IDynamicConverter converter)
+        private readonly TimeSpan _pingInterval = TimeSpan.FromSeconds(15);
+        private Task? _receiveLoopTask;
+
+        public HubconGraphQLClient(string httpUrl, string websocketUrl)
         {
-            _logger = logger;
-            _converter = converter;
+            _httpEndpoint = new Uri(httpUrl);
+            _wsEndpoint = new Uri(websocketUrl);
+            _httpClient = new HttpClient();
         }
 
-        private bool IsStarted { get; set; }
-        public void Start()
+        // --- HTTP: Query or Mutation ---
+        public async Task<string> SendQueryAsync(string query, object? variables = null, CancellationToken cancellationToken = default)
         {
-            if(IsStarted) return;
-
-            if (!_authenticationManagerFactory!.Invoke()!.IsSessionActive) return;
-
-            Task _runnerTask = Task.CompletedTask;
-
-
-            _graphQLHttpClientFactory!.Invoke().Options.ConfigureWebsocketOptions = (x) =>
+            var payload = new
             {
-                var authManager = _authenticationManagerFactory?.Invoke();
-                _logger.LogInformation("Intentando autenticar...");
-
-                if (authManager is not null && authManager.IsSessionActive)
-                    x.SetRequestHeader("Authorization", $"Bearer {authManager?.AccessToken}");         
+                query,
+                variables
             };
 
-            var exceptionRunner = Task.Run(async () =>
+            var json = JsonSerializer.Serialize(payload);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(_httpEndpoint, content, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync(cancellationToken);
+        }
+
+        // --- WebSocket: Subscription ---
+
+        public async Task ConnectWebSocketAsync(CancellationToken cancellationToken = default)
+        {
+            if (_webSocket != null && _webSocket.State == WebSocketState.Open)
+                return;
+
+            _webSocket = new ClientWebSocket();
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+            await _webSocket.ConnectAsync(_wsEndpoint, _cts.Token);
+
+            // Start the receive + ping loop
+            _receiveLoopTask = ReceiveLoopAsync(_cts.Token);
+            _ = PingLoopAsync(_cts.Token);
+        }
+
+        public async Task DisconnectWebSocketAsync()
+        {
+            if (_webSocket == null)
+                return;
+
+            _cts?.Cancel();
+
+            if (_webSocket.State == WebSocketState.Open)
+                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client disconnect", CancellationToken.None);
+
+            _webSocket.Dispose();
+            _webSocket = null;
+        }
+
+        public async Task SendSubscriptionAsync(string subscriptionQuery, object? variables = null, CancellationToken cancellationToken = default)
+        {
+            if (_webSocket == null || _webSocket.State != WebSocketState.Open)
+                throw new InvalidOperationException("WebSocket is not connected.");
+
+            var id = Guid.NewGuid().ToString();
+
+            var payload = new
             {
-                var sw = new Stopwatch();
-                var timer1 = new System.Timers.Timer(5000);
-
-                while (true)
+                id,
+                type = "start",
+                payload = new
                 {
-                    try
-                    {
-                        IObservable<Exception> observable = _graphQLHttpClientFactory!.Invoke().WebSocketReceiveErrors;
-                        var observer = new AsyncObserver<Exception>();
-
-                        using (observable.Subscribe(observer))
-                        {
-                            sw.Start();
-                            //timer.Start();
-                            await foreach (var newEvent in observer.GetAsyncEnumerable(new CancellationToken()))
-                            {
-                                sw.Restart();
-                                _logger.LogInformation($"Error received. Payload: {newEvent}");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogInformation($"Error: {ex.Message}");
-                    }
-                }
-            });
-
-            var runner = async () =>
-            {
-                var sw = new Stopwatch();
-                var timer1 = new System.Timers.Timer(5000);
-
-                while (true)
-                {
-                    try
-                    {
-                        IObservable<object?> observable = _graphQLHttpClientFactory!.Invoke().PongStream;
-                        var observer = new AsyncObserver<object?>();
-
-                        using (observable.Subscribe(observer))
-                        {
-                            sw.Start();
-                            //timer.Start();
-                            await foreach (var newEvent in observer.GetAsyncEnumerable(new CancellationToken()))
-                            {
-                                sw.Restart();
-                                _logger.LogInformation($"PONG received. Payload: {newEvent}");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogInformation($"Error: {ex.Message}");
-                    }
+                    query = subscriptionQuery,
+                    variables
                 }
             };
 
-            _ = Task.Run(async () =>
-            {
-                if (_runnerTask == null || _runnerTask.IsCompleted)
-                {
-                    _runnerTask = Task.Run(runner);
-                }
+            var json = JsonSerializer.Serialize(payload);
+            var buffer = Encoding.UTF8.GetBytes(json);
 
-                exceptionRunner.Start();
-
-                while (true)
-                {
-                    try
-                    {
-
-                        while (true)
-                        {
-                            try
-                            {
-                                await Task.Delay(1000);
-                                await _graphQLHttpClientFactory!.Invoke().SendPingAsync("MyPayload");
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError($"Error de websocket: {ex.Message}");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError($"Error: {ex.Message}");
-                        if (_runnerTask != null && !_runnerTask.IsCompleted)
-                        {
-                            _runnerTask.Dispose();
-                        }
-                        _runnerTask = Task.Run(runner);
-                    }
-                }
-            });
-
-            IsStarted = true;
+            await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationToken);
         }
 
-        public async Task<IOperationResponse<JsonElement>> SendRequestAsync(IOperationRequest request, MethodInfo methodInfo, string resolver, CancellationToken cancellationToken = default)
+        private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
         {
-            if (!IsStarted)
-                Start();
+            var buffer = new byte[8192];
 
-            GraphQLRequest? craftedRequest = BuildRequest(request, methodInfo, resolver);
-            var response = await _graphQLHttpClientFactory!.Invoke().SendMutationAsync<JsonElement>(craftedRequest);
-            var result = response.Data.Clone().GetProperty(resolver);
-
-            result.TryGetProperty(nameof(IObjectOperationResponse.Success).ToLower(), out JsonElement successValue);
-            result.TryGetProperty(nameof(BaseOperationResponse.Data).ToLower(), out JsonElement dataValue);
-            result.TryGetProperty(nameof(BaseOperationResponse.Error).ToLower(), out JsonElement errorValue);
-
-            return new BaseJsonResponse(
-                _converter.DeserializeJsonElement<bool>(successValue.Clone()),
-                dataValue,
-                _converter.DeserializeJsonElement<string>(errorValue.Clone())
-            );
-        }
-
-        public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, string resolver, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-        {
-            if (!IsStarted)
-                Start();
-
-            var graphQLRequest = BuildStream(request, resolver);
-            IObservable<GraphQLResponse<JsonElement>> observable = _graphQLHttpClientFactory!.Invoke().CreateSubscriptionStream<JsonElement>(graphQLRequest);
-           
-            var observer = new AsyncObserver<GraphQLResponse<JsonElement>>();
-
-            using (observable.Subscribe(observer))
+            try
             {
-                await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
+                while (!cancellationToken.IsCancellationRequested && _webSocket?.State == WebSocketState.Open)
                 {
-                     var result = newEvent!.Data.Clone().GetProperty(resolver);
+                    var result = await _webSocket.ReceiveAsync(buffer, cancellationToken);
 
-                    yield return result;
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server closed", cancellationToken);
+                        break;
+                    }
+
+                    var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    HandleWebSocketMessage(message);
                 }
+            }
+            catch (OperationCanceledException) { /* Normal on cancellation */ }
+            catch (Exception ex)
+            {
+                Console.WriteLine("WebSocket receive error: " + ex.Message);
+                // Aquí podrías manejar reconexión si querés
             }
         }
 
-        public async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, string resolver, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        private void HandleWebSocketMessage(string message)
         {
-            if (!IsStarted)
-                Start();
+            // Aquí parseás el mensaje según el protocolo GraphQL WS
+            // Por ejemplo, mensajes de tipo "data", "error", "complete", "ka" (keep-alive)
+            var doc = JsonDocument.Parse(message);
+            if (!doc.RootElement.TryGetProperty("type", out var typeElem))
+                return;
 
-            if(_authenticationManagerFactory?.Invoke() == null)
-                throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
+            var type = typeElem.GetString();
 
-            var graphQLRequest = BuildSubscription(request, resolver);
-            IObservable<GraphQLResponse<JsonElement>> observable = _graphQLHttpClientFactory!.Invoke().CreateSubscriptionStream<JsonElement>(graphQLRequest);
-
-            var observer = new AsyncObserver<GraphQLResponse<JsonElement>>();
-
-            using (observable.Subscribe(observer))
+            switch (type)
             {
-                await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
-                {
-                    var result = newEvent!.Data.Clone().GetProperty(resolver).Clone();
-                    yield return result;
-                }
+                case "ka": // keep alive
+                           // Recibiste ping del servidor, podrías responder pong o solo ignorar
+                    break;
+
+                case "data":
+                    // Procesar datos recibidos de la suscripción
+                    Console.WriteLine("Received data: " + message);
+                    break;
+
+                case "error":
+                    Console.WriteLine("Received error: " + message);
+                    break;
+
+                case "complete":
+                    Console.WriteLine("Subscription complete.");
+                    break;
+
+                default:
+                    Console.WriteLine("Unknown message type: " + type);
+                    break;
             }
         }
 
-        private GraphQLRequest BuildRequest(IOperationRequest invokeRequest, MethodInfo methodInfo, string resolver)
+        private async Task PingLoopAsync(CancellationToken cancellationToken)
         {
-            var sb = new StringBuilder();
-            var request = new MethodInvokeRequest(invokeRequest.OperationName, invokeRequest.ContractName, invokeRequest.Args);
-
-            sb.Append($"mutation(${nameof(request)}: {nameof(MethodInvokeRequest)}Input!) {{");
-            sb.Append($"{resolver}({nameof(request)}: $request) {{");
-
-
-            if(methodInfo.ReturnType == typeof(Task) || methodInfo.ReturnType == typeof(void))
+            while (!cancellationToken.IsCancellationRequested && _webSocket?.State == WebSocketState.Open)
             {
-                sb.Append($"success ");
-                sb.Append($"error ");
-            }
-            else
-            {
-                sb.Append($"success ");
-                sb.Append($"error ");
-                sb.Append($"data ");
-            }
-
-
-            sb.Append("}}");
-
-            var graphqlRequest = new GraphQLRequest()
-            {
-                Query = sb.ToString(),
-                Variables = new
+                // Enviar ping tipo "ka" (keep-alive)
+                var pingPayload = new
                 {
-                    request
-                },
-            };
-
-            return graphqlRequest;
-        }
-
-        private GraphQLRequest BuildStream(IOperationRequest invokeRequest, string resolver)
-        {
-            var sb = new StringBuilder();
-
-            var request = new MethodInvokeRequest(invokeRequest.OperationName, invokeRequest.ContractName, invokeRequest.Args);
-
-            sb.Append($"subscription(${nameof(request)}: {nameof(MethodInvokeRequest)}Input!) {{");
-            sb.Append($"{resolver}({nameof(request)}: $request) }}");
-
-            var graphqlRequest = new GraphQLRequest()
-            {
-                Query = sb.ToString(),
-                Variables = new
-                {
-                    request
-                },
-            };
-
-            return graphqlRequest;
-        }
-
-        private GraphQLRequest BuildSubscription(IOperationRequest invokeRequest, string resolver)
-        {
-            var sb = new StringBuilder();
-
-            var request = new SubscriptionRequest(invokeRequest.OperationName, invokeRequest.ContractName, null);
-
-            sb.Append($"subscription(${nameof(request)}: {nameof(SubscriptionRequest)}Input!) {{");
-            sb.Append($"{resolver}({nameof(request)}: $request) }}");
-
-            var graphqlRequest = new GraphQLRequest()
-            {
-                Query = sb.ToString(),
-                Variables = new
-                {
-                    request
-                },
-            };
-
-            return graphqlRequest;
-        }
-
-        private bool IsBuilt { get; set; }
-        public void Build(Uri BaseUri, string? HttpEndpoint, string? WebsocketEndpoint, Type? AuthenticationManagerType, IComponentContext context, bool useSecureConnection = true)
-        {
-            if (IsBuilt) return;
-
-            var baseHttpUrl = $"{BaseUri!.AbsoluteUri}/{HttpEndpoint ?? "graphql"}";
-            var baseWebsocketUrl = $"{BaseUri!.AbsoluteUri}/{WebsocketEndpoint ?? "graphql"}";
-
-            var httpUrl = useSecureConnection ? $"https://{baseHttpUrl}" : $"http://{baseHttpUrl}";
-            var websocketUrl = useSecureConnection ? $"wss://{baseWebsocketUrl}" : $"ws://{baseWebsocketUrl}";
-
-
-            Func<IAuthenticationManager?>? authManagerFactory = null;
-
-            if (AuthenticationManagerType is not null)
-            {
-                var type = typeof(Func<>).MakeGenericType(AuthenticationManagerType);
-                authManagerFactory = (Func<IAuthenticationManager>?)context.ResolveOptional(type)!;
-            }
-
-            _authenticationManagerFactory = () =>
-            {
-                if(_authenticationManager != null)
-                    return _authenticationManager;
-
-                return _authenticationManager = authManagerFactory?.Invoke();
-            };
-
-            _graphQLHttpClientOptionsFactory = () =>
-            {
-                if (_graphQLHttpClientOptions != null)
-                    return _graphQLHttpClientOptions;
-
-                var options = new GraphQLHttpClientOptions
-                {
-                    EndPoint = new Uri(httpUrl),
-                    WebSocketEndPoint = new Uri(websocketUrl),
-                    WebSocketProtocol = "graphql-transport-ws",
-                    HttpMessageHandler = new HttpClientMessageHandler((IAuthenticationManager?)_authenticationManagerFactory.Invoke())
+                    type = "ka"
                 };
+                var json = JsonSerializer.Serialize(pingPayload);
+                var buffer = Encoding.UTF8.GetBytes(json);
 
-                return _graphQLHttpClientOptions = options;
-            };
+                try
+                {
+                    await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationToken);
+                }
+                catch
+                {
+                    // Ignorar errores aquí, el receive loop se encargará de reconectar o cerrar
+                }
 
-            _graphQLHttpClientFactory = () => 
-            {
-                if (_graphQLHttpClient != null)
-                    return _graphQLHttpClient;
+                await Task.Delay(_pingInterval, cancellationToken);
+            }
+        }
 
-                return _graphQLHttpClient = new GraphQLHttpClient(_graphQLHttpClientOptionsFactory.Invoke(), new SystemTextJsonSerializer()); 
-            };
-
-            IsBuilt = true;
+        public void Dispose()
+        {
+            _cts?.Cancel();
+            _webSocket?.Dispose();
+            _httpClient.Dispose();
         }
     }
-}
 
+}

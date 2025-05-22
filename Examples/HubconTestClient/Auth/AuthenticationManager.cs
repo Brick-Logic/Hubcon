@@ -1,5 +1,6 @@
 ﻿using Hubcon.Core.Authentication;
 using HubconTestDomain;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,9 +26,13 @@ namespace HubconTestClient.Auth
             return AuthResult.Success(token, "", 100000);
         }
 
-        protected async override Task ClearSessionAsync()
+        protected override Task ClearSessionAsync()
         {
-            
+            AccessToken = "";
+            RefreshToken = "";
+            AccessTokenExpiresAt = null;
+
+            return Task.CompletedTask;
         }
 
         protected async override Task<PersistedSession?> LoadPersistedSessionAsync()
@@ -48,7 +53,7 @@ namespace HubconTestClient.Auth
 
         protected async override Task<IAuthResult> RefreshSessionAsync(string refreshToken)
         {
-            var token = await secondTestContract.LoginAsync("", "");
+            var token = await secondTestContract.LoginAsync(Username, Password);
 
             AccessToken = token;
             RefreshToken = "";

@@ -4,37 +4,53 @@ namespace Hubcon.Core.Authentication
 {
     public abstract class BaseAuthenticationManager : IAuthenticationManager
     {
+        public event Action? OnSessionIsActive;
+        public event Action? OnSessionIsInactive;
+
         public abstract string? AccessToken { get; protected set; }
         public abstract string? RefreshToken { get; protected set; }
         public abstract DateTime? AccessTokenExpiresAt { get; protected set; }
 
         public bool IsSessionActive => !string.IsNullOrEmpty(AccessToken);
 
+        public string Username { get; protected set; } = string.Empty;
+        public string Password { get; protected set; } = string.Empty;
+
         public async Task<IResult> LoginAsync(string username, string password)
         {
+            Username = username;
+            Password = password;
+
             var auth = await AuthenticateAsync(username, password);
 
             if (auth.IsFailure)
+            {
+                OnSessionIsInactive?.Invoke();
                 return Result.Failure(auth.ErrorMessage);
+            }
 
             AccessToken = auth.AccessToken;
             RefreshToken = auth.RefreshToken;
             AccessTokenExpiresAt = DateTime.UtcNow.AddSeconds(auth.ExpiresInSeconds);
 
             await SaveSessionAsync();
+            OnSessionIsActive?.Invoke();
+
 
             return Result.Success();
         }
 
         public async Task<IResult> TryRefreshSessionAsync()
         {
-            if (string.IsNullOrEmpty(RefreshToken))
-                return Result.Failure("No refresh token available.");
+            //if (string.IsNullOrEmpty(RefreshToken))
+            //    return Result.Failure("No refresh token available.");
 
             var refresh = await RefreshSessionAsync(RefreshToken!);
+
             if (refresh.IsFailure)
             {
                 await ClearSessionAsync();
+                OnSessionIsInactive?.Invoke();
                 return Result.Failure("Refresh failed");
             }
 
@@ -43,6 +59,7 @@ namespace Hubcon.Core.Authentication
             AccessTokenExpiresAt = DateTime.UtcNow.AddSeconds(refresh.ExpiresInSeconds);
 
             await SaveSessionAsync();
+            OnSessionIsActive?.Invoke();
 
             return Result.Success();
         }
@@ -53,6 +70,7 @@ namespace Hubcon.Core.Authentication
             RefreshToken = null;
             AccessTokenExpiresAt = null;
             await ClearSessionAsync();
+            OnSessionIsInactive?.Invoke();
         }
 
         public async Task<IResult> LoadSessionAsync()
@@ -63,9 +81,11 @@ namespace Hubcon.Core.Authentication
                 AccessToken = session.AccessToken;
                 RefreshToken = session.RefreshToken;
                 AccessTokenExpiresAt = session.ExpiresAt;
-
+                OnSessionIsActive?.Invoke();
                 return Result.Success();
             }
+
+            OnSessionIsInactive?.Invoke();
 
             return Result.Failure();
         }

@@ -4,6 +4,9 @@ namespace Hubcon.Core.Abstractions.Interfaces
 {
     public interface IAuthenticationManager
     {
+        public abstract event Action? OnSessionIsActive;
+        public abstract event Action? OnSessionIsInactive;
+
         string? AccessToken { get; }
         DateTime? AccessTokenExpiresAt { get; }
         bool IsSessionActive { get; }

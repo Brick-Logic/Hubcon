@@ -115,7 +115,7 @@ namespace Hubcon.GraphQL.Subscriptions
                         logger.LogInformation("Reconnecting...");
 
                         int baseReconnectionDelay = 1000;
-                        int maxReconnectionDelay = 30000;
+                        int maxReconnectionDelay = 3000;
 
                         int expDelay = baseReconnectionDelay * (int)Math.Pow(2, retry);
                         int jitter = Random.Shared.Next(0, 1000);

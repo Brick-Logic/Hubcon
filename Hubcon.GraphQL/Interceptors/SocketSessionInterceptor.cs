@@ -95,5 +95,4 @@ namespace Hubcon.GraphQL.Interceptors
             return base.ToString();
         }
     }
-
 }

@@ -14,7 +14,7 @@ namespace Hubcon.Client
             HubconClientBuilder.Current.AddHubconClientServices(builder, container =>
             {
                 container.RegisterWithInjector(x => x
-                    .RegisterType<HubconGraphQLClient>()
+                    .RegisterType<HubconClient>()
                     .As<IHubconClient>()
                     .AsSingleton());
 

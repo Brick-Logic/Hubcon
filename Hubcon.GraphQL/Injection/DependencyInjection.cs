@@ -36,6 +36,7 @@ namespace Hubcon.GraphQL.Injection
                 .AddType<ObjectType<IOperationResponse<JsonElement>>>()
                 .AddType<InputObjectType<MethodInvokeRequest>>()
                 .AddType<InputObjectType<SubscriptionRequest>>()
+                .DisableIntrospection(false)
                 .AddProjections()
                 .AddInMemorySubscriptions()
                 .AddSocketSessionInterceptor<SocketSessionInterceptor>();
@@ -46,7 +47,7 @@ namespace Hubcon.GraphQL.Injection
                 container.RegisterWithInjector(x => x.RegisterType<ControllerEntrypoint>());
 
                 container.RegisterWithInjector(x => x
-                    .RegisterType<HubconGraphQLClient>()
+                    .RegisterType<HubconClient>()
                     .As<IHubconClient>()
                     .AsSingleton());
 
