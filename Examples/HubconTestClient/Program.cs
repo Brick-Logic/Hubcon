@@ -54,7 +54,7 @@ namespace HubconTestClient
             }
 
             client.OnUserCreated!.AddHandler(handler);
-            //await client.OnUserCreated.Subscribe();
+            await client.OnUserCreated.Subscribe();
             await client.CreateUser();
             logger.LogInformation("Evento conectado.");
 
@@ -78,34 +78,6 @@ namespace HubconTestClient
 
             Console.ReadKey();
 
-
-
-            //TestHubController? hubController = new TestHubController();
-            //var server = await hubController.StartInstanceAsync(Url, Console.WriteLine, null, options => 
-            //{
-            //    options.AddMiddleware<LoggingMiddleware>();
-            //});
-
-            //var connector = hubController.GetConnector<IServerHubContract>();
-
-            //Console.WriteLine("Running test: ShowTextOnServer... ");
-            //await connector.ShowTextOnServer();
-            //Console.Write($"Done.");
-
-            //Console.WriteLine("Running test: GetTemperatureFromServer... ");
-            //var result3 = await connector.GetTemperatureFromServer();
-            //Console.Write($"Done.");
-
-            //Console.WriteLine("Running test: GetTemperatureFromServer... ");
-            //await connector.ShowTempOnServerFromClient();
-            //Console.Write($"Done.");
-
-            //Console.WriteLine("Running test: GetMessages->IAsyncEnumerable<string>... ");
-            //var result1 = connector.GetMessages(10).ToBlockingEnumerable();
-            //Console.Write($"Done. MessageCount: {result1.Count()}");
-
-            //Console.ReadKey();
-
             int finishedRequestsCount = 0;
             int errors = 0;
             int lastRequests = 0;
@@ -125,22 +97,7 @@ namespace HubconTestClient
             };
             worker.Start();
 
-            var worker2 = new System.Timers.Timer();
-            worker2.Interval = 10000;
-            worker2.Elapsed += (sender, eventArgs)
-                =>
-            {
-                logger.LogInformation($"Called GC collection.");
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-                GC.Collect();
-                logger.LogInformation($"GC collection finished.");
-            };
-            worker2.Start();
-
-            sw.Start();
-
-            var tasks = Enumerable.Range(0, 5).Select(_ => Task.Run(async () =>
+            var tasks = Enumerable.Range(0, 1).Select(_ => Task.Run(async () =>
             {
                 while (true)
                 {
@@ -150,30 +107,6 @@ namespace HubconTestClient
             })).ToArray();
 
             await Task.WhenAll(tasks);
-
-
-
-            //while (true)
-            //{
-
-            //    //Console.ReadKey();
-            //    //var list = client.GetMessages(10);
-
-            //    //await foreach (var message in list)
-            //    //{
-            //    //    Console.WriteLine(message);
-            //    //}
-
-
-            //    Console.ReadKey();
-            //    await client.ShowTextOnServer();
-
-            //    Console.ReadKey();
-            //    await client.ShowTempOnServerFromClient();
-
-            //    Console.ReadKey();
-            //    await client.ShowTextOnServer();
-            //}
         }
     }
 }

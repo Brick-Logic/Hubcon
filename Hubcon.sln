@@ -49,7 +49,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hubcon.Client", "Hubcon.Cli
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hubcon.Client.Registries", "Hubcon.Client.Registries\Hubcon.Client.Registries.csproj", "{5D20E712-FF94-40E5-B246-2EAE10EDD01D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hubcon.Server", "Hubcon.Server\Hubcon.Server.csproj", "{0F15208B-A814-4213-B3C8-2361522AD988}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hubcon.Server", "Hubcon.Server\Hubcon.Server.csproj", "{EB9DAA84-8E02-535A-600B-CF6BD510A139}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -125,10 +125,10 @@ Global
 		{5D20E712-FF94-40E5-B246-2EAE10EDD01D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5D20E712-FF94-40E5-B246-2EAE10EDD01D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5D20E712-FF94-40E5-B246-2EAE10EDD01D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0F15208B-A814-4213-B3C8-2361522AD988}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0F15208B-A814-4213-B3C8-2361522AD988}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0F15208B-A814-4213-B3C8-2361522AD988}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0F15208B-A814-4213-B3C8-2361522AD988}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB9DAA84-8E02-535A-600B-CF6BD510A139}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB9DAA84-8E02-535A-600B-CF6BD510A139}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB9DAA84-8E02-535A-600B-CF6BD510A139}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB9DAA84-8E02-535A-600B-CF6BD510A139}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

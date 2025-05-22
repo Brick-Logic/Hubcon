@@ -9,6 +9,7 @@
 
   <ItemGroup>
 	<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	<ProjectReference Include="..\Hubcon.Core.Middlewares\Hubcon.Core.Middlewares.csproj" />
     <ProjectReference Include="..\Hubcon.Core\Hubcon.Core.csproj" />
     <PackageReference Include="GraphQL.Client" Version="6.1.0" />
     <PackageReference Include="GraphQL.Client.Serializer.SystemTextJson" Version="6.1.0" />

@@ -67,7 +67,7 @@ namespace Hubcon.GraphQL.Injection
                     .AsScoped());
             });
 
-            var controllerConfig = new ControllerOptions(executorBuilder, builder, HubconBuilder.Current);
+            var controllerConfig = new ControllerOptions(executorBuilder, builder, HubconServerBuilder.Current);
             controllerConfig.SetEntrypoint<ControllerEntrypoint>();
             controllerOptions?.Invoke(controllerConfig);
       

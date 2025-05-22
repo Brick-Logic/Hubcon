@@ -12,7 +12,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Hubcon.GraphQL.Client
 {
@@ -40,12 +39,9 @@ namespace Hubcon.GraphQL.Client
         {
             if (IsStarted) return;
 
-
-
             Task _runnerTask = Task.CompletedTask;
             Task _exceptionTask = Task.CompletedTask;
             TaskCompletionSource tcs = new TaskCompletionSource();
-
 
             _graphQLHttpClientFactory!.Invoke().Options.ConfigureWebsocketOptions = (x) =>
             {
@@ -54,34 +50,6 @@ namespace Hubcon.GraphQL.Client
                     x.SetRequestHeader("Authorization", $"Bearer {authManager?.AccessToken}");
             };
 
-            var exceptionRunner2 = async () =>
-            {
-                var sw = new Stopwatch();
-
-                while (true)
-                {
-                    try
-                    {
-                        IObservable<Exception> observable = _graphQLHttpClientFactory!.Invoke().WebSocketReceiveErrors;
-                        var observer = new AsyncObserver<Exception>();
-
-                        using (observable.Subscribe(observer))
-                        {
-                            sw.Start();
-                            //timer.Start();
-                            await foreach (var newEvent in observer.GetAsyncEnumerable(new CancellationToken()))
-                            {
-                                sw.Restart();
-                                _logger.LogInformation($"Error received. Payload: {newEvent}");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogInformation($"Error: {ex.Message}");
-                    }
-                }
-            };
 
             var runner = async () =>
             {
@@ -142,16 +110,8 @@ namespace Hubcon.GraphQL.Client
                                         _runnerTask = Task.Run(runner);
                                     }
 
-                                    //if (_exceptionTask == null || _exceptionTask.IsCompleted)
-                                    //{
-                                    //    _exceptionTask = Task.Run(exceptionRunner);
-                                    //}
-
                                     await _graphQLHttpClientFactory!.Invoke().SendPingAsync(null);
                                 }
-
-                                if (!tcs.Task.IsCompleted)
-                                    tcs.SetResult();
                             }
                             catch (Exception ex)
                             {
@@ -162,18 +122,6 @@ namespace Hubcon.GraphQL.Client
                     catch (Exception ex)
                     {
                         _logger.LogError($"Error: {ex.Message}");
-
-                        //if (_runnerTask != null && !_runnerTask.IsCompleted)
-                        //{
-                        //    _runnerTask.Dispose();
-                        //}
-                        //_runnerTask = Task.Run(runner);
-
-                        //if (_exceptionTask != null && !_exceptionTask.IsCompleted)
-                        //{
-                        //    _exceptionTask.Dispose();
-                        //}
-                        //_exceptionTask = Task.Run(runner);
                     }
                 }
             });
@@ -190,7 +138,7 @@ namespace Hubcon.GraphQL.Client
 
             GraphQLRequest? craftedRequest = BuildRequest(request, methodInfo, resolver);
             var response = await _graphQLHttpClientFactory!.Invoke().SendMutationAsync<JsonElement>(craftedRequest);
-            var result = response.Data.GetProperty(resolver);
+            var result = response.Data.Clone().GetProperty(resolver);
 
             result.TryGetProperty(nameof(IObjectOperationResponse.Success).ToLower(), out JsonElement successValue);
             result.TryGetProperty(nameof(BaseOperationResponse.Data).ToLower(), out JsonElement dataValue);
@@ -218,7 +166,7 @@ namespace Hubcon.GraphQL.Client
             {
                 await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
                 {
-                    var result = newEvent!.Data.GetProperty(resolver).Clone();
+                    var result = newEvent!.Data.Clone().GetProperty(resolver).Clone();
 
                     yield return result;
                 }
@@ -242,7 +190,7 @@ namespace Hubcon.GraphQL.Client
             {
                 await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
                 {
-                    var result = newEvent!.Data.GetProperty(resolver);
+                    var result = newEvent!.Data.Clone().GetProperty(resolver);
                     yield return result;
                 }
             }
@@ -309,7 +257,7 @@ namespace Hubcon.GraphQL.Client
         {
             var sb = new StringBuilder();
 
-            var request = new SubscriptionRequest(invokeRequest.OperationName, invokeRequest.ContractName);
+            var request = new SubscriptionRequest(invokeRequest.OperationName, invokeRequest.ContractName, null);
 
             sb.Append($"subscription(${nameof(request)}: {nameof(SubscriptionRequest)}Input!) {{");
             sb.Append($"{resolver}({nameof(request)}: $request) }}");
