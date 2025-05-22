@@ -14,6 +14,7 @@ using Hubcon.Server;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
+using Hubcon.GraphQL.Interceptors;
 
 namespace Hubcon.GraphQL.Injection
 {
@@ -36,7 +37,8 @@ namespace Hubcon.GraphQL.Injection
                 .AddType<InputObjectType<MethodInvokeRequest>>()
                 .AddType<InputObjectType<SubscriptionRequest>>()
                 .AddProjections()
-                .AddInMemorySubscriptions();
+                .AddInMemorySubscriptions()
+                .AddSocketSessionInterceptor<SocketSessionInterceptor>();
 
 
             HubconServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
@@ -64,8 +66,7 @@ namespace Hubcon.GraphQL.Injection
                     .AsScoped());
             });
 
-
-            var controllerConfig = new ControllerOptions(executorBuilder, builder, HubconServerBuilder.Current);
+            var controllerConfig = new ControllerOptions(executorBuilder, builder, HubconBuilder.Current);
             controllerConfig.SetEntrypoint<ControllerEntrypoint>();
             controllerOptions?.Invoke(controllerConfig);
       

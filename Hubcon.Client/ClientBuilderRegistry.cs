@@ -24,18 +24,17 @@ namespace Hubcon.Client
                     .RegisterWithInjector(x => x
                         .Register((context, b) =>
                         {
-                            
-                            var scope = context.Resolve<ILifetimeScope>();
                             var registry = context.Resolve<IClientBuilderRegistry>();
 
                             if(registry.GetClientBuilder(contractType, out IClientBuilder? value))
                             {
-                                return value!.GetOrCreateClient(contractType, scope);
+                                return value!.GetOrCreateClient(contractType, context);
                             }
 
-                            return default!;      
-                            
-                        }).As(contractType)));
+                            return default!;                             
+                        })
+                        .As(contractType)
+                        .AsSingleton()));
             }
         }
 

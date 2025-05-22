@@ -47,10 +47,7 @@ namespace Hubcon.Client
 
         public IServerModuleConfiguration UseAuthenticationManager<T>() where T : IAuthenticationManager
         {
-            if (builder.AuthenticationManagerType != null)
-                return this;
-
-            builder.AuthenticationManagerType = typeof(T);
+            builder.UseAuthenticationManager<T>();
             return this;
         }
     }

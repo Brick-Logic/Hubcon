@@ -9,6 +9,7 @@ namespace HubconTestDomain
 {
     public interface ISecondTestContract : IControllerContract
     {
+        public Task<string> LoginAsync(string username, string password);
         public Task TestMethod();
         public void TestVoid();
         public Task TestMethod(string message);

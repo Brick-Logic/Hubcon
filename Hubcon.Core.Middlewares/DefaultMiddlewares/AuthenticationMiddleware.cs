@@ -7,25 +7,28 @@ using Hubcon.Core.Invocation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 
 namespace Hubcon.Core.Middlewares.DefaultMiddlewares
 {
     public class AuthenticationMiddleware(
-        IAuthorizationService _authorizationService, 
+        IAuthorizationService _authorizationService,
         ILogger<AuthenticationMiddleware> logger) : IAuthenticationMiddleware
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
             var user = context.HttpContext?.User;
 
-            //if ((context.Blueprint.Kind == OperationKind.Subscription || context.Blueprint.Kind == OperationKind.Stream) 
-            //    && user?.Identity?.IsAuthenticated != true)
-            //{
-            //    logger.LogError($"Server: Subscriptions are required to be authenticated. Source IP: {context.HttpContext?.Connection.RemoteIpAddress}.");
-            //    context.HttpContext?.Connection.RequestClose();
-            //    return;
-            //}
+            if ((context.Blueprint.Kind == OperationKind.Subscription || context.Blueprint.Kind == OperationKind.Stream)
+                && user?.Identity?.IsAuthenticated != true)
+            {
+                logger.LogError($"Server: Subscriptions are required to be authenticated. Source IP: {context.HttpContext?.Connection.RemoteIpAddress}.");
+                context.Result = new BaseOperationResponse(false, "Access denied");
+                context.HttpContext?.Connection.RequestClose();
+                return;
+            }
 
             if (context.Blueprint.RequiresAuthorization)
             {

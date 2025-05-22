@@ -38,6 +38,11 @@ namespace Hubcon.Client
             }
         }
 
+        public void AddService(Action<ContainerBuilder> container)
+        {
+            ServicesToInject.Add(container);
+        }
+
         public WebApplicationBuilder AddHubconClientServices(
             WebApplicationBuilder builder,
             params Action<ContainerBuilder>?[] additionalServices)

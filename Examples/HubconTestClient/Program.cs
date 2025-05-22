@@ -1,11 +1,11 @@
 ﻿using Hubcon.Client;
+using HubconTestClient.Auth;
 using HubconTestClient.Modules;
 using HubconTestDomain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
 
 namespace HubconTestClient
 {
@@ -24,11 +24,17 @@ namespace HubconTestClient
             var scope = app.Services.CreateScope();
 
             var client = scope.ServiceProvider.GetRequiredService<ITestContract>();
+            var authManager = scope.ServiceProvider.GetRequiredService<AuthenticationManager>();
             var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<ITestContract>>();
 
 
             logger.LogInformation("Esperando interacción antes de continuar...");
+            Console.ReadKey();
+
+            var result = await authManager.LoginAsync("miusuario", "");
+            logger.LogInformation($"Login result: {result.IsSuccess}");
+
             Console.ReadKey();
 
             var text = client2.TestReturn();

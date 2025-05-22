@@ -4,14 +4,11 @@ namespace Hubcon.Core.Authentication
 {
     public abstract class BaseAuthenticationManager : IAuthenticationManager
     {
-        public string? AccessToken { get; protected set; }
-        public string? RefreshToken { get; protected set; }
-        public DateTime? AccessTokenExpiresAt { get; protected set; }
+        public abstract string? AccessToken { get; protected set; }
+        public abstract string? RefreshToken { get; protected set; }
+        public abstract DateTime? AccessTokenExpiresAt { get; protected set; }
 
-        public bool IsSessionActive =>
-            !string.IsNullOrEmpty(AccessToken) &&
-            AccessTokenExpiresAt.HasValue &&
-            DateTime.UtcNow < AccessTokenExpiresAt.Value;
+        public bool IsSessionActive => !string.IsNullOrEmpty(AccessToken);
 
         public async Task<IResult> LoginAsync(string username, string password)
         {
@@ -74,7 +71,7 @@ namespace Hubcon.Core.Authentication
         }
 
         protected abstract Task<IAuthResult> AuthenticateAsync(string username, string password);
-        protected abstract Task<AuthResult> RefreshSessionAsync(string refreshToken);
+        protected abstract Task<IAuthResult> RefreshSessionAsync(string refreshToken);
         protected abstract Task SaveSessionAsync();
         protected abstract Task ClearSessionAsync();
         protected abstract Task<PersistedSession?> LoadPersistedSessionAsync();
@@ -93,7 +90,7 @@ namespace Hubcon.Core.Authentication
     public class AuthResult : IAuthResult
     {
         public bool IsSuccess { get; set; }
-        public bool IsFailure => !IsFailure;
+        public bool IsFailure => !IsSuccess;
         public string? AccessToken { get; private set; }
         public string? RefreshToken { get; private set; }
         public int ExpiresInSeconds { get; private set; }
@@ -109,7 +106,7 @@ namespace Hubcon.Core.Authentication
     public class PersistedSession : IPersistedSession
     {
         public string AccessToken { get; set; } = default!;
-        public string RefreshToken { get; set; } = default!;
+        public string? RefreshToken { get; set; } = default!;
         public DateTime ExpiresAt { get; set; }
     }
 }

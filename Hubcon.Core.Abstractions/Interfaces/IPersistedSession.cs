@@ -5,6 +5,6 @@ namespace Hubcon.Core.Authentication
     {
         string AccessToken { get; set; }
         DateTime ExpiresAt { get; set; }
-        string RefreshToken { get; set; }
+        string? RefreshToken { get; set; }
     }
 }

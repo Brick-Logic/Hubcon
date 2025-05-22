@@ -1,6 +1,7 @@
 ﻿using Hubcon.Client;
 using Hubcon.Core.Abstractions.Interfaces;
 using Hubcon.Core.Authentication;
+using HubconTestClient.Auth;
 using HubconTestDomain;
 
 namespace HubconTestClient.Modules
@@ -18,7 +19,7 @@ namespace HubconTestClient.Modules
             configuration.AddContract<ISecondTestContract>();
 
             // Manager de autenticación (opcional)
-            //configuration.UseAuthenticationManager<BaseAuthenticationManager>();
+            configuration.UseAuthenticationManager<AuthenticationManager>();
 
             // Usar conexion insegura
             configuration.UseInsecureConnection();

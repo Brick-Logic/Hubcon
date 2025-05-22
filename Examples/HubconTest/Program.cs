@@ -12,6 +12,8 @@ namespace HubconTest
 {
     public class Program
     {
+        public static string Key = "cITTqWy43KvkXYrBjvX9YTgs/wVo0qVJ2oXIiknta+k=";
+
         public static void Main(string[] args)
         {
 
@@ -43,8 +45,9 @@ namespace HubconTest
             });
 
             builder.UseContractsFromAssembly(nameof(HubconTestDomain));
+
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
+                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                 {
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
@@ -54,11 +57,12 @@ namespace HubconTest
                         ValidateIssuerSigningKey = true,
                         ValidIssuer = "clave",
                         ValidAudience = "clave",
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("clave"))
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
                     };
                 });
 
             builder.Services.AddAuthorization();
+
 
             var app = builder.Build();
 
@@ -69,6 +73,7 @@ namespace HubconTest
                 app.MapScalarApiReference();
             }
 
+            app.UseAuthentication(); // debe ir antes de UseAuthorization
             app.UseAuthorization();
 
             app.MapControllers();

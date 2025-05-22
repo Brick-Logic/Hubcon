@@ -10,8 +10,9 @@ namespace Hubcon.Core.Abstractions.Interfaces
         List<Type> Contracts { get; }
         bool UseSecureConnection { get; set; }
 
-        T GetOrCreateClient<T>(ILifetimeScope lifetimeScope) where T : IControllerContract;
-        object GetOrCreateClient(Type contractType, ILifetimeScope lifetimeScope);
+        T GetOrCreateClient<T>(IComponentContext context) where T : IControllerContract;
+        object GetOrCreateClient(Type contractType, IComponentContext context);
         void LoadContractProxy(Type contractType);
+        void UseAuthenticationManager<T>() where T : IAuthenticationManager;
     }
 }
