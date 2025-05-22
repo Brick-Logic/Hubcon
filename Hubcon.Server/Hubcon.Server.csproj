@@ -7,7 +7,6 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 		<ProjectReference Include="..\Hubcon.Core.Middlewares\Hubcon.Core.Middlewares.csproj" />
 		<ProjectReference Include="..\Hubcon.Core.Pipelines\Hubcon.Core.Pipelines.csproj" />
 		<ProjectReference Include="..\Hubcon.Core.Routing\Hubcon.Core.Routing.csproj" />

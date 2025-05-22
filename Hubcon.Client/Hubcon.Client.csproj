@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="..\Hubcon.Core.Abstractions\Hubcon.Core.Abstractions.csproj" />
     <ProjectReference Include="..\Hubcon.Core.Routing\Hubcon.Core.Routing.csproj" />
     <ProjectReference Include="..\Hubcon.GraphQL\Hubcon.GraphQL.csproj" />
