@@ -1,9 +1,8 @@
-﻿using Hubcon.Core.Abstractions.Standard.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using System;
 using System.Linq;
 using System.Text;
 
@@ -53,11 +52,10 @@ namespace HubconAnalyzer.SourceGenerators
 
             sb.AppendLine($"#nullable enable");
             sb.AppendLine($"using Castle.DynamicProxy;");
-            sb.AppendLine($"using Hubcon.Core.Invocation;");
-            sb.AppendLine($"using Hubcon.Core.Abstractions;");
-            sb.AppendLine($"using Hubcon.Core.Attributes;");
+            sb.AppendLine($"using Hubcon.Shared.Abstractions.Interfaces;");
+            sb.AppendLine($"using Hubcon.Shared.Components.Attributes;");
+            sb.AppendLine($"using Hubcon.Shared.Components.Invocation;");
             sb.AppendLine($"using System.Reflection;");
-            sb.AppendLine($"using Hubcon.GraphQL.Models;");
             sb.AppendLine($"");
             sb.AppendLine($"[HubconProxy]");
             sb.AppendLine($"public class {proxyName} : {iface.ToDisplayString()}");

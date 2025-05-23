@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Hubcon.GraphQL\Hubcon.GraphQL.csproj" />
+    <ProjectReference Include="..\..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
+    <ProjectReference Include="..\..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Hubcon.Shared.Components\Hubcon.Shared.Components.csproj" />
   </ItemGroup>
 </Project>

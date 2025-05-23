@@ -12,7 +12,7 @@
 		<!-- Empaquetar como NuGet -->
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageId>HubconAnalyzer.SourceGenerators</PackageId>
-		<Version>1.0.57</Version>
+		<Version>1.0.63</Version>
 		<Authors>TuNombre</Authors>
 		<Company>TuEmpresa</Company>
 		<Description>Analyzer que genera proxies para interfaces que implementan IControllerContract</Description>
@@ -40,6 +40,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Hubcon.Core.Abstractions.Standard\Hubcon.Core.Abstractions.Standard.csproj" />
+	  <ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
 	</ItemGroup>
 </Project>

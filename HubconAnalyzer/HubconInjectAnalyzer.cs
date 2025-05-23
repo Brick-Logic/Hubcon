@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace HubconAnalyzer
 {
-    using Hubcon.Core.Abstractions.Standard.Attributes;
+    using Hubcon.Shared.Abstractions.Standard.Attributes;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.CSharp.Syntax;

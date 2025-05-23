@@ -1,12 +1,10 @@
-using Hubcon.Core.Middlewares.DefaultMiddlewares;
-using Hubcon.GraphQL.Injection;
+using Hubcon.Server.Injection;
 using HubconTest.Controllers;
 using HubconTest.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Text;
-using Hubcon.Server;
 
 namespace HubconTest
 {
@@ -44,7 +42,7 @@ namespace HubconTest
                 });
             });
 
-            builder.UseContractsFromAssembly(nameof(HubconTestDomain));
+            //builder.UseContractsFromAssembly(nameof(HubconTestDomain));
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>

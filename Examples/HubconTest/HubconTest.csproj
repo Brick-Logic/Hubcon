@@ -15,7 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Hubcon.Core\Hubcon.Core.csproj" />
     <ProjectReference Include="..\..\Hubcon.Server\Hubcon.Server.csproj" />
     <ProjectReference Include="..\HubconTestDomain\HubconTestDomain.csproj" />
   </ItemGroup>

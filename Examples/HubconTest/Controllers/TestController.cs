@@ -1,7 +1,6 @@
-﻿using Hubcon.Core.Abstractions.Interfaces;
-using Hubcon.Core.Attributes;
+﻿using Hubcon.Shared.Abstractions.Attributes;
+using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestDomain;
-using Microsoft.Extensions.Logging;
 
 namespace HubconTest.Controllers
 {

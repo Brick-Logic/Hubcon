@@ -1,5 +1,6 @@
-﻿using Hubcon.Core.Abstractions.Delegates;
-using Hubcon.Core.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.Delegates;
+using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace HubconTest.Middlewares

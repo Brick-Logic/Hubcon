@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
+		<PackageReference Include="HubconAnalyzer" Version="1.0.*" />
+		<PackageReference Include="HubconAnalyzer.CodeFixes" Version="1.0.*" />
+		<PackageReference Include="HubconAnalyzer.DiagnosticSupressors" Version="1.0.*" />
+		<PackageReference Include="HubconAnalyzer.SourceGenerators" Version="1.0.*" />
+	</ItemGroup>
+</Project>

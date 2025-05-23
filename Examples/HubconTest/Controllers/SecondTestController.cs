@@ -1,5 +1,5 @@
-﻿using Hubcon.Core.Abstractions.Standard.Attributes;
-using Hubcon.Core.Abstractions.Standard.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Standard.Attributes;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using HubconTestDomain;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;

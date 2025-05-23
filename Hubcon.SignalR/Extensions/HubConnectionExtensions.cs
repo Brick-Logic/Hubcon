@@ -1,4 +1,4 @@
-﻿using Hubcon.Core.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Text.Json;
 

@@ -1,5 +1,5 @@
 ﻿using Autofac;
-using Hubcon.Core.Invocation;
+using Hubcon.Shared.Components.Invocation;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Hubcon.SignalR.HubActivator

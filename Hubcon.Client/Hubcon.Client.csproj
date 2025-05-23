@@ -1,18 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
-  <ItemGroup>
-	<FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <ProjectReference Include="..\Hubcon.Core.Abstractions\Hubcon.Core.Abstractions.csproj" />
-    <ProjectReference Include="..\Hubcon.Core.Routing\Hubcon.Core.Routing.csproj" />
-    <ProjectReference Include="..\Hubcon.GraphQL\Hubcon.GraphQL.csproj" />
-    <PackageReference Include="GraphQL.Client" Version="6.1.0" />
-	<PackageReference Include="GraphQL.Client.Serializer.SystemTextJson" Version="6.1.0" />
-  </ItemGroup>
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<PackageReference Include="Autofac" Version="8.1.0" />
+		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
+		<PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
+		<PackageReference Include="GraphQL.Client" Version="6.1.0" />
+		<PackageReference Include="GraphQL.Client.Serializer.SystemTextJson" Version="6.1.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" />
+		<ProjectReference Include="..\Hubcon.Client.Core\Hubcon.Client.Core.csproj" />
+		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
+		<ProjectReference Include="..\Hubcon.Shared.Components\Hubcon.Shared.Components.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="README.md">
+	    <PackagePath></PackagePath>
+	    <Pack>true</Pack>
+	  </None>
+	</ItemGroup>
 
 </Project>

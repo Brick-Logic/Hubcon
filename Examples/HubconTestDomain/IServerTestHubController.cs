@@ -1,7 +1,5 @@
-﻿using Hubcon.Core.Abstractions.Interfaces;
-using Hubcon.Core.Abstractions.Standard.Interfaces;
-using Hubcon.GraphQL.Models;
-using Hubcon.GraphQL.Subscriptions;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace HubconTestDomain
 {

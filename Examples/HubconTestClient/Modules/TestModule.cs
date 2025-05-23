@@ -1,6 +1,5 @@
-﻿using Hubcon.Client;
-using Hubcon.Core.Abstractions.Interfaces;
-using Hubcon.Core.Authentication;
+﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Client.Builder;
 using HubconTestClient.Auth;
 using HubconTestDomain;
 

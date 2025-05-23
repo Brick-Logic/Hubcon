@@ -1,4 +1,4 @@
-﻿using Hubcon.Core.Abstractions.Standard.Attributes;
+﻿using Hubcon.Shared.Abstractions.Standard.Attributes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;

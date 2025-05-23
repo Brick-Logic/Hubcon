@@ -1,8 +1,10 @@
 ﻿using Autofac;
-using Hubcon.Core.Abstractions.Interfaces;
-using Hubcon.Core.Extensions;
-using Hubcon.GraphQL.Client;
-using Hubcon.GraphQL.Subscriptions;
+using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Client.Builder;
+using Hubcon.Client.Integration.Client;
+using Hubcon.Client.Integration.Subscriptions;
+using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Components.Extensions;
 using Microsoft.AspNetCore.Builder;
 
 namespace Hubcon.Client
