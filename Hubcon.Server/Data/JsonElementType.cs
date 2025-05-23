@@ -1,7 +1,7 @@
 ﻿using HotChocolate.Language;
 using HotChocolate.Types;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Components.Serialization;
+using Hubcon.Shared.Core.Serialization;
 using System.Text.Json;
 
 namespace Hubcon.Server.Data

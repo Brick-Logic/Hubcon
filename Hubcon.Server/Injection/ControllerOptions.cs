@@ -8,7 +8,7 @@ using Hubcon.Server.Models;
 using Hubcon.Server.Models.CustomAttributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Components.Invocation;
+using Hubcon.Shared.Core.Invocation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;

@@ -4,7 +4,7 @@ using Hubcon.Client.Builder;
 using Hubcon.Client.Integration.Client;
 using Hubcon.Client.Integration.Subscriptions;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Components.Extensions;
+using Hubcon.Shared.Core.Extensions;
 using Microsoft.AspNetCore.Builder;
 
 namespace Hubcon.Client

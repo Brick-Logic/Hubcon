@@ -1,6 +1,6 @@
 ﻿using Autofac;
 using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Shared.Components.Extensions;
+using Hubcon.Shared.Core.Extensions;
 
 namespace Hubcon.Client.Builder
 {

@@ -5,7 +5,7 @@ using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Attributes;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Components.Tools;
+using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Http;
 using System.Reflection;
 

@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<IsPackable>false</IsPackable>
+		<AssemblyName>HubconAnalyzers</AssemblyName>
+		<RootNamespace>HubconAnalyzers</RootNamespace>
+		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<PackageOutputPath>../nupkgs</PackageOutputPath>
+
+		<IsPackable>true</IsPackable>
+
+		<!-- Empaquetar como NuGet -->
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<PackageId>HubconAnalyzers</PackageId>
+		<Version>1.0.0</Version>
+		<Authors>TuNombre</Authors>
+		<Company>TuEmpresa</Company>
+		<Description>Analyzer que genera proxies para interfaces que implementan IControllerContract</Description>
+		<PackageTags>analyzer</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Las APIs de Roslyn -->
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Remove="$(TargetDir)$(AssemblyName).dll" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
+	</ItemGroup>
+</Project>

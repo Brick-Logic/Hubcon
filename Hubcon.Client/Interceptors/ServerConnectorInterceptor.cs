@@ -1,8 +1,8 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Components.Extensions;
-using Hubcon.Shared.Components.Invocation;
+using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Core.Invocation;
 using System;
 using System.Collections.Generic;
 using System.Linq;

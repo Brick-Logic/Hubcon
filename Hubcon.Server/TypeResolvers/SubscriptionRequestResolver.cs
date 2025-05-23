@@ -1,5 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Components.Subscriptions;
+using Hubcon.Shared.Core.Subscriptions;
 
 namespace Hubcon.Server.TypeResolvers
 {

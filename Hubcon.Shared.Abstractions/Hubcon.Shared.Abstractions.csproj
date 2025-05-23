@@ -8,9 +8,5 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
-		<PackageReference Include="HubconAnalyzer" Version="1.0.*" />
-		<PackageReference Include="HubconAnalyzer.CodeFixes" Version="1.0.*" />
-		<PackageReference Include="HubconAnalyzer.DiagnosticSupressors" Version="1.0.*" />
-		<PackageReference Include="HubconAnalyzer.SourceGenerators" Version="1.0.*" />
 	</ItemGroup>
 </Project>

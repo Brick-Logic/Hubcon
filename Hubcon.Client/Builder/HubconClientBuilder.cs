@@ -6,9 +6,9 @@ using Hubcon.Client.Core.Registries;
 using Hubcon.Client.Interceptors;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Components.Attributes;
-using Hubcon.Shared.Components.Extensions;
-using Hubcon.Shared.Components.Serialization;
+using Hubcon.Shared.Core.Attributes;
+using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Core.Serialization;
 using Microsoft.AspNetCore.Builder;
 
 namespace Hubcon.Client.Builder
