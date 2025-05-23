@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace HubconAnalyzer {
+namespace HubconAnalyzers.CodeFixes {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace HubconAnalyzer {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("HubconAnalyzer.CodeFixResources", typeof(CodeFixResources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("HubconAnalyzers.CodeFixes.CodeFixResources", typeof(CodeFixResources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
