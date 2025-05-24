@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using Hubcon.Shared.Abstractions.Models;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Abstractions.Interfaces
 {

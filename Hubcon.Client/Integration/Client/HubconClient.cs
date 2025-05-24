@@ -132,8 +132,8 @@ namespace Hubcon.Client.Integration.Client
                 await Start();
 
             GraphQLRequest? craftedRequest = BuildRequest(request, methodInfo, resolver);
-            var response = await _graphQLHttpClientFactory!.Invoke().SendMutationAsync<JsonElement>(craftedRequest);
-            var result = response.Data.Clone().GetProperty(resolver);
+            var response = await _graphQLHttpClientFactory!.Invoke().SendMutationAsync<object>(craftedRequest);
+            var result = ((JsonElement)response.Data).Clone().GetProperty(resolver);
 
             result.TryGetProperty(nameof(IObjectOperationResponse.Success).ToLower(), out JsonElement successValue);
             result.TryGetProperty(nameof(BaseOperationResponse.Data).ToLower(), out JsonElement dataValue);

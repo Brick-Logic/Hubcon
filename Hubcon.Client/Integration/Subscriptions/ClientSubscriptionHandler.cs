@@ -26,6 +26,13 @@ namespace Hubcon.Client.Integration.Subscriptions
 
         public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
 
+#pragma warning disable CS8618 // Un campo que no acepta valores NULL debe contener un valor distinto de NULL al salir del constructor. Considere la posibilidad de agregar el modificador "required" o declararlo como un valor que acepta valores NULL.
+        public ClientSubscriptionHandler()
+#pragma warning restore CS8618 // Un campo que no acepta valores NULL debe contener un valor distinto de NULL al salir del constructor. Considere la posibilidad de agregar el modificador "required" o declararlo como un valor que acepta valores NULL.
+        {
+            
+        }
+
         public ClientSubscriptionHandler(IHubconClient client, IDynamicConverter converter, ILogger<ClientSubscriptionHandler<T>> logger)
         {
             _client = client;

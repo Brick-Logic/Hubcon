@@ -5,6 +5,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Hubcon.Client.Builder
 {
@@ -24,6 +25,7 @@ namespace Hubcon.Client.Builder
             return (T)GetOrCreateClient(typeof(T), services);
         }
 
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ClientSubscriptionHandler<int>))]
         public object GetOrCreateClient(Type contractType, IServiceProvider services)
         {
             if (_clients.ContainsKey(contractType) && _clients.TryGetValue(contractType, out object? client))
@@ -48,6 +50,7 @@ namespace Hubcon.Client.Builder
                 if (value == null)
                 {
                     var genericType = typeof(ClientSubscriptionHandler<>).MakeGenericType(subscriptionProp.PropertyType.GenericTypeArguments[0]);
+                    _ = Activator.CreateInstance(genericType);
                     var subscriptionInstance = (ISubscription)services.GetRequiredService(genericType);
                     PropertyTools.AssignProperty(newClient, subscriptionProp, subscriptionInstance);
                     PropertyTools.AssignProperty(subscriptionInstance, nameof(subscriptionInstance.Property), subscriptionProp);

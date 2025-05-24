@@ -16,6 +16,27 @@ namespace Hubcon.Client.Builder
 {
     public class HubconClientBuilder
     {
+        public readonly static List<Type> SupportedPrimitiveGenericTypes = new()
+        {
+            typeof(string),
+            typeof(bool),
+            typeof(byte),
+            typeof(sbyte),
+            typeof(char),
+            typeof(decimal),
+            typeof(double),
+            typeof(float),
+            typeof(int),
+            typeof(uint),
+            typeof(nint),
+            typeof(nuint),
+            typeof(long),
+            typeof(ulong),
+            typeof(short),
+            typeof(ushort),
+            typeof(object),
+        };
+
         private ProxyRegistry Proxies { get; }
         private ClientBuilderRegistry ClientBuilders { get; }
 
@@ -46,7 +67,7 @@ namespace Hubcon.Client.Builder
             }
         }
 
-        public IServiceCollection Services { get; internal set; }
+        public IServiceCollection? Services { get; internal set; }
 
         public IServiceCollection AddHubconClient(IServiceCollection services)
         {
@@ -60,7 +81,12 @@ namespace Hubcon.Client.Builder
             services.AddSingleton<IHubconClient, HubconClient>();
             services.AddSingleton<ICommunicationHandler, ClientCommunicationHandler>();
             services.AddSingleton<IHubconClientProvider, HubconClientProvider>();
-            services.AddTransient(typeof(ClientSubscriptionHandler<>));
+
+            foreach(var primitiveType in SupportedPrimitiveGenericTypes)
+            {
+                var handlerType = typeof(ClientSubscriptionHandler<>).MakeGenericType(primitiveType);
+                services.AddTransient(handlerType);
+            }
 
             return services;
         }

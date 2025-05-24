@@ -1,12 +1,40 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Hubcon.Shared.Core.Serialization
 {
     public class DynamicConverter : IDynamicConverter
     {
+        private static readonly Dictionary<Type, JsonTypeInfo> _typeInfoMap = new()
+        {
+            { typeof(bool), PrimitiveJsonContext.Default.Boolean },
+            { typeof(byte), PrimitiveJsonContext.Default.Byte },
+            { typeof(sbyte), PrimitiveJsonContext.Default.SByte },
+            { typeof(char), PrimitiveJsonContext.Default.Char },
+            { typeof(decimal), PrimitiveJsonContext.Default.Decimal },
+            { typeof(double), PrimitiveJsonContext.Default.Double },
+            { typeof(float), PrimitiveJsonContext.Default.Single },
+            { typeof(int), PrimitiveJsonContext.Default.Int32 },
+            { typeof(uint), PrimitiveJsonContext.Default.UInt32 },
+            { typeof(nint), PrimitiveJsonContext.Default.IntPtr },
+            { typeof(nuint), PrimitiveJsonContext.Default.UIntPtr },
+            { typeof(long), PrimitiveJsonContext.Default.Int64 },
+            { typeof(ulong), PrimitiveJsonContext.Default.UInt64 },
+            { typeof(short), PrimitiveJsonContext.Default.Int16 },
+            { typeof(ushort), PrimitiveJsonContext.Default.UInt16 },
+            { typeof(string), PrimitiveJsonContext.Default.String },
+            { typeof(object), PrimitiveJsonContext.Default.Object },
+            { typeof(OperationRequest), PrimitiveJsonContext.Default.OperationRequest },
+            { typeof(IOperationRequest), PrimitiveJsonContext.Default.IOperationRequest },
+            { typeof(SubscriptionRequest), PrimitiveJsonContext.Default.SubscriptionRequest },
+            { typeof(ISubscriptionRequest), PrimitiveJsonContext.Default.ISubscriptionRequest },
+        };
+
         public Dictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 
         private readonly JsonSerializerOptions jsonSerializerOptions = new()
@@ -20,9 +48,9 @@ namespace Hubcon.Shared.Core.Serialization
 
         public object?[] SerializeArgs(object?[] args)
         {
-            if(args == null)
+            if (args == null)
                 return Array.Empty<object>();
-            if (args.Length == 0) 
+            if (args.Length == 0)
                 return Array.Empty<object>();
 
             for (int i = 0; i < args.Length; i++)
@@ -75,7 +103,7 @@ namespace Hubcon.Shared.Core.Serialization
             return DeserializeArgs(parameterTypes, args);
         }
 
-        public string? SerializeData(object? data) => data == null ? null : Newtonsoft.Json.JsonConvert.SerializeObject(data);    
+        public string? SerializeData(object? data) => data == null ? null : Newtonsoft.Json.JsonConvert.SerializeObject(data);
         public object? DeserializeData(Type type, object data) => data == null ? null : Newtonsoft.Json.JsonConvert.DeserializeObject($"{data}", type);
         public T? DeserializeData<T>(object? data)
         {
@@ -87,14 +115,26 @@ namespace Hubcon.Shared.Core.Serialization
             if (typeof(IAsyncEnumerable<object>).IsAssignableFrom(typeof(T)))
                 return (T)data;
 
-            return (T?)DeserializeData(typeof(T), data);       
+            return (T?)DeserializeData(typeof(T), data);
         }
 
 
         // 1. Convierte un objeto a JsonElement
         public JsonElement SerializeObject(object? value)
         {
-            return JsonSerializer.SerializeToElement(value, jsonSerializerOptions).Clone();
+            if (value == null)
+                return JsonDocument.Parse("null").RootElement;
+
+            var type = value.GetType();
+
+            if (_typeInfoMap.TryGetValue(type, out var typeInfo))
+            {
+                var bytes = JsonSerializer.SerializeToUtf8Bytes(value, typeInfo);
+                using var doc = JsonDocument.Parse(bytes);
+                return doc.RootElement.Clone();
+            }
+
+            throw new InvalidOperationException($"No JsonTypeInfo registered for type: {type.FullName}");
         }
 
         // 2. Convierte una colección de objetos a JsonElements
@@ -122,7 +162,7 @@ namespace Hubcon.Shared.Core.Serialization
         // 3. Convierte un JsonElement a un objeto fuertemente tipado
         public T? DeserializeJsonElement<T>(JsonElement element)
         {
-            if ( element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
+            if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
                 return default;
 
             return element.Clone().Deserialize<T>(jsonSerializerOptions);
@@ -173,5 +213,31 @@ namespace Hubcon.Shared.Core.Serialization
                 }
             }
         }
+    }
+
+    [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)]
+    [JsonSerializable(typeof(bool))]
+    [JsonSerializable(typeof(byte))]
+    [JsonSerializable(typeof(sbyte))]
+    [JsonSerializable(typeof(char))]
+    [JsonSerializable(typeof(decimal))]
+    [JsonSerializable(typeof(double))]
+    [JsonSerializable(typeof(float))]
+    [JsonSerializable(typeof(int))]
+    [JsonSerializable(typeof(uint))]
+    [JsonSerializable(typeof(nint))]
+    [JsonSerializable(typeof(nuint))]
+    [JsonSerializable(typeof(long))]
+    [JsonSerializable(typeof(ulong))]
+    [JsonSerializable(typeof(short))]
+    [JsonSerializable(typeof(ushort))]
+    [JsonSerializable(typeof(string))]
+    [JsonSerializable(typeof(object))]
+    [JsonSerializable(typeof(OperationRequest))]
+    [JsonSerializable(typeof(IOperationRequest))]
+    [JsonSerializable(typeof(SubscriptionRequest))]
+    [JsonSerializable(typeof(ISubscriptionRequest))]
+    internal partial class PrimitiveJsonContext : JsonSerializerContext
+    {
     }
 }

@@ -1,8 +1,10 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
+    [JsonSerializable(typeof(OperationRequest))]
     public class OperationRequest : IOperationRequest
     {
         public string ContractName { get; }
