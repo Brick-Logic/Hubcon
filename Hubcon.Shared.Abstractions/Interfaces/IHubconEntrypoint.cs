@@ -1,14 +1,12 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Subscriptions;
-using Microsoft.AspNetCore.Builder;
+﻿using Hubcon.Shared.Abstractions.Models;
 using System.Text.Json;
 
-namespace Hubcon.Shared.Core.Invocation
+namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IHubconEntrypoint : IBaseHubconController
     {
         public IAsyncEnumerable<JsonElement> HandleMethodStream(OperationRequest request);
-        public void Build(WebApplication? app = null);
+        public void Build();
         IAsyncEnumerable<JsonElement> HandleSubscription(SubscriptionRequest request);
     }
 }

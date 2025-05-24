@@ -1,6 +1,5 @@
-﻿using Autofac;
-using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Extensions;
+﻿using Hubcon.Client.Abstractions.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Client.Builder
 {
@@ -8,33 +7,30 @@ namespace Hubcon.Client.Builder
     {
         private Dictionary<Type, IClientBuilder> ClientBuilders { get; } = new();
 
-        public void RegisterModule<TRemoteServerModule>(List<Action<ContainerBuilder>> ServicesToInject) 
+        public void RegisterModule<TRemoteServerModule>(IServiceCollection services) 
             where TRemoteServerModule : IRemoteServerModule, new()
         {
             var module = new TRemoteServerModule();
 
             var clientBuilder = new ClientBuilder(proxyRegistry);
-            var builderConfig = new ServerModuleConfiguration(clientBuilder);
+            var builderConfig = new ServerModuleConfiguration(clientBuilder, services);
             module.Configure(builderConfig);
 
             foreach(var contractType in clientBuilder.Contracts)
             {
                 ClientBuilders.Add(contractType, clientBuilder);
-                ServicesToInject.Add(container => container
-                    .RegisterWithInjector(x => x
-                        .Register((context, b) =>
-                        {
-                            var registry = context.Resolve<IClientBuilderRegistry>();
 
-                            if(registry.GetClientBuilder(contractType, out IClientBuilder? value))
-                            {
-                                return value!.GetOrCreateClient(contractType, context);
-                            }
+                services.AddSingleton(contractType, (serviceProvider) => {
 
-                            return default!;                             
-                        })
-                        .As(contractType)
-                        .AsSingleton()));
+                    var registry = serviceProvider.GetRequiredService<IClientBuilderRegistry>();
+
+                    if (registry.GetClientBuilder(contractType, out IClientBuilder? value))
+                    {
+                        return value!.GetOrCreateClient(contractType, serviceProvider);
+                    }
+
+                    return default!;
+                });
             }
         }
 

@@ -1,11 +1,10 @@
-﻿using Autofac;
-using GraphQL;
+﻿using GraphQL;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
 using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.MessageHandlers;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Invocation;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Subscriptions;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -268,7 +267,7 @@ namespace Hubcon.Client.Integration.Client
         }
 
         private bool IsBuilt { get; set; }
-        public void Build(Uri BaseUri, string? HttpEndpoint, string? WebsocketEndpoint, Type? AuthenticationManagerType, IComponentContext context, bool useSecureConnection = true)
+        public void Build(Uri BaseUri, string? HttpEndpoint, string? WebsocketEndpoint, Type? AuthenticationManagerType, IServiceProvider services, bool useSecureConnection = true)
         {
             if (IsBuilt) return;
 
@@ -282,8 +281,7 @@ namespace Hubcon.Client.Integration.Client
 
             if (AuthenticationManagerType is not null)
             {
-                var type = typeof(Func<>).MakeGenericType(AuthenticationManagerType);
-                authManagerFactory = (Func<IAuthenticationManager>?)context.ResolveOptional(type)!;
+                authManagerFactory = () => (IAuthenticationManager)services.GetService(AuthenticationManagerType)!;
             }
 
             _authenticationManagerFactory = () =>

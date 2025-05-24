@@ -2,7 +2,7 @@
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Invocation;
+using Hubcon.Shared.Abstractions.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;

@@ -1,4 +1,5 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Subscriptions;
 using System.Reflection;

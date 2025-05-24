@@ -2,7 +2,8 @@
 
 namespace Hubcon.Shared.Abstractions.Standard.Interfaces
 {
-    public interface IControllerContract
+    public interface IClientProxy
     {
+        void UseInterceptor(AsyncInterceptorBase interceptor);
     }
 }

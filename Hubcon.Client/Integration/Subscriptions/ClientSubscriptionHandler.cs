@@ -2,9 +2,8 @@
 using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Core.Invocation;
-using Hubcon.Shared.Core.Subscriptions;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
 using System.Text.Json;

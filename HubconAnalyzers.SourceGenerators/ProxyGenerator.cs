@@ -46,22 +46,22 @@ namespace HubconAnalyzers.SourceGenerators
 
         private static string GenerateProxyClass(INamedTypeSymbol iface)
         {
-            var ns = iface.ContainingNamespace.ToDisplayString();
             var proxyName = iface.Name + "Proxy";
             var sb = new StringBuilder();
 
             sb.AppendLine($"#nullable enable");
             sb.AppendLine($"using Castle.DynamicProxy;");
-            sb.AppendLine($"using Hubcon.Shared.Abstractions.Interfaces;");
+            sb.AppendLine($"using Hubcon.Shared.Abstractions.Models;");
+            sb.AppendLine($"using Hubcon.Shared.Abstractions.Standard.Interfaces;");
             sb.AppendLine($"using Hubcon.Shared.Core.Attributes;");
-            sb.AppendLine($"using Hubcon.Shared.Core.Invocation;");
+            sb.AppendLine($"using System.Diagnostics.CodeAnalysis;");
             sb.AppendLine($"using System.Reflection;");
+            sb.AppendLine($"using System.Runtime.CompilerServices;");
             sb.AppendLine($"");
             sb.AppendLine($"[HubconProxy]");
-            sb.AppendLine($"public class {proxyName} : {iface.ToDisplayString()}");
+            sb.AppendLine($"public class {proxyName} : {iface.ToDisplayString()}, {nameof(IClientProxy)}");
             sb.AppendLine($"{{");
-            sb.AppendLine($"    public AsyncInterceptorBase Interceptor;");
-            sb.AppendLine($"");
+            sb.AppendLine($"    public AsyncInterceptorBase? Interceptor {{ get; private set; }}");
 
 
             foreach(var property in iface.GetMembers().OfType<IPropertySymbol>())
@@ -76,9 +76,14 @@ namespace HubconAnalyzers.SourceGenerators
                 sb.AppendLine(type);
             }
 
+            sb.AppendLine("");
+            sb.AppendLine($"    public {proxyName}() {{ }}");
             sb.AppendLine($"");
-            sb.AppendLine($"    public {proxyName}(AsyncInterceptorBase interceptor)");
+            sb.AppendLine($"    public void UseInterceptor(AsyncInterceptorBase interceptor)");
             sb.AppendLine($"    {{");
+            sb.AppendLine($"        if(Interceptor != null)");
+            sb.AppendLine($"            return;");
+            sb.AppendLine($"");
             sb.AppendLine($"        Interceptor = interceptor;");
             sb.AppendLine($"    }}");
             sb.AppendLine($"");
@@ -108,28 +113,28 @@ namespace HubconAnalyzers.SourceGenerators
                 }
 
                 if (paramNames.Any())
-                    sb.AppendLine($"        SimpleInvocation invocation = new SimpleInvocation(this, Interceptor, method, {string.Join(",", paramNames)});");
+                    sb.AppendLine($"        SimpleInvocation invocation = new SimpleInvocation(this, Interceptor!, method, {string.Join(",", paramNames)});");
                 else
-                    sb.AppendLine($"        SimpleInvocation invocation = new SimpleInvocation(this, Interceptor, method);");
+                    sb.AppendLine($"        SimpleInvocation invocation = new SimpleInvocation(this, Interceptor!, method);");
 
                 if (returnType == "void")
                 {
-                    sb.AppendLine($"        Interceptor.InterceptSynchronous(invocation);");
+                    sb.AppendLine($"        Interceptor!.InterceptSynchronous(invocation);");
                 }
                 else if(returnType.StartsWith("System.Threading.Tasks.Task<"))
                 {
                     var generic = returnType.Replace("System.Threading.Tasks.Task<", "").TrimEnd('>');
-                    sb.AppendLine($"        Interceptor.InterceptAsynchronous<{generic}>(invocation);");
+                    sb.AppendLine($"        Interceptor!.InterceptAsynchronous<{generic}>(invocation);");
                     sb.AppendLine($"        return ({returnType})invocation.ReturnValue!;");
                 }
                 else if (returnType.StartsWith("System.Threading.Tasks.Task"))
                 {
-                    sb.AppendLine($"        Interceptor.InterceptAsynchronous(invocation);");
+                    sb.AppendLine($"        Interceptor!.InterceptAsynchronous(invocation);");
                     sb.AppendLine($"        return ({returnType})invocation.ReturnValue!;");
                 }
                 else
                 {
-                    sb.AppendLine($"        Interceptor.InterceptSynchronous(invocation);");
+                    sb.AppendLine($"        Interceptor!.InterceptSynchronous(invocation);");
                     sb.AppendLine($"        return ({returnType})invocation.ReturnValue!;");
                 }
 
@@ -137,6 +142,31 @@ namespace HubconAnalyzers.SourceGenerators
             }
 
             sb.AppendLine("}");
+            sb.AppendLine("");
+
+            var preserver = GenerateProxyPreserverClass(iface);
+            sb.AppendLine(preserver);
+
+            return sb.ToString();
+        }
+
+        private static string GenerateProxyPreserverClass(INamedTypeSymbol iface)
+        {
+            var sb = new StringBuilder();
+
+            var proxyName = iface.Name + "Proxy";
+
+            sb.AppendLine($"public static class {proxyName}PreserverModule");
+            sb.AppendLine($"{{");
+            sb.AppendLine($"    [ModuleInitializer]");
+            sb.AppendLine($"    public static void Init()");
+            sb.AppendLine($"    {{");
+            sb.AppendLine($"        _ = typeof({proxyName});");            
+            sb.AppendLine($"    }}");       
+            sb.AppendLine($"");
+            sb.AppendLine($"    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof({proxyName}))]");
+            sb.AppendLine($"    public static void {proxyName}Preserver() {{ }}");                
+            sb.AppendLine($"}}");
 
             return sb.ToString();
         }

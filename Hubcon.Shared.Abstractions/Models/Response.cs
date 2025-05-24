@@ -1,7 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using System.Text.Json;
 
-namespace Hubcon.Shared.Core.Invocation
+namespace Hubcon.Shared.Abstractions.Models
 {
     public static class Response
     {

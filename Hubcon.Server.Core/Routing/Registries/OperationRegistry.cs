@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Shared.Abstractions.Interfaces;

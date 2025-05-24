@@ -1,9 +1,10 @@
-﻿using Autofac;
-using Castle.DynamicProxy;
+﻿using Castle.DynamicProxy;
 using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Client.Integration.Subscriptions;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Core.Tools;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Client.Builder
 {
@@ -18,12 +19,12 @@ namespace Hubcon.Client.Builder
         public bool UseSecureConnection { get; set; } = true;
         private Dictionary<Type, object> _clients { get; } = new();
         
-        public T GetOrCreateClient<T>(IComponentContext context) where T : IControllerContract
+        public T GetOrCreateClient<T>(IServiceProvider services) where T : IControllerContract
         {
-            return (T)GetOrCreateClient(typeof(T), context);
+            return (T)GetOrCreateClient(typeof(T), services);
         }
 
-        public object GetOrCreateClient(Type contractType, IComponentContext context)
+        public object GetOrCreateClient(Type contractType, IServiceProvider services)
         {
             if (_clients.ContainsKey(contractType) && _clients.TryGetValue(contractType, out object? client))
                 return client!;
@@ -33,43 +34,45 @@ namespace Hubcon.Client.Builder
 
             var proxyType = proxyRegistry.TryGetProxy(contractType);
 
-            var hubconClient = context.Resolve<IHubconClient>();
+            var hubconClient = services.GetService<IHubconClient>();
 
-            hubconClient.Build(BaseUri!, HttpEndpoint, WebsocketEndpoint, AuthenticationManagerType, context, UseSecureConnection);
+            hubconClient?.Build(BaseUri!, HttpEndpoint, WebsocketEndpoint, AuthenticationManagerType, services, UseSecureConnection);
 
-            var commHandler = context.Resolve<ICommunicationHandler>(new[]
+            var newClient = (IClientProxy)services.GetRequiredService(proxyType);
+            var interceptor = services.GetRequiredService<IContractInterceptor>() as object;
+            newClient.UseInterceptor((AsyncInterceptorBase)interceptor);
+           
+            foreach(var subscriptionProp in newClient.GetType().GetProperties().Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription))))
             {
-                new TypedParameter(typeof(IHubconClient), hubconClient)
-            });
+                var value = subscriptionProp.GetValue(newClient, null);
+                if (value == null)
+                {
+                    var genericType = typeof(ClientSubscriptionHandler<>).MakeGenericType(subscriptionProp.PropertyType.GenericTypeArguments[0]);
+                    var subscriptionInstance = (ISubscription)services.GetRequiredService(genericType);
+                    PropertyTools.AssignProperty(newClient, subscriptionProp, subscriptionInstance);
+                    PropertyTools.AssignProperty(subscriptionInstance, nameof(subscriptionInstance.Property), subscriptionProp);
+                    subscriptionInstance.Build();
+                }
+            }
 
-            var interceptor = context.Resolve<IContractInterceptor>(new[]
-            {
-                new TypedParameter(typeof(ICommunicationHandler), commHandler)
-            });
+            _clients.Add(contractType, newClient!);
 
-            var newClient = context.Resolve(proxyType, new[]
-            {
-                new TypedParameter(typeof(AsyncInterceptorBase), interceptor)
-            });
-
-            _clients.Add(contractType, newClient);
-
-            return newClient;
+            return newClient!;
         }
 
-        public void UseAuthenticationManager<T>() where T : IAuthenticationManager
+        public void UseAuthenticationManager<T>(IServiceCollection services) where T : IAuthenticationManager
         {
             if (AuthenticationManagerType != null)
                 return;
 
             AuthenticationManagerType = typeof(T);
-            HubconClientBuilder.Current.AddService(container 
-                => container.RegisterWithInjector(x => x.RegisterType(AuthenticationManagerType).AsSingleton()));
+
+            HubconClientBuilder.Current.Services.AddSingleton(AuthenticationManagerType);
         }
 
-        public void LoadContractProxy(Type contractType)
+        public void LoadContractProxy(Type contractType, IServiceCollection services)
         {
-            HubconClientBuilder.Current.LoadContractProxy(contractType);
+            HubconClientBuilder.Current.LoadContractProxy(contractType, services);
         }
     }
 }

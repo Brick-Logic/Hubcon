@@ -1,10 +1,8 @@
 ﻿using Autofac;
-using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Models.CustomAttributes;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Attributes;
-using Hubcon.Shared.Core.Invocation;
-using Hubcon.Shared.Core.Subscriptions;
 using Microsoft.AspNetCore.Builder;
 using System.Text.Json;
 
@@ -37,8 +35,7 @@ namespace Hubcon.Server.Entrypoint
         public IAsyncEnumerable<JsonElement> HandleSubscription(SubscriptionRequest request)
             => HubconController.Pipeline.GetSubscription(request);
         
-
-        public void Build(WebApplication? app = null)
+        public void Build()
         {
         }
     }

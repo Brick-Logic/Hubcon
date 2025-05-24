@@ -9,9 +9,9 @@ using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Http;
 using System.Reflection;
 
-namespace Hubcon.Server.Extensions
+namespace Hubcon.Server.Core.Extensions
 {
-    public static class AutofacExtensions
+    public static class HubconExtensions
     {
         public static ContainerBuilder RegisterWithInjector<TType, TActivatorData, TSingleRegistrationStyle>(
             this ContainerBuilder container,
@@ -38,20 +38,23 @@ namespace Hubcon.Server.Extensions
                     if (prop.GetValue(e.Instance) != null)
                         continue;
 
-                    if (prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
+                    if (prop.ReflectedType!.IsAssignableTo(typeof(IClientProxy)))
+                        continue;
+
+                    if (prop.PropertyType.IsAssignableTo(typeof(ISubscription)) && prop.ReflectedType!.IsAssignableTo(typeof(IControllerContract)))
                     {
                         var accessor = e.Context.ResolveOptional<IHttpContextAccessor>();
 
                         if (accessor != null)
                         {
-                            var contract = prop.ReflectedType!
-                                .GetInterfaces()
-                                .ToList()
-                                .Find(x => x.IsAssignableTo(typeof(IControllerContract)))!.Name;
+                            var contract = prop.ReflectedType?
+                                .GetInterfaces()?
+                                .ToList()?
+                                .Find(x => x.IsAssignableTo(typeof(IControllerContract)))?.Name;
 
                             var operationRegistry = e.Context.Resolve<IOperationRegistry>();
 
-                            if (!operationRegistry.GetOperationBlueprint(contract, prop.Name, out IOperationBlueprint? blueprint))
+                            if (!operationRegistry.GetOperationBlueprint(contract!, prop.Name, out IOperationBlueprint? blueprint))
                                 continue;
 
                             if (blueprint?.Kind != OperationKind.Subscription)
@@ -64,12 +67,12 @@ namespace Hubcon.Server.Extensions
                                 var token = JwtHelper.ExtractTokenFromHeader(accessor.HttpContext);
                                 var userId = JwtHelper.GetUserId(token);
 
-                                var descriptor = sub.GetHandler(userId!, contract, prop.Name);
+                                var descriptor = sub.GetHandler(userId!, contract!, prop.Name);
                                 PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);
                             }
                             else
                             {
-                                var descriptor = sub.GetHandler("", contract, prop.Name);
+                                var descriptor = sub.GetHandler("", contract!, prop.Name);
                                 PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);
                             }
                         }
@@ -92,11 +95,20 @@ namespace Hubcon.Server.Extensions
                     {
                         var resolved = e.Context.ResolveOptional(prop.PropertyType);
                         PropertyTools.AssignProperty(e.Instance, prop, resolved);
-                    }
+                    }           
                 }
             });
 
             return container;
         }
+
+        public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsScoped<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
+            => regBuilder.InstancePerLifetimeScope();
+
+        public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsTransient<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
+            => regBuilder.InstancePerDependency();
+
+        public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsSingleton<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
+            => regBuilder.SingleInstance();
     }
 }

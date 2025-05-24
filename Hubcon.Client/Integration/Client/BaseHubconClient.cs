@@ -1,14 +1,13 @@
-﻿using Autofac;
-using Castle.DynamicProxy;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Castle.DynamicProxy;
 using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.Client.Integration.Client
 {
     public class HubconClientProvider : IHubconClientProvider
     {
-        private readonly ILifetimeScope _lifetimeScope;
+        private readonly IServiceProvider _serviceProvider;
         private IControllerContract? _client = null!;
         private readonly IContractInterceptor Interceptor;
         private readonly IProxyRegistry _proxyRegistry;
@@ -17,11 +16,11 @@ namespace Hubcon.Client.Integration.Client
         public HubconClientProvider(
             IContractInterceptor interceptor,
             IProxyRegistry proxyRegistry,
-            ILifetimeScope lifetimeScope) : base()
+            IServiceProvider serviceProvider) : base()
         {
             Interceptor = interceptor;
             _proxyRegistry = proxyRegistry;
-            _lifetimeScope = lifetimeScope;
+            _serviceProvider = serviceProvider;
         }
 
         public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : IControllerContract
@@ -30,10 +29,7 @@ namespace Hubcon.Client.Integration.Client
                 return (TICommunicationContract)_client;
 
             var proxyType = _proxyRegistry.TryGetProxy<TICommunicationContract>();
-            _client = (TICommunicationContract)_lifetimeScope.Resolve(proxyType, new[]
-            {
-                new TypedParameter(typeof(AsyncInterceptorBase), Interceptor)
-            });
+            _client = (TICommunicationContract)_serviceProvider.GetService(proxyType);
 
             return (TICommunicationContract)_client;
         }

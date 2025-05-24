@@ -12,10 +12,10 @@
 		<!-- Empaquetar como NuGet -->
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageId>HubconAnalyzers.SourceGenerators</PackageId>
-		<Version>1.0.0</Version>
-		<Authors>TuNombre</Authors>
-		<Company>TuEmpresa</Company>
-		<Description>Analyzer que genera proxies para interfaces que implementan IControllerContract</Description>
+		<Version>1.0.14</Version>
+		<Authors>Brick-Logic</Authors>
+		<Company>Brick-Logic</Company>
+		<Description>Generador de codigo que crea proxies de cliente para contratos de Hubcon.</Description>
 		<PackageTags>analyzer;source-generator</PackageTags>
 		<PackageOutputPath>../nupkgs</PackageOutputPath>
 

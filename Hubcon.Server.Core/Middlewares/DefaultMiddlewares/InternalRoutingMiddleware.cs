@@ -2,7 +2,7 @@
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Invocation;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Subscriptions;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;

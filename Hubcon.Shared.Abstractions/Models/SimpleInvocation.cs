@@ -2,7 +2,7 @@
 using System.Reflection;
 using Castle.DynamicProxy;
 
-namespace Hubcon.Shared.Core.Invocation
+namespace Hubcon.Shared.Abstractions.Models
 {
 
     public class SimpleInvocation : IInvocation
@@ -36,10 +36,7 @@ namespace Hubcon.Shared.Core.Invocation
 
         public Type TargetType => _proxy.GetType();
 
-        public void Proceed()
-        {
-            ReturnValue = _method.Invoke(_proxy, _arguments)!;
-        }
+        public void Proceed() { }
 
         public object GetArgumentValue(int index) => _arguments![index]!;
 
@@ -49,9 +46,6 @@ namespace Hubcon.Shared.Core.Invocation
 
         public MethodInfo GetConcreteMethodInvocationTarget() => _method;
 
-        public IInvocationProceedInfo CaptureProceedInfo()
-        {
-            return default!;
-        }
+        public IInvocationProceedInfo CaptureProceedInfo() => default!;
     }
 }

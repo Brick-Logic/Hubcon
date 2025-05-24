@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Extensions;
 using Hubcon.Shared.Core.Extensions;
 
 namespace Hubcon.Server.Core.Middlewares

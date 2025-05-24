@@ -2,7 +2,7 @@
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Hubcon.Shared.Core.Injectors
+namespace Hubcon.Server.Core.Injectors
 {
     public class HubconServiceProvider : IHubconServiceProvider
     {

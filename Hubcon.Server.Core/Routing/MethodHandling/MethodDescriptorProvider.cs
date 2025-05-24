@@ -1,5 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Pipelines;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;

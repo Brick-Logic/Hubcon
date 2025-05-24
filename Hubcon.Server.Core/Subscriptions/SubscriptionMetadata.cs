@@ -3,7 +3,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using System.Reflection;
 
-namespace Hubcon.Shared.Core.Subscriptions
+namespace Hubcon.Server.Core.Subscriptions
 {
     public class SubscriptionDescriptor : ISubscriptionDescriptor
     {

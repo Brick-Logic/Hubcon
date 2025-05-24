@@ -1,5 +1,4 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 
 namespace Hubcon.Server.Core.Controllers
 {

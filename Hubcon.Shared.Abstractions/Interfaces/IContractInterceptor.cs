@@ -1,6 +1,4 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
-
-namespace Hubcon.Client.Abstractions.Interfaces
+﻿namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IContractInterceptor
     {

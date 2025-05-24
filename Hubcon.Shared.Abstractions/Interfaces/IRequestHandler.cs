@@ -1,7 +1,6 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
-using System.Text.Json;
+﻿using System.Text.Json;
 
-namespace Hubcon.Server.Abstractions.Interfaces
+namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IRequestHandler
     {

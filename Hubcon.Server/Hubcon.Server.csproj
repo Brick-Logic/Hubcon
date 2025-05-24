@@ -14,8 +14,11 @@
 		<PackageReference Include="HotChocolate.AspNetCore" Version="15.1.5" />
 		<PackageReference Include="HotChocolate.Server" Version="10.5.5" />
 		<PackageReference Include="HotChocolate.Types" Version="15.1.5" />
-
 		
+		<PackageReference Include="HubconAnalyzers" Version="1.0.*" />
+		<PackageReference Include="HubconAnalyzers.CodeFixes" Version="1.0.*" />
+		<PackageReference Include="HubconAnalyzers.DiagnosticSupressors" Version="1.0.*" />
+
 		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Client.Core\Hubcon.Client.Core.csproj" />
 		<ProjectReference Include="..\Hubcon.Server.Core\Hubcon.Server.Core.csproj" />

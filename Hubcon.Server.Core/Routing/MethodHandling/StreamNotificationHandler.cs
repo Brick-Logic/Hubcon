@@ -1,6 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Invocation;
+using Hubcon.Shared.Abstractions.Models;
 using System.Threading.Channels;
 
 namespace Hubcon.Server.Core.Routing.MethodHandling

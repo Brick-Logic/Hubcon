@@ -1,7 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using System.Reflection;
 
-namespace Hubcon.Shared.Core.Injectors
+namespace Hubcon.Server.Core.Injectors
 {
     public class PropertyInjector : IPropertyInjector
     {

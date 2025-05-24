@@ -1,8 +1,7 @@
-﻿using Autofac;
-using Castle.DynamicProxy;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Castle.DynamicProxy;
 using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.Client.Connectors
 {
@@ -11,40 +10,40 @@ namespace Hubcon.Client.Connectors
     /// the server's interface.
     /// </summary>
     /// <typeparam name="TIServerHubController"></typeparam>
-    public class HubconServerConnector<TICommunicationHandler> : IServerConnector, IHubconServerConnector<TICommunicationHandler>
-        where TICommunicationHandler : ICommunicationHandler
-    {
-        private IControllerContract? _client = null!;
-        private readonly IContractInterceptor Interceptor;
-        private readonly IProxyRegistry proxyRegistry;
+    //public class HubconServerConnector<TICommunicationHandler> : IServerConnector, IHubconServerConnector<TICommunicationHandler>
+    //    where TICommunicationHandler : ICommunicationHandler
+    //{
+    //    private IControllerContract? _client = null!;
+    //    private readonly IContractInterceptor Interceptor;
+    //    private readonly IProxyRegistry proxyRegistry;
 
-        public ICommunicationHandler Connection { get => Interceptor.CommunicationHandler; }
+    //    public ICommunicationHandler Connection { get => Interceptor.CommunicationHandler; }
 
-        private ILifetimeScope _lifetimeScope { get; }
+    //    private IServiceProvider _serviceProvider { get; }
 
-        public HubconServerConnector(
-            IContractInterceptor interceptor,
-            IProxyRegistry proxyRegistry,
-            ILifetimeScope lifetimeScoped) : base()
-        {
-            Interceptor = interceptor;
-            this.proxyRegistry = proxyRegistry;
-            _lifetimeScope = lifetimeScoped;
-        }
+    //    public HubconServerConnector(
+    //        IContractInterceptor interceptor,
+    //        IProxyRegistry proxyRegistry,
+    //        IServiceProvider serviceProvider) : base()
+    //    {
+    //        Interceptor = interceptor;
+    //        this.proxyRegistry = proxyRegistry;
+    //        _serviceProvider = serviceProvider;
+    //    }
 
-        public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : IControllerContract
-        {
-            if (_client != null)
-                return (TICommunicationContract)_client;
+    //    public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : IControllerContract
+    //    {
+    //        if (_client != null)
+    //            return (TICommunicationContract)_client;
 
-            var proxyType = proxyRegistry.TryGetProxy<TICommunicationContract>();
+    //        var proxyType = proxyRegistry.TryGetProxy<TICommunicationContract>();
 
-            _client = (TICommunicationContract)_lifetimeScope.Resolve(proxyType, new[]
-            {
-                new TypedParameter(typeof(AsyncInterceptorBase), Interceptor)
-            });
+    //        _client = (TICommunicationContract)_serviceProvider.GetService(proxyType, new[]
+    //        {
+    //            new TypedParameter(typeof(AsyncInterceptorBase), Interceptor)
+    //        });
 
-            return (TICommunicationContract)_client;
-        }
-    }
+    //        return (TICommunicationContract)_client;
+    //    }
+    //}
 }

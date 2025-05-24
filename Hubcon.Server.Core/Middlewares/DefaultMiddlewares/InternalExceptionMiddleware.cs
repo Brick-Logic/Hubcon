@@ -1,7 +1,7 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Invocation;
+using Hubcon.Shared.Abstractions.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares

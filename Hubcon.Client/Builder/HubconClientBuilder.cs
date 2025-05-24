@@ -1,8 +1,8 @@
-﻿using Autofac;
-using Autofac.Extensions.DependencyInjection;
-using Hubcon.Client.Abstractions.Interfaces;
+﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Connectors;
 using Hubcon.Client.Core.Registries;
+using Hubcon.Client.Integration.Client;
+using Hubcon.Client.Integration.Subscriptions;
 using Hubcon.Client.Interceptors;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
@@ -10,6 +10,7 @@ using Hubcon.Shared.Core.Attributes;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Serialization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Client.Builder
 {
@@ -17,8 +18,6 @@ namespace Hubcon.Client.Builder
     {
         private ProxyRegistry Proxies { get; }
         private ClientBuilderRegistry ClientBuilders { get; }
-        private List<Action<ContainerBuilder>> ServicesToInject { get; } = new();
-        private List<Type> ProxiesToRegister { get; } = new();
 
         private HubconClientBuilder()
         {
@@ -47,47 +46,34 @@ namespace Hubcon.Client.Builder
             }
         }
 
-        public void AddService(Action<ContainerBuilder> container)
+        public IServiceCollection Services { get; internal set; }
+
+        public IServiceCollection AddHubconClient(IServiceCollection services)
         {
-            ServicesToInject.Add(container);
+            Services = services;
+
+            services.AddSingleton<IProxyRegistry>(Proxies);
+            services.AddSingleton<IClientBuilderRegistry>(ClientBuilders);
+            services.AddSingleton<IDynamicConverter, DynamicConverter>();
+            services.AddSingleton<IContractInterceptor, ServerConnectorInterceptor>();
+            //services.AddSingleton(typeof(HubconServerConnector<>), typeof(IHubconServerConnector<>));
+            services.AddSingleton<IHubconClient, HubconClient>();
+            services.AddSingleton<ICommunicationHandler, ClientCommunicationHandler>();
+            services.AddSingleton<IHubconClientProvider, HubconClientProvider>();
+            services.AddTransient(typeof(ClientSubscriptionHandler<>));
+
+            return services;
         }
 
-        public WebApplicationBuilder AddHubconClientServices(
-            WebApplicationBuilder builder,
-            params Action<ContainerBuilder>?[] additionalServices)
-        {
-            builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
-            builder.Host.ConfigureContainer<ContainerBuilder>((context, container) =>
-            {
-                if (ServicesToInject.Count > 0)
-                    ServicesToInject.ForEach(x => x.Invoke(container));
-
-                if (ProxiesToRegister.Count > 0)
-                    ProxiesToRegister.ForEach(x => container.RegisterWithInjector(y => y.RegisterType(x).AsTransient()));
-
-                container
-                       .RegisterWithInjector(x => x.RegisterInstance(Proxies).As<IProxyRegistry>().AsSingleton())
-                       .RegisterWithInjector(x => x.RegisterInstance(ClientBuilders).As<IClientBuilderRegistry>().AsSingleton())
-                       .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().As<IDynamicConverter>().AsSingleton())
-                       .RegisterWithInjector(x => x.RegisterType(typeof(ServerConnectorInterceptor)).As(typeof(IContractInterceptor)).AsScoped())
-                       .RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconServerConnector<>)).As(typeof(IHubconServerConnector<>)).AsScoped());
-
-                foreach (var services in additionalServices)
-                    services?.Invoke(container);
-            });
-
-            return builder;
-        }
-
-        public WebApplicationBuilder AddRemoteServerModule<TRemoteServerModule>(WebApplicationBuilder builder)
+        public IServiceCollection AddRemoteServerModule<TRemoteServerModule>(IServiceCollection services)
              where TRemoteServerModule : IRemoteServerModule, new()
         {
-            ClientBuilders.RegisterModule<TRemoteServerModule>(ServicesToInject);
+            ClientBuilders.RegisterModule<TRemoteServerModule>(services);
 
-            return builder;
+            return services;
         }
 
-        public void LoadContractProxy(Type contractType)
+        public void LoadContractProxy(Type contractType, IServiceCollection services)
         {
             if (!contractType.IsAssignableTo(typeof(IControllerContract)))
                 return;
@@ -100,13 +86,13 @@ namespace Hubcon.Client.Builder
                 .ToList();
 
             var proxy = proxyTypes.Find(x => x.Name == contractType.Name + "Proxy")!;
-            proxyTypes.Add(proxy);
 
+            proxyTypes.Add(proxy);
             Proxies.RegisterProxy(contractType, proxy);
-            ProxiesToRegister.Add(proxy);
+            services.AddTransient(proxy);
         }
 
-        public WebApplicationBuilder UseContractsFromAssembly(WebApplicationBuilder e, string assemblyName)
+        public IServiceCollection UseContractsFromAssembly(IServiceCollection services, string assemblyName)
         {
             var assembly = AppDomain.CurrentDomain.Load(assemblyName);
 
@@ -124,10 +110,10 @@ namespace Hubcon.Client.Builder
             {
                 var proxy = proxies.Find(x => x.Name == contract.Name + "Proxy")!;
                 Proxies.RegisterProxy(contract, proxy);
-                ProxiesToRegister.Add(proxy);
+                services.AddScoped(proxy);
             }
 
-            return e;
+            return services;
         }
     }
 }

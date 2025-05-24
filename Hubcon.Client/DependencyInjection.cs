@@ -1,55 +1,28 @@
-﻿using Autofac;
-using Hubcon.Client.Abstractions.Interfaces;
+﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Builder;
-using Hubcon.Client.Integration.Client;
-using Hubcon.Client.Integration.Subscriptions;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Extensions;
-using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Client
 {
     public static class DependencyInjection
     {
-        public static WebApplicationBuilder AddHubconClient(this WebApplicationBuilder builder)
+        public static IServiceCollection AddHubconClient(this IServiceCollection services)
         {
-            HubconClientBuilder.Current.AddHubconClientServices(builder, container =>
-            {
-                container.RegisterWithInjector(x => x
-                    .RegisterType<HubconClient>()
-                    .As<IHubconClient>()
-                    .AsSingleton());
-
-                container.RegisterWithInjector(x => x
-                    .RegisterType<ClientCommunicationHandler>()
-                    .As<ICommunicationHandler>()
-                    .AsSingleton());
-
-                container.RegisterWithInjector(x => x
-                    .RegisterType<HubconClientProvider>()
-                    .As<IHubconClientProvider>()
-                    .AsSingleton());
-
-                container.RegisterWithInjector(x => x
-                    .RegisterGeneric(typeof(ClientSubscriptionHandler<>))
-                    .As(typeof(ISubscription<>))
-                    .AsTransient());
-            });
-
-            return builder;
+            HubconClientBuilder.Current.AddHubconClient(services);
+            return services;
         }
 
-        public static WebApplicationBuilder AddRemoteServerModule<TRemoteServerModule>(this WebApplicationBuilder builder)
+        public static IServiceCollection AddRemoteServerModule<TRemoteServerModule>(this IServiceCollection services)
              where TRemoteServerModule : IRemoteServerModule, new()
         {
-            HubconClientBuilder.Current.AddRemoteServerModule<TRemoteServerModule>(builder);
-
-            return builder;
+            HubconClientBuilder.Current.AddRemoteServerModule<TRemoteServerModule>(services);
+            return services;
         }
 
-        public static WebApplicationBuilder UseContractsFromAssembly(this WebApplicationBuilder e, string assemblyName)
+        public static IServiceCollection UseContractsFromAssembly(this IServiceCollection services, string assemblyName)
         {
-            return HubconClientBuilder.Current.UseContractsFromAssembly(e, assemblyName);
+            HubconClientBuilder.Current.UseContractsFromAssembly(services, assemblyName);
+            return services;
         }
     }
 }

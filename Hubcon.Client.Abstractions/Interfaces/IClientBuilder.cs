@@ -1,6 +1,6 @@
-﻿using Autofac;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Client.Abstractions.Interfaces
 {
@@ -11,9 +11,9 @@ namespace Hubcon.Client.Abstractions.Interfaces
         List<Type> Contracts { get; }
         bool UseSecureConnection { get; set; }
 
-        T GetOrCreateClient<T>(IComponentContext context) where T : IControllerContract;
-        object GetOrCreateClient(Type contractType, IComponentContext context);
-        void LoadContractProxy(Type contractType);
-        void UseAuthenticationManager<T>() where T : IAuthenticationManager;
+        T GetOrCreateClient<T>(IServiceProvider services) where T : IControllerContract;
+        object GetOrCreateClient(Type contractType, IServiceProvider services);
+        void LoadContractProxy(Type contractType, IServiceCollection services);
+        void UseAuthenticationManager<T>(IServiceCollection services) where T : IAuthenticationManager;
     }
 }

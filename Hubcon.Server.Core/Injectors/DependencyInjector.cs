@@ -2,7 +2,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace Hubcon.Shared.Core.Injectors
+namespace Hubcon.Server.Core.Injectors
 {
     public class DependencyInjector<T, TProp> : IDependencyInjector<T, TProp>
     {

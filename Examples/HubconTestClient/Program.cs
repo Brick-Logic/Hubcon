@@ -17,8 +17,8 @@ namespace HubconTestClient
         {
             var builder = WebApplication.CreateBuilder();
 
-            builder.AddHubconClient();
-            builder.AddRemoteServerModule<TestModule>();
+            builder.Services.AddHubconClient();
+            builder.Services.AddRemoteServerModule<TestModule>();
 
             var app = builder.Build();
             var scope = app.Services.CreateScope();
@@ -49,7 +49,7 @@ namespace HubconTestClient
 
             async Task handler(int input)
             {
-                logger.LogDebug($"Evento recibido: {input}");
+                logger.LogInformation($"Evento recibido: {input}");
                 Interlocked.Add(ref eventosRecibidos, 1);
             }
 
@@ -66,7 +66,7 @@ namespace HubconTestClient
 
             logger.LogInformation("Enviando request...");
             await client.CreateUser();
-            logger.LogInformation($"Request enviado, respuesta recibida.");
+            logger.LogInformation($"Request terminado.");
             Console.ReadKey();
 
             logger.LogInformation("Enviando request...");

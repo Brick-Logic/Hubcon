@@ -1,10 +1,10 @@
-﻿using Autofac;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Client.Abstractions.Interfaces
 {
     public interface IClientBuilderRegistry
     {
         bool GetClientBuilder(Type contractType, out IClientBuilder? value);
-        void RegisterModule<TRemoteServerModule>(List<Action<ContainerBuilder>> ServicesToInject) where TRemoteServerModule : IRemoteServerModule, new();
+        void RegisterModule<TRemoteServerModule>(IServiceCollection services) where TRemoteServerModule : IRemoteServerModule, new();
     }
 }

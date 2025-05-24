@@ -1,9 +1,8 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Attributes;
-using Hubcon.Shared.Core.Injectors;
 using System.Reflection;
 
-namespace Hubcon.Shared.Core.Injectors
+namespace Hubcon.Server.Core.Injectors
 {
     public static class HubconInjector
     {

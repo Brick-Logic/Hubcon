@@ -1,6 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 
-namespace Hubcon.Shared.Core.Invocation
+namespace Hubcon.Shared.Abstractions.Models
 {
     public class BaseOperationResponse : BaseResponse, IObjectOperationResponse, IResponse
     {

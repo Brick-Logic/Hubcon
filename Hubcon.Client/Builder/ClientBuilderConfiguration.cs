@@ -1,10 +1,11 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Client.Builder
 {
-    internal class ServerModuleConfiguration(IClientBuilder builder) : IServerModuleConfiguration
+    internal class ServerModuleConfiguration(IClientBuilder builder, IServiceCollection services) : IServerModuleConfiguration
     {
         public IServerModuleConfiguration WithBaseUrl(string hostUrl)
         {
@@ -33,12 +34,12 @@ namespace Hubcon.Client.Builder
 
         private void LoadContractProxy(Type contractType)
         {
-            builder.LoadContractProxy(contractType);
+            builder.LoadContractProxy(contractType, services);
         }
 
         public IServerModuleConfiguration UseAuthenticationManager<T>() where T : IAuthenticationManager
         {
-            builder.UseAuthenticationManager<T>();
+            builder.UseAuthenticationManager<T>(services);
             return this;
         }
     }

@@ -1,5 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Client.Abstractions.Interfaces
 {

@@ -1,9 +1,8 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Models;
 using Microsoft.Extensions.Hosting;
 using System.Text.Json;
 
-namespace Hubcon.Shared.Core.Invocation
+namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IBaseHubconController
     {
@@ -20,6 +19,6 @@ namespace Hubcon.Shared.Core.Invocation
     public interface IHubconClientController<TICommunicationHandler> : IBaseHubconController<TICommunicationHandler>, IHostedService
          where TICommunicationHandler : ICommunicationHandler
     {
-        Task<IResponse> StartStream(string methodCode, IOperationRequest request);
+        Task<IResponse> StartStream(string methodCode, SubscriptionRequest request);
     }
 }
