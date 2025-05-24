@@ -23,6 +23,10 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         object?[] SerializeArgs(object?[] args);
         IEnumerable<JsonElement> SerializeArgsToJson(IEnumerable<object?> values);
         string? SerializeData(object? data);
+
         JsonElement SerializeObject(object? value);
+        T DeserializeByteArray<T>(byte[] bytes);
+        byte[] SerializeToByteArray(object? value);
+        T DeserializeObject<T>(JsonElement json);
     }
 }

@@ -12,4 +12,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.15" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Examples\HubconTestDomain\HubconTestDomain.csproj" />
+    <ProjectReference Include="..\..\Hubcon.Client\Hubcon.Client.csproj" />
+  </ItemGroup>
 </Project>

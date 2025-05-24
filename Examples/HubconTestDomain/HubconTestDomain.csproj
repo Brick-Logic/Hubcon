@@ -8,5 +8,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\Hubcon.Shared\Hubcon.Shared.csproj" />
+		<PackageReference Include="HubconAnalyzers.SourceGenerators" Version="1.0.*" />
 	</ItemGroup>
 </Project>
