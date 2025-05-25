@@ -21,12 +21,24 @@ namespace HubconTest
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    policy
+                        .AllowAnyOrigin() // Solo para desarrollo
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+            });
+
             builder.Services.AddOpenApi();
 
             builder.AddHubcon(controllerOptions =>
             {
                 //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
                 controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
+                controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
                 //controllerOptions.AddGlobalMiddleware<AuthenticationMiddleware>();
 
                 controllerOptions.AddController<TestController>(controllerMiddlewares =>
@@ -63,6 +75,8 @@ namespace HubconTest
 
 
             var app = builder.Build();
+
+            app.UseCors();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

@@ -1,5 +1,6 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Builder;
+using Hubcon.Client.Integration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Client

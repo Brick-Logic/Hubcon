@@ -60,14 +60,14 @@ namespace Hubcon.Client.Builder
             return newClient!;
         }
 
-        public void UseAuthenticationManager<T>(IServiceCollection services) where T : IAuthenticationManager
+        public void UseAuthenticationManager<T>(IServiceCollection services) where T : class, IAuthenticationManager
         {
             if (AuthenticationManagerType != null)
                 return;
 
             AuthenticationManagerType = typeof(T);
 
-            HubconClientBuilder.Current.Services.AddSingleton(AuthenticationManagerType);
+            HubconClientBuilder.Current.Services.AddSingleton<T>();
         }
 
         public void LoadContractProxy(Type contractType, IServiceCollection services)

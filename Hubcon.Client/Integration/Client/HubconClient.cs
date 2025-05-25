@@ -6,6 +6,7 @@ using Hubcon.Client.Core.MessageHandlers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Subscriptions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Reflection;
@@ -37,7 +38,7 @@ namespace Hubcon.Client.Integration.Client
         private bool IsStarted { get; set; }
         public async Task Start()
         {
-            if (IsStarted) return;
+            if (true || IsStarted) return;
 
             Task _runnerTask = Task.CompletedTask;
             Task _exceptionTask = Task.CompletedTask;
@@ -65,7 +66,7 @@ namespace Hubcon.Client.Integration.Client
                         {
                             sw.Start();
                             //timer.Start();
-                            await foreach (var newEvent in observer.GetAsyncEnumerable(new CancellationToken()))
+                            await foreach (var newEvent in observer.GetAsyncEnumerable(new CancellationToken()).ConfigureAwait(false))
                             {
                                 sw.Restart();
                                 _logger.LogInformation($"PONG received.");
@@ -313,7 +314,8 @@ namespace Hubcon.Client.Integration.Client
                 if (_graphQLHttpClient != null)
                     return _graphQLHttpClient;
 
-                return _graphQLHttpClient = new GraphQLHttpClient(_graphQLHttpClientOptionsFactory.Invoke(), new SystemTextJsonSerializer());
+                var client = services.GetService<HttpClient>();
+                return _graphQLHttpClient = new GraphQLHttpClient(_graphQLHttpClientOptionsFactory.Invoke(), new SystemTextJsonSerializer(), client!);
             };
 
             IsBuilt = true;

@@ -1,0 +1,55 @@
+﻿@page "/counter"
+@using Hubcon.Blazor.Client.Auth
+@using Hubcon.Shared.Abstractions.Interfaces
+@using HubconTestDomain
+@rendermode InteractiveWebAssembly
+@inject AuthenticationManager _authenticationManager
+@inject ILogger<Counter> _logger
+@inject ITestContract _testContract 
+
+<button class="btn btn-primary" @onclick="Login">Login</button>
+<button class="btn btn-primary" @onclick="TestSubscribe">TestSubscribe</button>
+<button class="btn btn-primary" @onclick="TestCreateUser">TestCreateUser</button>
+<button class="btn btn-primary" @onclick="TestStream">TestStream</button>
+
+@code {
+    private int eventosRecibidos = 0;
+
+    protected async void Login()
+    {
+        var res = await _authenticationManager.LoginAsync("", "").ConfigureAwait(false);
+
+        if (res.IsSuccess)
+            _logger.LogInformation($"Login OK. Token: {_authenticationManager.AccessToken}");
+        else
+            _logger.LogInformation($"Login failure.");
+    }
+
+    protected async Task TestSubscribe()
+    {
+        async Task handler(int input)
+        {
+            _logger.LogInformation($"Evento recibido: {input}");
+            Interlocked.Add(ref eventosRecibidos, 1);
+        }
+
+        _testContract.OnUserCreated!.AddHandler(handler);
+        await _testContract.OnUserCreated.Subscribe().ConfigureAwait(false);
+
+        _logger.LogInformation($"Subscribe OK");
+    }
+
+    protected async Task TestCreateUser()
+    {
+        await _testContract.CreateUser().ConfigureAwait(false);
+        _logger.LogInformation($"CreateUser OK");
+    }
+
+    protected async Task TestStream()
+    {
+        await foreach (var item in _testContract.GetMessages(10).ConfigureAwait(false))
+        {
+            _logger.LogInformation($"Item de stream recibidos: {item}");
+        }
+    }
+}

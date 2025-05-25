@@ -37,7 +37,7 @@ namespace Hubcon.Client.Builder
             builder.LoadContractProxy(contractType, services);
         }
 
-        public IServerModuleConfiguration UseAuthenticationManager<T>() where T : IAuthenticationManager
+        public IServerModuleConfiguration UseAuthenticationManager<T>() where T : class, IAuthenticationManager
         {
             builder.UseAuthenticationManager<T>(services);
             return this;
