@@ -16,9 +16,9 @@ using System.Text.Json;
 
 namespace Hubcon.Server.Injection
 {
-    public class ControllerOptions : IControllerOptions
+    public class GraphQLControllerOptions : IControllerOptions
     {
-        public ControllerOptions(IRequestExecutorBuilder executorBuilder, WebApplicationBuilder builder, HubconServerBuilder hubconBuilder)
+        public GraphQLControllerOptions(IRequestExecutorBuilder executorBuilder, WebApplicationBuilder builder, HubconServerBuilder hubconBuilder)
         {
             ExecutorBuilder = executorBuilder;
             Builder = builder;
@@ -216,7 +216,6 @@ namespace Hubcon.Server.Injection
         {
             HubconServerBuilder.AddHubconController<T>(Builder, options);
         }
-
 
         public void AddController(Type controllerType, Action<IMiddlewareOptions>? options = null)
         {

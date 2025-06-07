@@ -1,4 +1,5 @@
 using Hubcon.Server.Injection;
+using Hubcon.Server.Models;
 using HubconTest.Controllers;
 using HubconTest.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -34,7 +35,8 @@ namespace HubconTest
 
             builder.Services.AddOpenApi();
 
-            builder.AddHubcon(controllerOptions =>
+            builder.AddHubcon();
+            builder.UseHubconGraphQL(controllerOptions =>
             {
                 //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
                 controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();

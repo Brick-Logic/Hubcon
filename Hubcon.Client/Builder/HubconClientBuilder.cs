@@ -8,6 +8,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Attributes;
 using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Core.Injection;
 using Hubcon.Shared.Core.Serialization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,9 +55,9 @@ namespace Hubcon.Client.Builder
 
             services.AddSingleton<IProxyRegistry>(Proxies);
             services.AddSingleton<IClientBuilderRegistry>(ClientBuilders);
+            services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
             services.AddSingleton<IDynamicConverter, DynamicConverter>();
             services.AddSingleton<IContractInterceptor, ServerConnectorInterceptor>();
-            //services.AddSingleton(typeof(HubconServerConnector<>), typeof(IHubconServerConnector<>));
             services.AddSingleton<IHubconClient, HubconClient>();
             services.AddSingleton<ICommunicationHandler, ClientCommunicationHandler>();
             services.AddSingleton<IHubconClientProvider, HubconClientProvider>();

@@ -17,16 +17,17 @@ namespace HubconTestClient
         {
             var builder = WebApplication.CreateBuilder();
 
+            builder.Services.AddSingleton<HttpClient>();
             builder.Services.AddHubconClient();
             builder.Services.AddRemoteServerModule<TestModule>();
 
             var app = builder.Build();
             var scope = app.Services.CreateScope();
 
-            var client = scope.ServiceProvider.GetRequiredService<ITestContract>();
+            var client = scope.ServiceProvider.GetRequiredService<IUserService>();
             var authManager = scope.ServiceProvider.GetRequiredService<AuthenticationManager>();
             var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<ITestContract>>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserService>>();
 
 
             logger.LogInformation("Esperando interacción antes de continuar...");

@@ -30,7 +30,9 @@ namespace Hubcon.Shared.Core.Subscriptions
         {
             try
             {
-                await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
+                await foreach (var item 
+                    
+                    in _channel.Reader.ReadAllAsync(cancellationToken))
                 {
                     yield return item;
                 }

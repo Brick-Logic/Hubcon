@@ -97,6 +97,11 @@ namespace Hubcon.Shared.Core.Serialization
             return JsonSerializer.SerializeToElement(value, jsonSerializerOptions).Clone();
         }
 
+        public T DeserializeByteArray<T>(byte[] bytes)
+        {
+            return JsonSerializer.Deserialize<T>(bytes, jsonSerializerOptions)!;
+        }
+
         // 2. Convierte una colección de objetos a JsonElements
         public IEnumerable<JsonElement> SerializeArgsToJson(IEnumerable<object?> values)
         {

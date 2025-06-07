@@ -11,10 +11,9 @@ namespace HubconTestDomain
         Task ShowTempOnServerFromClient();
     }
 
-    public interface ITestContract : IControllerContract
+    public interface IUserService : IControllerContract
     {
         ISubscription<int>? OnUserCreated { get; }
-
         Task<int> GetTemperatureFromServer();
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();

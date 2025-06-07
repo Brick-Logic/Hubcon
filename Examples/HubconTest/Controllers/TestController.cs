@@ -4,7 +4,7 @@ using HubconTestDomain;
 
 namespace HubconTest.Controllers
 {
-    public class TestController(ILogger<TestController> logger) : ITestContract
+    public class TestController(ILogger<TestController> logger) : IUserService
     {
         [AllowAnonymous]
         public ISubscription<int>? OnUserCreated { get; }

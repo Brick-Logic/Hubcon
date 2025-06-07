@@ -14,6 +14,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement> stream, CancellationToken cancellationToken);
         IAsyncEnumerable<JsonElement> ConvertToJsonElementStream(IAsyncEnumerable<object?> stream, CancellationToken cancellationToken = default);
         object?[] DeserializeArgs(Type[] types, object?[] args);
+        T DeserializeByteArray<T>(byte[] bytes);
         object?[] DeserializedArgs(Delegate del, object?[] args);
         object? DeserializeData(Type type, object data);
         T? DeserializeData<T>(object? data);

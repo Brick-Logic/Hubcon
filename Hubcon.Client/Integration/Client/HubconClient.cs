@@ -3,12 +3,14 @@ using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
 using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.MessageHandlers;
+using Hubcon.Client.Core.Subscriptions;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Subscriptions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -16,39 +18,39 @@ using System.Text.Json;
 
 namespace Hubcon.Client.Integration.Client
 {
-    public class HubconClient : IHubconClient
+    public class HubconClient(
+        IDynamicConverter converter,
+        Lazy<HttpClient> clientFactory,
+        ILogger<HubconClient> logger) : IHubconClient
     {
-        private GraphQLHttpClient? _graphQLHttpClient;
-        private IAuthenticationManager? _authenticationManager;
-        private GraphQLHttpClientOptions? _graphQLHttpClientOptions;
+        private string _graphqlHttpUrl = "";
+        private string _graphqlWebsocketUrl = "";
 
-        private Func<GraphQLHttpClient>? _graphQLHttpClientFactory;
-        private Func<IAuthenticationManager?>? _authenticationManagerFactory;
-        private Func<GraphQLHttpClientOptions>? _graphQLHttpClientOptionsFactory;
+        private string _restHttpUrl = "";
+        private string _websocketUrl = "";
 
-        private readonly ILogger<IHubconClient> _logger;
-        private readonly IDynamicConverter _converter;
+        Func<IAuthenticationManager?>? authenticationManagerFactory;
 
-        public HubconClient(ILogger<HubconClient> logger, IDynamicConverter converter)
-        {
-            _logger = logger;
-            _converter = converter;
-        }
+        SubscriptionManager subscriptionManager;
+        private Func<GraphQLHttpClientOptions> graphQLHttpClientOptionsFactory;
+        private Func<GraphQLHttpClient> graphQLHttpClientFactory;
+        private GraphQLHttpClientOptions? graphQLHttpClientOptions;
+        private GraphQLHttpClient graphQLHttpClient;
 
         private bool IsStarted { get; set; }
         public async Task Start()
         {
+            graphQLHttpClientFactory.Invoke().Options.ConfigureWebsocketOptions = (x) =>
+            {
+                var authManager = authenticationManagerFactory?.Invoke();
+                if (authManager is not null && authManager.IsSessionActive)
+                    x.SetRequestHeader("Authorization", $"Bearer {authManager?.AccessToken}");
+            };
+
             if (true || IsStarted) return;
 
             Task _runnerTask = Task.CompletedTask;
             Task _exceptionTask = Task.CompletedTask;
-
-            _graphQLHttpClientFactory!.Invoke().Options.ConfigureWebsocketOptions = (x) =>
-            {
-                var authManager = _authenticationManagerFactory?.Invoke();
-                if (authManager is not null && authManager.IsSessionActive)
-                    x.SetRequestHeader("Authorization", $"Bearer {authManager?.AccessToken}");
-            };
 
 
             var runner = async () =>
@@ -59,29 +61,34 @@ namespace Hubcon.Client.Integration.Client
                 {
                     try
                     {
-                        IObservable<object?> observable = _graphQLHttpClientFactory!.Invoke().PongStream;
-                        var observer = new AsyncObserver<object?>();
-
-                        using (observable.Subscribe(observer))
+                        if (authenticationManagerFactory!.Invoke()!.IsSessionActive)
                         {
-                            sw.Start();
-                            //timer.Start();
-                            await foreach (var newEvent in observer.GetAsyncEnumerable(new CancellationToken()).ConfigureAwait(false))
+                            IObservable<object?> observable = graphQLHttpClientFactory.Invoke().PongStream;
+                            var observer = new AsyncObserver<object?>();
+
+                            using (observable.Subscribe(observer))
                             {
-                                sw.Restart();
-                                _logger.LogInformation($"PONG received.");
+                                sw.Start();
+                                //timer.Start();
+                                await foreach (var newEvent in observer.GetAsyncEnumerable(new CancellationToken()))
+                                {
+                                    sw.Restart();
+                                    logger.LogInformation($"PONG received.");
+                                }
                             }
                         }
+
+                        await Task.Delay(millisecondsDelay: 1000);
                     }
                     catch (Exception ex)
                     {
                         if (ex.Message.Contains("Connection closed by the server"))
                         {
-                            _logger.LogInformation($"Error: El servidor cerró la conexión. Es posible que la sesión haya expirado o no se haya podido autenticar. Intentando refrescar la sesión...");
-                            var res = await _authenticationManager!.TryRefreshSessionAsync();
+                            logger.LogInformation($"Error: El servidor cerró la conexión. Es posible que la sesión haya expirado o no se haya podido autenticar. Intentando refrescar la sesión...");
+                            var res = await authenticationManagerFactory!.Invoke()!.TryRefreshSessionAsync();
                             if (!res.IsSuccess)
                             {
-                                _logger.LogInformation($"Error: No se pudo refrescar la sesión.");
+                                logger.LogInformation($"Error: No se pudo refrescar la sesión.");
 
                             }
                             await Task.Delay(1000);
@@ -102,14 +109,14 @@ namespace Hubcon.Client.Integration.Client
                             {
                                 await Task.Delay(millisecondsDelay: 1000);
 
-                                if (_authenticationManagerFactory!.Invoke()!.IsSessionActive)
+                                if (authenticationManagerFactory!.Invoke()!.IsSessionActive)
                                 {
                                     if (_runnerTask == null || _runnerTask.IsCompleted)
                                     {
                                         _runnerTask = Task.Run(runner);
                                     }
 
-                                    await _graphQLHttpClientFactory!.Invoke().SendPingAsync(null);
+                                    await graphQLHttpClientFactory.Invoke().SendPingAsync(null);
                                 }
                             }
                             catch (Exception ex)
@@ -119,41 +126,71 @@ namespace Hubcon.Client.Integration.Client
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError($"Error: {ex.Message}");
+                        logger.LogError($"Error: {ex.Message}");
                     }
                 }
-            });
+            }).ConfigureAwait(false);
 
             IsStarted = true;
         }
 
         public async Task<IOperationResponse<JsonElement>> SendRequestAsync(IOperationRequest request, MethodInfo methodInfo, string resolver, CancellationToken cancellationToken = default)
         {
-            if (!IsStarted)
-                await Start();
+            try
+            {
+                HubconGraphQLRequest? craftedRequest = BuildRequest(request, methodInfo, resolver);
+                var bytes = converter.SerializeObject(craftedRequest).ToString();
+                using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
-            GraphQLRequest? craftedRequest = BuildRequest(request, methodInfo, resolver);
-            var response = await _graphQLHttpClientFactory!.Invoke().SendMutationAsync<JsonElement>(craftedRequest);
-            var result = response.Data.Clone().GetProperty(resolver);
+                var httpRequest = new HttpRequestMessage(HttpMethod.Post, _graphqlHttpUrl)
+                {
+                    Content = content
+                };
 
-            result.TryGetProperty(nameof(IObjectOperationResponse.Success).ToLower(), out JsonElement successValue);
-            result.TryGetProperty(nameof(BaseOperationResponse.Data).ToLower(), out JsonElement dataValue);
-            result.TryGetProperty(nameof(BaseOperationResponse.Error).ToLower(), out JsonElement errorValue);
+                var authManager = authenticationManagerFactory?.Invoke();
 
-            return new BaseJsonResponse(
-                _converter.DeserializeJsonElement<bool>(successValue),
-                dataValue,
-                _converter.DeserializeJsonElement<string>(errorValue)
-            );
+                if (authManager != null && authManager.IsSessionActive)
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
+
+
+                var client = clientFactory.Value;
+                var response = await client.SendAsync(httpRequest, cancellationToken);
+
+                var responseBytes = await response.Content.ReadAsByteArrayAsync();
+                var result = converter.DeserializeByteArray<JsonElement>(responseBytes)
+                    .Clone()
+                    .GetProperty("data")
+                    .GetProperty(resolver);
+
+                result.TryGetProperty(nameof(IObjectOperationResponse.Success).ToLower(), out JsonElement successValue);
+                result.TryGetProperty(nameof(BaseOperationResponse.Data).ToLower(), out JsonElement dataValue);
+                result.TryGetProperty(nameof(BaseOperationResponse.Error).ToLower(), out JsonElement errorValue);
+
+                return new BaseJsonResponse(
+                    converter.DeserializeJsonElement<bool>(successValue),
+                    dataValue,
+                    converter.DeserializeJsonElement<string>(errorValue)
+                );
+            }
+            catch (Exception ex)
+            {
+                return new BaseJsonResponse(
+                    false,
+                    default,
+                    ex.Message
+                );
+            }
+
         }
 
         public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, string resolver, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             if (!IsStarted)
                 await Start();
-            
+
             var graphQLRequest = BuildStream(request, resolver);
-            IObservable<GraphQLResponse<JsonElement>> observable = _graphQLHttpClientFactory!.Invoke().CreateSubscriptionStream<JsonElement>(graphQLRequest);
+
+            IObservable<GraphQLResponse<JsonElement>> observable = graphQLHttpClientFactory.Invoke().CreateSubscriptionStream<JsonElement>(graphQLRequest); /*_graphQLHttpClientFactory!.Invoke().CreateSubscriptionStream<JsonElement>(graphQLRequest);*/
 
             var observer = new AsyncObserver<GraphQLResponse<JsonElement>>();
 
@@ -172,11 +209,12 @@ namespace Hubcon.Client.Integration.Client
             if (!IsStarted)
                 await Start();
 
-            if (_authenticationManagerFactory?.Invoke() == null)
+            if (authenticationManagerFactory?.Invoke() == null)
                 throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
 
             var graphQLRequest = BuildSubscription(request, resolver);
-            IObservable<GraphQLResponse<JsonElement>> observable = _graphQLHttpClientFactory!.Invoke().CreateSubscriptionStream<JsonElement>(graphQLRequest);
+
+            IObservable<GraphQLResponse<JsonElement>> observable = graphQLHttpClientFactory.Invoke().CreateSubscriptionStream<JsonElement>(graphQLRequest); /* _graphQLHttpClientFactory!.Invoke().CreateSubscriptionStream<JsonElement>(graphQLRequest);*/
 
             var observer = new AsyncObserver<GraphQLResponse<JsonElement>>();
 
@@ -190,7 +228,7 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        private GraphQLRequest BuildRequest(IOperationRequest invokeRequest, MethodInfo methodInfo, string resolver)
+        private HubconGraphQLRequest BuildRequest(IOperationRequest invokeRequest, MethodInfo methodInfo, string resolver)
         {
             var sb = new StringBuilder();
             var request = new OperationRequest(invokeRequest.OperationName, invokeRequest.ContractName, invokeRequest.Args);
@@ -213,14 +251,12 @@ namespace Hubcon.Client.Integration.Client
 
             sb.Append("}}");
 
-            var graphqlRequest = new GraphQLRequest()
+            var graphqlRequest = new HubconGraphQLRequest()
             {
-                Query = sb.ToString(),
-                Variables = new
-                {
-                    request
-                },
+                Query = sb.ToString()
             };
+
+            graphqlRequest.Variables.Add($"{nameof(request)}", converter.SerializeObject(request));
 
             return graphqlRequest;
         }
@@ -275,51 +311,30 @@ namespace Hubcon.Client.Integration.Client
             var baseHttpUrl = $"{BaseUri!.AbsoluteUri}/{HttpEndpoint ?? "graphql"}";
             var baseWebsocketUrl = $"{BaseUri!.AbsoluteUri}/{WebsocketEndpoint ?? "graphql"}";
 
-            var httpUrl = useSecureConnection ? $"https://{baseHttpUrl}" : $"http://{baseHttpUrl}";
-            var websocketUrl = useSecureConnection ? $"wss://{baseWebsocketUrl}" : $"ws://{baseWebsocketUrl}";
+            _graphqlHttpUrl = useSecureConnection ? $"https://{baseHttpUrl}" : $"http://{baseHttpUrl}";
+            _graphqlWebsocketUrl = useSecureConnection ? $"wss://{baseWebsocketUrl}" : $"ws://{baseWebsocketUrl}";
 
-            Func<IAuthenticationManager?>? authManagerFactory = null;
 
             if (AuthenticationManagerType is not null)
             {
-                authManagerFactory = () => (IAuthenticationManager)services.GetService(AuthenticationManagerType)!;
+                var lazyAuthType = typeof(Lazy<>).MakeGenericType(AuthenticationManagerType);
+                authenticationManagerFactory = () => (IAuthenticationManager)((dynamic)services.GetRequiredService(lazyAuthType)).Value;
             }
 
-            _authenticationManagerFactory = () =>
-            {
-                if (_authenticationManager != null)
-                    return _authenticationManager;
 
-                return _authenticationManager = authManagerFactory?.Invoke();
+            graphQLHttpClientOptionsFactory = () => graphQLHttpClientOptions ??= new GraphQLHttpClientOptions
+            {
+                EndPoint = new Uri(_graphqlHttpUrl),
+                WebSocketEndPoint = new Uri(_graphqlWebsocketUrl),
+                WebSocketProtocol = "graphql-transport-ws",
+                HttpMessageHandler = new HttpClientMessageHandler(authenticationManagerFactory?.Invoke())
             };
 
-            _graphQLHttpClientOptionsFactory = () =>
-            {
-                if (_graphQLHttpClientOptions != null)
-                    return _graphQLHttpClientOptions;
-
-                var options = new GraphQLHttpClientOptions
-                {
-                    EndPoint = new Uri(httpUrl),
-                    WebSocketEndPoint = new Uri(websocketUrl),
-                    WebSocketProtocol = "graphql-transport-ws",
-                    HttpMessageHandler = new HttpClientMessageHandler(_authenticationManagerFactory.Invoke())
-                };
-
-                return _graphQLHttpClientOptions = options;
-            };
-
-            _graphQLHttpClientFactory = () =>
-            {
-                if (_graphQLHttpClient != null)
-                    return _graphQLHttpClient;
-
-                var client = services.GetService<HttpClient>();
-                return _graphQLHttpClient = new GraphQLHttpClient(_graphQLHttpClientOptionsFactory.Invoke(), new SystemTextJsonSerializer(), client!);
-            };
+            graphQLHttpClientFactory = () => graphQLHttpClient ??= new GraphQLHttpClient(graphQLHttpClientOptionsFactory.Invoke(), new SystemTextJsonSerializer(), clientFactory.Value);
+            
+            //subscriptionManager = new SubscriptionManager(new Uri(_graphqlWebsocketUrl), converter, authenticationManagerFactory, () => new ClientWebSocket());
 
             IsBuilt = true;
         }
     }
 }
-
