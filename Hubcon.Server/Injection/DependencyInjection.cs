@@ -11,25 +11,25 @@ using Hubcon.Server.Models;
 using Hubcon.Server.Subscriptions;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Core.Extensions;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Hubcon.Server.Injection
 {
     public static class DependencyInjection
     {
-        private static IRequestExecutorBuilder? requestExecutorBuilder;
-
-        public static WebApplicationBuilder AddHubcon(
-            this WebApplicationBuilder builder,
-            Action<ContainerBuilder>? additionalServices = null)
+        public static WebApplicationBuilder AddHubcon(this WebApplicationBuilder builder, Action<ContainerBuilder>? additionalServices = null)
         {
             HubconServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
             {
-                container.RegisterWithInjector(x => x.RegisterType<GraphQLEntrypoint>());
+                container.RegisterWithInjector(x => x.RegisterType<DefaultEntrypoint>());
 
                 container.RegisterWithInjector(container => container
                     .RegisterType<DummyCommunicationHandler>()
@@ -50,88 +50,48 @@ namespace Hubcon.Server.Injection
             return builder;
         }
 
-        public static WebApplicationBuilder UseHubconGraphQL(this WebApplicationBuilder builder, Action<IControllerOptions>? controllerOptions = null)
-        {
-            var executorBuilder = builder.Services
-                .AddGraphQLServer()
-                .AddQueryType<Query>()
-                .AddType<BaseResponse>()
-                .AddType<BaseOperationResponse>()
-                .AddType<BaseJsonResponse>()
-                .AddType<JsonScalarType>()
-                .AddType<ObjectType<IResponse>>()
-                .AddType<ObjectType<IOperationResponse<JsonElement>>>()
-                .AddType<InputObjectType<OperationRequest>>()
-                .AddType<InputObjectType<SubscriptionRequest>>()
-                .DisableIntrospection(false)
-                .AddInMemorySubscriptions()
-                .AddSocketSessionInterceptor<SocketSessionInterceptor>();
-
-            var controllerConfig = new GraphQLControllerOptions(requestExecutorBuilder!, builder, HubconServerBuilder.Current);
-            controllerConfig.SetEntrypoint<GraphQLEntrypoint>();
-            controllerOptions?.Invoke(controllerConfig);
-
-
-            return builder;
-        }
-
         public static WebApplicationBuilder UseHubcon(this WebApplicationBuilder builder, Action<IControllerOptions>? controllerOptions = null)
         {
-            var executorBuilder = builder.Services
-                .AddGraphQLServer()
-                .AddQueryType<Query>()
-                .AddType<BaseResponse>()
-                .AddType<BaseOperationResponse>()
-                .AddType<BaseJsonResponse>()
-                .AddType<JsonScalarType>()
-                .AddType<ObjectType<IResponse>>()
-                .AddType<ObjectType<IOperationResponse<JsonElement>>>()
-                .AddType<InputObjectType<OperationRequest>>()
-                .AddType<InputObjectType<SubscriptionRequest>>()
-                .DisableIntrospection(false)
-                .AddInMemorySubscriptions()
-                .AddSocketSessionInterceptor<SocketSessionInterceptor>();
-
-            var controllerConfig = new GraphQLControllerOptions(requestExecutorBuilder!, builder, HubconServerBuilder.Current);
-            controllerConfig.SetEntrypoint<GraphQLEntrypoint>();
+            var controllerConfig = new DefaultControllerOptions(builder, HubconServerBuilder.Current);
             controllerOptions?.Invoke(controllerConfig);
-
 
             return builder;
         }
 
-        public static WebApplication MapHubconGraphQL(this WebApplication app, string path)
+        public static WebApplication UseHubcon(this WebApplication app, string path = "operation")
         {
-            app.UseWebSockets();
-            app.MapGraphQL(path);
+            var prefix = !string.IsNullOrEmpty(path) ? $"/{path}" : "";
 
-            return app;
-        }
-
-        public static WebApplication UseHubcon(this WebApplication app, string path = "/operation")
-        {
-            var uri = new Uri(path);
-
-            app.MapPost(uri.AbsolutePath + "/" + nameof(DefaultEntrypoint.HandleMethodTask), (OperationRequest request, DefaultEntrypoint entrypoint) =>
+            app.MapPost(prefix + "/" + nameof(DefaultEntrypoint.HandleMethodTask), async ([FromBody] OperationRequest request, DefaultEntrypoint entrypoint) =>
             {
-                return entrypoint.HandleMethodTask(request);
+                var response = await entrypoint.HandleMethodTask(request);
+                return response;
             });
 
-            app.MapPost(uri.AbsolutePath + "/" + nameof(DefaultEntrypoint.HandleMethodVoid), (OperationRequest request, DefaultEntrypoint entrypoint) =>
+            app.MapPost(prefix + "/" + nameof(DefaultEntrypoint.HandleMethodVoid), async ([FromBody] OperationRequest request, DefaultEntrypoint entrypoint) =>
             {
-                return entrypoint.HandleMethodVoid(request);
+                var response = await entrypoint.HandleMethodVoid(request);
+                return response;
             });
 
-            app.MapPost(uri.AbsolutePath + "/" + nameof(DefaultEntrypoint.HandleMethodStream), (OperationRequest request, DefaultEntrypoint entrypoint) =>
+            app.MapPost(prefix + "/" + nameof(DefaultEntrypoint.HandleMethodStream), async ([FromBody] OperationRequest request, DefaultEntrypoint entrypoint) =>
             {
-                return entrypoint.HandleMethodStream(request);
+                var stream = await entrypoint.HandleMethodStream(request);
+                return SerializeStream(stream);             
             });
 
             app.UseWebSockets();
-
             app.UseMiddleware<HubconWebSocketMiddleware>();
 
             return app;
+        }
+
+        static async IAsyncEnumerable<JsonElement> SerializeStream(IAsyncEnumerable<object?> source)
+        {
+            await foreach(var element in source)
+            {
+                yield return JsonSerializer.SerializeToElement(element);
+            }
         }
     }
 }

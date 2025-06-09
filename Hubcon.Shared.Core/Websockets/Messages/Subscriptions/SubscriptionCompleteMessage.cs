@@ -7,5 +7,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
 {
-    public record class UnsubscribeMessage(string SubscriptionId) : BaseMessage(MessageType.subscription_cancel);
+    public record class SubscriptionCompleteMessage(string SubscriptionId) : BaseMessage(MessageType.subscription_complete);
 }

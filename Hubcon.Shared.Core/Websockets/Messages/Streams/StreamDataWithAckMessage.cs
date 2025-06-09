@@ -9,5 +9,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
 {
-    public record class EventDataWithAckMessage(string Id, JsonElement Data, string AckId) : BaseMessage(MessageType.subscription_event_ack);
+    public record class StreamDataWithAckMessage(string StreamId, JsonElement Data, string AckId) : BaseMessage(MessageType.stream_data_with_ack);
 }

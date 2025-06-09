@@ -92,9 +92,9 @@ namespace Hubcon.Server.Core.Pipelines
             return pipelineResult.Result!;
         }
 
-        public IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request)
+        public async Task<IAsyncEnumerable<object?>> GetStream(IOperationRequest request)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Stream))
                 return null!;
 
             static Task<IOperationResult> ResultHandler(object? result)
@@ -105,13 +105,12 @@ namespace Hubcon.Server.Core.Pipelines
             IOperationContext context = BuildContext(request, blueprint);
             var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
             var pipelineTask = pipeline.Execute();
-            pipelineTask.Wait();
-            var pipelineResult = (IAsyncEnumerable<object>)pipelineTask.Result.Result!.Data!;
+            await pipelineTask;
 
-            return _converter.ConvertToJsonElementStream(pipelineResult);
+            return (IAsyncEnumerable<object>)pipelineTask.Result.Result!.Data!;
         }
 
-        public IAsyncEnumerable<JsonElement> GetSubscription(
+        public async Task<IAsyncEnumerable<object?>> GetSubscription(
             IOperationRequest request,
             CancellationToken cancellationToken = default)
         {
@@ -126,9 +125,9 @@ namespace Hubcon.Server.Core.Pipelines
             IOperationContext context = BuildContext(request, blueprint);
             var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
             var pipelineTask = pipeline.Execute();
-            pipelineTask.Wait();
+            await pipelineTask;
             var res = pipelineTask.Result.Result!.Data!;
-            return (IAsyncEnumerable<JsonElement>)res;
+            return (IAsyncEnumerable<object?>)res;
         }
 
 

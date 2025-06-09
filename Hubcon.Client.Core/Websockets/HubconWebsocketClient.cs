@@ -1,14 +1,15 @@
-﻿using Hubcon.Websockets.Shared;
-using Hubcon.Websockets.Shared.Events;
-using Hubcon.Websockets.Shared.Heartbeat;
-using Hubcon.Websockets.Shared.Interfaces;
-using Hubcon.Websockets.Shared.Messages.Connection;
-using Hubcon.Websockets.Shared.Messages.Generic;
-using Hubcon.Websockets.Shared.Messages.Ingest;
-using Hubcon.Websockets.Shared.Messages.Operation;
-using Hubcon.Websockets.Shared.Messages.Ping;
-using Hubcon.Websockets.Shared.Messages.Subscriptions;
-using Hubcon.Websockets.Shared.Models;
+﻿using Hubcon.Client.Core.Extensions;
+using Hubcon.Shared.Core.Websockets;
+using Hubcon.Shared.Core.Websockets.Events;
+using Hubcon.Shared.Core.Websockets.Heartbeat;
+using Hubcon.Shared.Core.Websockets.Interfaces;
+using Hubcon.Shared.Core.Websockets.Messages.Connection;
+using Hubcon.Shared.Core.Websockets.Messages.Generic;
+using Hubcon.Shared.Core.Websockets.Messages.Ingest;
+using Hubcon.Shared.Core.Websockets.Messages.Operation;
+using Hubcon.Shared.Core.Websockets.Messages.Ping;
+using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
+using Hubcon.Shared.Core.Websockets.Models;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
@@ -16,12 +17,16 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 
-namespace Hubcon.Websockets.Client
+namespace Hubcon.Client.Core.Websockets
 {
-    public class WebSocketClient : IAsyncDisposable, IUnsubscriber
+    public class HubconWebSocketClient : IAsyncDisposable, IUnsubscriber
     {
         private readonly Uri _uri;
         private ClientWebSocket? _webSocket;
+
+        public Action<ClientWebSocketOptions>? WebSocketOptions { get; set; }
+        public Func<string?>? AuthorizationTokenProvider { get; set; }
+
         private readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -30,6 +35,7 @@ namespace Hubcon.Websockets.Client
         };
 
         private readonly ConcurrentDictionary<string, BaseObservable> _subscriptions = new();
+        private readonly ConcurrentDictionary<string, BaseObservable> _streams = new();
         private readonly ConcurrentDictionary<string, TaskCompletionSource<IngestInitAckMessage>> _ingestAck = new();
         private readonly ConcurrentDictionary<string, TaskCompletionSource<IngestDataAckMessage>> _ingestDataAck = new();
         private readonly ConcurrentDictionary<string, TaskCompletionSource<OperationResponseMessage>> _operationTcs = new();
@@ -60,11 +66,11 @@ namespace Hubcon.Websockets.Client
 
         private Guid _lastPongId = Guid.Empty;
         private DateTime _lastPongTime = DateTime.UtcNow;
-        private const int _timeoutSeconds = 10;
+        private const int _timeoutSeconds = 1000;
 
         private Channel<string> _messageChannel;
 
-        public WebSocketClient(Uri uri)
+        public HubconWebSocketClient(Uri uri)
         {
             _pongStream = new GenericObservable<PongMessage>(_jsonOptions);
             _errorStream = new GenericObservable<Exception>(_jsonOptions);
@@ -80,6 +86,17 @@ namespace Hubcon.Websockets.Client
                 throw new InvalidOperationException($"Ya existe una suscripción con Id {request.Id}");
 
             await SendSubscribeMessageAsync(request);
+            return observable;
+        }
+
+        public async Task<IObservable<T>> Stream<T>(object payload)
+        {
+            var request = new WebsocketRequest(Guid.NewGuid().ToString(), JsonSerializer.SerializeToElement(payload, _jsonOptions));
+            var observable = new GenericObservable<T>(this, request.Id, JsonSerializer.SerializeToElement(request, _jsonOptions), RequestType.Subscription, _jsonOptions);
+            if (!_streams.TryAdd(request.Id, observable))
+                throw new InvalidOperationException($"Ya existe una suscripción con Id {request.Id}");
+
+            await SendStreamMessageAsync(request);
             return observable;
         }
 
@@ -227,12 +244,22 @@ namespace Hubcon.Websockets.Client
                             _pongStream.OnNext(pongMessage);
                             break;
 
-                        case MessageType.subscription_event_data:
-                            var eventData = JsonSerializer.Deserialize<EventDataMessage>(json, _jsonOptions);
+                        case MessageType.subscription_data:
+                            var eventData = JsonSerializer.Deserialize<SubscriptionDataMessage>(json, _jsonOptions);
                             if (eventData?.Id != null && _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
                             {
                                 sub.OnNextElement(eventData.Data);
                             }
+
+                            break;
+
+                        case MessageType.stream_data:
+                            var streamData = JsonSerializer.Deserialize<StreamDataMessage>(json, _jsonOptions);
+                            if (streamData?.StreamId != null && _streams.TryGetValue(streamData.StreamId, out BaseObservable? stream))
+                            {
+                                stream.OnNextElement(streamData.Data);
+                            }
+
                             break;
 
                         case MessageType.error:
@@ -343,19 +370,28 @@ namespace Hubcon.Websockets.Client
                         }
 
                         Console.WriteLine("Intentando conectar...");
-                        await _webSocket.ConnectAsync(_uri, _cts.Token);
+                        WebSocketOptions?.Invoke(_webSocket.Options);
+
+                        var uriBuilder = new UriBuilder(_uri);
+
+                        var token = AuthorizationTokenProvider?.Invoke();
+
+                        if (!string.IsNullOrEmpty(token))
+                            uriBuilder.AddQueryParameter("acess_token", token);
+
+                        await _webSocket.ConnectAsync(uriBuilder.Uri, _cts.Token);
 
                         Console.WriteLine("Conectado, intentando handshake...");
                         await SendMessageAsync(JsonSerializer.Serialize(new ConnectionInitMessage(), _jsonOptions));
 
-                        var buffer = new byte[8192];
+                        var buffer = new byte[16384];
 
                         var receiveTask = _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
                         var shortCircuitTask = Task.Delay(5000);
 
                         var connectionResult = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), _cts.Token, receiveTask);
 
-                        if (connectionResult is null || connectionResult is not WebSocketReceiveResult)
+                        if (connectionResult == null || connectionResult.GetType() != typeof(WebSocketReceiveResult))
                             throw new TimeoutException("Connection failed.");
 
                         if (connectionResult.MessageType == WebSocketMessageType.Close)
@@ -377,8 +413,13 @@ namespace Hubcon.Websockets.Client
                         _pingLoopCts = new CancellationTokenSource();
 
                         _timeoutTask ??= Task.Run(ReconnectLoop);
+                        //await _timeoutTask.ConfigureAwait(false);
+
                         _processingTask ??= Task.Run(HandleIncomingMessage);
+                        //await _processingTask.ConfigureAwait(false);
+
                         _pingTask = Task.Run(() => PingMessageLoop(_pingLoopCts.Token));
+                        //await _pingTask.ConfigureAwait(false);
 
                         _heartbeatWatcher = new HeartbeatWatcher(_timeoutSeconds, async () =>
                         {
@@ -388,6 +429,7 @@ namespace Hubcon.Websockets.Client
                         });
 
                         _receiveTask = Task.Run(() => ReceiveLoopAsync(_receiveLoopCts.Token));
+                        //await _receiveTask.ConfigureAwait(false);
 
                         foreach (var kvp in _subscriptions.Values)
                             await SendSubscribeMessageAsync(JsonSerializer.Deserialize<WebsocketRequest>(kvp.RequestData!.Request, _jsonOptions)!);
@@ -440,13 +482,20 @@ namespace Hubcon.Websockets.Client
 
         private async Task SendSubscribeMessageAsync(WebsocketRequest request)
         {
-            var msg = JsonSerializer.Serialize(new SubscribeMessage(request.Id, request.Payload), _jsonOptions);
+            var msg = JsonSerializer.Serialize(new SubscriptionInitMessage(request.Id, request.Payload), _jsonOptions);
             await SendMessageAsync(msg);
         }
 
+        private async Task SendStreamMessageAsync(WebsocketRequest request)
+        {
+            var msg = JsonSerializer.Serialize(new StreamInitMessage(request.Id, request.Payload), _jsonOptions);
+            await SendMessageAsync(msg);
+        }
+
+
         private async Task SendUnsubscribeMessageAsync(string subscriptionId)
         {
-            var msg = JsonSerializer.Serialize(new UnsubscribeMessage(subscriptionId), _jsonOptions);
+            var msg = JsonSerializer.Serialize(new SubscriptionCompleteMessage(subscriptionId), _jsonOptions);
             await SendMessageAsync(msg);
         }
 
@@ -503,7 +552,7 @@ namespace Hubcon.Websockets.Client
         int cantidad = 0;
         private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
         {
-            var buffer = new byte[8192];
+            var buffer = new byte[16384];
             Interlocked.Increment(ref cantidad);
             Console.WriteLine($"ReceiveLoop iniciado. Cantidad: {Volatile.Read(ref cantidad)}");
 
@@ -538,6 +587,7 @@ namespace Hubcon.Websockets.Client
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine(ex.ToString());
                     }
                 }
             }

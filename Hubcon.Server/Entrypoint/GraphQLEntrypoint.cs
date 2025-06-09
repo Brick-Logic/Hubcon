@@ -28,11 +28,11 @@ namespace Hubcon.Server.Entrypoint
         }
 
         [HubconMethod(MethodType.Subscription)]
-        public IAsyncEnumerable<JsonElement> HandleMethodStream(OperationRequest request)
+        public Task<IAsyncEnumerable<object?>> HandleMethodStream(OperationRequest request)
             => HubconController.Pipeline.GetStream(request);
 
         [HubconMethod(MethodType.Subscription)]
-        public IAsyncEnumerable<JsonElement> HandleSubscription(SubscriptionRequest request)
+        public Task<IAsyncEnumerable<object?>> HandleSubscription(SubscriptionRequest request)
             => HubconController.Pipeline.GetSubscription(request);
         
         public void Build()

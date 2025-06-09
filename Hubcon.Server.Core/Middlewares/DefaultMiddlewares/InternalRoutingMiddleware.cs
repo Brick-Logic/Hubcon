@@ -88,13 +88,13 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
 
-                async IAsyncEnumerable<JsonElement> SubDelegate()
+                async IAsyncEnumerable<object?> SubDelegate()
                 {
                     try
                     {
                         await foreach (var newEvent in observer.GetAsyncEnumerable(new()))
                         {
-                            yield return dynamicConverter.SerializeObject(newEvent);
+                            yield return newEvent;
                         }
                     }
                     finally

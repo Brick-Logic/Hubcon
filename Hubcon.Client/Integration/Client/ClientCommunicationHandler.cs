@@ -60,7 +60,6 @@ namespace Hubcon.Client.Integration.Client
             }
             catch (Exception ex)
             {
-                // logging
                 logger.LogError(ex.Message);
                 return null!;
             }

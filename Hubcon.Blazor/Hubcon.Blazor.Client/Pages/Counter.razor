@@ -5,7 +5,7 @@
 @rendermode InteractiveWebAssembly
 @inject AuthenticationManager _authenticationManager
 @inject ILogger<Counter> _logger
-@inject IUserService _testContract 
+@inject IUserService _userService
 
 <button class="btn btn-primary" @onclick="Login">Login</button>
 <button class="btn btn-primary" @onclick="TestSubscribe">TestSubscribe</button>
@@ -13,11 +13,9 @@
 <button class="btn btn-primary" @onclick="TestStream">TestStream</button>
 
 @code {
-    private int eventosRecibidos = 0;
-
     protected async void Login()
     {
-        var res = await _authenticationManager.LoginAsync("", "").ConfigureAwait(false);
+        var res = await _authenticationManager.LoginAsync("", "");
 
         if (res.IsSuccess)
             _logger.LogInformation($"Login OK. Token: {_authenticationManager.AccessToken}");
@@ -27,27 +25,26 @@
 
     protected async Task TestSubscribe()
     {
-        async Task handler(int input)
+        HubconEventHandler<int> handler = async (int input) =>
         {
             _logger.LogInformation($"Evento recibido: {input}");
-            Interlocked.Add(ref eventosRecibidos, 1);
-        }
+        };
 
-        _testContract.OnUserCreated!.AddHandler(handler);
-        await _testContract.OnUserCreated.Subscribe().ConfigureAwait(false);
+        _userService.OnUserCreated!.AddHandler(handler);
+        await _userService.OnUserCreated.Subscribe();
 
         _logger.LogInformation($"Subscribe OK");
     }
 
     protected async Task TestCreateUser()
     {
-        await _testContract.CreateUser().ConfigureAwait(false);
+        await _userService.CreateUser();
         _logger.LogInformation($"CreateUser OK");
     }
 
     protected async Task TestStream()
     {
-        await foreach (var item in _testContract.GetMessages(10).ConfigureAwait(false))
+        await foreach (var item in _userService.GetMessages(10))
         {
             _logger.LogInformation($"Item de stream recibidos: {item}");
         }

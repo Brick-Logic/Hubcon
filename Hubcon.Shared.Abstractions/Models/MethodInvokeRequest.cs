@@ -3,11 +3,16 @@ using System.Text.Json;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
-    public class OperationRequest : IOperationRequest
+    public record class OperationRequest : IOperationRequest
     {
-        public string ContractName { get; }
-        public string OperationName { get; }
+        public string ContractName { get; set; }
+        public string OperationName { get; set; }
         public IEnumerable<JsonElement> Args { get; set; }
+
+        public OperationRequest()
+        {
+            
+        }
 
         public OperationRequest(string operationName, string contractName)
         {

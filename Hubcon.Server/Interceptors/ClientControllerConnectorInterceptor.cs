@@ -28,6 +28,8 @@ namespace Hubcon.Server.Interceptors
             var handler = HandlerFactory.Invoke();
             var methodName = invocation.Method.GetMethodSignature();
             var contractName = invocation.Method.ReflectedType!.Name;
+            Console.WriteLine(contractName);
+            Console.WriteLine(invocation.Method);
             var resultType = typeof(TResult);
 
             if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))

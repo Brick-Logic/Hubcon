@@ -11,15 +11,20 @@
         ping,
         pong,
         subscription_init,
-        subscription_event_data,
-        subscription_event_ack,
-        subscription_cancel,
+        subscription_data,
+        subscription_data_with_ack,
+        subscription_complete,
         ingest_init,
         ingest_init_ack,
         ingest_data,
         ingest_data_ack,
         ingest_complete,
         ingest_data_with_ack,
-        operation_call
+        operation_call,
+        stream_init,
+        stream_complete,
+        stream_data_ack,
+        stream_data,
+        stream_data_with_ack
     }
 }

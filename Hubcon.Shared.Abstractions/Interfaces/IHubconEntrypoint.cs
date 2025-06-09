@@ -5,8 +5,8 @@ namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IHubconEntrypoint : IBaseHubconController
     {
-        public IAsyncEnumerable<JsonElement> HandleMethodStream(OperationRequest request);
+        public Task<IAsyncEnumerable<object?>> HandleMethodStream(OperationRequest request);
         public void Build();
-        IAsyncEnumerable<JsonElement> HandleSubscription(SubscriptionRequest request);
+        public Task<IAsyncEnumerable<object?>> HandleSubscription(SubscriptionRequest request);
     }
 }

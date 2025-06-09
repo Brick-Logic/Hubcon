@@ -32,7 +32,7 @@ namespace HubconTestClient.Auth
 
         protected async override Task<PersistedSession?> LoadPersistedSessionAsync()
         {
-            var token = await secondTestContract.LoginAsync("", "");
+            var token = await secondTestContract.LoginAsync("aaa", "bbb");
 
             AccessToken = token;
             RefreshToken = "";

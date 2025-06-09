@@ -1,7 +1,12 @@
-﻿using Castle.DynamicProxy;
+﻿using Castle.Core.Internal;
+using Castle.Core.Logging;
+using Castle.DynamicProxy;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Extensions;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 
 namespace Hubcon.Client.Interceptors
 {
@@ -9,11 +14,13 @@ namespace Hubcon.Client.Interceptors
     {
         public ICommunicationHandler CommunicationHandler { get; }
         private readonly IDynamicConverter _converter;
+        private readonly ILogger<ServerConnectorInterceptor> logger;
 
-        public ServerConnectorInterceptor(ICommunicationHandler handler, IDynamicConverter converter)
+        public ServerConnectorInterceptor(ICommunicationHandler handler, IDynamicConverter converter, ILogger<ServerConnectorInterceptor> logger)
         {
             CommunicationHandler = handler;
             _converter = converter;
+            this.logger = logger;
         }
 
         protected override async Task<TResult> InterceptAsync<TResult>(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
@@ -22,13 +29,11 @@ namespace Hubcon.Client.Interceptors
 
             if (typeof(TResult).IsGenericType && typeof(TResult).GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
             {
-                // Obtener el tipo de los elementos de IAsyncEnumerable<T>
                 var itemType = typeof(TResult).GetGenericArguments()[0];
 
-                // Crear el método adecuado que se espera
                 var streamMethod = CommunicationHandler
-                    .GetType() // Cambia 'Handler' por el tipo adecuado
-                    .GetMethod(nameof(CommunicationHandler.StreamAsync))! // Cambia 'StreamAsync' por el nombre correcto del método
+                    .GetType() 
+                    .GetMethod(nameof(CommunicationHandler.StreamAsync))!
                     .MakeGenericMethod(itemType);
 
                 var request = new OperationRequest(
@@ -37,7 +42,6 @@ namespace Hubcon.Client.Interceptors
                     _converter.SerializeArgsToJson(invocation.Arguments)
                 );
 
-                // Invocar el método StreamAsync pasando el tipo adecuado
                 result = await (Task<TResult>)streamMethod.Invoke(CommunicationHandler, new object[]
                 {
                     request,

@@ -59,7 +59,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
 
-                Kind = RawReturnType.IsAssignableTo(typeof(IAsyncEnumerable<>)) ? OperationKind.Stream : OperationKind.Method;
+                var isStream = RawReturnType.IsGenericType && RawReturnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
+                Kind = isStream ? OperationKind.Stream : OperationKind.Method;
             }
             else if (memberInfo is PropertyInfo propertyInfo)
             {

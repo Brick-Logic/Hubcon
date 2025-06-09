@@ -36,7 +36,7 @@ namespace HubconTest
             builder.Services.AddOpenApi();
 
             builder.AddHubcon();
-            builder.UseHubconGraphQL(controllerOptions =>
+            builder.UseHubcon(controllerOptions =>
             {
                 //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
                 controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
@@ -92,7 +92,7 @@ namespace HubconTest
 
             app.MapControllers();
 
-            app.MapHubconGraphQL("/graphql");
+            app.UseHubcon();
 
             app.Run();
         }

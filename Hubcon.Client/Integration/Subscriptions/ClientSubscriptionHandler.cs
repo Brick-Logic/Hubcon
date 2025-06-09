@@ -82,7 +82,9 @@ namespace Hubcon.Client.Integration.Subscriptions
                     {
                         IAsyncEnumerable<JsonElement> eventSource = null!;
 
-                        var contract = Property.ReflectedType!.GetInterfaces().Find(x => x.IsAssignableTo(typeof(IControllerContract)));
+                        var interfaces = Property.ReflectedType!.GetInterfaces();
+                        var baseContractType = typeof(IControllerContract);
+                        var contract = interfaces.Find(x => x.IsAssignableTo(baseContractType) && x != baseContractType) ?? baseContractType;
                         var request = new SubscriptionRequest(Property.Name, contract.Name, null);
 
                         eventSource = _client.GetSubscription(request, nameof(IHubconEntrypoint.HandleSubscription), _tokenSource.Token);
@@ -112,6 +114,7 @@ namespace Hubcon.Client.Integration.Subscriptions
                         retry += 1;
                         _connected = SubscriptionState.Reconnecting;
                         logger.LogInformation("Reconnecting...");
+                        logger.LogInformation(ex.ToString());
 
                         int baseReconnectionDelay = 1000;
                         int maxReconnectionDelay = 3000;

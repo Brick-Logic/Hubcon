@@ -4,7 +4,6 @@ using Castle.DynamicProxy;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
-
     public class SimpleInvocation : IInvocation
     {
         private readonly object _proxy;
