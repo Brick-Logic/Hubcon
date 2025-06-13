@@ -1,25 +1,14 @@
 ﻿using Autofac;
-using HotChocolate.Execution.Configuration;
-using Hubcon.Server.Core.Controllers;
-using Hubcon.Server.Core.Dummy;
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Extensions;
+using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Server.Core.Websockets.Middleware;
-using Hubcon.Server.Data;
-using Hubcon.Server.Entrypoint;
-using Hubcon.Server.Interceptors;
-using Hubcon.Server.Models;
-using Hubcon.Server.Subscriptions;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Entrypoint;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Hubcon.Server.Injection
 {
@@ -31,20 +20,10 @@ namespace Hubcon.Server.Injection
             {
                 container.RegisterWithInjector(x => x.RegisterType<DefaultEntrypoint>());
 
-                container.RegisterWithInjector(container => container
-                    .RegisterType<DummyCommunicationHandler>()
-                    .As<ICommunicationHandler>()
-                    .AsScoped());
-
                 container.RegisterWithInjector(x => x
                     .RegisterGeneric(typeof(ServerSubscriptionHandler<>))
                     .As(typeof(ISubscription<>))
                     .AsTransient());
-
-                container.RegisterWithInjector(x => x
-                    .RegisterType(typeof(HubconControllerManager))
-                    .As<IHubconControllerManager>()
-                    .AsScoped());
             });
 
             return builder;
@@ -62,9 +41,9 @@ namespace Hubcon.Server.Injection
         {
             var prefix = !string.IsNullOrEmpty(path) ? $"/{path}" : "";
 
-            app.MapPost(prefix + "/" + nameof(DefaultEntrypoint.HandleMethodTask), async ([FromBody] OperationRequest request, DefaultEntrypoint entrypoint) =>
+            app.MapPost(prefix + "/" + nameof(DefaultEntrypoint.HandleMethodWithResult), async ([FromBody] OperationRequest request, DefaultEntrypoint entrypoint) =>
             {
-                var response = await entrypoint.HandleMethodTask(request);
+                var response = await entrypoint.HandleMethodWithResult(request);
                 return response;
             });
 

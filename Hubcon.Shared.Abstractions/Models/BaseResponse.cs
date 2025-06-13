@@ -2,7 +2,7 @@
 
 namespace Hubcon.Shared.Abstractions.Models
 {
-    public abstract class BaseResponse : IResponse
+    public abstract record class BaseResponse : IResponse
     {
         public abstract bool Success { get; }
 

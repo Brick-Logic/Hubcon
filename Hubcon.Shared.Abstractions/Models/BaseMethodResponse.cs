@@ -2,12 +2,10 @@
 
 namespace Hubcon.Shared.Abstractions.Models
 {
-    public class BaseOperationResponse : BaseResponse, IObjectOperationResponse, IResponse
+    public record class BaseOperationResponse : BaseResponse, IObjectOperationResponse, IResponse
     {
         public object? Data { get; }
-
         public override bool Success { get; }
-
         public override string? Error { get; }
 
         public BaseOperationResponse(bool success, object? data = null, string? error = null)
@@ -18,7 +16,7 @@ namespace Hubcon.Shared.Abstractions.Models
         }
     }
 
-    public class BaseOperationResponse<T> : BaseResponse, IOperationResult, IOperationResponse<T>, IResponse
+    public record class BaseOperationResponse<T> : BaseResponse, IOperationResult, IOperationResponse<T>, IResponse
     {
         public override bool Success { get; }
         public override string? Error { get; }

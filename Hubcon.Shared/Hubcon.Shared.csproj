@@ -11,6 +11,8 @@
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
 		<PackageReference Include="HubconAnalyzers.SourceGenerators" Version="1.0.*" />
+		<PackageReference Include="HubconAnalyzers.CodeFixes" Version="1.0.*" />
+		<PackageReference Include="HubconAnalyzers.DiagnosticSupressors" Version="1.0.*" />
 	</ItemGroup>
 
 </Project>

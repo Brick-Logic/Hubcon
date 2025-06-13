@@ -1,6 +1,6 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Integration.Subscriptions;
+using Hubcon.Client.Core.Subscriptions;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;

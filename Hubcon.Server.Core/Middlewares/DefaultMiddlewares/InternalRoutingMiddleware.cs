@@ -6,7 +6,7 @@ using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Subscriptions;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;
-using System.Text.Json;
+using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {

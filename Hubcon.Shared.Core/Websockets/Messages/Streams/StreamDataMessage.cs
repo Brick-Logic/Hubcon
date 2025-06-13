@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
+namespace Hubcon.Shared.Core.Websockets.Messages.Streams
 {
     public record class StreamDataMessage(string StreamId, JsonElement Data) : BaseMessage(MessageType.stream_data);
 }

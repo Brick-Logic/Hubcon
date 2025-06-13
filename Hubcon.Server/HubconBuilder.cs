@@ -10,11 +10,11 @@ using Hubcon.Server.Core.Pipelines;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Server.Core.Routing.MethodHandling;
 using Hubcon.Server.Core.Routing.Registries;
-using Hubcon.Server.Interceptors;
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Serialization;
+using Hubcon.Shared.Entrypoint;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
@@ -63,13 +63,10 @@ namespace Hubcon.Server
                     .RegisterWithInjector(x => x.RegisterInstance(SubscriptionRegistry).As<ILiveSubscriptionRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<InternalRoutingMiddleware>().As<IInternalRoutingMiddleware>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().As<IDynamicConverter>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<MethodDescriptorProvider>().As<IMethodDescriptorProvider>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<StreamNotificationHandler>().As<IStreamNotificationHandler>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<ClientRegistry>().As<IClientRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<HubconServiceProvider>().As<IHubconServiceProvider>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterType(typeof(ClientControllerConnectorInterceptor)).As<IClientControllerConnectorInterceptor>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped());
-                    //.RegisterWithInjector(x => x.RegisterGeneric(typeof(HubconClientConnector<>)).As(typeof(IClientAccessor<>)).AsScoped());
 
                 foreach (var services in additionalServices)
                     services?.Invoke(container);
@@ -103,8 +100,8 @@ namespace Hubcon.Server
 
         public ContainerBuilder AddHubconEntrypoint(ContainerBuilder container, Type hubconEntrypointType)
         {
-            if (!hubconEntrypointType.IsAssignableTo(typeof(IHubconEntrypoint)))
-                throw new ArgumentException($"El tipo {hubconEntrypointType.Name} no implementa la interfaz {nameof(IHubconEntrypoint)}");
+            if (!hubconEntrypointType.IsAssignableTo(typeof(DefaultEntrypoint)))
+                throw new ArgumentException($"El tipo {hubconEntrypointType.Name} no es compatible con la clase {nameof(DefaultEntrypoint)}");
 
             return container.RegisterWithInjector(x => x.RegisterType(hubconEntrypointType));
         }

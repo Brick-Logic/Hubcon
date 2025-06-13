@@ -14,6 +14,11 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
+		<ProjectReference Include="..\Hubcon.Shared\Hubcon.Shared.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Interceptors\" />
 	</ItemGroup>
 
 </Project>

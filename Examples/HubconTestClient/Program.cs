@@ -50,24 +50,26 @@ namespace HubconTestClient
 
             async Task handler(int input)
             {
-                logger.LogInformation($"Evento recibido: {input}");
+                //logger.LogInformation($"Evento recibido: {input}");
                 Interlocked.Add(ref eventosRecibidos, 1);
             }
 
-            client.OnUserCreated!.AddHandler(handler);
-            await client.OnUserCreated.Subscribe();
-            await client.CreateUser();
+            //client.OnUserCreated!.AddHandler(handler);
+            //await client.OnUserCreated.Subscribe();
             logger.LogInformation("Evento conectado.");
 
-            Console.ReadKey();
-            logger.LogInformation("Enviando request GetTemperatureFromServer...");
-            var temp = await client.GetTemperatureFromServer();
-            logger.LogInformation($"Datos recibidos: {temp}");
             Console.ReadKey();
 
             logger.LogInformation("Enviando request...");
             await client.CreateUser();
             logger.LogInformation($"Request terminado.");
+
+            Console.ReadKey();
+
+            logger.LogInformation("Enviando request GetTemperatureFromServer...");
+            var temp = await client.GetTemperatureFromServer();
+            logger.LogInformation($"Datos recibidos: {temp}");
+
             Console.ReadKey();
 
             logger.LogInformation("Enviando request...");
@@ -86,8 +88,7 @@ namespace HubconTestClient
             var sw = new Stopwatch();
             var worker = new System.Timers.Timer();
             worker.Interval = 1000;
-            worker.Elapsed += (sender, eventArgs)
-                =>
+            worker.Elapsed += (sender, eventArgs) =>
             {
                 var avgRequestsPerSec = finishedRequestsCount - lastRequests;
                 var nanosecs = (double)sw.ElapsedTicks / Stopwatch.Frequency * 1_000;
@@ -98,7 +99,7 @@ namespace HubconTestClient
             };
             worker.Start();
 
-            var tasks = Enumerable.Range(0, 1).Select(_ => Task.Run(async () =>
+            var tasks = Enumerable.Range(5, 5).Select(_ => Task.Run(async () =>
             {
                 while (true)
                 {

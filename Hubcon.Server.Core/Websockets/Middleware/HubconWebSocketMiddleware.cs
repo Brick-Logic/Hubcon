@@ -1,4 +1,5 @@
-﻿using Hubcon.Server.Core.Websockets.Helpers;
+﻿using Castle.Core.Logging;
+using Hubcon.Server.Core.Websockets.Helpers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Websockets;
@@ -10,8 +11,11 @@ using Hubcon.Shared.Core.Websockets.Messages.Generic;
 using Hubcon.Shared.Core.Websockets.Messages.Ingest;
 using Hubcon.Shared.Core.Websockets.Messages.Operation;
 using Hubcon.Shared.Core.Websockets.Messages.Ping;
+using Hubcon.Shared.Core.Websockets.Messages.Streams;
 using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
+using Hubcon.Shared.Entrypoint;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Reflection;
@@ -23,10 +27,8 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Server.Core.Websockets.Middleware
 {
-    public class HubconWebSocketMiddleware
+    public class HubconWebSocketMiddleware(RequestDelegate next, DefaultEntrypoint entrypoint, ILogger<HubconWebSocketMiddleware> logger)
     {
-        private readonly RequestDelegate _next;
-        private readonly IHubconControllerManager hubconControllerManager;
         private int timeoutSeconds = 1000;
         private HeartbeatWatcher _heartbeatWatcher = null!;
 
@@ -37,13 +39,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             Converters = { new JsonStringEnumConverter() }
         };
 
-        // Clave simétrica para validar JWT (deberías ponerla en config segura)
-
-        public HubconWebSocketMiddleware(RequestDelegate next, IHubconControllerManager hubconControllerManager)
-        {
-            _next = next;
-            this.hubconControllerManager = hubconControllerManager;
-        }
 
         public static async IAsyncEnumerable<object> GetSubscriptionSource([EnumeratorCancellation] CancellationToken cancellationToken)
         {
@@ -61,7 +56,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         {
             if (!context.WebSockets.IsWebSocketRequest || !(context.Request.Path == "/ws"))
             {
-                await _next(context);
+                await next(context);
                 return;
             }
 
@@ -203,7 +198,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                logger.LogError(ex.Message);
             }
             finally
             {
@@ -219,7 +214,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.Message);
+                        logger.LogError(ex.Message);
                     }
                 }
                 foreach (var task in _tasks)
@@ -232,7 +227,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.Message);
+                        logger.LogError(ex.Message);
                     }
                 }
             }
@@ -341,7 +336,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         {
             await foreach (var item in source)
             {
-                Console.WriteLine(item);
                 continue;
             }
         }
@@ -363,11 +357,11 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 try
                 {
                     IOperationRequest operationRequest = JsonSerializer.Deserialize<OperationRequest>(request.Payload)!;
-                    result = hubconControllerManager.Pipeline.HandleWithResultAsync(operationRequest);
+                    result = entrypoint.HandleMethodWithResult(operationRequest);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
+                    logger.LogError(ex.Message);
 
                     if (context.RequestAborted.IsCancellationRequested)
                         result = null;
@@ -377,7 +371,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             catch (Exception ex)
             {
                 result = null;
-                Console.WriteLine($"{ex.Message}");
+                logger.LogError($"{ex.Message}");
             }
 
             var response = new OperationResponseMessage(
@@ -403,7 +397,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 if (request == null) return;
 
                 IOperationRequest operationRequest = JsonSerializer.Deserialize<OperationRequest>(request.Payload)!;
-                result = hubconControllerManager.Pipeline.HandleWithResultAsync(operationRequest);
+                result = entrypoint.HandleMethodWithResult(operationRequest);
 
                 if (context.RequestAborted.IsCancellationRequested)
                     result = false;
@@ -418,7 +412,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             catch (Exception ex)
             {
                 result = false;
-                Console.WriteLine($"{ex.Message}");
+                logger.LogError($"{ex.Message}");
             }
         }
 
@@ -443,7 +437,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             catch (Exception ex)
             {
                 result = false;
-                Console.WriteLine($"{ex.Message}");
+                logger.LogError($"{ex.Message}");
             }
         }
 
@@ -468,7 +462,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             catch (Exception ex)
             {
                 result = false;
-                Console.WriteLine($"{ex.Message}");
+                logger.LogError($"{ex.Message}");
             }
         }
 
@@ -509,7 +503,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 try
                 {
                     IOperationRequest operationRequest = JsonSerializer.Deserialize<OperationRequest>(subscribe.Payload, _jsonSerializerOptions)!;
-                    var stream = await hubconControllerManager.Pipeline.GetSubscription(operationRequest);
+                    var stream = await entrypoint.HandleSubscription(operationRequest);
 
                     if (stream == null) { return; }
 
@@ -564,7 +558,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 if (x.IsFaulted)
                 {
                     var ex = x.Exception;
-                    Console.WriteLine(ex.Message);
+                    logger.LogError(ex.Message);
                 }
             });
 
@@ -594,7 +588,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 try
                 {
                     IOperationRequest operationRequest = JsonSerializer.Deserialize<OperationRequest>(subscribe.Payload, _jsonSerializerOptions)!;
-                    var stream = await hubconControllerManager.Pipeline.GetStream(operationRequest);
+                    var stream = await entrypoint.HandleMethodStream(operationRequest);
 
                     if (stream == null) { return; }
 
@@ -642,15 +636,17 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         Error = ex.Message
                     });
                 }
-            }).ContinueWith(x =>
+            }).ContinueWith(async x =>
             {
                 _tasks.TryRemove(subTaskToken, out _);
 
                 if (x.IsFaulted)
                 {
                     var ex = x.Exception;
-                    Console.WriteLine(ex.Message);
+                    logger.LogError(ex.Message);
                 }
+
+                await sender.SendAsync(new StreamCompleteMessage(subscribe.StreamId));
             });
 
             _tasks.TryAdd(subTaskToken, subTask);

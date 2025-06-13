@@ -11,7 +11,6 @@
 
         protected BaseMessage(MessageType type)
         {
-            Console.WriteLine($"Mensaje creado: {type}.");
             Type = type;
         }
     }

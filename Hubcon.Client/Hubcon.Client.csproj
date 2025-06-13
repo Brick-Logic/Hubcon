@@ -8,8 +8,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
-		<PackageReference Include="GraphQL.Client" Version="6.1.0" />
-		<PackageReference Include="GraphQL.Client.Serializer.SystemTextJson" Version="6.1.0" />
 	</ItemGroup>
 
 	<ItemGroup>

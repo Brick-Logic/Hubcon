@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace HubconAnalyzer.DiagnosticSuppressors
+namespace HubconAnalyzers.DiagnosticSuppressors
 {
     /// <summary>
     /// Suprime CS8618 para cualquier propiedad con [HubconInject].

@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace HubconAnalyzer
+namespace HubconAnalyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class AsyncControllerMethodAnalyzer : DiagnosticAnalyzer

@@ -2,6 +2,6 @@
 {
     public interface IContractInterceptor
     {
-        ICommunicationHandler CommunicationHandler { get; }
+        IHubconClient Client { get; }
     }
 }

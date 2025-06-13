@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Server.Abstractions.Interfaces
+namespace Hubcon.Server.Core.CustomAttributes
 {
-    //public interface IClientControllerConnectorInterceptor
-    //{
-    //}
+    internal class UseSSEAttribute : Attribute
+    {
+    }
 }

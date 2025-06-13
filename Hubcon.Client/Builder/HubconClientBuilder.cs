@@ -1,16 +1,13 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Connectors;
 using Hubcon.Client.Core.Registries;
+using Hubcon.Client.Core.Subscriptions;
 using Hubcon.Client.Integration.Client;
-using Hubcon.Client.Integration.Subscriptions;
 using Hubcon.Client.Interceptors;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Attributes;
-using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Injection;
 using Hubcon.Shared.Core.Serialization;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Client.Builder
@@ -26,7 +23,7 @@ namespace Hubcon.Client.Builder
             ClientBuilders = new ClientBuilderRegistry(Proxies);
 
             var worker2 = new System.Timers.Timer();
-            worker2.Interval = 300000;
+            worker2.Interval = 10000;
             worker2.Elapsed += (sender, eventArgs) =>
             {
                 GC.Collect();
@@ -57,10 +54,8 @@ namespace Hubcon.Client.Builder
             services.AddSingleton<IClientBuilderRegistry>(ClientBuilders);
             services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
             services.AddSingleton<IDynamicConverter, DynamicConverter>();
-            services.AddSingleton<IContractInterceptor, ServerConnectorInterceptor>();
+            services.AddSingleton<IContractInterceptor, ClientProxyInterceptor>();
             services.AddSingleton<IHubconClient, HubconClient>();
-            services.AddSingleton<ICommunicationHandler, ClientCommunicationHandler>();
-            services.AddSingleton<IHubconClientProvider, HubconClientProvider>();
             services.AddTransient(typeof(ClientSubscriptionHandler<>));
 
             return services;

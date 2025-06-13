@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using Newtonsoft.Json.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
 namespace Hubcon.Shared.Core.Subscriptions
@@ -10,7 +11,7 @@ namespace Hubcon.Shared.Core.Subscriptions
 
         public async Task WriteToChannelAsync(T? item)
         {
-            await _channel.Writer.WriteAsync(item);
+            _ = _channel.Writer.TryWrite(item);
         }
 
         public IAsyncEnumerable<T?> GetAsyncEnumerable(CancellationToken cancellationToken)
@@ -30,9 +31,7 @@ namespace Hubcon.Shared.Core.Subscriptions
         {
             try
             {
-                await foreach (var item 
-                    
-                    in _channel.Reader.ReadAllAsync(cancellationToken))
+                await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
                 {
                     yield return item;
                 }
@@ -58,7 +57,7 @@ namespace Hubcon.Shared.Core.Subscriptions
         public void OnNext(T value)
         {
             // Enviar el valor al canal
-            WriteToChannelAsync(value).ConfigureAwait(false);
+            _ = _channel.Writer.TryWrite(value);
         }
 
         public Task WaitUntilCompleted()

@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
-    public class BaseJsonResponse : BaseOperationResponse<JsonElement>, IOperationResponse<JsonElement>
+    public record class BaseJsonResponse : BaseOperationResponse<JsonElement>, IOperationResponse<JsonElement>
     {
         public BaseJsonResponse() : base(true, default, null)
         {

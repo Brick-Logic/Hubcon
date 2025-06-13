@@ -18,6 +18,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
         public abstract void OnNextElement(JsonElement value);
         public abstract void OnNextObject(object value);
         public abstract void OnError(Exception ex);
+        public abstract void OnCompleted();
     }
 
     public class GenericObservable<TMessage> : BaseObservable, IObservable<TMessage>
@@ -92,6 +93,17 @@ namespace Hubcon.Shared.Core.Websockets.Events
             {
                 try { o.OnError(ex); } catch { /* Ignorar errores */ }
             }
+        }
+
+        public override void OnCompleted()
+        {
+            foreach (var observer in _observers.ToArray())
+            {
+                observer.OnCompleted();
+                UnsubscribeObserver(observer);
+            }
+
+            _observers.Clear();
         }
 
         private void UnsubscribeObserver(IObserver<TMessage> observer)

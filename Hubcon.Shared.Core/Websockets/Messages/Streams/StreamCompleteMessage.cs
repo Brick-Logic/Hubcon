@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
+namespace Hubcon.Shared.Core.Websockets.Messages.Streams
 {
     public record class StreamCompleteMessage(string StreamId) : BaseMessage(MessageType.stream_complete);
 }

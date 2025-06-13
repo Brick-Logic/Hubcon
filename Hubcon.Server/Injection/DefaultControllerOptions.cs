@@ -1,5 +1,4 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.AspNetCore.Builder;
 

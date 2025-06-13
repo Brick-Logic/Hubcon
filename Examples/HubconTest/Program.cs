@@ -1,5 +1,4 @@
 using Hubcon.Server.Injection;
-using Hubcon.Server.Models;
 using HubconTest.Controllers;
 using HubconTest.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -40,7 +39,7 @@ namespace HubconTest
             {
                 //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
                 controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
-                controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
+                //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
                 //controllerOptions.AddGlobalMiddleware<AuthenticationMiddleware>();
 
                 controllerOptions.AddController<TestController>(controllerMiddlewares =>
