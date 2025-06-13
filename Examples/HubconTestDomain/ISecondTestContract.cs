@@ -11,9 +11,9 @@ namespace HubconTestDomain
     {
         public Task<string> LoginAsync(string username, string password);
         public Task TestMethod();
-        public void TestVoid();
+        public Task TestVoid();
         public Task TestMethod(string message);
         public Task<string> TestReturn(string message);
-        string TestReturn();
+        public Task<string> TestReturn();
     }
 }

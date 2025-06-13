@@ -22,7 +22,7 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
-        public IServerModuleConfiguration AddContract<T>() where T : IControllerContract
+        public IServerModuleConfiguration Implements<T>() where T : IControllerContract
         {
             if (builder.Contracts.Any(x => x == typeof(T)))
                 return this;

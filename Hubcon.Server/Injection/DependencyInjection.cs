@@ -14,7 +14,7 @@ namespace Hubcon.Server.Injection
 {
     public static class DependencyInjection
     {
-        public static WebApplicationBuilder AddHubcon(this WebApplicationBuilder builder, Action<ContainerBuilder>? additionalServices = null)
+        public static WebApplicationBuilder AddHubconServer(this WebApplicationBuilder builder, Action<ContainerBuilder>? additionalServices = null)
         {
             HubconServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
             {
@@ -29,7 +29,7 @@ namespace Hubcon.Server.Injection
             return builder;
         }
 
-        public static WebApplicationBuilder UseHubcon(this WebApplicationBuilder builder, Action<IControllerOptions>? controllerOptions = null)
+        public static WebApplicationBuilder ConfigureHubconServer(this WebApplicationBuilder builder, Action<IControllerOptions>? controllerOptions = null)
         {
             var controllerConfig = new DefaultControllerOptions(builder, HubconServerBuilder.Current);
             controllerOptions?.Invoke(controllerConfig);

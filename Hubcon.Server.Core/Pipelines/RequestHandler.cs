@@ -50,7 +50,7 @@ namespace Hubcon.Server.Core.Pipelines
         public async Task<IOperationResponse<JsonElement>> HandleSynchronousResult(IOperationRequest request)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
-                return new BaseJsonResponse(false);
+                return new BaseJsonResponse(false, default, null);
 
             var controller = _serviceProvider.GetRequiredService(blueprint!.ControllerType);
 
@@ -69,7 +69,7 @@ namespace Hubcon.Server.Core.Pipelines
             var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
 
-            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeObject(pipelineResult.Result.Data));
+            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeObject(pipelineResult.Result.Data), null);
         }
 
         public async Task<IResponse> HandleSynchronous(IOperationRequest request)
@@ -160,7 +160,7 @@ namespace Hubcon.Server.Core.Pipelines
             var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
 
-            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeObject(pipelineResult.Result.Data));
+            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeObject(pipelineResult.Result.Data), null);
         }
 
         public IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint)
