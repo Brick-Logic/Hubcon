@@ -1,5 +1,9 @@
 ﻿using Castle.Core.Logging;
 using Hubcon.Client.Core.Extensions;
+using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Core.Serialization;
+using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets;
 using Hubcon.Shared.Core.Websockets.Events;
 using Hubcon.Shared.Core.Websockets.Heartbeat;
@@ -16,6 +20,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -26,6 +31,7 @@ namespace Hubcon.Client.Core.Websockets
     public class HubconWebSocketClient : IAsyncDisposable, IUnsubscriber
     {
         private readonly Uri _uri;
+        private readonly IDynamicConverter converter;
         private readonly ILogger? logger;
         private ClientWebSocket? _webSocket;
 
@@ -76,11 +82,12 @@ namespace Hubcon.Client.Core.Websockets
 
         private Channel<string> _messageChannel;
 
-        public HubconWebSocketClient(Uri uri, ILogger? logger = null)
+        public HubconWebSocketClient(Uri uri, IDynamicConverter converter, ILogger? logger = null)
         {
             _pongStream = new GenericObservable<PongMessage>(_jsonOptions);
             _errorStream = new GenericObservable<Exception>(_jsonOptions);
             _uri = uri;
+            this.converter = converter;
             this.logger = logger;
             _messageChannel = Channel.CreateUnbounded<string>();
         }
@@ -104,7 +111,7 @@ namespace Hubcon.Client.Core.Websockets
             var tcs = new CancellationTokenSource();
 
             tcs.Token.Register(async () =>
-            {           
+            {
                 _streams.TryRemove(request.Id, out var obs);
                 obs.Item1.OnCompleted();
                 await obs.Item3.DisposeAsync();
@@ -113,7 +120,7 @@ namespace Hubcon.Client.Core.Websockets
             var hw = new HeartbeatWatcher(5000, async () =>
             {
                 if (_streams.TryGetValue(request.Id, out var obs) && obs.Item2.IsCancellationRequested)
-                {               
+                {
                     await obs.Item2.CancelAsync();
                 }
             });
@@ -125,48 +132,146 @@ namespace Hubcon.Client.Core.Websockets
             return observable;
         }
 
-        public async Task Ingest<T>(IAsyncEnumerable<T> source, object payload, bool needsAck = false)
+        //public async Task Ingest<T>(IAsyncEnumerable<T> source, object payload, bool needsAck = false)
+        //{
+        //    var request = new WebsocketRequest(Guid.NewGuid().ToString(), JsonSerializer.SerializeToElement(payload, _jsonOptions));
+
+        //    try
+        //    {
+        //        var canIngest = await SendIngestMessageAsync(request);
+
+        //        if (!canIngest) throw new TimeoutException("Se excedió el tiempo limite para la confirmación de ingesta al servidor.");
+
+        //        if (needsAck)
+        //        {
+        //            await foreach (var item in source)
+        //            {
+        //                var id = Guid.NewGuid().ToString();
+        //                var message = new IngestDataMessage(id, JsonSerializer.SerializeToElement(item, _jsonOptions));
+        //                var msg = JsonSerializer.Serialize(message);
+
+        //                var tcs = new TaskCompletionSource<IngestDataAckMessage>();
+        //                _ingestDataAck.TryAdd(id, tcs);
+
+        //                await SendMessageAsync(msg);
+
+        //                var ackResult = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), tcs.Task);
+
+        //                if (ackResult == null) throw new TimeoutException("Se excedió el tiempo limite para la confirmación de ingesta al servidor.");
+
+        //                if (ackResult.Id != request.Id)
+        //                {
+        //                    throw new InvalidOperationException("La confirmación recibida no coincide con los datos enviados.");
+        //                }
+        //            }
+        //        }
+        //        else
+        //        {
+        //            await foreach (var item in source)
+        //            {
+        //                var message = new IngestDataWithAckMessage(request.Id, JsonSerializer.SerializeToElement(item, _jsonOptions));
+        //                var msg = JsonSerializer.Serialize(message);
+        //                await SendMessageAsync(msg);
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _errorStream.OnNext(ex);
+        //        logger?.Error(ex.Message);
+        //    }
+        //    finally
+        //    {
+        //        var msg = JsonSerializer.Serialize(new IngestCompleteMessage(request.Id), _jsonOptions);
+        //        await SendMessageAsync(msg);
+        //    }
+        //}
+
+        public async Task IngestMultiple(IOperationRequest payload, object[] arguments, bool needsAck = false)
         {
-            var request = new WebsocketRequest(Guid.NewGuid().ToString(), JsonSerializer.SerializeToElement(payload, _jsonOptions));
+            var cts = new CancellationTokenSource();
+            var sourceTasks = new List<Task>();
+            var initAckTcs = new TaskCompletionSource<IngestInitAckMessage>();
+            var generalTcs = new TaskCompletionSource<IngestCompleteMessage>();
+            var sources = new Dictionary<string, IAsyncEnumerable<JsonElement>>();
+            var generalId = Guid.NewGuid().ToString();
+            var initialAckId = Guid.NewGuid().ToString();
+            _ingestAck.TryAdd(initialAckId, initAckTcs);
 
             try
             {
-                var canIngest = await SendIngestMessageAsync(request);
-
-                if (!canIngest) throw new TimeoutException("Se excedió el tiempo limite para la confirmación de ingesta al servidor.");
-
-                if (needsAck)
+                for (int i = 0; i < arguments.Length; i++)
                 {
-                    await foreach (var item in source)
+                    if (arguments[i] != null && EnumerableTools.IsAsyncEnumerable(arguments[i]))
                     {
+                        var obj = arguments[i];
                         var id = Guid.NewGuid().ToString();
-                        var message = new IngestDataMessage(id, JsonSerializer.SerializeToElement(item, _jsonOptions));
-                        var msg = JsonSerializer.Serialize(message);
+                        arguments[i] = id;
+                        var stream = EnumerableTools.WrapEnumeratorAsJsonElementEnumerable(obj);
+                        sources.TryAdd(id, stream!);
+                    }
+                }
 
-                        var tcs = new TaskCompletionSource<IngestDataAckMessage>();
-                        _ingestDataAck.TryAdd(id, tcs);
+                foreach (var source in sources)
+                {
+                    var sourceTask = Task.Run(async () =>
+                    {
+                        var initAckResult = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(15), initAckTcs.Task);
 
-                        await SendMessageAsync(msg);
-
-                        var ackResult = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), tcs.Task);
-
-                        if (ackResult == null) throw new TimeoutException("Se excedió el tiempo limite para la confirmación de ingesta al servidor.");
-
-                        if (ackResult.Id != request.Id)
+                        if (initAckResult == null)
                         {
+                            initAckTcs.TrySetCanceled();
+                            throw new TimeoutException("Se excedió el tiempo limite para la confirmación de ingesta al servidor.");
+                        }
+
+                        if (initAckResult.Id != initialAckId)
+                        {
+                            initAckTcs.TrySetCanceled();
                             throw new InvalidOperationException("La confirmación recibida no coincide con los datos enviados.");
                         }
-                    }
+
+                        await foreach (var item in source.Value)
+                        {
+                            if (generalTcs.Task.IsCompleted)
+                                throw new OperationCanceledException("Stream cancelado.");
+
+                            var message = new IngestDataMessage(source.Key, JsonSerializer.SerializeToElement(item, _jsonOptions));
+                            var msg = JsonSerializer.Serialize(message, _jsonOptions);
+
+                            //var tcs = new TaskCompletionSource<IngestDataAckMessage>();
+                            //_ingestDataAck.TryAdd(source.Key, tcs);
+
+                            await SendMessageAsync(msg);
+
+                            //var ackResult = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), tcs.Task);
+
+                            //if (ackResult == null) 
+                            //    throw new TimeoutException("Se excedió el tiempo limite para la confirmación de ingesta al servidor.");
+
+                            //if (ackResult.Id != source.Key)
+                            //    throw new InvalidOperationException("La confirmación recibida no coincide con los datos enviados.");               
+                        }
+                    });
+
+                    sourceTasks.Add(sourceTask);
                 }
-                else
-                {
-                    await foreach (var item in source)
-                    {
-                        var message = new IngestDataWithAckMessage(request.Id, JsonSerializer.SerializeToElement(item, _jsonOptions));
-                        var msg = JsonSerializer.Serialize(message);
-                        await SendMessageAsync(msg);
-                    }
-                }
+
+                var newRequest = new OperationRequest(
+                    payload.OperationName,
+                    payload.ContractName,
+                    converter.SerializeArgsToJson(arguments));
+
+                var ingestRequest = new IngestInitMessage(
+                    initialAckId,
+                    sources.Keys.ToArray(),
+                    JsonSerializer.SerializeToElement(newRequest, _jsonOptions)
+                );
+
+                var msg = JsonSerializer.Serialize(ingestRequest, _jsonOptions);
+
+                await SendMessageAsync(msg);
+
+                await Task.WhenAll(sourceTasks);
             }
             catch (Exception ex)
             {
@@ -175,8 +280,35 @@ namespace Hubcon.Client.Core.Websockets
             }
             finally
             {
-                var msg = JsonSerializer.Serialize(new IngestCompleteMessage(request.Id), _jsonOptions);
+                var msg = JsonSerializer.Serialize(new IngestCompleteMessage(initialAckId, sources.Keys.ToArray()), _jsonOptions);
                 await SendMessageAsync(msg);
+            }
+        }
+
+        public static class IngestUtils
+        {
+            public static IAsyncEnumerable<JsonElement> WrapAsJsonElementEnumerable(object value, Type elementType)
+            {
+                if (value == null)
+                    throw new ArgumentNullException(nameof(value));
+
+                if (!typeof(IAsyncEnumerable<>).MakeGenericType(elementType).IsAssignableFrom(value.GetType()))
+                    throw new InvalidCastException($"Expected IAsyncEnumerable<{elementType.Name}> but got {value.GetType().Name}");
+
+                var method = typeof(IngestUtils)
+                    .GetMethod(nameof(WrapGeneric), BindingFlags.NonPublic | BindingFlags.Static)!
+                    .MakeGenericMethod(elementType);
+
+                return (IAsyncEnumerable<JsonElement>)method.Invoke(null, new object[] { value })!;
+            }
+
+            private static async IAsyncEnumerable<JsonElement> WrapGeneric<T>(IAsyncEnumerable<T> source)
+            {
+                await foreach (var item in source)
+                {
+                    var json = JsonSerializer.SerializeToElement(item);
+                    yield return json;
+                }
             }
         }
 
@@ -193,11 +325,11 @@ namespace Hubcon.Client.Core.Websockets
 
             if (response == null) throw new TimeoutException();
 
-            var result =  response == null ? throw new TimeoutException() : JsonSerializer.Deserialize<bool>(response.Result, _jsonOptions)!;
+            var result = response == null ? throw new TimeoutException() : JsonSerializer.Deserialize<bool>(response.Result, _jsonOptions)!;
 
-            if (result == true) 
+            if (result == true)
                 return;
-            else 
+            else
                 throw new Exception("Ocurrió un error mientras se ejecutaba la operación.");
         }
 
@@ -229,9 +361,9 @@ namespace Hubcon.Client.Core.Websockets
 
         private async Task<T> WaitWithTimeoutAsync<T>(TimeSpan timeout, Task<T> task, CancellationToken token = default)
         {
-            Task? timeoutTask = null;  
-            
-            if(timeout == TimeSpan.Zero)
+            Task? timeoutTask = null;
+
+            if (timeout == TimeSpan.Zero)
                 timeoutTask = Task.Delay(Timeout.Infinite, token);
             else
                 timeoutTask = Task.Delay(timeout, token);
@@ -354,7 +486,7 @@ namespace Hubcon.Client.Core.Websockets
             }
             catch (Exception)
             {
-            }          
+            }
         }
 
         private async Task EnsureConnectedAsync()
@@ -491,31 +623,31 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        private async Task<bool> SendIngestMessageAsync(WebsocketRequest request)
-        {
-            var msg = JsonSerializer.Serialize(new IngestInitMessage(request.Id), _jsonOptions);
-            var cts = new TaskCompletionSource<IngestInitAckMessage>();
-            _ingestAck.TryAdd(request.Id, cts);
-            await SendMessageAsync(msg);
+        //private async Task<bool> SendIngestMessageAsync(IEnumerable<string> streamIds)
+        //{
+        //    var msg = JsonSerializer.Serialize(new IngestInitMessage(streamIds, request.Payload), _jsonOptions);
+        //    var cts = new TaskCompletionSource<IngestInitAckMessage>();
+        //    _ingestAck.TryAdd(request.Id, cts);
+        //    await SendMessageAsync(msg);
 
-            var result = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), _cts.Token, cts.Task);
+        //    var result = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), _cts.Token, cts.Task);
 
-            _ingestAck.TryRemove(request.Id, out _);
+        //    _ingestAck.TryRemove(request.Id, out _);
 
-            if (result != null)
-            {
-                var ackMessage = cts.Task.Result;
+        //    if (result != null)
+        //    {
+        //        var ackMessage = cts.Task.Result;
 
-                if (ackMessage.Id != null && ackMessage.Id == request.Id)
-                {
-                    return true;
-                }
+        //        if (ackMessage.Id != null && ackMessage.Id == request.Id)
+        //        {
+        //            return true;
+        //        }
 
-                return false;
-            }
-            else
-                return false;
-        }
+        //        return false;
+        //    }
+        //    else
+        //        return false;
+        //}
 
         private async Task SendSubscribeMessageAsync(WebsocketRequest request)
         {

@@ -1,4 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace HubconTestDomain
@@ -18,6 +19,7 @@ namespace HubconTestDomain
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();
         Task CreateUser();
+        Task IngestMessages(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2);
     }
 }
 

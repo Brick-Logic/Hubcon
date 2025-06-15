@@ -6,7 +6,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
 {
     public interface IOperationContext
     {
-        object?[] Arguments { get; init; }
+        object?[] Arguments { get; set; }
         IOperationBlueprint Blueprint { get; init; }
         Exception? Exception { get; set; }
         HttpContext? HttpContext { get; init; }

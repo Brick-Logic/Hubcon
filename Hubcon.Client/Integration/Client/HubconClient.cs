@@ -96,7 +96,6 @@ namespace Hubcon.Client.Integration.Client
                     ex.Message
                 );
             }
-
         }
 
         public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -114,6 +113,15 @@ namespace Hubcon.Client.Integration.Client
                 }
             }
         }
+
+        public async Task Ingest(IOperationRequest request, object[] arguments, CancellationToken cancellationToken = default)
+        {
+            if (authenticationManagerFactory?.Invoke() == null)
+                throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
+
+            await client.IngestMultiple(request, arguments);    
+        }
+
 
         public async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
@@ -151,7 +159,7 @@ namespace Hubcon.Client.Integration.Client
                 authenticationManagerFactory = () => (IAuthenticationManager)((dynamic)services.GetRequiredService(lazyAuthType)).Value;
             }
 
-            client = new HubconWebSocketClient(new Uri(_websocketUrl));
+            client = new HubconWebSocketClient(new Uri(_websocketUrl), converter);
 
             IsBuilt = true;
         }

@@ -33,6 +33,14 @@ namespace HubconTestClient
             logger.LogInformation("Esperando interacción antes de continuar...");
             Console.ReadKey();
 
+            Console.WriteLine($"Iniciando ingest...");
+            IAsyncEnumerable<string> source1 = GetMessages(5);
+            IAsyncEnumerable<string> source2 = GetMessages(5);
+            await client.IngestMessages(source1, source2);
+            Console.WriteLine($"Ingest terminado.");
+
+            Console.ReadKey();
+
             var result = await authManager.LoginAsync("miusuario", "");
             logger.LogInformation($"Login result: {result.IsSuccess}");
 
@@ -109,6 +117,17 @@ namespace HubconTestClient
             })).ToArray();
 
             await Task.WhenAll(tasks);
+        }
+
+        static async IAsyncEnumerable<string> GetMessages(int count)
+        {
+            for(int i = 0; i < count; i++)
+            {
+                var message = $"string:{i}";
+                Console.WriteLine($"Enviando mensaje... [{message}]");
+                yield return message;
+                await Task.Delay(1000);
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
@@ -163,14 +164,68 @@ namespace Hubcon.Server.Core.Pipelines
             return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeObject(pipelineResult.Result.Data), null);
         }
 
-        public IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint)
+        public async Task<IResponse> HandleIngest(IOperationRequest request, Dictionary<string, object> sources)
+        {
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) /*&& blueprint?.Kind == OperationKind.Ingest*/))
+                return null!;
+
+            if(request.Args.Count() == 0 
+                || blueprint.ParameterTypes.Length == 0 
+                || blueprint.ParameterTypes.Length != request.Args.Count())
+            {
+                return new BaseOperationResponse(false);
+            }  
+
+            var arguments = new List<object?>();
+            var args = request.Args.ToArray();
+
+            for(int i = 0; i < blueprint.ParameterTypes.Length; i++)
+            {
+                var type = blueprint.ParameterTypes[i];
+                var arg = args[i];
+
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
+                {
+                    var id = _converter.DeserializeJsonElement<string>(arg);
+                    var source = sources.TryGetValue(id!, out object? value);
+                    arguments.Add(value);
+                }
+                else
+                {
+                    arguments.Add(arg!);
+                }
+            }
+
+            IOperationContext context = BuildContext(request, blueprint, arguments.ToArray());
+
+            static async Task<IOperationResult> ResultHandler(object? result)
+            {
+                try
+                {
+                    if (result is Task task)
+                        await task;
+
+                    return new BaseOperationResponse(true);
+                }
+                catch(Exception ex)
+                {
+                    return new BaseOperationResponse(false);
+                }
+            }
+
+            var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
+            var pipelineResult = await pipeline.Execute();
+            return pipelineResult.Result!;
+        }
+
+        public IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint, object?[]? arguments = null)
         {
             return new OperationContext()
             {
                 OperationName = request.OperationName,
                 RequestServices = _serviceProvider,
                 Blueprint = blueprint,
-                Arguments = _converter.DeserializeJsonArgs(request.Args, blueprint!.ParameterTypes).ToArray(),
+                Arguments = arguments ?? _converter.DeserializeJsonArgs(request.Args, blueprint!.ParameterTypes).ToArray(),
                 HttpContext = _serviceProvider.GetRequiredService<IHttpContextAccessor>()?.HttpContext,
                 Request = request
             };

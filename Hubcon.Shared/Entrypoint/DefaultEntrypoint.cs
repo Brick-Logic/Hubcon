@@ -23,6 +23,9 @@ namespace Hubcon.Shared.Entrypoint
         public Task<IAsyncEnumerable<object?>> HandleSubscription(IOperationRequest request)
             => RequestHandler.GetSubscription(request);
 
+        public Task HandleIngest(IOperationRequest request, Dictionary<string, object> sources)
+            => RequestHandler.HandleIngest(request, sources);
+
         public void Build()
         {
         }

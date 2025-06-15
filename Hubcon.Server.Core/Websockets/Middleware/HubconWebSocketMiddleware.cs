@@ -27,7 +27,10 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Server.Core.Websockets.Middleware
 {
-    public class HubconWebSocketMiddleware(RequestDelegate next, DefaultEntrypoint entrypoint, ILogger<HubconWebSocketMiddleware> logger)
+    public class HubconWebSocketMiddleware(
+        RequestDelegate next, 
+        DefaultEntrypoint entrypoint, 
+        ILogger<HubconWebSocketMiddleware> logger)
     {
         private int timeoutSeconds = 1000;
         private HeartbeatWatcher _heartbeatWatcher = null!;
@@ -187,8 +190,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.ingest_complete:
-                            var ingestComplete = HandleIngestComplete(_ingests, messageJson);
-                            Handle(ingestComplete, _tasks);
+                            await HandleIngestComplete(_ingests, messageJson);
                             break;
                         default:
                             // Opcional: ignorar o enviar error por tipo desconocido
@@ -206,6 +208,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 {
                     sub.Cancel();
                 }
+
                 foreach (var channel in _ackChannels.Values)
                 {
                     try
@@ -217,6 +220,19 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         logger.LogError(ex.Message);
                     }
                 }
+
+                foreach (var task in _ingests.Values)
+                {
+                    try
+                    {
+                        await task.Item3.DisposeAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex.Message);
+                    }
+                }
+
                 foreach (var task in _tasks)
                 {
                     task.Key.Cancel();
@@ -237,13 +253,11 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         {
             var ingestCompleteMessage = JsonSerializer.Deserialize<IngestCompleteMessage>(messageJson, _jsonSerializerOptions);
 
-            if (ingestCompleteMessage == null || !_ingests.TryGetValue(ingestCompleteMessage.Id, out _))
-                return;
-
-            _ingests.TryRemove(ingestCompleteMessage.Id, out var complete);
-            complete.Item2?.Cancel();
-            complete.Item2?.Dispose();
-            await complete.Item3.DisposeAsync();
+            foreach(var id in ingestCompleteMessage.StreamIds)
+            {
+                _ingests.TryRemove(id, out var complete);
+                await complete.Item3.DisposeAsync();
+            }
         }
 
         private static async Task HandleIngestDataWithAck(ConcurrentDictionary<string, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)> _ingests, WebSocketMessageSender sender, string messageJson)
@@ -271,36 +285,41 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             ingest.Item1.OnNextObject(ingestDataMessage.Data);
         }
 
-        private async Task HandleIngestInit(ConcurrentDictionary<string, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)> _ingests, WebSocketMessageSender sender, string messageJson)
+        private async Task HandleIngestInit(
+            ConcurrentDictionary<string, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)> _ingests, 
+            WebSocketMessageSender sender, 
+            string messageJson)
         {
             var ingestInitMessage = JsonSerializer.Deserialize<IngestInitMessage>(messageJson, _jsonSerializerOptions);
 
-            if (ingestInitMessage == null || string.IsNullOrEmpty(ingestInitMessage.Id))
-                return;
+            Dictionary<string, object> sources = new();
 
-            if (_ingests.TryGetValue(ingestInitMessage.Id, out _))
-                return;
-
-            var observable = new GenericObservable<JsonElement>(_jsonSerializerOptions);
-            var observer = new AsyncObserver<JsonElement>();
-            observable.Subscribe(observer);
-
-
-            var cts = new CancellationTokenSource();
-            var hw = new HeartbeatWatcher(5000, () =>
+            foreach (var id in ingestInitMessage!.StreamIds)
             {
-                _ingests.TryRemove(ingestInitMessage.Id, out var complete);
-                complete.Item2?.Cancel();
-                complete.Item2?.Dispose();
+                if (_ingests.TryGetValue(id, out _))
+                    return;
 
-                return Task.CompletedTask;
-            });
+                var observable = new GenericObservable<JsonElement>(_jsonSerializerOptions);
+                var observer = new AsyncObserver<JsonElement>();
+                observable.Subscribe(observer);
+                var cts = new CancellationTokenSource();
 
-            _ingests.TryAdd(ingestInitMessage.Id, (observable, cts, hw));
+                var hw = new HeartbeatWatcher(60, async () =>
+                {
+                    observable.OnCompleted();
+                    await cts.CancelAsync();
+                    _ingests.TryRemove(id, out var complete);
+                    complete.Item2?.Cancel();
+                    complete.Item2?.Dispose();
+                });
 
-            await ConvertAsyncEnumerableDynamic(typeof(int), observer.GetAsyncEnumerable(cts.Token), cts.Token);
+                _ingests.TryAdd(id, (observable, cts, hw));
+                sources.TryAdd(id, observer.GetAsyncEnumerable(cts.Token));
+            }
 
-            await sender.SendAsync(new IngestInitAckMessage(ingestInitMessage!.Id));
+            var operationRequest = JsonSerializer.Deserialize<OperationRequest>(ingestInitMessage.Payload, _jsonSerializerOptions)!;
+            await sender.SendAsync(new IngestInitAckMessage(ingestInitMessage.Id));
+            await entrypoint.HandleIngest(operationRequest, sources);
         }
 
         public void Handle(Task task, ConcurrentDictionary<CancellationTokenSource, Task> tasks)
@@ -308,36 +327,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             CancellationTokenSource? cts = new CancellationTokenSource();
             var runningTask = Task.Run(() => task, cts.Token);
             tasks.TryAdd(cts, runningTask);
-        }
-
-        public async Task ConvertAsyncEnumerableDynamic(
-            Type targetType,
-            IAsyncEnumerable<JsonElement> source,
-            CancellationToken token)
-        {
-            var method = GetType().GetMethod(nameof(ConvertAsyncEnumerable))!.MakeGenericMethod(targetType);
-            var enumerable = await Task.Run(() => method.Invoke(this, new object[] { source, token }), token);
-
-            var consumerMethod = GetType().GetMethod(nameof(ConsumeAsyncEnumerable))!;
-            await Task.Run(() => consumerMethod.Invoke(this, new object[] { enumerable! }), token);
-        }
-
-        public async IAsyncEnumerable<T> ConvertAsyncEnumerable<T>(
-            IAsyncEnumerable<JsonElement> source,
-            [EnumeratorCancellation] CancellationToken token)
-        {
-            await foreach (var item in source.WithCancellation(token))
-            {
-                yield return item.Deserialize<T>(_jsonSerializerOptions)!;
-            }
-        }
-
-        public static async Task ConsumeAsyncEnumerable(IAsyncEnumerable<int> source)
-        {
-            await foreach (var item in source)
-            {
-                continue;
-            }
         }
 
         private async Task HandleOperationInvoke(

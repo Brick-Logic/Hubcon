@@ -6,6 +6,7 @@ using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Subscriptions;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
 using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
@@ -21,9 +22,44 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             if (context.Blueprint.Kind == OperationKind.Method || context.Blueprint.Kind == OperationKind.Stream)
             {
                 var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);
+                object?[] args = null!;
 
-                object?[] args = dynamicConverter.DeserializeJsonArgs(request.Args, context.Blueprint!.ParameterTypes).ToArray();
-                object? result = context.Blueprint!.InvokeDelegate?.DynamicInvoke(controller, args);
+                if(context.Arguments.Length != context.Blueprint!.ParameterTypes.Length)
+                {
+                    context.Result = new BaseOperationResponse(false);
+                    return;
+                }
+
+                for(int i = 0; i < context.Arguments.Length; i++)
+                {
+                    var type = context.Blueprint!.ParameterTypes[i];
+
+                    if (context.Arguments[i] is JsonElement)
+                    {
+                        context.Arguments[i] = dynamicConverter.DeserializeJsonElement((JsonElement)context.Arguments[i]!, type);
+                    }
+                    else if (EnumerableTools.IsAsyncEnumerable(context.Arguments[i]!) 
+                        && EnumerableTools.GetAsyncEnumerableType(context.Arguments[i]!) == typeof(IAsyncEnumerable<JsonElement>))
+                    {
+                        context.Arguments[i] = await EnumerableTools.ConvertAsyncEnumerableDynamic(
+                            type, 
+                            (IAsyncEnumerable<JsonElement>)context.Arguments[i]!, 
+                            dynamicConverter);
+
+                        continue;
+                    }
+                    else if (context.Arguments[i]?.GetType().IsAssignableTo(type) ?? false)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        context.Result = new BaseOperationResponse(false);
+                        return;
+                    }
+                }
+
+                object? result = context.Blueprint!.InvokeDelegate?.DynamicInvoke(controller, context.Arguments);
 
                 context.Result = await resultHandler.Invoke(result);
                 await next();

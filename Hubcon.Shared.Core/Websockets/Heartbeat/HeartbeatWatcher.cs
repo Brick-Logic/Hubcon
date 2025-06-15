@@ -8,6 +8,7 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
 {
     public sealed class HeartbeatWatcher : IAsyncDisposable
     {
+        private bool timeoutExecuted = false;
         private readonly Func<Task> _onTimeout;
         private readonly int _timeoutSeconds;
 
@@ -38,7 +39,11 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
                 var elapsed = (DateTime.UtcNow - _lastHeartbeat).TotalSeconds;
                 if (elapsed > _timeoutSeconds)
                 {
-                    await _onTimeout();
+                    if (!timeoutExecuted)
+                    {
+                        timeoutExecuted = true;
+                        await _onTimeout();
+                    }
                     break;
                 }
             }
@@ -48,6 +53,12 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
         {
             _cts.Cancel();
             _cts.Dispose();
+
+            if (!timeoutExecuted)
+            {
+                timeoutExecuted = true;
+                await _onTimeout();
+            }
 
             try { await _loop; } catch { /* swallow */ }
         }

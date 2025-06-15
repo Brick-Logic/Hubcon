@@ -1,11 +1,13 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Castle.Core.Logging;
+using Hubcon.Shared.Abstractions.Interfaces;
+using Microsoft.Extensions.Logging;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace Hubcon.Shared.Core.Serialization
 {
-    public class DynamicConverter : IDynamicConverter
+    public class DynamicConverter(ILogger<DynamicConverter> logger) : IDynamicConverter
     {
         public Dictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 
@@ -137,15 +139,25 @@ namespace Hubcon.Shared.Core.Serialization
         public IEnumerable<object?> DeserializeJsonArgs(IEnumerable<JsonElement> elements, IEnumerable<Type> types)
         {
             List<object?> list = new();
-            using var elementEnum = elements.GetEnumerator();
-            using var typeEnum = types.GetEnumerator();
 
-            while (elementEnum.MoveNext() && typeEnum.MoveNext())
+            try
             {
-                list.Add(DeserializeJsonElement(elementEnum.Current, typeEnum.Current));
+                using var elementEnum = elements.GetEnumerator();
+                using var typeEnum = types.GetEnumerator();
+
+                while (elementEnum.MoveNext() && typeEnum.MoveNext())
+                {
+                    list.Add(DeserializeJsonElement(elementEnum.Current, typeEnum.Current));
+                }
+
+                return list;
+            }
+            catch(Exception ex)
+            {
+                logger.LogInformation(ex.ToString());
+                return [];
             }
 
-            return list;
         }
 
         public async IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement> stream, [EnumeratorCancellation] CancellationToken cancellationToken)

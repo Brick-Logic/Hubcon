@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
 {
-    public record class IngestCompleteMessage(string Id) : BaseMessage(MessageType.ingest_complete);
+    public record class IngestCompleteMessage(string Id, string[] StreamIds) : BaseMessage(MessageType.ingest_complete);
 }

@@ -2,6 +2,7 @@
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Entrypoint;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -9,8 +10,8 @@ using System.Text.Json;
 namespace Hubcon.Client.Interceptors
 {
     public class ClientProxyInterceptor(
-        IHubconClient client, 
-        IDynamicConverter converter, 
+        IHubconClient client,
+        IDynamicConverter converter,
         ILogger<ClientProxyInterceptor> logger) : AsyncInterceptorBase, IContractInterceptor
     {
         public IHubconClient Client => client;
@@ -75,13 +76,22 @@ namespace Hubcon.Client.Interceptors
             var contractName = invocation.Method.ReflectedType!.Name;
             using var cts = new CancellationTokenSource();
 
-            OperationRequest request = new(
-                methodName,
-                contractName,
-                converter.SerializeArgsToJson(invocation.Arguments)
-            );
+            if (invocation.Arguments.Any(EnumerableTools.IsAsyncEnumerable))
+            {
+                OperationRequest request = new(methodName, contractName, null);
 
-            await Client.CallAsync(request, invocation.Method, cts.Token);
+                await Client.Ingest(request, invocation.Arguments);
+            }
+            else
+            {
+                OperationRequest request = new(
+                    methodName,
+                    contractName,
+                    converter.SerializeArgsToJson(invocation.Arguments)
+                );
+
+                await Client.CallAsync(request, invocation.Method, cts.Token);
+            }
         }
     }
 }

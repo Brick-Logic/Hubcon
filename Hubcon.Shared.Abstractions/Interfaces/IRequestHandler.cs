@@ -12,5 +12,6 @@ namespace Hubcon.Shared.Abstractions.Interfaces
 
         public Task<IAsyncEnumerable<object?>> GetStream(IOperationRequest request);
         public Task<IAsyncEnumerable<object?>> GetSubscription(IOperationRequest request, CancellationToken cancellationToken = default);
+        public Task<IResponse> HandleIngest(IOperationRequest request, Dictionary<string, object> sources);
     }
 }

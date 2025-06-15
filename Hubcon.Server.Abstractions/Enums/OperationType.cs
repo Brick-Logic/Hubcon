@@ -10,6 +10,7 @@ namespace Hubcon.Server.Abstractions.Enums
     {
         Method,
         Subscription,
-        Stream
+        Stream,
+        Ingest
     }
 }
