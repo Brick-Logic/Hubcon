@@ -2,6 +2,7 @@
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 {
@@ -139,10 +140,10 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 middlewares.AddRange(GlobalResponseMiddlewares);
             }
 
-            
+            var result = middlewares.Where(x => x != null);
 
-            BuiltMiddlewares.AddRange(middlewares);
-            BuiltMiddlewares.RemoveAll(x => x == null);
+            if(result.Any() && BuiltMiddlewares.Count == 0)
+                BuiltMiddlewares.AddRange(result);
 
             return BuiltMiddlewares;
         }

@@ -21,9 +21,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
         {
             if (context.Blueprint.Kind == OperationKind.Method || context.Blueprint.Kind == OperationKind.Stream)
             {
-                var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);
-                object?[] args = null!;
-
                 if(context.Arguments.Length != context.Blueprint!.ParameterTypes.Length)
                 {
                     context.Result = new BaseOperationResponse(false);
@@ -59,7 +56,8 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     }
                 }
 
-                object? result = context.Blueprint!.InvokeDelegate?.DynamicInvoke(controller, context.Arguments);
+                var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);
+                object? result = context.Blueprint!.InvokeDelegate?.Invoke(controller, context.Arguments!);
 
                 context.Result = await resultHandler.Invoke(result);
                 await next();

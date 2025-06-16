@@ -51,11 +51,10 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
 
         public async ValueTask DisposeAsync()
         {
-            _cts.Cancel();
-            _cts.Dispose();
-
             if (!timeoutExecuted)
             {
+                _cts.Cancel();
+                _cts.Dispose();
                 timeoutExecuted = true;
                 await _onTimeout();
             }

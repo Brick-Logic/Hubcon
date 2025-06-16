@@ -26,10 +26,11 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         public bool RequiresAuthorization { get; }
         public IEnumerable<AuthorizeAttribute> AuthorizationAttributes { get; }
-        public Delegate? InvokeDelegate { get; }
+        public Func<object?, object[], object?>? InvokeDelegate { get; }
         public IPipelineBuilder PipelineBuilder { get; }
 
-        public OperationBlueprint(string operationName, Type contractType, Type controllerType, MemberInfo memberInfo, IPipelineBuilder pipelineBuilder, Delegate? invokeDelegate = null)
+
+        public OperationBlueprint(string operationName, Type contractType, Type controllerType, MemberInfo memberInfo, IPipelineBuilder pipelineBuilder, Func<object?, object[], object?>? invokeDelegate = null)
         {
             ArgumentException.ThrowIfNullOrEmpty(operationName);
             ArgumentNullException.ThrowIfNull(contractType);

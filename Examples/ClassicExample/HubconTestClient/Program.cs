@@ -31,61 +31,65 @@ namespace HubconTestClient
 
 
             logger.LogInformation("Esperando interacción antes de continuar...");
+
             Console.ReadKey();
 
             Console.WriteLine($"Iniciando ingest...");
-            IAsyncEnumerable<string> source1 = GetMessages(5);
-            IAsyncEnumerable<string> source2 = GetMessages(5);
-            await client.IngestMessages(source1, source2);
+            IAsyncEnumerable<string> source1 = GetMessages(15);
+            IAsyncEnumerable<string> source2 = GetMessages(10);
+            IAsyncEnumerable<string> source3 = GetMessages(15);
+            IAsyncEnumerable<string> source4 = GetMessages(20);
+            IAsyncEnumerable<string> source5 = GetMessages(25);
+            await client.IngestMessages(source1, source2, source3, source4, source5);
             Console.WriteLine($"Ingest terminado.");
 
             Console.ReadKey();
 
-            var result = await authManager.LoginAsync("miusuario", "");
-            logger.LogInformation($"Login result: {result.IsSuccess}");
+            //var result = await authManager.LoginAsync("miusuario", "");
+            //logger.LogInformation($"Login result: {result.IsSuccess}");
 
-            Console.ReadKey();
+            //Console.ReadKey();
 
-            var text = client2.TestReturn();
+            //var text = client2.TestReturn();
 
 
-            logger.LogInformation($"TestVoid llamado. Texto recibido: {text}");
-            Console.ReadKey();
+            //logger.LogInformation($"TestVoid llamado. Texto recibido: {text}");
+            //Console.ReadKey();
 
-            logger.LogDebug("Conectando evento...");
+            //logger.LogDebug("Conectando evento...");
 
             int eventosRecibidos = 0;
 
-            async Task handler(int input)
-            {
-                //logger.LogInformation($"Evento recibido: {input}");
-                Interlocked.Add(ref eventosRecibidos, 1);
-            }
+            //async Task handler(int input)
+            //{
+            //    //logger.LogInformation($"Evento recibido: {input}");
+            //    Interlocked.Add(ref eventosRecibidos, 1);
+            //}
 
-            //client.OnUserCreated!.AddHandler(handler);
-            //await client.OnUserCreated.Subscribe();
-            logger.LogInformation("Evento conectado.");
+            ////client.OnUserCreated!.AddHandler(handler);
+            ////await client.OnUserCreated.Subscribe();
+            //logger.LogInformation("Evento conectado.");
 
-            Console.ReadKey();
+            //Console.ReadKey();
 
-            logger.LogInformation("Enviando request...");
-            await client.CreateUser();
-            logger.LogInformation($"Request terminado.");
+            //logger.LogInformation("Enviando request...");
+            //await client.CreateUser();
+            //logger.LogInformation($"Request terminado.");
 
-            Console.ReadKey();
+            //Console.ReadKey();
 
-            logger.LogInformation("Enviando request GetTemperatureFromServer...");
-            var temp = await client.GetTemperatureFromServer();
-            logger.LogInformation($"Datos recibidos: {temp}");
+            //logger.LogInformation("Enviando request GetTemperatureFromServer...");
+            //var temp = await client.GetTemperatureFromServer();
+            //logger.LogInformation($"Datos recibidos: {temp}");
 
-            Console.ReadKey();
+            //Console.ReadKey();
 
-            logger.LogInformation("Enviando request...");
+            //logger.LogInformation("Enviando request...");
 
-            await foreach (var item in client.GetMessages(10))
-            {
-                logger.LogInformation($"Respuesta recibida: {item}");
-            }
+            //await foreach (var item in client.GetMessages(10))
+            //{
+            //    logger.LogInformation($"Respuesta recibida: {item}");
+            //}
 
             Console.ReadKey();
 
@@ -107,7 +111,7 @@ namespace HubconTestClient
             };
             worker.Start();
 
-            var tasks = Enumerable.Range(5, 5).Select(_ => Task.Run(async () =>
+            var tasks = Enumerable.Range(1, 1).Select(_ => Task.Run(async () =>
             {
                 while (true)
                 {

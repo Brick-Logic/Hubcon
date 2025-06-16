@@ -19,7 +19,12 @@ namespace HubconTestDomain
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();
         Task CreateUser();
-        Task IngestMessages(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2);
+        Task IngestMessages(
+            IAsyncEnumerable<string> source, 
+            IAsyncEnumerable<string> source2, 
+            IAsyncEnumerable<string> source3, 
+            IAsyncEnumerable<string> source4, 
+            IAsyncEnumerable<string> source5);
     }
 }
 

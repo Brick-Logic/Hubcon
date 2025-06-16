@@ -19,7 +19,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         Type RawReturnType { get; }
         bool RequiresAuthorization { get; }
         Type ReturnType { get; }
-        Delegate? InvokeDelegate { get; }
+        Func<object?, object[], object?>? InvokeDelegate { get; }
         IPipelineBuilder PipelineBuilder { get; }
     }
 }

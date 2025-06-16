@@ -39,5 +39,10 @@ namespace BlazorTestServer.Controllers
             logger.LogInformation("Mostrando texto");
             return Task.CompletedTask;
         }
+
+        public Task IngestMessages(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2, IAsyncEnumerable<string> source3, IAsyncEnumerable<string> source4, IAsyncEnumerable<string> source5)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

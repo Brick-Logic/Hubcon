@@ -30,8 +30,8 @@ namespace HubconTest.Controllers
         //[Authorize(Roles = ["Admin"])]
         public async Task CreateUser()
         {
-            var number = Random.Shared.Next(-10, 50);
-            OnUserCreated?.Emit(number);
+            //var number = Random.Shared.Next(-10, 50);
+            //OnUserCreated?.Emit(number);
             await Task.CompletedTask;
         }
 
@@ -41,25 +41,35 @@ namespace HubconTest.Controllers
             return Task.CompletedTask;
         }
 
-        public async Task IngestMessages(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2)
+        public async Task IngestMessages(
+            IAsyncEnumerable<string> source, 
+            IAsyncEnumerable<string> source2, 
+            IAsyncEnumerable<string> source3, 
+            IAsyncEnumerable<string> source4, 
+            IAsyncEnumerable<string> source5)
         {
-            var task1 = Task.Run(async () =>
+            Task TaskRunner<T>(IAsyncEnumerable<T> source, string name)
             {
-                await foreach(var item in source)
+                return Task.Run(async () =>
                 {
-                    logger.LogInformation($"source1: {item}");
-                }
-            });
+                    await foreach (var item in source)
+                    {
+                        logger.LogInformation($"source1: {item}");
+                    }
+                    logger.LogInformation($"[{name}] Stream terminado.");
+                });
+            }
 
-            var task2 = Task.Run(async () =>
-            {
-                await foreach (var item in source2)
-                {
-                    logger.LogInformation($"source2: {item}");
-                }
-            });
+            List<Task> sources =
+            [
+                TaskRunner(source, nameof(source)),
+                TaskRunner(source2, nameof(source2)),
+                TaskRunner(source3, nameof(source3)),
+                TaskRunner(source4, nameof(source4)),
+                TaskRunner(source5, nameof(source5)),
+            ];
 
-            await Task.WhenAll(task1, task2);
+            await Task.WhenAll(sources);
             logger.LogInformation("Ingest terminado exitosamente");
         }
     }

@@ -47,14 +47,14 @@ namespace Hubcon.Server.Core.Routing.Registries
                 {
 
                     var methodSignature = method.GetMethodSignature();
-                    var action = CreateMethodDescriptor(method);
+                    Func<object?, object[], object?> action = BuildInvoker(method);
 
                     var pipelineBuilder = new PipelineBuilder();
                     var middlewareOptions = new MiddlewareOptions(pipelineBuilder, servicesToInject);
 
                     options?.Invoke(middlewareOptions);
 
-                    var descriptor = new OperationBlueprint(methodSignature, interfaceType, controllerType, method, pipelineBuilder, action);
+                    var descriptor = new OperationBlueprint(methodSignature, interfaceType, controllerType, method, pipelineBuilder, action!);
 
                     contractMethods.TryAdd($"{descriptor.OperationName}", descriptor);
                     OnOperationRegistered?.Invoke(descriptor);
@@ -109,7 +109,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             return false;
         }
 
-        private MethodDelegate CreateMethodDescriptor(MethodInfo method)
+        private Delegate CreateMethodDescriptor(MethodInfo method)
         {
             var instanceParam = Expression.Parameter(typeof(object), "instance");
             var argsParam = Expression.Parameter(typeof(object[]), "args");
@@ -137,6 +137,59 @@ namespace Hubcon.Server.Core.Routing.Registries
 
             var lambda = Expression.Lambda<MethodDelegate>(body, instanceParam, argsParam);
             return lambda.Compile();
+        }
+
+        public static Func<object?, object[], object?> BuildInvoker(MethodInfo method)
+        {
+            // Parámetros de la función: (object? target, object[] args)
+            var targetExp = Expression.Parameter(typeof(object), "target");
+            var argsExp = Expression.Parameter(typeof(object[]), "args");
+
+            // Obtener los parámetros del método y convertir cada uno
+            var methodParams = method.GetParameters();
+            var paramExps = new Expression[methodParams.Length];
+
+            for (int i = 0; i < methodParams.Length; i++)
+            {
+                // args[i]
+                var argAccess = Expression.ArrayIndex(argsExp, Expression.Constant(i));
+
+                // Convertir object a tipo esperado (puede ser value type o ref type)
+                var argCast = Expression.Convert(argAccess, methodParams[i].ParameterType);
+
+                paramExps[i] = argCast;
+            }
+
+            // Expresión para la instancia (o null para estático)
+            Expression instanceExp;
+            if (method.IsStatic)
+            {
+                instanceExp = null; // para métodos estáticos no hay instancia
+            }
+            else
+            {
+                // Convertir object target a tipo del método (declaring type)
+                instanceExp = Expression.Convert(targetExp, method.DeclaringType!);
+            }
+
+            // Crear la llamada al método
+            MethodCallExpression callExp = Expression.Call(instanceExp, method, paramExps);
+
+            // Si el método devuelve void, debemos devolver null
+            if (method.ReturnType == typeof(void))
+            {
+                // Crear un bloque con la llamada y return null
+                var block = Expression.Block(callExp, Expression.Constant(null, typeof(object)));
+
+                return Expression.Lambda<Func<object?, object[], object?>>(block, targetExp, argsExp).Compile();
+            }
+            else
+            {
+                // Si devuelve valor, convertirlo a object
+                var castCallExp = Expression.Convert(callExp, typeof(object));
+
+                return Expression.Lambda<Func<object?, object[], object?>>(castCallExp, targetExp, argsExp).Compile();
+            }
         }
     }
 }
