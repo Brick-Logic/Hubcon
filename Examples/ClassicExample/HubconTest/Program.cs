@@ -35,7 +35,7 @@ namespace HubconTest
             builder.ConfigureHubconServer(controllerOptions =>
             {
                 //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
-                controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
+                //controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
                 //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
                 //controllerOptions.AddGlobalMiddleware<AuthenticationMiddleware>();
 
@@ -70,7 +70,6 @@ namespace HubconTest
                 });
 
             builder.Services.AddAuthorization();
-
 
             var app = builder.Build();
 

@@ -4,6 +4,7 @@ using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Attributes;
+using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Http;
@@ -38,7 +39,7 @@ namespace Hubcon.Server.Core.Extensions
                     if (prop.GetValue(e.Instance) != null)
                         continue;
 
-                    if (prop.ReflectedType!.IsAssignableTo(typeof(IClientProxy)))
+                    if (prop.ReflectedType!.IsAssignableTo(typeof(BaseContractProxy)))
                         continue;
 
                     if (prop.PropertyType.IsAssignableTo(typeof(ISubscription)) && prop.ReflectedType!.IsAssignableTo(typeof(IControllerContract)))

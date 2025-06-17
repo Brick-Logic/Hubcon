@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Extensions;
+using Hubcon.Server.Core.Routing;
 using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Server.Core.Websockets.Middleware;
 using Hubcon.Shared.Abstractions.Interfaces;
@@ -8,6 +9,7 @@ using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Entrypoint;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
 namespace Hubcon.Server.Injection
@@ -39,25 +41,30 @@ namespace Hubcon.Server.Injection
 
         public static WebApplication UseHubcon(this WebApplication app, string path = "operation")
         {
-            var prefix = !string.IsNullOrEmpty(path) ? $"/{path}" : "";
+            //var prefix = !string.IsNullOrEmpty(path) ? $"/{path}" : "";
 
-            app.MapPost(prefix + "/" + nameof(DefaultEntrypoint.HandleMethodWithResult), async ([FromBody] OperationRequest request, DefaultEntrypoint entrypoint) =>
-            {
-                var response = await entrypoint.HandleMethodWithResult(request);
-                return response;
-            });
+            //app.MapPost("/IUserService/CreateUser", async ([FromBody] OperationRequest request, DefaultEntrypoint entrypoint) =>
+            //{
+            //    var response = await entrypoint.HandleMethodVoid(request);
+            //    return response;
+            //});
 
-            app.MapPost(prefix + "/" + nameof(DefaultEntrypoint.HandleMethodVoid), async ([FromBody] OperationRequest request, DefaultEntrypoint entrypoint) =>
-            {
-                var response = await entrypoint.HandleMethodVoid(request);
-                return response;
-            });
+            //HttpOperationRegisterer.MapTypedEndpoint
 
-            app.MapPost(prefix + "/" + nameof(DefaultEntrypoint.HandleMethodStream), async ([FromBody] OperationRequest request, DefaultEntrypoint entrypoint) =>
-            {
-                var stream = await entrypoint.HandleMethodStream(request);
-                return SerializeStream(stream);             
-            });
+            //app.MapPost(prefix + "/" + nameof(DefaultEntrypoint.HandleMethodVoid), async ([FromBody] OperationRequest request, DefaultEntrypoint entrypoint) =>
+            //{
+            //    var response = await entrypoint.HandleMethodVoid(request);
+            //    return response;
+            //});
+
+            //app.MapPost(prefix + "/" + nameof(DefaultEntrypoint.HandleMethodStream), async ([FromBody] OperationRequest request, DefaultEntrypoint entrypoint) =>
+            //{
+            //    var stream = await entrypoint.HandleMethodStream(request);
+            //    return SerializeStream(stream);             
+            //});
+
+            var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
+            operationRegistry.MapControllers(app);
 
             app.UseWebSockets();
             app.UseMiddleware<HubconWebSocketMiddleware>();

@@ -11,11 +11,11 @@ namespace Hubcon.Shared.Entrypoint
         [HubconInject]
         public IRequestHandler RequestHandler { get; }
 
-        public async Task<IOperationResponse<JsonElement>> HandleMethodWithResult(IOperationRequest request)
-            => await RequestHandler.HandleWithResultAsync(request);
+        public Task<IOperationResponse<JsonElement>> HandleMethodWithResult(IOperationRequest request)
+            => RequestHandler.HandleWithResultAsync(request);
 
-        public async Task<IResponse> HandleMethodVoid(IOperationRequest request)
-            => await RequestHandler.HandleWithoutResultAsync(request);
+        public Task<IResponse> HandleMethodVoid(IOperationRequest request)
+            => RequestHandler.HandleWithoutResultAsync(request);
 
         public Task<IAsyncEnumerable<object?>> HandleMethodStream(IOperationRequest request) 
             => RequestHandler.GetStream(request);

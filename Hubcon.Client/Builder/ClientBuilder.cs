@@ -2,6 +2,7 @@
 using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.Subscriptions;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,9 +39,7 @@ namespace Hubcon.Client.Builder
 
             hubconClient?.Build(BaseUri!, HttpEndpoint, WebsocketEndpoint, AuthenticationManagerType, services, UseSecureConnection);
 
-            var newClient = (IClientProxy)services.GetRequiredService(proxyType);
-            var interceptor = services.GetRequiredService<IContractInterceptor>() as object;
-            newClient.UseInterceptor((AsyncInterceptorBase)interceptor);
+            var newClient = (BaseContractProxy)services.GetRequiredService(proxyType);
            
             foreach(var subscriptionProp in newClient.GetType().GetProperties().Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription))))
             {

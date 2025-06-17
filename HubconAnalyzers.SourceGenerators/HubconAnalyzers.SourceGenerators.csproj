@@ -12,7 +12,7 @@
 		<!-- Empaquetar como NuGet -->
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageId>HubconAnalyzers.SourceGenerators</PackageId>
-		<Version>1.0.14</Version>
+		<Version>1.0.36</Version>
 		<Authors>Brick-Logic</Authors>
 		<Company>Brick-Logic</Company>
 		<Description>Generador de codigo que crea proxies de cliente para contratos de Hubcon.</Description>
@@ -25,8 +25,6 @@
 
 	<ItemGroup>
 		<!-- Las APIs de Roslyn -->
-		<PackageReference Include="Castle.Core" Version="4.4.0" />
-		<PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all" />
 	</ItemGroup>

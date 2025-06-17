@@ -149,11 +149,11 @@ namespace Hubcon.Server.Core.Pipelines
                 else if (result is Task task)
                 {
                     var response = await GetTaskResultAsync(task, blueprint!.RawReturnType.GetGenericArguments()[0]);
-                    return new BaseOperationResponse(true, _converter.SerializeObject(response));
+                    return new BaseOperationResponse(true, response);
                 }
                 else
                 {
-                    return new BaseOperationResponse(true, _converter.SerializeObject(result));
+                    return new BaseOperationResponse(true, result);
                 }
             };
 

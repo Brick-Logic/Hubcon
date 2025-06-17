@@ -1,4 +1,7 @@
-﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Standard.Extensions;
+using Hubcon.Shared.Abstractions.Standard.Interceptor;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using HubconAnalyzers.SourceGenerators.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -50,8 +53,8 @@ namespace HubconAnalyzers.SourceGenerators
             var sb = new StringBuilder();
 
             sb.AppendLine($"#nullable enable");
-            sb.AppendLine($"using Castle.DynamicProxy;");
             sb.AppendLine($"using Hubcon.Shared.Abstractions.Models;");
+            sb.AppendLine($"using Hubcon.Shared.Abstractions.Standard.Interceptor;");
             sb.AppendLine($"using Hubcon.Shared.Abstractions.Standard.Interfaces;");
             sb.AppendLine($"using Hubcon.Shared.Core.Attributes;");
             sb.AppendLine($"using System.Diagnostics.CodeAnalysis;");
@@ -59,10 +62,8 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine($"using System.Runtime.CompilerServices;");
             sb.AppendLine($"");
             sb.AppendLine($"[HubconProxy]");
-            sb.AppendLine($"public class {proxyName} : {iface.ToDisplayString()}, {nameof(IClientProxy)}");
+            sb.AppendLine($"public class {proxyName} : {nameof(BaseContractProxy)}, {iface.ToDisplayString()}");
             sb.AppendLine($"{{");
-            sb.AppendLine($"    public AsyncInterceptorBase? Interceptor {{ get; private set; }}");
-
 
             foreach(var property in iface.GetMembers().OfType<IPropertySymbol>())
             {
@@ -76,16 +77,7 @@ namespace HubconAnalyzers.SourceGenerators
                 sb.AppendLine(type);
             }
 
-            sb.AppendLine("");
-            sb.AppendLine($"    public {proxyName}() {{ }}");
-            sb.AppendLine($"");
-            sb.AppendLine($"    public void UseInterceptor(AsyncInterceptorBase interceptor)");
-            sb.AppendLine($"    {{");
-            sb.AppendLine($"        if(Interceptor != null)");
-            sb.AppendLine($"            return;");
-            sb.AppendLine($"");
-            sb.AppendLine($"        Interceptor = interceptor;");
-            sb.AppendLine($"    }}");
+            sb.AppendLine($"    public {proxyName}({nameof(IClientProxyInterceptor)} interceptor) : base(interceptor) {{ }}");
             sb.AppendLine($"");
 
             foreach (var method in iface
@@ -97,46 +89,36 @@ namespace HubconAnalyzers.SourceGenerators
                 var methodName = method.Name;
                 var parameters = string.Join(", ", method.Parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"));
                 var paramNames = string.Join(", ", method.Parameters.Select(p => p.Name));
-                
-               
+
                 sb.AppendLine($"    public {returnType} {methodName}({parameters})");
                 sb.AppendLine($"    {{");
 
-                if(method.Parameters.Length  > 0)
-                {
-                    var parameterTypes = string.Join(", ", method.Parameters.Select(p => $"typeof({p.Type.ToDisplayString()})"));
-                    sb.AppendLine($"        MethodInfo method = typeof({iface.ToDisplayString()}).GetMethod(\"{methodName}\", new Type[] {{ {parameterTypes.Replace("?", "")} }})!;");        
-                }
-                else
-                {
-                    sb.AppendLine($"        MethodInfo method = typeof({iface.ToDisplayString()}).GetMethod(\"{methodName}\", Type.EmptyTypes)!;");
-                }
+                var stringMethodName = $"\"{method.GetMethodSignature()}\"";
+                var callMethod = "";
+                var AllParameters = "";
 
                 if (paramNames.Any())
-                    sb.AppendLine($"        SimpleInvocation invocation = new SimpleInvocation(this, Interceptor!, method, {string.Join(",", paramNames)});");
-                else
-                    sb.AppendLine($"        SimpleInvocation invocation = new SimpleInvocation(this, Interceptor!, method);");
+                    AllParameters = $", {string.Join(",", paramNames)}";
 
                 if (returnType == "void")
                 {
-                    sb.AppendLine($"        Interceptor!.InterceptSynchronous(invocation);");
+                    callMethod = $"{nameof(BaseContractProxy.CallAsync)}({stringMethodName}{AllParameters}).Wait();";
                 }
-                else if(returnType.StartsWith("System.Threading.Tasks.Task<"))
+                else if (returnType.StartsWith("System.Threading.Tasks.Task<"))
                 {
                     var generic = returnType.Replace("System.Threading.Tasks.Task<", "").TrimEnd('>');
-                    sb.AppendLine($"        Interceptor!.InterceptAsynchronous<{generic}>(invocation);");
-                    sb.AppendLine($"        return ({returnType})invocation.ReturnValue!;");
+                    callMethod = $"return {nameof(BaseContractProxy.InvokeAsync)}<{generic}>({stringMethodName}{AllParameters});";
                 }
                 else if (returnType.StartsWith("System.Threading.Tasks.Task"))
                 {
-                    sb.AppendLine($"        Interceptor!.InterceptAsynchronous(invocation);");
-                    sb.AppendLine($"        return ({returnType})invocation.ReturnValue!;");
+                    callMethod = $"return {nameof(BaseContractProxy.CallAsync)}({stringMethodName}{AllParameters});";
                 }
                 else
                 {
-                    sb.AppendLine($"        Interceptor!.InterceptSynchronous(invocation);");
-                    sb.AppendLine($"        return ({returnType})invocation.ReturnValue!;");
+                    callMethod = $"return {nameof(BaseContractProxy.InvokeAsync)}<{returnType}>({stringMethodName}{AllParameters}).Result;";
                 }
+
+                sb.AppendLine($"        {callMethod}");
 
                 sb.AppendLine($"    }}");
             }

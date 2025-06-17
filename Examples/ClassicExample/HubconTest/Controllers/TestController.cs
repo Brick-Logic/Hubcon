@@ -1,7 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestDomain;
-using Microsoft.Extensions.Configuration.EnvironmentVariables;
 
 namespace HubconTest.Controllers
 {

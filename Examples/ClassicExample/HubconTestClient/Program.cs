@@ -1,4 +1,5 @@
 ﻿using Hubcon.Client;
+using Hubcon.Shared.Core.Websockets.Interfaces;
 using HubconTestClient.Auth;
 using HubconTestClient.Modules;
 using HubconTestDomain;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace HubconTestClient
 {
@@ -17,9 +19,10 @@ namespace HubconTestClient
         {
             var builder = WebApplication.CreateBuilder();
 
-            builder.Services.AddSingleton<HttpClient>();
             builder.Services.AddHubconClient();
             builder.Services.AddRemoteServerModule<TestModule>();
+            builder.Logging.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
+            builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
 
             var app = builder.Build();
             var scope = app.Services.CreateScope();
@@ -32,16 +35,16 @@ namespace HubconTestClient
 
             logger.LogInformation("Esperando interacción antes de continuar...");
 
-            Console.ReadKey();
+            //Console.ReadKey();
 
-            Console.WriteLine($"Iniciando ingest...");
-            IAsyncEnumerable<string> source1 = GetMessages(15);
-            IAsyncEnumerable<string> source2 = GetMessages(10);
-            IAsyncEnumerable<string> source3 = GetMessages(15);
-            IAsyncEnumerable<string> source4 = GetMessages(20);
-            IAsyncEnumerable<string> source5 = GetMessages(25);
-            await client.IngestMessages(source1, source2, source3, source4, source5);
-            Console.WriteLine($"Ingest terminado.");
+            //Console.WriteLine($"Iniciando ingest...");
+            //IAsyncEnumerable<string> source1 = GetMessages(15);
+            //IAsyncEnumerable<string> source2 = GetMessages(10);
+            //IAsyncEnumerable<string> source3 = GetMessages(15);
+            //IAsyncEnumerable<string> source4 = GetMessages(20);
+            //IAsyncEnumerable<string> source5 = GetMessages(25);
+            //await client.IngestMessages(source1, source2, source3, source4, source5);
+            //Console.WriteLine($"Ingest terminado.");
 
             Console.ReadKey();
 
@@ -108,8 +111,18 @@ namespace HubconTestClient
                 logger.LogInformation($"Requests: {finishedRequestsCount} | Avg requests/s:{avgRequestsPerSec} | Max req/s: {maxReqs}| Received events: {eventosRecibidos} | Avg request time: {nanosecs / avgRequestsPerSec}");
                 lastRequests = finishedRequestsCount;
                 sw.Restart();
+                ThreadPool.GetAvailableThreads(out var workerThreads, out _);
+                logger.LogInformation($"Threads disponibles: {workerThreads}");
             };
             worker.Start();
+
+            //int i = 0;
+
+            //while (i < 10000)
+            //{
+            //    await client.CreateUser();
+            //    i++;
+            //}
 
             var tasks = Enumerable.Range(1, 1).Select(_ => Task.Run(async () =>
             {

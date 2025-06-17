@@ -1,7 +1,9 @@
 ﻿using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
@@ -28,9 +30,15 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public IEnumerable<AuthorizeAttribute> AuthorizationAttributes { get; }
         public Func<object?, object[], object?>? InvokeDelegate { get; }
         public IPipelineBuilder PipelineBuilder { get; }
+        public string Route { get; }
 
 
-        public OperationBlueprint(string operationName, Type contractType, Type controllerType, MemberInfo memberInfo, IPipelineBuilder pipelineBuilder, Func<object?, object[], object?>? invokeDelegate = null)
+        public OperationBlueprint(
+            string operationName, 
+            Type contractType, Type controllerType, 
+            MemberInfo memberInfo, 
+            IPipelineBuilder pipelineBuilder, 
+            Func<object?, object[], object?>? invokeDelegate = null)
         {
             ArgumentException.ThrowIfNullOrEmpty(operationName);
             ArgumentNullException.ThrowIfNull(contractType);
@@ -58,9 +66,15 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                        ? methodInfo.ReturnType.GetGenericArguments()[0]
                        : methodInfo.ReturnType;
 
+                Route = methodInfo.HasCustomAttribute<RouteAttribute>() 
+                    ? methodInfo.GetCustomAttribute<RouteAttribute>()!.Template
+                    : methodInfo.GetRoute();
+
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
 
-                var isStream = RawReturnType.IsGenericType && RawReturnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
+                var isStream = RawReturnType.IsGenericType 
+                    && RawReturnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
+
                 Kind = isStream ? OperationKind.Stream : OperationKind.Method;
             }
             else if (memberInfo is PropertyInfo propertyInfo)

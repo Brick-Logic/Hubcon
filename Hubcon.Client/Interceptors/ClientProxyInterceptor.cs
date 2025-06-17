@@ -1,10 +1,13 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Entrypoint;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 using System.Text.Json;
 
 namespace Hubcon.Client.Interceptors
@@ -12,17 +15,17 @@ namespace Hubcon.Client.Interceptors
     public class ClientProxyInterceptor(
         IHubconClient client,
         IDynamicConverter converter,
-        ILogger<ClientProxyInterceptor> logger) : AsyncInterceptorBase, IContractInterceptor
+        ILogger<ClientProxyInterceptor> logger) : IClientProxyInterceptor
     {
         public IHubconClient Client => client;
 
-        protected override async Task<TResult> InterceptAsync<TResult>(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task<TResult>> proceed)
+        public async Task<T> InvokeAsync<T>(MethodInfo method, params object[] arguments)
         {
-            TResult? result;
+            T result;
 
-            var methodName = invocation.Method.GetMethodSignature();
-            var contractName = invocation.Method.ReflectedType!.Name;
-            var resultType = typeof(TResult);
+            var methodName = method.GetMethodSignature();
+            var contractName = method.ReflectedType!.Name;
+            var resultType = typeof(T);
             logger.LogInformation(resultType.FullName);
             using var cts = new CancellationTokenSource();
 
@@ -38,12 +41,12 @@ namespace Hubcon.Client.Interceptors
                 OperationRequest request = new(
                     methodName,
                     contractName,
-                    converter.SerializeArgsToJson(invocation.Arguments)
+                    converter.SerializeArgsToJson(arguments)
                 );
 
                 IAsyncEnumerable<JsonElement> stream = Client.GetStream(request, cts.Token);
 
-                result = (TResult)streamMethod.Invoke(converter, new object[]
+                result = (T)streamMethod.Invoke(converter, new object[]
                 {
                     stream,
                     cts.Token
@@ -54,43 +57,41 @@ namespace Hubcon.Client.Interceptors
                 OperationRequest request = new(
                     methodName,
                     contractName,
-                    converter.SerializeArgsToJson(invocation.Arguments)
+                    converter.SerializeArgsToJson(arguments)
                 );
 
-                var response = await Client.SendAsync(
+                result = await Client.SendAsync<T>(
                     request,
-                    invocation.Method,
+                    method,
                     cts.Token
                 );
 
-                result = converter.DeserializeJsonElement<TResult>(response.Data);
             }
 
-            invocation.ReturnValue = result;
             return result!;
         }
 
-        protected override async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, Func<IInvocation, IInvocationProceedInfo, Task> proceed)
+        public Task CallAsync(MethodInfo method, params object[] arguments)
         {
-            var methodName = invocation.Method.GetMethodSignature();
-            var contractName = invocation.Method.ReflectedType!.Name;
+            var methodName = method.GetMethodSignature();
+            var contractName = method.ReflectedType!.Name;
             using var cts = new CancellationTokenSource();
 
-            if (invocation.Arguments.Any(EnumerableTools.IsAsyncEnumerable))
+            if (arguments.Length == 0 && arguments.Any(EnumerableTools.IsAsyncEnumerable))
             {
                 OperationRequest request = new(methodName, contractName, null);
 
-                await Client.Ingest(request, invocation.Arguments);
+                return Client.Ingest(request, arguments);
             }
             else
             {
                 OperationRequest request = new(
                     methodName,
                     contractName,
-                    converter.SerializeArgsToJson(invocation.Arguments)
+                    converter.SerializeArgsToJson(arguments)
                 );
 
-                await Client.CallAsync(request, invocation.Method, cts.Token);
+                return Client.CallAsync(request, method, cts.Token);
             }
         }
     }

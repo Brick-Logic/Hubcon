@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Microsoft.AspNetCore.Builder;
 
 namespace Hubcon.Server.Abstractions.Interfaces
 {
@@ -9,6 +10,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
 
         bool GetOperationBlueprint(IOperationRequest request, out IOperationBlueprint? value);
         bool GetOperationBlueprint(string contractName, string operationName, out IOperationBlueprint? value);
+        void MapControllers(WebApplication app);
         void RegisterOperations(Type controllerType, Action<IMiddlewareOptions>? options, out List<Action<ContainerBuilder>> servicesToInject);
     }
 }

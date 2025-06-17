@@ -16,7 +16,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
         IDynamicConverter dynamicConverter,
         ILiveSubscriptionRegistry liveSubscriptionRegistry) : IInternalRoutingMiddleware
     {
-
         public async Task Execute(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, PipelineDelegate next)
         {
             if (context.Blueprint.Kind == OperationKind.Method || context.Blueprint.Kind == OperationKind.Stream)
@@ -58,7 +57,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);
                 object? result = context.Blueprint!.InvokeDelegate?.Invoke(controller, context.Arguments!);
-
                 context.Result = await resultHandler.Invoke(result);
                 await next();
             }

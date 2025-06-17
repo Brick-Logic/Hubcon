@@ -50,11 +50,12 @@ namespace Hubcon.Client.Builder
         {
             Services = services;
 
+            services.AddHttpClient();
             services.AddSingleton<IProxyRegistry>(Proxies);
             services.AddSingleton<IClientBuilderRegistry>(ClientBuilders);
             services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
             services.AddSingleton<IDynamicConverter, DynamicConverter>();
-            services.AddSingleton<IContractInterceptor, ClientProxyInterceptor>();
+            services.AddSingleton<IClientProxyInterceptor, ClientProxyInterceptor>();
             services.AddSingleton<IHubconClient, HubconClient>();
             services.AddTransient(typeof(ClientSubscriptionHandler<>));
 

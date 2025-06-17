@@ -10,12 +10,13 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 
 namespace Hubcon.Client.Integration.Client
 {
     public class HubconClient(
         IDynamicConverter converter,
-        Lazy<HttpClient> clientFactory,
+        IHttpClientFactory clientFactory,
         ILogger<HubconClient> logger) : IHubconClient
     {
         private string _restHttpUrl = "";
@@ -24,40 +25,43 @@ namespace Hubcon.Client.Integration.Client
         Func<IAuthenticationManager?>? authenticationManagerFactory;
         HubconWebSocketClient client;
 
+        HttpClient httpClient = clientFactory.CreateClient();
+
         private bool IsStarted { get; set; }
-        public async Task<IOperationResponse<JsonElement>> SendAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
+        public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
         {
             try
             {
-                var bytes = converter.SerializeObject(request).ToString();
+                var bytes = converter.SerializeObject(request.Args).ToString();
                 using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
-                var httpRequest = new HttpRequestMessage(HttpMethod.Post, _restHttpUrl + $"/{nameof(DefaultEntrypoint.HandleMethodWithResult)}")
+                HttpMethod httpMethod = request.Args.Any() ? HttpMethod.Post : HttpMethod.Get;
+
+                var httpRequest = new HttpRequestMessage(httpMethod, _restHttpUrl + methodInfo.GetRoute())
                 {
                     Content = content
                 };
+
 
                 var authManager = authenticationManagerFactory?.Invoke();
 
                 if (authManager != null && authManager.IsSessionActive)
                     httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
 
-
-                var client = clientFactory.Value;
-                var response = await client.SendAsync(httpRequest, cancellationToken);
+                var response = await httpClient.SendAsync(httpRequest, cancellationToken);
 
                 var responseBytes = await response.Content.ReadAsByteArrayAsync();
                 var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
 
-                return converter.DeserializeJsonElement<BaseJsonResponse>(result)!;
+                return converter.DeserializeJsonElement<BaseOperationResponse<T>>(result)!.Data!;
             }
             catch (Exception ex)
             {
-                return new BaseJsonResponse(
+                return new BaseOperationResponse<T>(
                     false,
                     default,
                     ex.Message
-                );
+                ).Data!;
             }
 
         }
@@ -69,7 +73,9 @@ namespace Hubcon.Client.Integration.Client
                 var bytes = converter.SerializeObject(request).ToString();
                 using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
-                var httpRequest = new HttpRequestMessage(HttpMethod.Post, _restHttpUrl + $"/{nameof(DefaultEntrypoint.HandleMethodVoid)}")
+                HttpMethod httpMethod = request.Args.Any() ? HttpMethod.Post : HttpMethod.Get;
+
+                var httpRequest = new HttpRequestMessage(httpMethod, _restHttpUrl + methodInfo.GetRoute())
                 {
                     Content = content
                 };
@@ -79,9 +85,7 @@ namespace Hubcon.Client.Integration.Client
                 if (authManager != null && authManager.IsSessionActive)
                     httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
 
-
-                var client = clientFactory.Value;
-                var response = await client.SendAsync(httpRequest, cancellationToken);
+                var response = await httpClient.SendAsync(httpRequest, cancellationToken);
 
                 var responseBytes = await response.Content.ReadAsByteArrayAsync();
                 var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
@@ -108,7 +112,7 @@ namespace Hubcon.Client.Integration.Client
             {
                 await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
                 {
-                    var result = newEvent!.Clone();
+                    var result = newEvent!;
                     yield return result;
                 }
             }
@@ -136,7 +140,7 @@ namespace Hubcon.Client.Integration.Client
             {
                 await foreach (var newEvent in observer.GetAsyncEnumerable(cancellationToken))
                 {
-                    var result = newEvent!.Clone();
+                    var result = newEvent!;
                     yield return result;
                 }
             }
@@ -147,7 +151,7 @@ namespace Hubcon.Client.Integration.Client
         {
             if (IsBuilt) return;
 
-            var baseRestHttpUrl = $"{BaseUri!.AbsoluteUri}/{HttpEndpoint ?? "operation"}";
+            var baseRestHttpUrl = $"{BaseUri!.AbsoluteUri}";
             var baseRestWebsocketUrl = $"{BaseUri!.AbsoluteUri}/{WebsocketEndpoint ?? "ws"}";
 
             _restHttpUrl = useSecureConnection ? $"https://{baseRestHttpUrl}" : $"http://{baseRestHttpUrl}";

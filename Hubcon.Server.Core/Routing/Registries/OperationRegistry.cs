@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
@@ -9,6 +10,8 @@ using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.AspNetCore.Builder;
+using Hubcon.Server.Abstractions.Enums;
 
 namespace Hubcon.Server.Core.Routing.Registries
 {
@@ -75,6 +78,20 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                     contractMethods.TryAdd($"{descriptor.OperationName}", descriptor);
                     OnOperationRegistered?.Invoke(descriptor);
+                }
+            }
+        }
+
+        public void MapControllers(WebApplication app)
+        {
+            foreach(var operationskvp in AvailableOperations)
+            {
+                foreach (var operation in operationskvp.Value)
+                {
+                    if(operation.Value.OperationInfo is MethodInfo)
+                    {
+                        app.MapTypedEndpoint(operation.Value);
+                    }
                 }
             }
         }

@@ -21,5 +21,6 @@ namespace Hubcon.Server.Abstractions.Interfaces
         Type ReturnType { get; }
         Func<object?, object[], object?>? InvokeDelegate { get; }
         IPipelineBuilder PipelineBuilder { get; }
+        string Route { get; }
     }
 }

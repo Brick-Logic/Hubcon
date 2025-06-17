@@ -96,7 +96,7 @@ namespace Hubcon.Shared.Core.Serialization
         // 1. Convierte un objeto a JsonElement
         public JsonElement SerializeObject(object? value)
         {
-            return JsonSerializer.SerializeToElement(value, jsonSerializerOptions).Clone();
+            return JsonSerializer.SerializeToElement(value, jsonSerializerOptions);
         }
 
         public T DeserializeByteArray<T>(byte[] bytes)
@@ -123,7 +123,7 @@ namespace Hubcon.Shared.Core.Serialization
             if (element.ValueKind == JsonValueKind.Null)
                 return null;
 
-            return element.Clone().Deserialize(targetType, jsonSerializerOptions);
+            return element.Deserialize(targetType, jsonSerializerOptions);
         }
 
         // 3. Convierte un JsonElement a un objeto fuertemente tipado
@@ -132,7 +132,7 @@ namespace Hubcon.Shared.Core.Serialization
             if ( element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
                 return default;
 
-            return element.Clone().Deserialize<T>(jsonSerializerOptions);
+            return element.Deserialize<T>(jsonSerializerOptions);
         }
 
         // 4. Convierte una lista de JsonElements a objetos, según tipos dados
@@ -181,7 +181,7 @@ namespace Hubcon.Shared.Core.Serialization
             {
                 if (item is JsonElement typedItem)
                 {
-                    yield return typedItem.Clone();
+                    yield return typedItem;
                 }
                 else
                 {
