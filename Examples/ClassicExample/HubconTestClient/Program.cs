@@ -17,6 +17,18 @@ namespace HubconTestClient
 
         static async Task Main()
         {
+            var process = Process.GetCurrentProcess();
+
+            long coreMask = 0;
+            for (int i = 0; i <= 0; i++)
+            {
+                coreMask |= 1L << i;
+            }
+
+            process.ProcessorAffinity = (IntPtr)coreMask;
+            process.PriorityClass = ProcessPriorityClass.RealTime;
+
+
             var builder = WebApplication.CreateBuilder();
 
             builder.Services.AddHubconClient();
@@ -124,14 +136,23 @@ namespace HubconTestClient
             //    i++;
             //}
 
-            var tasks = Enumerable.Range(1, 1).Select(_ => Task.Run(async () =>
+            List<Task> tasks = Enumerable.Range(6, 6).Select(_ => Task.Run(async () =>
             {
                 while (true)
                 {
                     await client.CreateUser();
                     Interlocked.Add(ref finishedRequestsCount, 1);
                 }
-            })).ToArray();
+            })).ToList();
+
+            //tasks.AddRange(Enumerable.Range(5, 5).Select(_ => Task.Run(async () =>
+            //{
+            //    while (true)
+            //    {
+            //        await client.CreateUser().ConfigureAwait(false);
+            //        Interlocked.Add(ref finishedRequestsCount, 1);
+            //    }
+            //})).ToList());
 
             await Task.WhenAll(tasks);
         }

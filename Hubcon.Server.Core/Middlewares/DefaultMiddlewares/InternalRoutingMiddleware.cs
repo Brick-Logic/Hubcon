@@ -37,7 +37,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     else if (EnumerableTools.IsAsyncEnumerable(context.Arguments[i]!) 
                         && EnumerableTools.GetAsyncEnumerableType(context.Arguments[i]!) == typeof(IAsyncEnumerable<JsonElement>))
                     {
-                        context.Arguments[i] = await EnumerableTools.ConvertAsyncEnumerableDynamic(
+                        context.Arguments[i] = EnumerableTools.ConvertAsyncEnumerableDynamic(
                             type, 
                             (IAsyncEnumerable<JsonElement>)context.Arguments[i]!, 
                             dynamicConverter);
@@ -106,17 +106,19 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 var observer = new AsyncObserver<object>();
 
-                HubconEventHandler<object> hubconEventHandler = async (eventValue) =>
+                Task hubconEventHandler(object? eventValue)
                 {
                     try
                     {
-                        await observer.WriteToChannelAsync(eventValue!);
+                        observer.WriteToChannelAsync(eventValue!);
                     }
                     catch (Exception ex)
                     {
                         Console.Error.WriteLine($"Error al escribir al canal de observación: {ex}");
                     }
-                };
+
+                    return Task.CompletedTask;
+                }
 
                 subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
 

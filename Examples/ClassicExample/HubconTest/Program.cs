@@ -2,12 +2,42 @@ using Hubcon.Server.Injection;
 using HubconTest.Controllers;
 using HubconTest.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using System.Diagnostics;
 using System.Text;
 
 namespace HubconTest
 {
+    public static class Watcher
+    {
+        static System.Timers.Timer worker;
+
+        public static void Start(ILogger<object> logger)
+        {
+            var process = Process.GetCurrentProcess();
+
+            long coreMask = 0;
+            for (int i = 1; i <= 11; i++)
+            {
+                coreMask |= 1L << i;
+            }
+
+            process.ProcessorAffinity = (IntPtr)coreMask;
+            process.PriorityClass = ProcessPriorityClass.RealTime;
+
+            worker = new System.Timers.Timer();
+            worker.Interval = 1000;
+            worker.Elapsed += (sender, eventArgs) =>
+            {
+                ThreadPool.GetAvailableThreads(out var workerThreads, out _);
+                logger.LogInformation("Threads disponibles: " + workerThreads);
+            };
+            worker.Start();
+        }
+    }
+
     public class Program
     {
         public static string Key = "cITTqWy43KvkXYrBjvX9YTgs/wVo0qVJ2oXIiknta+k=";
@@ -88,6 +118,10 @@ namespace HubconTest
             app.MapControllers();
 
             app.UseHubcon();
+
+            var logger = app.Services.GetService<ILogger<object>>();
+
+            Watcher.Start(logger!);
 
             app.Run();
         }

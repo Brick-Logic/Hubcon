@@ -304,13 +304,13 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 observable.Subscribe(observer);
                 var cts = new CancellationTokenSource();
 
-                var hw = new HeartbeatWatcher(60, async () =>
+                var hw = new HeartbeatWatcher(60, () =>
                 {
                     observable.OnCompleted();
-                    await cts.CancelAsync();
                     _ingests.TryRemove(id, out var complete);
                     complete.Item2?.Cancel();
                     complete.Item2?.Dispose();
+                    return cts.CancelAsync();
                 });
 
                 _ingests.TryAdd(id, (observable, cts, hw));

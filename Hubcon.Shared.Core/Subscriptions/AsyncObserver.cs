@@ -9,7 +9,7 @@ namespace Hubcon.Shared.Core.Subscriptions
         private readonly Channel<T?> _channel = Channel.CreateUnbounded<T?>();
         private TaskCompletionSource<bool> _completed = new TaskCompletionSource<bool>();
 
-        public async Task WriteToChannelAsync(T? item)
+        public void WriteToChannelAsync(T? item)
         {
             _ = _channel.Writer.TryWrite(item);
         }

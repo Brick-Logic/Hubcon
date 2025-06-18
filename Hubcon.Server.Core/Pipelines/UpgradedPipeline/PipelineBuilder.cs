@@ -152,7 +152,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         {
             var middlewares = GetMiddlewares();
 
-            PipelineDelegate currentDelegate = () => { return Task.CompletedTask; };
+            PipelineDelegate currentDelegate = () => { return Task.FromResult(context); };
 
             foreach (Type middlewareType in middlewares.AsEnumerable().Reverse())
             {
@@ -160,23 +160,29 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
                 if (middlewareType.IsAssignableTo(typeof(IInternalRoutingMiddleware)))
                 {
-                    currentDelegate = async () =>
+                    currentDelegate = () =>
                     {
                         var middleware = (IInternalRoutingMiddleware)serviceProvider.GetRequiredService(middlewareType);
-                        await middleware.Execute(request, context, resultHandler, next);
+                        return middleware.Execute(request, context, resultHandler, next);
                     };
                 }
                 else
                 {
-                    currentDelegate = async () =>
+                    currentDelegate = () =>
                     {
                         var middleware = (IExecutableMiddleware)serviceProvider.GetRequiredService(middlewareType);
-                        await middleware.Execute(request, context, next);
+                        return middleware.Execute(request, context, next);
                     };
                 }
             }
 
-            return new PipelineExecutor(currentDelegate!, context);
+            async Task<IOperationContext> executionDelegate()
+            {
+                await currentDelegate.Invoke();
+                return context;
+            }
+
+            return new PipelineExecutor(executionDelegate);
         }
     }
 }

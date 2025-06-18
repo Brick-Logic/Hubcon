@@ -23,14 +23,14 @@ namespace Hubcon.Server.Core.Subscriptions
 
         public void AddHandler(HubconEventHandler<T> handler)
         {
-            HubconEventHandler<object> internalHandler = async (value) => await handler.Invoke((T?)value!);
+            Task internalHandler(object? value) => handler.Invoke((T?)value!);
             Handlers[handler] = internalHandler;
             OnEventReceived += internalHandler;
         }
 
         public void AddGenericHandler(HubconEventHandler<object> handler)
         {
-            HubconEventHandler<object> internalHandler = async (value) => await handler.Invoke((T?)value!);
+            Task internalHandler(object? value) => handler.Invoke((T?)value!);
             Handlers[handler] = internalHandler;
             OnEventReceived += internalHandler;
         }
@@ -49,14 +49,14 @@ namespace Hubcon.Server.Core.Subscriptions
             Handlers.Remove(handler);
         }
 
-        public async Task Subscribe()
+        public Task Subscribe()
         {
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
-        public async Task Unsubscribe()
+        public Task Unsubscribe()
         {
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         public void Build()

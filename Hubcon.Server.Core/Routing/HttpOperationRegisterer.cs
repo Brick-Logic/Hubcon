@@ -1,5 +1,5 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Helpers;
+//using Hubcon.Server.Core.Helpers;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Entrypoint;
@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.OpenApi.Models;
+//using Microsoft.OpenApi.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,7 +45,7 @@ namespace Hubcon.Server.Core.Routing
             {
                 if(blueprint.ParameterTypes.Length > 0)
                 {
-                    builder = app.MapPost(route, ([FromBody] JsonElement request, DefaultEntrypoint entrypoint, IDynamicConverter converter) =>
+                    builder = app.MapPost(route, ([FromBody] JsonElement request, IRequestHandler requestHandler, IDynamicConverter converter) =>
                     {
                         var operationRequest = new OperationRequest(
                             operationName, 
@@ -53,16 +53,16 @@ namespace Hubcon.Server.Core.Routing
                             converter.DeserializeJsonElement<JsonElement[]>(request)
                         );
 
-                        var res = entrypoint.HandleMethodWithResult(operationRequest);
+                        var res = requestHandler.HandleWithResultAsync(operationRequest);
                         return Results.Ok(res);
                     });
                 }
                 else
                 {
-                    builder = app.MapGet(route, (DefaultEntrypoint entrypoint) =>
+                    builder = app.MapGet(route, (IRequestHandler requestHandler) =>
                     {
                         var operationRequest = new OperationRequest(operationName, contractName);
-                        var res = entrypoint.HandleMethodWithResult(operationRequest);
+                        var res = requestHandler.HandleWithResultAsync(operationRequest);
                         return Results.Ok(res);
                     });
                 }
@@ -71,7 +71,7 @@ namespace Hubcon.Server.Core.Routing
             {
                 if(blueprint.ParameterTypes.Length > 0)
                 {
-                    builder = app.MapPost(route, ([FromBody] JsonElement request, DefaultEntrypoint entrypoint, IDynamicConverter converter) =>
+                    builder = app.MapPost(route, ([FromBody] JsonElement request, IRequestHandler requestHandler, IDynamicConverter converter) =>
                     {
                         var operationRequest = new OperationRequest(
                             operationName,
@@ -79,16 +79,16 @@ namespace Hubcon.Server.Core.Routing
                             converter.DeserializeJsonElement<JsonElement[]>(request)
                         );
 
-                        var res = entrypoint.HandleMethodVoid(operationRequest);
+                        var res = requestHandler.HandleWithoutResultAsync(operationRequest);
                         return Results.Ok(res);
                     });
                 }
                 else
                 {
-                    builder = app.MapGet(route, (DefaultEntrypoint entrypoint) =>
+                    builder = app.MapGet(route, (IRequestHandler requestHandler) =>
                     {
                         var operationRequest = new OperationRequest(operationName, contractName);
-                        var res = entrypoint.HandleMethodVoid(operationRequest);
+                        var res = requestHandler.HandleWithoutResultAsync(operationRequest);
                         return Results.Ok(res);
                     });
                 }

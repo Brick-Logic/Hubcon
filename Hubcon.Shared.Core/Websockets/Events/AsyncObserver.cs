@@ -8,9 +8,9 @@ namespace Hubcon.Shared.Core.Websockets.Events
         private readonly Channel<T?> _channel = Channel.CreateUnbounded<T?>();
         private TaskCompletionSource<bool> _completed = new TaskCompletionSource<bool>();
 
-        public async Task WriteToChannelAsync(T? item)
+        public void WriteToChannelAsync(T? item)
         {
-            await _channel.Writer.WriteAsync(item);
+            _ = _channel.Writer.TryWrite(item);
         }
 
         public IAsyncEnumerable<T?> GetAsyncEnumerable(CancellationToken cancellationToken)
@@ -56,7 +56,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
         public void OnNext(T value)
         {
             // Enviar el valor al canal
-            WriteToChannelAsync(value).ConfigureAwait(false);
+            WriteToChannelAsync(value);
         }
 
         public Task WaitUntilCompleted()

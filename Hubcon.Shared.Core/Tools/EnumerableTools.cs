@@ -106,7 +106,7 @@ namespace Hubcon.Shared.Core.Tools
             return method.Invoke(source, new object[] { CancellationToken.None });
         }
 
-        public static async Task<object> ConvertAsyncEnumerableDynamic(
+        public static object ConvertAsyncEnumerableDynamic(
             Type targetType,
             IAsyncEnumerable<JsonElement> source,
             IDynamicConverter converter)
@@ -117,7 +117,7 @@ namespace Hubcon.Shared.Core.Tools
                 .GetMethod(nameof(ConvertAsyncEnumerable), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)!
                 .MakeGenericMethod(targetType.GetGenericArguments()[0]);
 
-            var enumerable = await Task.Run(() => method.Invoke(null, new object[] { source, converter }));
+            var enumerable = method.Invoke(null, new object[] { source, converter });
             return enumerable;    
         }
 
