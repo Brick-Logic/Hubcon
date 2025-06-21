@@ -9,6 +9,7 @@ using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
 using System.Text.Json;
+using System.Collections.Concurrent;
 
 namespace Hubcon.Client.Interceptors
 {
@@ -18,6 +19,8 @@ namespace Hubcon.Client.Interceptors
         ILogger<ClientProxyInterceptor> logger) : IClientProxyInterceptor
     {
         public IHubconClient Client => client;
+
+        private static ConcurrentDictionary<Type, MethodInfo> _methodInfoCache = new();
 
         public async Task<T> InvokeAsync<T>(MethodInfo method, params object[] arguments)
         {
@@ -31,17 +34,15 @@ namespace Hubcon.Client.Interceptors
 
             if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
             {
-                var itemType = resultType.GetGenericArguments()[0];
+                var streamMethod = _methodInfoCache.GetOrAdd(
+                    resultType.GetGenericArguments()[0],
+                    x => typeof(IDynamicConverter).GetMethod(nameof(converter.ConvertStream))!.MakeGenericMethod(x));
 
-                var streamMethod = converter
-                    .GetType()
-                    .GetMethod(nameof(converter.ConvertStream))!
-                    .MakeGenericMethod(itemType);
 
                 OperationRequest request = new(
                     methodName,
                     contractName,
-                    converter.SerializeArgsToJson(arguments)
+                    arguments
                 );
 
                 IAsyncEnumerable<JsonElement> stream = Client.GetStream(request, cts.Token);
@@ -57,7 +58,7 @@ namespace Hubcon.Client.Interceptors
                 OperationRequest request = new(
                     methodName,
                     contractName,
-                    converter.SerializeArgsToJson(arguments)
+                    arguments
                 );
 
                 result = await Client.SendAsync<T>(
@@ -77,7 +78,7 @@ namespace Hubcon.Client.Interceptors
             var contractName = method.ReflectedType!.Name;
             using var cts = new CancellationTokenSource();
 
-            if (arguments.Length == 0 && arguments.Any(EnumerableTools.IsAsyncEnumerable))
+            if (arguments.Length != 0 && arguments.Any(EnumerableTools.IsAsyncEnumerable))
             {
                 OperationRequest request = new(methodName, contractName, null);
 
@@ -88,7 +89,7 @@ namespace Hubcon.Client.Interceptors
                 OperationRequest request = new(
                     methodName,
                     contractName,
-                    converter.SerializeArgsToJson(arguments)
+                    arguments
                 );
 
                 return Client.CallAsync(request, method, cts.Token);

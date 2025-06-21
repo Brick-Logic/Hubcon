@@ -1,17 +1,14 @@
-﻿using System.Net.WebSockets;
+﻿using Hubcon.Server.Core.Configuration;
+using Microsoft.Extensions.Options;
+using System.Net.WebSockets;
 using System.Text;
 
 namespace Hubcon.Server.Core.Websockets.Helpers
 {
-    public class WebSocketMessageReceiver
+    public class WebSocketMessageReceiver(WebSocket socket, IInternalServerOptions options)
     {
-        private readonly WebSocket _socket;
-        private readonly byte[] _buffer = new byte[8192];
-
-        public WebSocketMessageReceiver(WebSocket socket)
-        {
-            _socket = socket;
-        }
+        private readonly WebSocket _socket = socket;
+        private readonly byte[] _buffer = new byte[options.MaxWebSocketMessageSize];
 
         public async Task<string?> ReceiveAsync()
         {           

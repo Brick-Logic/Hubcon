@@ -5,30 +5,30 @@ using Hubcon.Shared.Core.Extensions;
 
 namespace Hubcon.Server.Core.Middlewares
 {
-    public class MiddlewareOptions : IMiddlewareOptions
+    public class ControllerOptions : IControllerOptions
     {
         IPipelineBuilder _builder;
         public List<Action<ContainerBuilder>> ServicesToInject;
 
-        public MiddlewareOptions(IPipelineBuilder builder, List<Action<ContainerBuilder>> servicesToInject)
+        public ControllerOptions(IPipelineBuilder builder, List<Action<ContainerBuilder>> servicesToInject)
         {
             _builder = builder;
             ServicesToInject = servicesToInject;
         }
 
-        public IMiddlewareOptions AddMiddleware<T>() where T : class, IMiddleware
+        public IControllerOptions AddMiddleware<T>() where T : class, IMiddleware
         {
             return AddMiddleware(typeof(T));
         }
 
-        public IMiddlewareOptions AddMiddleware(Type middlewareType)
+        public IControllerOptions AddMiddleware(Type middlewareType)
         {
             _builder.AddMiddleware(middlewareType);
             ServicesToInject.Add(x => x.RegisterWithInjector(y => y.RegisterType(middlewareType)));
             return this;
         }
 
-        public IMiddlewareOptions UseGlobalMiddlewaresFirst(bool? value = null)
+        public IControllerOptions UseGlobalMiddlewaresFirst(bool value = true)
         {
             _builder.UseGlobalMiddlewaresFirst(value);
             return this;

@@ -8,8 +8,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Ping
 {
-    public record class PingMessage() : BaseMessage(MessageType.ping)
-    {
-        public Guid Id { get; } = Guid.NewGuid();
-    }
+    public record class PingMessage(string Id = "") : BaseMessage(MessageType.ping, Id);
 }

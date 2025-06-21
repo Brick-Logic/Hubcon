@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
 {
-    public record class SubscriptionDataMessage(string Id, JsonElement Data) : BaseMessage(MessageType.subscription_data);
+    public record class SubscriptionDataMessage(string Id, JsonElement Data) : BaseMessage(MessageType.subscription_data, Id);
 }

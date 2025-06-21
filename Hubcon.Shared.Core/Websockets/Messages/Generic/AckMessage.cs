@@ -6,8 +6,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Generic
 {
-    public record class AckMessage() : BaseMessage(MessageType.ack)
-    {
-        public Guid Id { get; set; }
-    }
+    public record class AckMessage(string Id) : BaseMessage(MessageType.ack, Id);
 }

@@ -3,5 +3,5 @@ using System.Text.Json;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Streams
 {
-    public record class StreamInitMessage(string StreamId, JsonElement Payload) : BaseMessage(MessageType.stream_init);
+    public record class StreamInitMessage(string Id, JsonElement Payload) : BaseMessage(MessageType.stream_init, Id);
 }

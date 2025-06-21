@@ -1,19 +1,25 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.AspNetCore.Builder;
 
 namespace Hubcon.Server.Injection
 {
-    public class DefaultControllerOptions : IControllerOptions
+    public class DefaultServerOptions : IServerOptions
     {
-        public DefaultControllerOptions(WebApplicationBuilder builder, HubconServerBuilder hubconBuilder)
+        public DefaultServerOptions(WebApplicationBuilder builder, ServerBuilder hubconBuilder)
         {
             Builder = builder;
             HubconServerBuilder = hubconBuilder;
         }
 
         public WebApplicationBuilder Builder { get; }
-        public HubconServerBuilder HubconServerBuilder { get; }
+        public ServerBuilder HubconServerBuilder { get; }
+
+        public void ConfigureCore(Action<ICoreServerOptions> coreServerOptions)
+        {
+            HubconServerBuilder.ConfigureCore(coreServerOptions);
+        }
 
         public void AddGlobalMiddleware<T>()
         {
@@ -25,12 +31,12 @@ namespace Hubcon.Server.Injection
             HubconServerBuilder.AddGlobalMiddleware(middlewareType);
         }
 
-        public void AddController<T>(Action<IMiddlewareOptions>? options = null) where T : class, IControllerContract
+        public void AddController<T>(Action<IControllerOptions>? options = null) where T : class, IControllerContract
         {
             HubconServerBuilder.AddHubconController<T>(Builder, options);
         }
 
-        public void AddController(Type controllerType, Action<IMiddlewareOptions>? options = null)
+        public void AddController(Type controllerType, Action<IControllerOptions>? options = null)
         {
             HubconServerBuilder.AddHubconController(Builder, controllerType, options);
         }

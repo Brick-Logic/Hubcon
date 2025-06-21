@@ -10,14 +10,14 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
     {
         private bool timeoutExecuted = false;
         private readonly Func<Task> _onTimeout;
-        private readonly int _timeoutSeconds;
+        private readonly TimeSpan _timeoutSeconds;
 
         private CancellationTokenSource _cts = new();
         private Task _loop;
 
         private DateTime _lastHeartbeat = DateTime.UtcNow;
 
-        public HeartbeatWatcher(int timeoutSeconds, Func<Task> onTimeout)
+        public HeartbeatWatcher(TimeSpan timeoutSeconds, Func<Task> onTimeout)
         {
             _timeoutSeconds = timeoutSeconds;
             _onTimeout = onTimeout;
@@ -37,7 +37,7 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
                 await Task.Delay(_timeoutSeconds * 1000 / 5, token);
 
                 var elapsed = (DateTime.UtcNow - _lastHeartbeat).TotalSeconds;
-                if (elapsed > _timeoutSeconds)
+                if (TimeSpan.FromSeconds(elapsed) > _timeoutSeconds)
                 {
                     if (!timeoutExecuted)
                     {

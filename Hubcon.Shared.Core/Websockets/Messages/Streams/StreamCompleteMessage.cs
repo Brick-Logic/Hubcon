@@ -7,5 +7,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Streams
 {
-    public record class StreamCompleteMessage(string StreamId) : BaseMessage(MessageType.stream_complete);
+    public record class StreamCompleteMessage(string Id) : BaseMessage(MessageType.stream_complete, Id);
 }

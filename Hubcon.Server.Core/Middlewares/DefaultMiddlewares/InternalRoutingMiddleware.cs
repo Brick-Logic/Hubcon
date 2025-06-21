@@ -32,7 +32,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                     if (context.Arguments[i] is JsonElement)
                     {
-                        context.Arguments[i] = dynamicConverter.DeserializeJsonElement((JsonElement)context.Arguments[i]!, type);
+                        context.Arguments[i] = dynamicConverter.DeserializeData(type, context.Arguments[i]!);
                     }
                     else if (EnumerableTools.IsAsyncEnumerable(context.Arguments[i]!) 
                         && EnumerableTools.GetAsyncEnumerableType(context.Arguments[i]!) == typeof(IAsyncEnumerable<JsonElement>))

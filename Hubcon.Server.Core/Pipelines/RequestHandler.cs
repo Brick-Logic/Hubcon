@@ -186,7 +186,7 @@ namespace Hubcon.Server.Core.Pipelines
 
                 if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
                 {
-                    var id = _converter.DeserializeJsonElement<string>(arg);
+                    var id = _converter.DeserializeData<string>(arg);
                     var source = sources.TryGetValue(id!, out object? value);
                     arguments.Add(value);
                 }
@@ -225,7 +225,7 @@ namespace Hubcon.Server.Core.Pipelines
                 OperationName = request.OperationName,
                 RequestServices = _serviceProvider,
                 Blueprint = blueprint,
-                Arguments = arguments ?? _converter.DeserializeJsonArgs(request.Args, blueprint!.ParameterTypes).ToArray(),
+                Arguments = arguments ?? _converter.DeserializeArgs(blueprint!.ParameterTypes, request.Args).ToArray(),
                 HttpContext = _serviceProvider.GetRequiredService<IHttpContextAccessor>()?.HttpContext,
                 Request = request
             };

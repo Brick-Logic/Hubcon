@@ -19,7 +19,7 @@ namespace HubconTest
             var process = Process.GetCurrentProcess();
 
             long coreMask = 0;
-            for (int i = 1; i <= 11; i++)
+            for (int i = 4; i <= 11; i++)
             {
                 coreMask |= 1L << i;
             }
@@ -62,27 +62,24 @@ namespace HubconTest
             builder.Services.AddOpenApi();
 
             builder.AddHubconServer();
-            builder.ConfigureHubconServer(controllerOptions =>
+            builder.ConfigureHubconServer(serverOptions =>
             {
-                //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
-                //controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
-                //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
-                //controllerOptions.AddGlobalMiddleware<AuthenticationMiddleware>();
+                serverOptions.ConfigureCore(coreOptions =>
+                    coreOptions
+                        .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
+                        .SetHttpTimeout(TimeSpan.FromSeconds(15))
+                        .AllowWebSocketIngest()
+                        .AllowWebSocketSubscriptions()
+                        .AllowWebSocketNormalMethods()
+                        .RequirePing()
+                        .EnableWebSocketPong()
+                );
 
-                controllerOptions.AddController<TestController>(controllerMiddlewares =>
-                {
-                    //controllerMiddlewares.AddMiddleware<LocalLoggingMiddleware>();
-                    controllerMiddlewares.UseGlobalMiddlewaresFirst(true);
-                });
+                serverOptions.AddGlobalMiddleware<ExceptionMiddleware>();
 
-                controllerOptions.AddController<SecondTestController>(controllerMiddlewares =>
-                {
-                    //controllerMiddlewares.AddMiddleware<LocalLoggingMiddleware>();
-                    controllerMiddlewares.UseGlobalMiddlewaresFirst(true);
-                });
+                serverOptions.AddController<TestController>();
+                serverOptions.AddController<SecondTestController>();
             });
-
-            //builder.UseContractsFromAssembly(nameof(HubconTestDomain));
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
@@ -116,12 +113,12 @@ namespace HubconTest
             app.UseAuthorization();
 
             app.MapControllers();
+            app.MapHubconControllers();
+            app.UseHubconWebsockets();
 
-            app.UseHubcon();
+            //var logger = app.Services.GetService<ILogger<object>>();
 
-            var logger = app.Services.GetService<ILogger<object>>();
-
-            Watcher.Start(logger!);
+            //Watcher.Start(logger!);
 
             app.Run();
         }

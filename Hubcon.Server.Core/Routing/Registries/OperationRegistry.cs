@@ -21,7 +21,7 @@ namespace Hubcon.Server.Core.Routing.Registries
 
         private Dictionary<string, Dictionary<string, IOperationBlueprint>> AvailableOperations = new();
 
-        public void RegisterOperations(Type controllerType, Action<IMiddlewareOptions>? options, out List<Action<ContainerBuilder>> servicesToInject)
+        public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, out List<Action<ContainerBuilder>> servicesToInject)
         {
             if (!typeof(IControllerContract).IsAssignableFrom(controllerType))
                 throw new NotImplementedException($"El tipo {controllerType.FullName} no implementa la interfaz {nameof(IControllerContract)} o un tipo derivado.");
@@ -53,7 +53,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                     Func<object?, object[], object?> action = BuildInvoker(method);
 
                     var pipelineBuilder = new PipelineBuilder();
-                    var middlewareOptions = new MiddlewareOptions(pipelineBuilder, servicesToInject);
+                    var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);
 
                     options?.Invoke(middlewareOptions);
 
@@ -70,7 +70,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                 foreach (var propertyInfo in subscriptions)
                 {
                     var pipelineBuilder = new PipelineBuilder();
-                    var middlewareOptions = new MiddlewareOptions(pipelineBuilder, servicesToInject);
+                    var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);
 
                     options?.Invoke(middlewareOptions);
 

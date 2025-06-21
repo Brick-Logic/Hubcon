@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -12,21 +13,35 @@ namespace Hubcon.Shared.Abstractions.Standard.Extensions
 
         public static string GetMethodSignature(this MethodInfo method)
         {
-            if(_signatureCache.TryGetValue(method, out var signature))
+            return _signatureCache.GetOrAdd(method, x =>
             {
-                return signature;
+                string methodName = method.Name;
+                string parameters = string.Join(", ",
+                    method.GetParameters()
+                          .Select(p => GetRuntimeTypeString(p.ParameterType)));
+
+                return $"{methodName}({parameters})";
+            });
+        }
+
+        static string GetRuntimeTypeString(Type type)
+        {
+            if (type.IsGenericType)
+            {
+                var genericDef = type.GetGenericTypeDefinition(); // ej: IAsyncEnumerable`1
+                var typeName = genericDef.FullName ?? genericDef.Name;
+
+                var args = type.GetGenericArguments()
+                               .Select(GetRuntimeTypeString);
+                return $"{typeName}[{string.Join(",", args)}]";
+            }
+            else if (type.IsArray)
+            {
+                return $"{GetRuntimeTypeString(type.GetElementType())}[]";
             }
             else
             {
-                List<string> identifiers = new List<string>()
-                {
-                    method.Name
-                };
-
-                identifiers.AddRange(method.GetParameters().Select(p => p.ParameterType.Name));
-                var result = string.Join("_", identifiers);
-                _signatureCache.TryAdd(method, result);
-                return result;
+                return type.FullName ?? type.Name;
             }
         }
 

@@ -3,6 +3,7 @@ using Autofac.Extensions.DependencyInjection;
 using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.Registries;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Injectors;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
@@ -21,30 +22,31 @@ using System.Reflection;
 
 namespace Hubcon.Server
 {
-    public class HubconServerBuilder
+    public class ServerBuilder
     {
         private IProxyRegistry Proxies { get; } = new ProxyRegistry();
         private ILiveSubscriptionRegistry SubscriptionRegistry { get; } = new LiveSubscriptionRegistry();
         private IOperationRegistry OperationRegistry { get; } = new OperationRegistry();
         private List<Action<ContainerBuilder>> ServicesToInject { get; } = new();
         private List<Type> ProxiesToRegister { get; } = new();
+        private CoreServerOptions ServerOptions { get; } = new();
 
 
-        private static HubconServerBuilder _current = null!;
-        public static HubconServerBuilder Current
+        private static ServerBuilder _current = null!;
+        public static ServerBuilder Current
         {
             get
             {
-                _current ??= new HubconServerBuilder();
+                _current ??= new ServerBuilder();
                 return _current;
             }
         }
 
-        private HubconServerBuilder()
+        private ServerBuilder()
         {              
         }
 
-        public HubconServerBuilder AddHubconServer(
+        internal ServerBuilder AddHubconServer(
             WebApplicationBuilder builder,
             params Action<ContainerBuilder>?[] additionalServices)
         {
@@ -58,6 +60,7 @@ namespace Hubcon.Server
                     ProxiesToRegister.ForEach(x => container.RegisterWithInjector(y => y.RegisterType(x).AsTransient()));
 
                 container
+                    .RegisterWithInjector(x => x.RegisterInstance(ServerOptions).As<IInternalServerOptions>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterInstance(OperationRegistry).As<IOperationRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterInstance(Proxies).As<IProxyRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterInstance(SubscriptionRegistry).As<ILiveSubscriptionRegistry>().AsSingleton())
@@ -80,7 +83,7 @@ namespace Hubcon.Server
             return this;
         }
 
-        public ContainerBuilder AddHubconControllersFromAssembly(ContainerBuilder container, Assembly assembly, Action<IMiddlewareOptions>? globalMiddlewareOptions = null)
+        internal ContainerBuilder AddHubconControllersFromAssembly(ContainerBuilder container, Assembly assembly, Action<IControllerOptions>? globalMiddlewareOptions = null)
         {
             var contracts = assembly
                 .GetTypes()
@@ -98,7 +101,7 @@ namespace Hubcon.Server
             return container;
         }
 
-        public ContainerBuilder AddHubconEntrypoint(ContainerBuilder container, Type hubconEntrypointType)
+        internal ContainerBuilder AddHubconEntrypoint(ContainerBuilder container, Type hubconEntrypointType)
         {
             if (!hubconEntrypointType.IsAssignableTo(typeof(DefaultEntrypoint)))
                 throw new ArgumentException($"El tipo {hubconEntrypointType.Name} no es compatible con la clase {nameof(DefaultEntrypoint)}");
@@ -106,16 +109,16 @@ namespace Hubcon.Server
             return container.RegisterWithInjector(x => x.RegisterType(hubconEntrypointType));
         }
 
-        public WebApplicationBuilder AddHubconController<T>(WebApplicationBuilder builder, Action<IMiddlewareOptions>? options = null) 
+        internal WebApplicationBuilder AddHubconController<T>(WebApplicationBuilder builder, Action<IControllerOptions>? options = null) 
             where T : class, IControllerContract
         {
             return AddHubconController(builder, typeof(T), options);
         }
 
-        public WebApplicationBuilder AddHubconController(
+        internal WebApplicationBuilder AddHubconController(
             WebApplicationBuilder builder,
             Type controllerType,
-            Action<IMiddlewareOptions>? options = null)
+            Action<IControllerOptions>? options = null)
         {
             List<Type> implementationTypes = controllerType
                 .GetInterfaces()
@@ -141,8 +144,8 @@ namespace Hubcon.Server
             return builder;
         }
 
-        public void AddGlobalMiddleware<TMiddleware>() => AddGlobalMiddleware(typeof(TMiddleware));
-        public void AddGlobalMiddleware(Type middlewareType)
+        internal void AddGlobalMiddleware<TMiddleware>() => AddGlobalMiddleware(typeof(TMiddleware));
+        internal void AddGlobalMiddleware(Type middlewareType)
         {
             if (!middlewareType.IsAssignableTo(typeof(IMiddleware)))
                 throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(IMiddleware)}");
@@ -153,6 +156,11 @@ namespace Hubcon.Server
                 .RegisterWithInjector(x => x
                     .RegisterType(middlewareType)
                         .IfNotRegistered(middlewareType)));
+        }
+
+        internal void ConfigureCore(Action<ICoreServerOptions> coreServerOptions)
+        {
+            coreServerOptions.Invoke(ServerOptions);
         }
     }
 }

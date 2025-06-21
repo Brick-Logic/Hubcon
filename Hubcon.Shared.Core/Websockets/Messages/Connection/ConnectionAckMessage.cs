@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Connection
 {
-    public record class ConnectionAckMessage() : BaseMessage(MessageType.connection_ack);
+    public record class ConnectionAckMessage(string Id = "") : BaseMessage(MessageType.connection_ack, Id);
 }

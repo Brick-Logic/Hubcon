@@ -22,16 +22,16 @@ namespace Hubcon.Client.Builder
             Proxies = new();
             ClientBuilders = new ClientBuilderRegistry(Proxies);
 
-            var worker2 = new System.Timers.Timer();
-            worker2.Interval = 10000;
-            worker2.Elapsed += (sender, eventArgs) =>
-            {
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-                GC.Collect();
-            };
-            worker2.AutoReset = true;
-            worker2.Start();
+            //var worker2 = new System.Timers.Timer();
+            //worker2.Interval = 10000;
+            //worker2.Elapsed += (sender, eventArgs) =>
+            //{
+            //    GC.Collect();
+            //    GC.WaitForPendingFinalizers();
+            //    GC.Collect();
+            //};
+            //worker2.AutoReset = true;
+            //worker2.Start();
         }
 
         private static HubconClientBuilder _current = null!;

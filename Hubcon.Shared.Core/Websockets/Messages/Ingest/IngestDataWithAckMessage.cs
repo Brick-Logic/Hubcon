@@ -9,5 +9,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
 {
-    public record class IngestDataWithAckMessage(string Id, JsonElement Data) : BaseMessage(MessageType.ingest_data_with_ack);
+    public record class IngestDataWithAckMessage(string Id, JsonElement Data) : BaseMessage(MessageType.ingest_data_with_ack, Id);
 }

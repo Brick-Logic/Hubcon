@@ -6,6 +6,8 @@ using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
+using System.Reflection;
 
 namespace Hubcon.Client.Builder
 {
@@ -16,6 +18,10 @@ namespace Hubcon.Client.Builder
         public Type? AuthenticationManagerType { get; set; }
         public string? HttpEndpoint { get; set; }
         public string? WebsocketEndpoint { get; set; }
+        private ConcurrentDictionary<Type, Type> _subTypesCache { get; } = new();
+        private ConcurrentDictionary<Type, IEnumerable<PropertyInfo>> _propTypesCache { get; } = new();
+
+
 
         public bool UseSecureConnection { get; set; } = true;
         private Dictionary<Type, object> _clients { get; } = new();
@@ -40,13 +46,20 @@ namespace Hubcon.Client.Builder
             hubconClient?.Build(BaseUri!, HttpEndpoint, WebsocketEndpoint, AuthenticationManagerType, services, UseSecureConnection);
 
             var newClient = (BaseContractProxy)services.GetRequiredService(proxyType);
-           
-            foreach(var subscriptionProp in newClient.GetType().GetProperties().Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription))))
+
+            var props = _propTypesCache.GetOrAdd(
+                proxyType,
+                x => x.GetProperties().Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription))));
+
+            foreach (var subscriptionProp in props)
             {
                 var value = subscriptionProp.GetValue(newClient, null);
                 if (value == null)
                 {
-                    var genericType = typeof(ClientSubscriptionHandler<>).MakeGenericType(subscriptionProp.PropertyType.GenericTypeArguments[0]);
+                    var genericType = _subTypesCache.GetOrAdd(
+                        subscriptionProp.PropertyType.GenericTypeArguments[0], 
+                        x => typeof(ClientSubscriptionHandler<>).MakeGenericType(x));
+
                     var subscriptionInstance = (ISubscription)services.GetRequiredService(genericType);
                     PropertyTools.AssignProperty(newClient, subscriptionProp, subscriptionInstance);
                     PropertyTools.AssignProperty(subscriptionInstance, nameof(subscriptionInstance.Property), subscriptionProp);

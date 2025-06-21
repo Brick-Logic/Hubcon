@@ -45,24 +45,24 @@ namespace Hubcon.Server.Core.Routing
             {
                 if(blueprint.ParameterTypes.Length > 0)
                 {
-                    builder = app.MapPost(route, ([FromBody] JsonElement request, IRequestHandler requestHandler, IDynamicConverter converter) =>
+                    builder = app.MapPost(route, async ([FromBody] JsonElement request, IRequestHandler requestHandler, IDynamicConverter converter) =>
                     {
                         var operationRequest = new OperationRequest(
                             operationName, 
                             contractName, 
-                            converter.DeserializeJsonElement<JsonElement[]>(request)
+                            converter.DeserializeData<List<object>>(request)
                         );
 
-                        var res = requestHandler.HandleWithResultAsync(operationRequest);
+                        var res = await requestHandler.HandleWithResultAsync(operationRequest);
                         return Results.Ok(res);
                     });
                 }
                 else
                 {
-                    builder = app.MapGet(route, (IRequestHandler requestHandler) =>
+                    builder = app.MapGet(route, async (IRequestHandler requestHandler) =>
                     {
                         var operationRequest = new OperationRequest(operationName, contractName);
-                        var res = requestHandler.HandleWithResultAsync(operationRequest);
+                        var res = await requestHandler.HandleWithResultAsync(operationRequest);
                         return Results.Ok(res);
                     });
                 }
@@ -71,24 +71,24 @@ namespace Hubcon.Server.Core.Routing
             {
                 if(blueprint.ParameterTypes.Length > 0)
                 {
-                    builder = app.MapPost(route, ([FromBody] JsonElement request, IRequestHandler requestHandler, IDynamicConverter converter) =>
+                    builder = app.MapPost(route, async ([FromBody] JsonElement request, IRequestHandler requestHandler, IDynamicConverter converter) =>
                     {
                         var operationRequest = new OperationRequest(
                             operationName,
                             contractName,
-                            converter.DeserializeJsonElement<JsonElement[]>(request)
+                            converter.DeserializeData<List<object>>(request)
                         );
 
-                        var res = requestHandler.HandleWithoutResultAsync(operationRequest);
+                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest);
                         return Results.Ok(res);
                     });
                 }
                 else
                 {
-                    builder = app.MapGet(route, (IRequestHandler requestHandler) =>
+                    builder = app.MapGet(route, async (IRequestHandler requestHandler) =>
                     {
                         var operationRequest = new OperationRequest(operationName, contractName);
-                        var res = requestHandler.HandleWithoutResultAsync(operationRequest);
+                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest);
                         return Results.Ok(res);
                     });
                 }

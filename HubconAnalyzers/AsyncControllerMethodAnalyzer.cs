@@ -13,8 +13,8 @@ namespace HubconAnalyzers
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,
-            title: "Método síncrono en controller",
-            messageFormat: "El método '{0}' está en un controller y no retorna Task ni Task<T>. Esto puede bloquear el hilo del cliente.",
+            title: "Sync method on a hubcon controller",
+            messageFormat: "The method '{0}' does not return Task or Task<T>. If the client uses hubcon automatic integration, the method invocation could block the client's main thread.",
             category: "Hubcon",
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true

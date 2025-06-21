@@ -1,9 +1,11 @@
 ﻿using Castle.Core.Logging;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Xml.Linq;
 
 namespace Hubcon.Shared.Core.Serialization
 {
@@ -17,7 +19,6 @@ namespace Hubcon.Shared.Core.Serialization
             WriteIndented = true,
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
             MaxDepth = 64,
-
         };
 
         public object?[] SerializeArgs(object?[] args)
@@ -33,46 +34,56 @@ namespace Hubcon.Shared.Core.Serialization
             return args;
         }
 
-        public object?[] DeserializeArgs(Type[] types, object?[] args)
+        public IEnumerable<object?> DeserializeArgs(IEnumerable<Type> types, IEnumerable<object?> args)
         {
-            if (types.Length == 0) return Array.Empty<object>();
+            if (!types.Any() || !args.Any()) 
+                return [];
 
-            if (types.Length != args.Length)
-                throw new ArgumentException("El número de tipos y valores debe coincidir.");
+            if (types.Count() != args.Count())
+                return [];
 
-            for (int i = 0; i < types.Length; i++)
+            var typesEnumerator = types.GetEnumerator();
+            var argsEnumerator = args.GetEnumerator();
+            var list = new List<object?>();
+
+            int i = 0;
+            while(typesEnumerator.MoveNext() && argsEnumerator.MoveNext())
             {
-                if (typeof(IAsyncEnumerable<JsonElement>).IsAssignableFrom(types[i]))
-                    args[i] = (IAsyncEnumerable<JsonElement>?)args[i];
+                if (argsEnumerator.Current == null)
+                    list.Add(null);
 
-                if (typeof(IAsyncEnumerable<>).IsAssignableFrom(types[i]))
-                    args[i] = (IAsyncEnumerable<object>?)args[i];
+                else if (argsEnumerator.Current is JsonElement element)
+                    list.Add(JsonSerializer.Deserialize(element, typesEnumerator.Current));
 
-                args[i] = Newtonsoft.Json.JsonConvert.DeserializeObject($"{args[i]}", types[i]);
+                else if (typeof(IAsyncEnumerable<JsonElement>).IsAssignableFrom(typesEnumerator.Current))
+                    list.Add((IAsyncEnumerable<JsonElement>?)argsEnumerator.Current);
+
+                else if (typeof(IAsyncEnumerable<>).IsAssignableFrom(typesEnumerator.Current))
+                    list.Add((IAsyncEnumerable<object>?)argsEnumerator.Current);
+
+                else if (argsEnumerator.Current != null)
+                    list.Add(JsonSerializer.Deserialize(argsEnumerator.Current.ToString()!, typesEnumerator.Current));
+
+                i++;
             }
 
-            return args;
+            return list;
         }
 
-        public object?[] DeserializedArgs(Delegate del, object?[] args)
+        private static ConcurrentDictionary<Delegate, Type[]> _delegateParametersCache = new();
+
+        public IEnumerable<object?> DeserializedArgs(Delegate del, IEnumerable<object?> args)
         {
-            if (args.Length == 0) return Array.Empty<object>();
+            if (!args.Any()) return [];
 
             Type[] parameterTypes;
 
-            if (TypeCache.TryGetValue(del, out var types))
-            {
-                parameterTypes = types;
-            }
-            else
-            {
-                parameterTypes = del
+            parameterTypes = _delegateParametersCache.GetOrAdd(del, x => x
                 .GetMethodInfo()
                 .GetParameters()
                 .Where(p => !p.ParameterType.FullName?.Contains("System.Runtime.CompilerServices.Closure") ?? true)
                 .Select(p => p.ParameterType)
-                .ToArray();
-            }
+                .ToArray());           
 
             return DeserializeArgs(parameterTypes, args);
         }
@@ -81,15 +92,17 @@ namespace Hubcon.Shared.Core.Serialization
         public object? DeserializeData(Type type, object data) => data == null ? null : Newtonsoft.Json.JsonConvert.DeserializeObject($"{data}", type);
         public T? DeserializeData<T>(object? data)
         {
-            if (data == null) return default;
+            if (data == null) 
+                return default;
 
-            if (typeof(IAsyncEnumerable<JsonElement>).IsAssignableFrom(typeof(T)))
+            else if(data is JsonElement element)
+                return JsonSerializer.Deserialize<T>(element, jsonSerializerOptions);
+
+            else if (typeof(T).IsAssignableFrom(data.GetType()))
                 return (T)data;
 
-            if (typeof(IAsyncEnumerable<object>).IsAssignableFrom(typeof(T)))
-                return (T)data;
-
-            return (T?)DeserializeData(typeof(T), data);       
+            else
+                return default;
         }
 
 

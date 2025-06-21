@@ -163,7 +163,7 @@ namespace Hubcon.Client.Integration.Client
                 authenticationManagerFactory = () => (IAuthenticationManager)((dynamic)services.GetRequiredService(lazyAuthType)).Value;
             }
 
-            client = new HubconWebSocketClient(new Uri(_websocketUrl), converter);
+            client = new HubconWebSocketClient(new Uri(_websocketUrl), converter, services.GetRequiredService<ILogger<HubconWebSocketClient>>());
 
             IsBuilt = true;
         }

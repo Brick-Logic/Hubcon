@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
 {
-    public record class IngestInitAckMessage(string Id) : BaseMessage(MessageType.ingest_init_ack);
+    public record class IngestInitAckMessage(string Id) : BaseMessage(MessageType.ingest_init_ack, Id);
 }

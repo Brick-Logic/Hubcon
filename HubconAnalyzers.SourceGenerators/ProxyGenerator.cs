@@ -93,7 +93,7 @@ namespace HubconAnalyzers.SourceGenerators
                 sb.AppendLine($"    public {returnType} {methodName}({parameters})");
                 sb.AppendLine($"    {{");
 
-                var stringMethodName = $"\"{method.GetMethodSignature()}\"";
+                var stringMethodName = $"\"{method.GetMethodSymbolSignature()}\"";
                 var callMethod = "";
                 var AllParameters = "";
 
