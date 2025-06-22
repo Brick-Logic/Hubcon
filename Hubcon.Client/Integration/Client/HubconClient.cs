@@ -70,7 +70,7 @@ namespace Hubcon.Client.Integration.Client
         {
             try
             {
-                var bytes = converter.SerializeObject(request).ToString();
+                var bytes = converter.SerializeObject(request.Args).ToString();
                 using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
                 HttpMethod httpMethod = request.Args.Any() ? HttpMethod.Post : HttpMethod.Get;

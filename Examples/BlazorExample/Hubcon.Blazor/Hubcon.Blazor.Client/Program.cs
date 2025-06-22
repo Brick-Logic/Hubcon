@@ -16,7 +16,7 @@ namespace Hubcon.Blazor.Client
             
             builder.Services.AddHubconClient();
             builder.Services.AddRemoteServerModule<TestModule>();
-            builder.Services.AddSingleton<HttpClient, HubconHttpClient>();
+            //builder.Services.AddSingleton<HttpClient, HubconHttpClient>();
 
 
             var app = builder.Build();

@@ -55,16 +55,16 @@ namespace Hubcon.Server.Injection
             return app;
         }
 
-        public static WebApplication UseHubcon(this WebApplication app, string path = "operation")
-        {
-            var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
-            operationRegistry.MapControllers(app);
+        //public static WebApplication UseHubcon(this WebApplication app, string path = "operation")
+        //{
+        //    var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
+        //    operationRegistry.MapControllers(app);
 
-            app.UseWebSockets();
-            app.UseMiddleware<HubconWebSocketMiddleware>();
+        //    app.UseWebSockets();
+        //    app.UseMiddleware<HubconWebSocketMiddleware>();
 
-            return app;
-        }
+        //    return app;
+        //}
 
         static async IAsyncEnumerable<JsonElement> SerializeStream(IAsyncEnumerable<object?> source)
         {

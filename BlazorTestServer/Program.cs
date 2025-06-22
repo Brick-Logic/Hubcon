@@ -1,5 +1,6 @@
 using BlazorTestServer.Controllers;
 using BlazorTestServer.Middlewares;
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Injection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -35,24 +36,22 @@ namespace BlazorTestServer
             builder.Services.AddOpenApi();
 
             builder.AddHubconServer();
-            builder.ConfigureHubconServer(controllerOptions =>
+            builder.ConfigureHubconServer(serverOptions =>
             {
-                //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
-                controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
-                //controllerOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
-                //controllerOptions.AddGlobalMiddleware<AuthenticationMiddleware>();
+                serverOptions.ConfigureCore(coreOptions =>
+                    coreOptions
+                        .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
+                        .SetHttpTimeout(TimeSpan.FromSeconds(15))
+                        .AllowWebSocketIngest()
+                        .AllowWebSocketSubscriptions()
+                        .AllowWebSocketNormalMethods()
+                        .RequirePing()
+                        .EnableWebSocketPong()
+                );
 
-                controllerOptions.AddController<TestController>(controllerMiddlewares =>
-                {
-                    //controllerMiddlewares.AddMiddleware<LocalLoggingMiddleware>();
-                    controllerMiddlewares.UseGlobalMiddlewaresFirst(true);
-                });
-
-                controllerOptions.AddController<SecondTestController>(controllerMiddlewares =>
-                {
-                    //controllerMiddlewares.AddMiddleware<LocalLoggingMiddleware>();
-                    controllerMiddlewares.UseGlobalMiddlewaresFirst(true);
-                });
+                serverOptions.AddGlobalMiddleware<ExceptionMiddleware>();
+                serverOptions.AddController<TestController>();
+                serverOptions.AddController<SecondTestController>();
             });
 
             //builder.UseContractsFromAssembly(nameof(HubconTestDomain));
@@ -91,7 +90,8 @@ namespace BlazorTestServer
 
             app.MapControllers();
 
-            app.UseHubcon();
+            app.MapHubconControllers();
+            app.UseHubconWebsockets();
 
             app.Run();
         }

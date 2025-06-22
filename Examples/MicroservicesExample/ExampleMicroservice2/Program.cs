@@ -12,7 +12,6 @@ namespace ExampleMicroservice2
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddSingleton<HttpClient>();
             builder.Services.AddHubconClient();
             builder.Services.AddRemoteServerModule<Microservice3ServerModule>();
 
@@ -32,7 +31,8 @@ namespace ExampleMicroservice2
 
             var app = builder.Build();
 
-            app.UseHubcon();
+            app.MapHubconControllers();
+            app.UseHubconWebsockets();
 
             app.Run();
         }

@@ -13,7 +13,6 @@ namespace ExampleMicroservice3
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddSingleton<HttpClient>();
             builder.Services.AddHubconClient();
             builder.Services.AddRemoteServerModule<Microservice1ServerModule>();
 
@@ -42,7 +41,8 @@ namespace ExampleMicroservice3
 
             microservice1.ProcessMessage("My custom message");
 
-            app.UseHubcon();
+            app.MapHubconControllers();
+            app.UseHubconWebsockets();
 
             app.Run();
         }

@@ -19,7 +19,7 @@ namespace HubconTest
             var process = Process.GetCurrentProcess();
 
             long coreMask = 0;
-            for (int i = 4; i <= 11; i++)
+            for (int i = 1; i <= Environment.ProcessorCount-1; i++)
             {
                 coreMask |= 1L << i;
             }
@@ -116,9 +116,9 @@ namespace HubconTest
             app.MapHubconControllers();
             app.UseHubconWebsockets();
 
-            //var logger = app.Services.GetService<ILogger<object>>();
+            var logger = app.Services.GetService<ILogger<object>>();
 
-            //Watcher.Start(logger!);
+            Watcher.Start(logger!);
 
             app.Run();
         }

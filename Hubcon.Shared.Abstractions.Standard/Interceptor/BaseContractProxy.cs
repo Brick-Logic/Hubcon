@@ -12,7 +12,7 @@ namespace Hubcon.Shared.Abstractions.Standard.Interceptor
 {
     public abstract class BaseContractProxy
     {
-        private ConcurrentDictionary<string, MethodInfo> Methods { get; } = new ConcurrentDictionary<string, MethodInfo>();
+        private static ConcurrentDictionary<(Type, string), MethodInfo> Methods { get; } = new ConcurrentDictionary<(Type, string), MethodInfo>();
 
         private readonly Type _contractType;
 
@@ -20,7 +20,9 @@ namespace Hubcon.Shared.Abstractions.Standard.Interceptor
         {
             Interceptor = interceptor;
 
-            _contractType = GetType().GetInterfaces().First(x => typeof(IControllerContract).IsAssignableFrom(x));
+            _contractType = GetType()
+                .GetInterfaces()
+                .First(x => typeof(IControllerContract).IsAssignableFrom(x) && x != typeof(IControllerContract));
        
             var methods = _contractType
                 .GetMethods()
@@ -28,7 +30,7 @@ namespace Hubcon.Shared.Abstractions.Standard.Interceptor
 
             foreach (var method in methods)
             {
-                Methods.TryAdd(method.GetMethodSignature(), method);
+                Methods.TryAdd((_contractType, method.GetMethodSignature()), method);
             }          
         }
 
@@ -36,7 +38,7 @@ namespace Hubcon.Shared.Abstractions.Standard.Interceptor
 
         private MethodInfo GetMethod(string methodSignature)
         {
-            Methods.TryGetValue(methodSignature, out MethodInfo method);
+            Methods.TryGetValue((_contractType, methodSignature), out var method);
             return method;
         }
 

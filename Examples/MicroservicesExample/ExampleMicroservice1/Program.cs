@@ -3,6 +3,7 @@ using ExampleMicroservicesDomain.Middlewares;
 using Hubcon.Server.Injection;
 using Hubcon.Client;
 using ExampleMicroservice1.ServerModules;
+using Hubcon.Server.Abstractions.Interfaces;
 
 namespace ExampleMicroservice1
 {
@@ -12,27 +13,33 @@ namespace ExampleMicroservice1
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddSingleton<HttpClient>();
             builder.Services.AddHubconClient();
             builder.Services.AddRemoteServerModule<Microservice2ServerModule>();
 
             builder.AddHubconServer();
-            builder.ConfigureHubconServer(controllerOptions =>
+            builder.ConfigureHubconServer(serverOptions =>
             {
-                controllerOptions.AddGlobalMiddleware<ExceptionMiddleware>();
+                //serverOptions.ConfigureCore(coreOptions =>
+                //    coreOptions
+                //        .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
+                //        .SetHttpTimeout(TimeSpan.FromSeconds(15))
+                //        .AllowWebSocketIngest()
+                //        .AllowWebSocketSubscriptions()
+                //        .AllowWebSocketNormalMethods()
+                //        .RequirePing()
+                //        .EnableWebSocketPong()
+                //);
 
-                controllerOptions.AddController<ExampleMicroservice1ContractHandler>(controllerMiddlewares =>
-                {
-                    controllerMiddlewares.UseGlobalMiddlewaresFirst(true);
-                    //controllerMiddlewares.AddMiddleware<LocalLoggingMiddleware>();
-                });
+                serverOptions.AddGlobalMiddleware<ExceptionMiddleware>();
+
+                serverOptions.AddController<ExampleMicroservice1ContractHandler>();
             });
 
             builder.Services.AddLogging();
 
             var app = builder.Build();
 
-            app.UseHubcon();
+            app.MapHubconControllers();
 
             app.Run();
         }

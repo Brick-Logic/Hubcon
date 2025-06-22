@@ -20,9 +20,10 @@ namespace ExampleMicroservice1.ContractHandlers
             }
         }
 
-        public async Task FinishMessage(string message)
+        public Task FinishMessage(string message)
         {
             logger.LogInformation($"[Microservice 1] Got message: '{message}'.");
+            return Task.CompletedTask;
         }
     }
 }
