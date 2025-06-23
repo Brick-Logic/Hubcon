@@ -4,8 +4,8 @@ namespace Hubcon.Shared.Abstractions.Models
 {
     public abstract record class BaseResponse : IResponse
     {
-        public abstract bool Success { get; }
+        public abstract bool Success { get; set; }
 
-        public abstract string? Error { get; }
+        public abstract string Error { get; set; }
     }
 }

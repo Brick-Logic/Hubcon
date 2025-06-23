@@ -19,7 +19,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             if ((context.Blueprint.Kind == OperationKind.Subscription) && user?.Identity?.IsAuthenticated != true)
             {
                 logger.LogError($"Server: Subscriptions are required to be authenticated. Source IP: {context.HttpContext?.Connection.RemoteIpAddress}.");
-                context.Result = new BaseOperationResponse(false, "Access denied");
+                context.Result = new BaseOperationResponse<object>(false, "Access denied");
                 context.HttpContext?.Connection.RequestClose();
                 return;
             }
@@ -27,7 +27,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             if ((context.Blueprint.Kind == OperationKind.Stream) && user?.Identity?.IsAuthenticated != true)
             {
                 logger.LogError($"Server: Authentication requerired. Source IP: {context.HttpContext?.Connection.RemoteIpAddress}.");
-                context.Result = new BaseOperationResponse(false, "Access denied");
+                context.Result = new BaseOperationResponse<object>(false, "Access denied");
                 context.HttpContext?.Connection.RequestClose();
                 return;
             }           
@@ -36,7 +36,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 if (user?.Identity == null || !user.Identity.IsAuthenticated)
                 {
-                    context.Result = new BaseOperationResponse(false, "Access denied");
+                    context.Result = new BaseOperationResponse<object>(false, "Access denied");
                     return;
                 }
 
@@ -47,7 +47,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         var result = await _authorizationService.AuthorizeAsync(user, null, attr.Policy);
                         if (!result.Succeeded)
                         {
-                            context.Result = new BaseOperationResponse(false, "Access denied");
+                            context.Result = new BaseOperationResponse<object>(false, "Access denied");
                             return;
                         }
                     }
@@ -57,7 +57,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         var roles = attr.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                         if (!roles.Any(user.IsInRole))
                         {
-                            context.Result = new BaseOperationResponse(false, "Access denied");
+                            context.Result = new BaseOperationResponse<object>(false, "Access denied");
                             return;
                         }
                     }

@@ -1,13 +1,20 @@
-﻿namespace Hubcon.Shared.Abstractions.Interfaces
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+
+namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IOperationResult : IResponse
     {
-        public object? Data { get; }
+        [Required]
+        [JsonRequired]
+        public object Data { get; set; }
     }
 
     public interface IOperationResponse<T> : IOperationResult
     {
-        public new T? Data { get; }
+        [Required]
+        [JsonRequired]
+        public new T Data { get; set; }
     }
 
     public interface IObjectOperationResponse : IOperationResponse<object>, IOperationResult, IResponse

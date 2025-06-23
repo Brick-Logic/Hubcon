@@ -12,7 +12,7 @@
 		<!-- Empaquetar como NuGet -->
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageId>HubconAnalyzers.SourceGenerators</PackageId>
-		<Version>1.0.42</Version>
+		<Version>1.0.43</Version>
 		<Authors>Brick-Logic</Authors>
 		<Company>Brick-Logic</Company>
 		<Description>Generador de codigo que crea proxies de cliente para contratos de Hubcon.</Description>

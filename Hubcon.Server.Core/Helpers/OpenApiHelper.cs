@@ -1,8 +1,12 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Castle.DynamicProxy.Internal;
+using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.OpenApi.Any;
+using Microsoft.OpenApi.Models;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Helpers
@@ -153,7 +157,7 @@ namespace Hubcon.Server.Core.Helpers
 
             if (returnType == typeof(void) || returnType == typeof(Task) || returnType == typeof(ValueTask))
             {
-                builder.Produces(200, typeof(IOperationResponse<object>)); // No Content
+                builder.Produces(200, typeof(IResponse));
             }
             else if (returnType == typeof(IResult) || returnType.IsAssignableTo(typeof(IResult)))
             {
@@ -162,8 +166,54 @@ namespace Hubcon.Server.Core.Helpers
             else
             {
                 // Tipo específico
-                builder.Produces(Defaults.DefaultSuccessStatusCode, typeof(IOperationResponse<>).MakeGenericType(returnType));
+                var responseType = typeof(IOperationResponse<>).MakeGenericType(returnType);
+                builder.Produces(Defaults.DefaultSuccessStatusCode, responseType)
+                       .WithOpenApi(operation => SetDefaultExample(operation, Defaults.DefaultSuccessStatusCode.ToString(), returnType));
             }
+        }
+
+        private static OpenApiOperation SetDefaultExample(OpenApiOperation operation, string statusCode, Type dataType)
+        {
+            if (operation.Responses.TryGetValue(statusCode, out var response) &&
+                response.Content.TryGetValue("application/json", out var content))
+            {
+                content.Example = CreateExampleResponse(dataType);
+            }
+
+            var test = operation.Parameters.Any(x => x.Example.AnyType is OpenApiNull);
+            return operation;
+        }
+
+        private static IOpenApiAny CreateExampleResponse(Type dataType)
+        {
+            var defaultDataValue = GetDefaultValueForType(dataType);
+
+            return new OpenApiObject
+            {
+                ["data"] = defaultDataValue,
+                ["success"] = new OpenApiBoolean(true),
+                ["message"] = new OpenApiString("")
+            };
+        }
+
+        private static IOpenApiAny GetDefaultValueForType(Type type)
+        {
+            return Type.GetTypeCode(type) switch
+            {
+                TypeCode.Int32 => new OpenApiInteger(0),
+                TypeCode.Int64 => new OpenApiLong(0),
+                TypeCode.String => new OpenApiString("string"),
+                TypeCode.Boolean => new OpenApiBoolean(false),
+                TypeCode.Double => new OpenApiDouble(0.0),
+                TypeCode.Decimal => new OpenApiDouble(0.0),
+                TypeCode.DateTime => new OpenApiString(DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")),
+                _ when type == typeof(Guid) => new OpenApiString(Guid.Empty.ToString()),
+                _ when type.IsEnum => new OpenApiString(Enum.GetNames(type).FirstOrDefault() ?? "0"),
+                _ when type.IsClass && type != typeof(string) => new OpenApiObject(),
+                _ when type.IsArray => new OpenApiArray(),
+                _ when type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>) => new OpenApiArray(),
+                _ => new OpenApiNull()
+            };
         }
 
         private static void ApplyAcceptsWithDefaults(RouteHandlerBuilder builder, MethodInfo methodInfo)

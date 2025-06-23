@@ -1,32 +1,41 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using System.ComponentModel.DataAnnotations;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
-    public record class BaseOperationResponse : BaseResponse, IObjectOperationResponse, IResponse
+    public record class BaseOperationResponse : BaseResponse, IResponse
     {
-        public object? Data { get; }
-        public override bool Success { get; }
-        public override string? Error { get; }
+        [Required]
+        public override bool Success { get; set; }
 
-        public BaseOperationResponse(bool success, object? data = null, string? error = null)
+        [Required]
+        public override string Error { get; set; } = "";
+
+        public BaseOperationResponse(bool success, string error = "")
         {
             Success = success;
-            Data = data;
             Error = error;
         }
     }
 
     public record class BaseOperationResponse<T> : BaseResponse, IOperationResult, IOperationResponse<T>, IResponse
     {
-        public override bool Success { get; }
-        public override string? Error { get; }
-        public T? Data { get; }
-        object? IOperationResult.Data => Data;
+        [Required]
+        public override bool Success { get; set; }
 
-        public BaseOperationResponse(bool success, T? data = default, string? error = null)
+        [Required]
+        public override string Error { get; set; }
+
+        [Required]
+        public T Data { get; set; } = default(T)!;
+
+        [Required]
+        object IOperationResult.Data { get => this.Data!; set => Data = (T)value!; }
+
+        public BaseOperationResponse(bool success, T data = default!, string error = default!)
         {
             Success = success;
-            Data = data;
+            Data = data ?? default!;
             Error = error;
         }
     }

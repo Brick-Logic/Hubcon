@@ -16,7 +16,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             }
             catch(Exception ex)
             {
-                context.Result = new BaseOperationResponse(false, null, ex.Message);
+                context.Result = new BaseOperationResponse<object>(false, null!, ex.Message);
                 context.Exception = ex;
                 logger.LogInformation(ex.ToString());
                 return;

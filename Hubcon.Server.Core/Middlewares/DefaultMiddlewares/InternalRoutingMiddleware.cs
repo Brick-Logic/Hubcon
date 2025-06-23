@@ -22,7 +22,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 if(context.Request.Arguments?.Count != context.Blueprint!.ParameterTypes.Count)
                 {
-                    context.Result = new BaseOperationResponse(false);
+                    context.Result = new BaseOperationResponse<object>(false);
                     return;
                 }
 
@@ -50,7 +50,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     }
                     else
                     {
-                        context.Result = new BaseOperationResponse(false);
+                        context.Result = new BaseOperationResponse<object>(false);
                         return;
                     }
                 }
@@ -138,7 +138,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     };
                 };
 
-                context.Result = new BaseOperationResponse(true, SubDelegate());
+                context.Result = new BaseOperationResponse<object>(true, SubDelegate());
                 await next();
             }
         }

@@ -15,7 +15,7 @@ namespace BlazorTestServer.Middlewares
 			}
 			catch (Exception ex)
 			{
-				context.Result = new BaseOperationResponse(false, null, ex.Message);
+				context.Result = new BaseOperationResponse<object>(false, default!, ex.Message);
 				context.Exception = ex;
                 logger.LogInformation(ex.ToString());
 				return;

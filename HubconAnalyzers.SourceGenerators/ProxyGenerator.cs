@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace HubconAnalyzers.SourceGenerators
 {
@@ -127,8 +128,9 @@ namespace HubconAnalyzers.SourceGenerators
                 }
                 else if (returnType.StartsWith("System.Threading.Tasks.Task<"))
                 {
-                    var generic = returnType.Replace("System.Threading.Tasks.Task<", "").TrimEnd('>');
+                    var generic = ExtractTaskGenericArgumentRegex(returnType);
                     callMethod = $"return {nameof(BaseContractProxy.InvokeAsync)}<{generic}>({stringMethodName}{AllParameters});";
+
                 }
                 else if (returnType.StartsWith("System.Threading.Tasks.Task"))
                 {
@@ -151,6 +153,20 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine(preserver);
 
             return sb.ToString();
+        }
+
+        private static string ExtractTaskGenericArgumentRegex(string taskType)
+        {
+            // Patrón que captura todo entre el primer < y el último > balanceado
+            var pattern = @"System\.Threading\.Tasks\.Task<(.+)>$";
+            var match = Regex.Match(taskType, pattern);
+
+            if (match.Success)
+            {
+                return match.Groups[1].Value;
+            }
+
+            return "object";
         }
 
         private static string GenerateProxyPreserverClass(INamedTypeSymbol iface)

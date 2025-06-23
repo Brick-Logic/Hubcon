@@ -71,5 +71,16 @@ namespace HubconTest.Controllers
             await Task.WhenAll(sources);
             logger.LogInformation("Ingest terminado exitosamente");
         }
+
+
+        public Task<MyTestClass> GetObject()
+        {
+            return Task.FromResult(new MyTestClass("hola", new TestClass2("propiedad")));
+        }
+
+        public async Task<IEnumerable<bool>> GetBooleans()
+        {
+            return Enumerable.Range(0, 5).Select(x => true);
+        }
     }
 }

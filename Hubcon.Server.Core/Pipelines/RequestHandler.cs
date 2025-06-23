@@ -40,12 +40,12 @@ namespace Hubcon.Server.Core.Pipelines
                 if (result is Task task)
                     await task;
 
-                return new BaseOperationResponse(true);
+                return new BaseOperationResponse<object>(true);
             }
 
             var pipeline = blueprint!.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
-            return pipelineResult.Result!;
+            return new BaseOperationResponse(pipelineResult.Result!.Success, pipelineResult.Result.Error);
         }
 
         public async Task<IOperationResponse<JsonElement>> HandleSynchronousResult(IOperationRequest request)
@@ -61,10 +61,10 @@ namespace Hubcon.Server.Core.Pipelines
             {
                 if (result is null)
                 {
-                    return Task.FromResult<IOperationResult>(new BaseOperationResponse(true));
+                    return Task.FromResult<IOperationResult>(new BaseOperationResponse<object>(true));
                 }
 
-                return Task.FromResult<IOperationResult>(new BaseOperationResponse(true, _converter.SerializeObject(result)));
+                return Task.FromResult<IOperationResult>(new BaseOperationResponse<object>(true, _converter.SerializeObject(result)));
             }
 
             var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
@@ -85,7 +85,7 @@ namespace Hubcon.Server.Core.Pipelines
                 if (result is Task task)
                     await task;
 
-                return new BaseOperationResponse(true);
+                return new BaseOperationResponse<object>(true);
             }
 
             var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
@@ -100,7 +100,7 @@ namespace Hubcon.Server.Core.Pipelines
 
             static Task<IOperationResult> ResultHandler(object? result)
             {
-                return Task.FromResult<IOperationResult>(new BaseOperationResponse(true, result));
+                return Task.FromResult<IOperationResult>(new BaseOperationResponse<object>(true, result));
             }
 
             IOperationContext context = BuildContext(request, blueprint);
@@ -120,7 +120,7 @@ namespace Hubcon.Server.Core.Pipelines
 
             static Task<IOperationResult> ResultHandler(object? result)
             {
-                return Task.FromResult<IOperationResult>(new BaseOperationResponse(true, result));
+                return Task.FromResult<IOperationResult>(new BaseOperationResponse<object>(true, result));
             }
 
             IOperationContext context = BuildContext(request, blueprint);
@@ -144,16 +144,16 @@ namespace Hubcon.Server.Core.Pipelines
             {
                 if (result is null)
                 {
-                    return new BaseOperationResponse(true);
+                    return new BaseOperationResponse<object>(true);
                 }
                 else if (result is Task task)
                 {
                     var response = await GetTaskResultAsync(task, blueprint!.RawReturnType.GetGenericArguments()[0]);
-                    return new BaseOperationResponse(true, response);
+                    return new BaseOperationResponse<object>(true, response);
                 }
                 else
                 {
-                    return new BaseOperationResponse(true, result);
+                    return new BaseOperationResponse<object>(true, result);
                 }
             };
 
@@ -203,11 +203,11 @@ namespace Hubcon.Server.Core.Pipelines
                     if (result is Task task)
                         await task;
 
-                    return new BaseOperationResponse(true);
+                    return new BaseOperationResponse<object>(true);
                 }
                 catch(Exception ex)
                 {
-                    return new BaseOperationResponse(false);
+                    return new BaseOperationResponse<object>(false);
                 }
             }
 
