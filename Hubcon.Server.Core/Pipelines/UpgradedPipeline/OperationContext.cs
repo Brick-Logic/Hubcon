@@ -10,7 +10,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public string OperationName { get; init; }
         public IServiceProvider RequestServices { get; init; }
         public IOperationBlueprint Blueprint { get; init; }
-        public object?[] Arguments { get; set; } = Array.Empty<object?>();
         public ClaimsPrincipal? User { get; init; }
         public IDictionary<string, object> Items { get; } = new Dictionary<string, object>();
         public IOperationRequest Request { get; init; }

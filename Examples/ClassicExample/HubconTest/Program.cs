@@ -46,8 +46,6 @@ namespace HubconTest
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddControllers();
-
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
@@ -64,17 +62,6 @@ namespace HubconTest
             builder.AddHubconServer();
             builder.ConfigureHubconServer(serverOptions =>
             {
-                serverOptions.ConfigureCore(coreOptions =>
-                    coreOptions
-                        .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
-                        .SetHttpTimeout(TimeSpan.FromSeconds(15))
-                        .AllowWebSocketIngest()
-                        .AllowWebSocketSubscriptions()
-                        .AllowWebSocketNormalMethods()
-                        .RequirePing()
-                        .EnableWebSocketPong()
-                );
-
                 serverOptions.AddGlobalMiddleware<ExceptionMiddleware>();
 
                 serverOptions.AddController<TestController>();
@@ -112,7 +99,6 @@ namespace HubconTest
             app.UseAuthentication(); // debe ir antes de UseAuthorization
             app.UseAuthorization();
 
-            app.MapControllers();
             app.MapHubconControllers();
             app.UseHubconWebsockets();
 

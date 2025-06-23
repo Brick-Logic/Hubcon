@@ -4,7 +4,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IOperationRequest
     {
-        IEnumerable<object> Args { get; }
+        Dictionary<string, object?>? Arguments { get; }
         string ContractName { get; }
         string OperationName { get; }
     }

@@ -10,9 +10,9 @@
         bool IsSessionActive { get; }
         string? RefreshToken { get; }
 
-        Task<IResult> LoadSessionAsync();
-        Task<IResult> LoginAsync(string username, string password);
+        Task<IHubconResult> LoadSessionAsync();
+        Task<IHubconResult> LoginAsync(string username, string password);
         Task LogoutAsync();
-        Task<IResult> TryRefreshSessionAsync();
+        Task<IHubconResult> TryRefreshSessionAsync();
     }
 }

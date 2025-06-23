@@ -12,7 +12,7 @@ namespace Hubcon.Shared.Core.Tools
 {
     public class EnumerableTools
     {
-        public static bool IsAsyncEnumerable(object obj)
+        public static bool IsAsyncEnumerable(object? obj)
         {
             if (obj is null) return false;
 

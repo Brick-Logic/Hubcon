@@ -1,6 +1,6 @@
 ﻿namespace Hubcon.Shared.Abstractions.Interfaces
 {
-    public interface IResult
+    public interface IHubconResult
     {
         string? ErrorMessage { get; }
         bool IsFailure { get; }

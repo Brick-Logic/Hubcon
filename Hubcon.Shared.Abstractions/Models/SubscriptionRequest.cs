@@ -8,13 +8,13 @@ namespace Hubcon.Shared.Abstractions.Models
         public string ContractName { get; }
         public string OperationName { get; }
 
-        public IEnumerable<object> Args { get; }
+        public Dictionary<string, object> Arguments { get; }
 
-        public SubscriptionRequest(string operationName, string contractName, IEnumerable<object>? args)
+        public SubscriptionRequest(string operationName, string contractName, Dictionary<string, object>? args)
         {
             OperationName = operationName;
             ContractName = contractName;
-            Args = args ?? Enumerable.Empty<object>();
+            Arguments = args ?? [];
         }
     }
 }

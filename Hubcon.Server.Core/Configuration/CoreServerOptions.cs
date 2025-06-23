@@ -20,7 +20,6 @@ namespace Hubcon.Server.Core.Configuration
 
         private bool? allowWsIngest;
         private bool? allowWsSubs;
-        private bool? allowWsEvents;
         private bool? allowWsMethods;
         private bool? websocketRequiresPing;
         private bool? messageRetryIsEnabled;
@@ -44,7 +43,6 @@ namespace Hubcon.Server.Core.Configuration
 
         public bool WebSocketIngestIsAllowed => allowWsIngest ?? true;
         public bool WebSocketSubscriptionIsAllowed => allowWsSubs ?? true;
-        public bool WebSocketEventsIsAllowed => allowWsEvents ?? true;
         public bool WebSocketMethodsIsAllowed => allowWsMethods ?? false;
         public bool WebsocketRequiresPing => websocketRequiresPing ?? true;
         public bool MessageRetryIsEnabled => messageRetryIsEnabled ?? false;
@@ -73,21 +71,15 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
 
-        public ICoreServerOptions EnableWebSocketPong(bool enabled = true)
+        public ICoreServerOptions DisableWebSocketPong(bool disabled = true)
         {
-            pongEnabled ??= enabled;
+            pongEnabled ??= !disabled;
             return this;
         }
 
         public ICoreServerOptions SetGlobalLogLevel(LogLevel level)
         {
             logLevel ??= level;
-            return this;
-        }
-
-        public ICoreServerOptions AddLogging()
-        {
-            logLevel ??= LogLevel.Information; // o dejarlo como está
             return this;
         }
 
@@ -103,39 +95,33 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
 
-        public ICoreServerOptions AllowWebSocketIngest(bool enabled = true)
+        public ICoreServerOptions DisableWebSocketIngest(bool disabled = true)
         {
-            allowWsIngest ??= enabled;
+            allowWsIngest ??= !disabled;
             return this;
         }
 
-        public ICoreServerOptions AllowWebSocketSubscriptions(bool enabled = true)
+        public ICoreServerOptions DisableWebSocketSubscriptions(bool disabled = true)
         {
-            allowWsSubs ??= enabled;
+            allowWsSubs ??= !disabled;
             return this;
         }
 
-        public ICoreServerOptions AllowWebSocketEvents(bool enabled = true)
+        public ICoreServerOptions DisableWebSocketNormalMethods(bool disabled = true)
         {
-            allowWsEvents ??= enabled;
+            allowWsMethods ??= !disabled;
             return this;
         }
 
-        public ICoreServerOptions AllowWebSocketNormalMethods(bool enabled = true)
+        public ICoreServerOptions DisableWebsocketPing(bool disabled = true)
         {
-            allowWsMethods ??= enabled;
+            websocketRequiresPing ??= !disabled;
             return this;
         }
 
-        public ICoreServerOptions RequirePing(bool enabled = true)
+        public ICoreServerOptions DisabledRetryableMessages(bool disabled = true)
         {
-            websocketRequiresPing ??= enabled;
-            return this;
-        }
-
-        public ICoreServerOptions AllowRetryableMessages(bool enabled = true)
-        {
-            messageRetryIsEnabled ??= enabled;
+            messageRetryIsEnabled ??= !disabled;
             return this;
         }
     }

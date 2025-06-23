@@ -18,6 +18,8 @@ namespace Hubcon.Server.Injection
     {
         public static WebApplicationBuilder AddHubconServer(this WebApplicationBuilder builder, Action<ContainerBuilder>? additionalServices = null)
         {
+            builder.Services.AddControllers();
+
             ServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
             {
                 container.RegisterWithInjector(x => x.RegisterType<DefaultEntrypoint>());

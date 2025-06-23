@@ -1,6 +1,8 @@
-﻿using Hubcon.Shared.Abstractions.Standard.Attributes;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Attributes;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using HubconTestDomain;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -37,6 +39,13 @@ namespace HubconTest.Controllers
             return "some return value";
         }
 
+        //[EndpointName("CreateUser")]
+        //[EndpointSummary("Crear un nuevo usuario")]
+        //[EndpointDescription("Endpoint para crear un nuevo usuario en el sistema")]
+        //[ProducesResponseType(400)]
+        //[ProducesResponseType(500)]
+        //[ProducesResponseType<IOperationResponse<string>>(200)]
+        //[Consumes("application/json")]
         public async Task<string> LoginAsync(string username, string password)
         {
             try

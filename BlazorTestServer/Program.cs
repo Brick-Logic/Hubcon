@@ -42,11 +42,11 @@ namespace BlazorTestServer
                     coreOptions
                         .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
                         .SetHttpTimeout(TimeSpan.FromSeconds(15))
-                        .AllowWebSocketIngest()
-                        .AllowWebSocketSubscriptions()
-                        .AllowWebSocketNormalMethods()
-                        .RequirePing()
-                        .EnableWebSocketPong()
+                        .DisableWebSocketIngest()
+                        .DisableWebSocketSubscriptions()
+                        .DisableWebSocketNormalMethods()
+                        .DisableWebsocketPing()
+                        .DisableWebSocketPong()
                 );
 
                 serverOptions.AddGlobalMiddleware<ExceptionMiddleware>();

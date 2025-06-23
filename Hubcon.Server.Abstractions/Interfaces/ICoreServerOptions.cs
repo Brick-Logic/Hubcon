@@ -39,7 +39,7 @@ namespace Hubcon.Server.Core.Configuration
         /// </summary>
         /// <param name="enabled"></param>
         /// <returns></returns>
-        ICoreServerOptions EnableWebSocketPong(bool enabled = true);
+        ICoreServerOptions DisableWebSocketPong(bool enabled = true);
 
         /// <summary>
         /// Sets the framework's logging level.
@@ -47,12 +47,6 @@ namespace Hubcon.Server.Core.Configuration
         /// <param name="level"></param>
         /// <returns></returns>
         ICoreServerOptions SetGlobalLogLevel(LogLevel level);
-
-        /// <summary>
-        /// Adds a basic global logging middleware for the hubcon pipeline.
-        /// </summary>
-        /// <returns></returns>
-        ICoreServerOptions AddLogging();
 
         /// <summary>
         /// Sets the path prefix that the websocket will be listening on.
@@ -73,35 +67,35 @@ namespace Hubcon.Server.Core.Configuration
         /// </summary>
         /// <param name="enabled"></param>
         /// <returns></returns>
-        ICoreServerOptions AllowWebSocketIngest(bool enabled = true);
+        ICoreServerOptions DisableWebSocketIngest(bool disabled = true);
 
         /// <summary>
         /// Determines if websocket subscriptions methods and ISubscription event handlers are allowed.
         /// </summary>
         /// <param name="enabled"></param>
         /// <returns></returns>
-        ICoreServerOptions AllowWebSocketSubscriptions(bool enabled = true);
+        ICoreServerOptions DisableWebSocketSubscriptions(bool disabled = true);
 
         /// <summary>
         /// Determines if typical controller methods are allowed through the websocket connection. This enables websocket-based controllers.
         /// </summary>
         /// <param name="enabled"></param>
         /// <returns></returns>
-        ICoreServerOptions AllowWebSocketNormalMethods(bool enabled = true);
+        ICoreServerOptions DisableWebSocketNormalMethods(bool disabled = true);
 
         /// <summary>
         /// Determines if receiving ping messages from clients is required to keep the websocket connection alive.
         /// </summary>
         /// <param name="enabled"></param>
         /// <returns></returns>
-        ICoreServerOptions RequirePing(bool enabled = true);
+        ICoreServerOptions DisableWebsocketPing(bool disabled = true);
 
         /// <summary>
         /// Determines if retryable messages should be used when detected.
         /// </summary>
         /// <param name="enabled"></param>
         /// <returns></returns>
-        ICoreServerOptions AllowRetryableMessages(bool enabled = true);
+        ICoreServerOptions DisabledRetryableMessages(bool enabled = true);
     }
 
     public interface IInternalServerOptions

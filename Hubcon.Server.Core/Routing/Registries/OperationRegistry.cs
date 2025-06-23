@@ -35,7 +35,10 @@ namespace Hubcon.Server.Core.Routing.Registries
 
             foreach (var interfaceType in interfaces)
             {
-                var methods = interfaceType.GetMethods();
+                var methods = interfaceType
+                    .GetMethods()
+                    .Where(x => !x.Name.StartsWith("get_") && !x.Name.StartsWith("set_"))
+                    .ToArray();
 
                 if (methods.Length == 0)
                     continue;

@@ -95,10 +95,31 @@ namespace HubconAnalyzers.SourceGenerators
 
                 var stringMethodName = $"\"{method.GetMethodSymbolSignature()}\"";
                 var callMethod = "";
+
+
                 var AllParameters = "";
 
-                if (paramNames.Any())
-                    AllParameters = $", {string.Join(",", paramNames)}";
+                if (method.Parameters.Any())
+                {
+                    AllParameters = $", new Dictionary<string, object?>() {{ ";
+                    bool first = true;
+
+                    foreach(var param in method.Parameters)
+                    {
+                        if (first)
+                        {
+                            AllParameters += $"{{ \"{param.Name}\", {param.Name} }}";
+                            first = false;
+                        }
+                        else
+                        {
+                            AllParameters += $", {{ \"{param.Name}\", {param.Name} }}";
+                        }
+                    }
+
+                    AllParameters += $" }}";
+                }
+                
 
                 if (returnType == "void")
                 {

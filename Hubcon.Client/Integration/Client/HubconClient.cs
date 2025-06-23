@@ -32,10 +32,10 @@ namespace Hubcon.Client.Integration.Client
         {
             try
             {
-                var bytes = converter.SerializeObject(request.Args).ToString();
+                var bytes = converter.SerializeObject(request.Arguments).ToString();
                 using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
-                HttpMethod httpMethod = request.Args.Any() ? HttpMethod.Post : HttpMethod.Get;
+                HttpMethod httpMethod = request.Arguments.Any() ? HttpMethod.Post : HttpMethod.Get;
 
                 var httpRequest = new HttpRequestMessage(httpMethod, _restHttpUrl + methodInfo.GetRoute())
                 {
@@ -70,10 +70,10 @@ namespace Hubcon.Client.Integration.Client
         {
             try
             {
-                var bytes = converter.SerializeObject(request.Args).ToString();
+                var bytes = converter.SerializeObject(request.Arguments).ToString();
                 using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
-                HttpMethod httpMethod = request.Args.Any() ? HttpMethod.Post : HttpMethod.Get;
+                HttpMethod httpMethod = request.Arguments.Any() ? HttpMethod.Post : HttpMethod.Get;
 
                 var httpRequest = new HttpRequestMessage(httpMethod, _restHttpUrl + methodInfo.GetRoute())
                 {
@@ -118,12 +118,12 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        public async Task Ingest(IOperationRequest request, object[] arguments, CancellationToken cancellationToken = default)
+        public async Task Ingest(IOperationRequest request, Dictionary<string, object?> arguments, CancellationToken cancellationToken = default)
         {
             if (authenticationManagerFactory?.Invoke() == null)
                 throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
 
-            await client.IngestMultiple(request, arguments);    
+            await client.IngestMultiple(request);
         }
 
 

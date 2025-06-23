@@ -169,22 +169,20 @@ namespace Hubcon.Server.Core.Pipelines
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) /*&& blueprint?.Kind == OperationKind.Ingest*/))
                 return null!;
 
-            if(request.Args.Count() == 0 
-                || blueprint.ParameterTypes.Length == 0 
-                || blueprint.ParameterTypes.Length != request.Args.Count())
+            if(request.Arguments?.Count() == 0 
+                || blueprint?.ParameterTypes.Count == 0 
+                || blueprint?.ParameterTypes.Count != request.Arguments?.Count())
             {
                 return new BaseOperationResponse(false);
             }  
 
             var arguments = new List<object?>();
-            var args = request.Args.ToArray();
 
-            for(int i = 0; i < blueprint.ParameterTypes.Length; i++)
+            foreach(var parameterType in blueprint!.ParameterTypes)
             {
-                var type = blueprint.ParameterTypes[i];
-                var arg = args[i];
+                var arg = request.Arguments?[parameterType.Key];
 
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
+                if (parameterType.Value.IsGenericType && parameterType.Value.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
                 {
                     var id = _converter.DeserializeData<string>(arg);
                     var source = sources.TryGetValue(id!, out object? value);
@@ -225,7 +223,6 @@ namespace Hubcon.Server.Core.Pipelines
                 OperationName = request.OperationName,
                 RequestServices = _serviceProvider,
                 Blueprint = blueprint,
-                Arguments = arguments ?? _converter.DeserializeArgs(blueprint!.ParameterTypes, request.Args).ToArray(),
                 HttpContext = _serviceProvider.GetRequiredService<IHttpContextAccessor>()?.HttpContext,
                 Request = request
             };

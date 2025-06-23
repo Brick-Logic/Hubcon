@@ -21,8 +21,9 @@ namespace Hubcon.Client.Interceptors
         public IHubconClient Client => client;
 
         private static ConcurrentDictionary<Type, MethodInfo> _methodInfoCache = new();
+        private static ConcurrentDictionary<MethodInfo, bool> _hasAsyncEnumerablesCache = new();
 
-        public async Task<T> InvokeAsync<T>(MethodInfo method, params object[] arguments)
+        public async Task<T> InvokeAsync<T>(MethodInfo method, Dictionary<string, object?>? arguments = null)
         {
             T result;
 
@@ -72,16 +73,18 @@ namespace Hubcon.Client.Interceptors
             return result!;
         }
 
-        public Task CallAsync(MethodInfo method, params object[] arguments)
+        public Task CallAsync(MethodInfo method, Dictionary<string, object?>? arguments = null)
         {
             var methodName = method.GetMethodSignature();
             var contractName = method.ReflectedType!.Name;
             using var cts = new CancellationTokenSource();
 
-            if (arguments.Length != 0 && arguments.Any(EnumerableTools.IsAsyncEnumerable))
-            {
-                OperationRequest request = new(methodName, contractName, null);
 
+            if (_hasAsyncEnumerablesCache.GetOrAdd(
+                method, 
+                x => method.GetParameters().Any(x => x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
+            {
+                var request = new OperationRequest(methodName, contractName, null);
                 return Client.Ingest(request, arguments);
             }
             else

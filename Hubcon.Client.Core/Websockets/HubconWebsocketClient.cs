@@ -189,7 +189,7 @@ namespace Hubcon.Client.Core.Websockets
         //    }
         //}
 
-        public async Task IngestMultiple(IOperationRequest payload, object[] arguments, bool needsAck = false)
+        public async Task IngestMultiple(IOperationRequest payload, bool needsAck = false)
         {
             var cts = new CancellationTokenSource();
             var sourceTasks = new List<Task>();
@@ -203,13 +203,13 @@ namespace Hubcon.Client.Core.Websockets
 
             try
             {
-                for (int i = 0; i < arguments.Length; i++)
+                foreach(var kvp in payload.Arguments!)
                 {
-                    if (arguments[i] != null && EnumerableTools.IsAsyncEnumerable(arguments[i]))
+                    if(kvp.Value != null && EnumerableTools.IsAsyncEnumerable(kvp.Value))
                     {
-                        var obj = arguments[i];
+                        var obj = kvp.Value;
                         var id = Guid.NewGuid().ToString();
-                        arguments[i] = id;
+                        payload.Arguments[kvp.Key] = id;
                         var stream = EnumerableTools.WrapEnumeratorAsJsonElementEnumerable(obj);
                         sources.TryAdd(id, stream!);
                     }
@@ -249,7 +249,6 @@ namespace Hubcon.Client.Core.Websockets
                             if (generalTcs.Task.IsCompleted || cts.IsCancellationRequested)
                                 throw new OperationCanceledException("Stream cancelado.");
 
-
                             //var ackResult = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), tcs.Task);
 
                             //if (ackResult == null) 
@@ -263,15 +262,10 @@ namespace Hubcon.Client.Core.Websockets
                     sourceTasks.Add(sourceTask);
                 }
 
-                var newRequest = new OperationRequest(
-                    payload.OperationName,
-                    payload.ContractName,
-                    arguments);
-
                 var ingestRequest = new IngestInitMessage(
                     initialAckId,
                     sources.Keys.ToArray(),
-                    newRequest
+                    payload
                 );
 
                 var msg = JsonSerializer.Serialize(ingestRequest, _jsonOptions);

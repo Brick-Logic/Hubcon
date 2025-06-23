@@ -1,88 +1,249 @@
-﻿//using Microsoft.OpenApi.Any;
-//using Microsoft.OpenApi.Models;
-//using System.Reflection;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
+using System.Reflection;
 
-//namespace Hubcon.Server.Core.Helpers
-//{
-//    public static class OpenApiHelper
-//    {
-//        public static (OpenApiSchema Schema, IOpenApiAny Example) GenerateSchemaAndExampleFromParameters(ParameterInfo[] parameters)
-//        {
-//            var schema = new OpenApiSchema
-//            {
-//                Type = "object",
-//                Properties = new Dictionary<string, OpenApiSchema>(),
-//                Required = new HashSet<string>()
-//            };
+namespace Hubcon.Server.Core.Helpers
+{
 
-//            var example = new OpenApiObject();
+    public static class OpenApiHelper
+    {
+        // Configuración por defecto
+        public static class Defaults
+        {
+            public static string[] DefaultContentTypes { get; set; } = { "application/json" };
+            public static int DefaultSuccessStatusCode { get; set; } = 200;
+            public static int DefaultErrorStatusCode { get; set; } = 400;
+            public static bool AddCommonErrorResponses { get; set; } = true;
+            public static string DefaultGroupName { get; set; } = "API";
+            public static bool EnableAutoFallbacks { get; set; } = true;
+        }
 
-//            foreach (var param in parameters)
-//            {
-//                var (propertySchema, propertyExample) = GenerateSchemaAndExampleFromType(param.ParameterType);
-//                schema.Properties[param.Name!] = propertySchema;
-//                schema.Required.Add(param.Name!);
-//                example[param.Name!] = propertyExample;
-//            }
+        public static RouteHandlerBuilder ApplyOpenApiFromMethod(
+            this RouteHandlerBuilder builder,
+            MethodInfo methodInfo,
+            string? groupName = null)
+        {
+            // Aplicar agrupamiento por namespace o clase
+            var effectiveGroupName = groupName ?? GetGroupFromMethod(methodInfo);
 
-//            return (schema, example);
-//        }
+            // EndpointName - con fallback automático
+            var endpointName = methodInfo.GetCustomAttribute<EndpointNameAttribute>();
+            if (endpointName != null)
+                builder.WithName(endpointName.EndpointName);
+            //else if (Defaults.EnableAutoFallbacks)
+            //    builder.WithName(GenerateDefaultEndpointName(methodInfo));
 
-//        private static (OpenApiSchema, IOpenApiAny) GenerateSchemaAndExampleFromType(Type type)
-//        {
-//            if (type == typeof(string))
-//                return (new OpenApiSchema { Type = "string" }, new OpenApiString("string"));
+            // Summary - con fallback automático
+            var summary = methodInfo.GetCustomAttribute<EndpointSummaryAttribute>();
+            if (summary != null)
+                builder.WithSummary(summary.Summary);
+            //else if (Defaults.EnableAutoFallbacks)
+            //    builder.WithSummary(GenerateDefaultSummary(methodInfo));
 
-//            if (type == typeof(int) || type == typeof(int?))
-//                return (new OpenApiSchema { Type = "integer", Format = "int32" }, new OpenApiInteger(123));
+            // Description
+            var description = methodInfo.GetCustomAttribute<EndpointDescriptionAttribute>();
+            if (description != null)
+                builder.WithDescription(description.Description);
 
-//            if (type == typeof(long) || type == typeof(long?))
-//                return (new OpenApiSchema { Type = "integer", Format = "int64" }, new OpenApiLong(1234567890));
+            // Tags - usar agrupamiento si no hay tags explícitos
+            var tags = methodInfo.GetCustomAttribute<TagsAttribute>();
+            if (tags != null)
+                builder.WithTags(tags.Tags.ToArray());
+            else if (!string.IsNullOrEmpty(effectiveGroupName))
+                builder.WithTags(effectiveGroupName);
 
-//            if (type == typeof(bool) || type == typeof(bool?))
-//                return (new OpenApiSchema { Type = "boolean" }, new OpenApiBoolean(true));
+            // Produces - con valores por defecto inteligentes
+            ApplyProducesWithDefaults(builder, methodInfo);
 
-//            if (type == typeof(double) || type == typeof(float) || type == typeof(decimal))
-//                return (new OpenApiSchema { Type = "number", Format = "double" }, new OpenApiDouble(12.34));
+            // Accepts - con detección automática mejorada (mantener lógica original)
+            ApplyAcceptsWithDefaults(builder, methodInfo);
 
-//            if (type == typeof(DateTime) || type == typeof(DateTime?))
-//                return (new OpenApiSchema { Type = "string", Format = "date-time" }, new OpenApiString(DateTime.UtcNow.ToString("o")));
+            return builder;
+        }
 
-//            if (type.IsEnum)
-//            {
-//                var names = Enum.GetNames(type);
-//                return (
-//                    new OpenApiSchema { Type = "string", Enum = names.Select(n => new OpenApiString(n)).ToList<IOpenApiAny>() },
-//                    new OpenApiString(names.FirstOrDefault() ?? "EnumValue")
-//                );
-//            }
+        private static string GetGroupFromMethod(MethodInfo methodInfo)
+        {
+            // 1. Primero buscar ApiExplorerSettings
+            var apiExplorer = methodInfo.DeclaringType?.GetCustomAttribute<ApiExplorerSettingsAttribute>();
+            if (!string.IsNullOrEmpty(apiExplorer?.GroupName))
+                return apiExplorer.GroupName;
 
-//            if (typeof(IEnumerable<string>).IsAssignableFrom(type))
-//                return (
-//                    new OpenApiSchema { Type = "array", Items = new OpenApiSchema { Type = "string" } },
-//                    new OpenApiArray { new OpenApiString("item1"), new OpenApiString("item2") }
-//                );
+            // 2. Luego por namespace
+            var namespaceParts = methodInfo.DeclaringType?.Namespace?.Split('.');
+            if (namespaceParts?.Length > 0)
+            {
+                var lastPart = namespaceParts.Last();
+                if (lastPart.EndsWith("Controllers"))
+                    return lastPart.Replace("Controllers", "");
+                return lastPart;
+            }
 
-//            // Objetos complejos: recursión
-//            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-//            var objSchema = new OpenApiSchema
-//            {
-//                Type = "object",
-//                Properties = new Dictionary<string, OpenApiSchema>(),
-//                Required = new HashSet<string>()
-//            };
+            // 3. Por nombre de clase
+            var className = methodInfo.DeclaringType?.Name ?? "";
+            if (className.EndsWith("Controller"))
+                return className.Replace("Controller", "");
+            if (className.EndsWith("Service"))
+                return className.Replace("Service", "");
 
-//            var objExample = new OpenApiObject();
+            return Defaults.DefaultGroupName;
+        }
 
-//            foreach (var prop in properties)
-//            {
-//                var (propSchema, propExample) = GenerateSchemaAndExampleFromType(prop.PropertyType);
-//                objSchema.Properties[prop.Name] = propSchema;
-//                objExample[prop.Name] = propExample;
-//            }
+        private static string GenerateDefaultEndpointName(MethodInfo methodInfo)
+        {
+            var className = methodInfo.DeclaringType?.Name?.Replace("Controller", "") ?? "Api";
+            return $"{className}_{methodInfo.Name}";
+        }
 
-//            return (objSchema, objExample);
-//        }
-//    }
+        private static string GenerateDefaultSummary(MethodInfo methodInfo)
+        {
+            var action = methodInfo.Name;
+            var entity = methodInfo.DeclaringType?.Name?.Replace("Controller", "") ?? "Resource";
 
-//}
+            // Patrones comunes
+            return action.ToLower() switch
+            {
+                var name when name.StartsWith("get") => $"Obtener {entity.ToLower()}",
+                var name when name.StartsWith("create") || name.StartsWith("post") => $"Crear {entity.ToLower()}",
+                var name when name.StartsWith("update") || name.StartsWith("put") => $"Actualizar {entity.ToLower()}",
+                var name when name.StartsWith("delete") => $"Eliminar {entity.ToLower()}",
+                var name when name.StartsWith("list") => $"Listar {entity.ToLower()}",
+                _ => $"{action} {entity.ToLower()}"
+            };
+        }
+
+        private static void ApplyProducesWithDefaults(RouteHandlerBuilder builder, MethodInfo methodInfo)
+        {
+            var produces = methodInfo.GetCustomAttributes<ProducesResponseTypeAttribute>().ToList();
+
+            // Si hay atributos explícitos, usarlos (lógica original)
+            if (produces.Any())
+            {
+                foreach (var produce in produces)
+                {
+                    if (produce.Type != null && produce.Type != typeof(void))
+                    {
+                        builder.Produces(produce.StatusCode, produce.Type);
+                    }
+                    else
+                    {
+                        builder.Produces(produce.StatusCode);
+                    }
+                }
+            }
+            else if (Defaults.EnableAutoFallbacks)
+            {
+                // Aplicar valores por defecto inteligentes
+                ApplyDefaultProduces(builder, methodInfo);
+            }
+
+            // Agregar respuestas de error comunes si está habilitado
+            if (Defaults.AddCommonErrorResponses && !produces.Any(p => p.StatusCode >= 400))
+            {
+                builder.Produces(400); // Bad Request
+                builder.Produces(500); // Internal Server Error
+            }
+        }
+
+        private static void ApplyDefaultProduces(RouteHandlerBuilder builder, MethodInfo methodInfo)
+        {
+            var returnType = GetActualReturnType(methodInfo);
+
+            if (returnType == typeof(void) || returnType == typeof(Task) || returnType == typeof(ValueTask))
+            {
+                builder.Produces(200, typeof(IOperationResponse<object>)); // No Content
+            }
+            else if (returnType == typeof(IResult) || returnType.IsAssignableTo(typeof(IResult)))
+            {
+                builder.Produces(Defaults.DefaultSuccessStatusCode);
+            }
+            else
+            {
+                // Tipo específico
+                builder.Produces(Defaults.DefaultSuccessStatusCode, typeof(IOperationResponse<>).MakeGenericType(returnType));
+            }
+        }
+
+        private static void ApplyAcceptsWithDefaults(RouteHandlerBuilder builder, MethodInfo methodInfo)
+        {
+            // Consumes from ConsumesAttribute (lógica original)
+            var consumes = methodInfo.GetCustomAttribute<ConsumesAttribute>();
+            if (consumes != null && consumes.ContentTypes.Count > 0)
+            {
+                // Buscar el primer parámetro complejo para Accepts
+                var complexParam = methodInfo.GetParameters()
+                    .FirstOrDefault(p => !p.ParameterType.IsPrimitive &&
+                                   p.ParameterType != typeof(string) &&
+                                   !typeof(HttpContext).IsAssignableFrom(p.ParameterType));
+                if (complexParam != null)
+                {
+                    builder.Accepts(complexParam.ParameterType, consumes.ContentTypes[0]);
+                }
+            }
+            else if (methodInfo.GetParameters().Length > 0)
+            {
+                // Lógica original con TypeHelper
+                var name = methodInfo.ReflectedType!.Name
+                    + methodInfo.Name
+                    + string.Join("", methodInfo.GetParameters().Select(x => StringHelper.ToPascalCase(x.Name!)))
+                    + "Input";
+                builder.Accepts(TypeHelper.CreateTypeFromParameters(methodInfo.GetParameters(), name), "application/json");
+            }
+            else if (Defaults.EnableAutoFallbacks)
+            {
+                // Fallback mejorado usando detección automática
+                var requestParam = FindRequestBodyParameter(methodInfo);
+                if (requestParam != null)
+                {
+                    var contentTypes = Defaults.DefaultContentTypes;
+                    builder.Accepts(requestParam.ParameterType, contentTypes[0]);
+                }
+            }
+        }
+
+        private static ParameterInfo? FindRequestBodyParameter(MethodInfo methodInfo)
+        {
+            var parameters = methodInfo.GetParameters();
+
+            // Excluir tipos que no son request body
+            var excludedTypes = new[]
+            {
+            typeof(HttpContext),
+            typeof(HttpRequest),
+            typeof(HttpResponse),
+            typeof(CancellationToken),
+            typeof(IServiceProvider)
+        };
+
+            return parameters.FirstOrDefault(p =>
+                !p.ParameterType.IsPrimitive &&
+                p.ParameterType != typeof(string) &&
+                p.ParameterType != typeof(Guid) &&
+                p.ParameterType != typeof(DateTime) &&
+                !excludedTypes.Any(t => t.IsAssignableFrom(p.ParameterType)) &&
+                !p.ParameterType.IsEnum &&
+                // Buscar atributo FromBody o asumir si es tipo complejo
+                (p.GetCustomAttribute<FromBodyAttribute>() != null ||
+                 (!p.ParameterType.IsValueType && p.ParameterType.IsClass)));
+        }
+
+        private static Type GetActualReturnType(MethodInfo methodInfo)
+        {
+            var returnType = methodInfo.ReturnType;
+
+            // Desenvolver Task<T> y ValueTask<T>
+            if (returnType.IsGenericType)
+            {
+                var genericType = returnType.GetGenericTypeDefinition();
+                if (genericType == typeof(Task<>) || genericType == typeof(ValueTask<>))
+                {
+                    returnType = returnType.GetGenericArguments()[0];
+                }
+            }
+
+            return returnType;
+        }
+    }
+}

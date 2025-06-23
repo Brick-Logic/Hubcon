@@ -42,12 +42,12 @@ namespace Hubcon.Shared.Abstractions.Standard.Interceptor
             return method;
         }
 
-        public Task<T> InvokeAsync<T>(string method, params object[] arguments)
+        public Task<T> InvokeAsync<T>(string method, Dictionary<string, object> arguments = null)
         {
             return Interceptor.InvokeAsync<T>(GetMethod(method), arguments);
         }
 
-        public Task CallAsync(string method, params object[] arguments)
+        public Task CallAsync(string method, Dictionary<string, object> arguments = null)
         {
             return Interceptor.CallAsync(GetMethod(method), arguments);
         }

@@ -19,7 +19,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public string ControllerName { get; }
         public Type ControllerType { get; }
 
-        public Type[] ParameterTypes { get; }
+        public Dictionary<string, Type> ParameterTypes { get; }
         public Type RawReturnType { get; }
         public Type ReturnType { get; }
         public bool HasReturnType { get; }
@@ -35,7 +35,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         public OperationBlueprint(
             string operationName, 
-            Type contractType, Type controllerType, 
+            Type contractType, 
+            Type controllerType, 
             MemberInfo memberInfo, 
             IPipelineBuilder pipelineBuilder, 
             Func<object?, object[], object?>? invokeDelegate = null)
@@ -51,13 +52,14 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             ControllerType = controllerType;
             ControllerName = controllerType.Name;
             OperationInfo = memberInfo;
+            ParameterTypes = [];
 
             if (memberInfo is MethodInfo methodInfo)
             {
-                ParameterTypes = methodInfo
-                    .GetParameters()
-                    .Select(x => x.ParameterType)
-                    .ToArray() ?? Array.Empty<Type>();
+                foreach(var parameter in methodInfo.GetParameters())
+                {
+                    ParameterTypes.Add(parameter.Name!, parameter.ParameterType);
+                }
 
                 RawReturnType = methodInfo.ReturnType;
 
@@ -79,7 +81,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             }
             else if (memberInfo is PropertyInfo propertyInfo)
             {
-                ParameterTypes = Array.Empty<Type>();
                 ReturnType = propertyInfo.PropertyType;
                 RawReturnType = propertyInfo.PropertyType;
                 HasReturnType = true;

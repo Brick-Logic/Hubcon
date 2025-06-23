@@ -17,7 +17,7 @@ namespace Hubcon.Client.Core.Authentication
         public string Username { get; protected set; } = string.Empty;
         public string Password { get; protected set; } = string.Empty;
 
-        public async Task<IResult> LoginAsync(string username, string password)
+        public async Task<IHubconResult> LoginAsync(string username, string password)
         {
             Username = username;
             Password = password;
@@ -41,7 +41,7 @@ namespace Hubcon.Client.Core.Authentication
             return Result.Success();
         }
 
-        public async Task<IResult> TryRefreshSessionAsync()
+        public async Task<IHubconResult> TryRefreshSessionAsync()
         {
             //if (string.IsNullOrEmpty(RefreshToken))
             //    return Result.Failure("No refresh token available.");
@@ -74,7 +74,7 @@ namespace Hubcon.Client.Core.Authentication
             OnSessionIsInactive?.Invoke();
         }
 
-        public async Task<IResult> LoadSessionAsync()
+        public async Task<IHubconResult> LoadSessionAsync()
         {
             var session = await LoadPersistedSessionAsync();
             if (session is not null)
@@ -98,14 +98,14 @@ namespace Hubcon.Client.Core.Authentication
         protected abstract Task<PersistedSession?> LoadPersistedSessionAsync();
     }
 
-    public class Result : IResult
+    public class Result : IHubconResult
     {
         public bool IsSuccess { get; private set; }
         public string? ErrorMessage { get; private set; }
         public bool IsFailure => !IsSuccess;
 
-        public static IResult Success() => new Result { IsSuccess = true };
-        public static IResult Failure(string? message = null) => new Result { IsSuccess = false, ErrorMessage = message ?? "" };
+        public static IHubconResult Success() => new Result { IsSuccess = true };
+        public static IHubconResult Failure(string? message = null) => new Result { IsSuccess = false, ErrorMessage = message ?? "" };
     }
 
     public class AuthResult : IAuthResult

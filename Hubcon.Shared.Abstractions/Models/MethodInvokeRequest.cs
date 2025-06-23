@@ -7,7 +7,7 @@ namespace Hubcon.Shared.Abstractions.Models
     {
         public string ContractName { get; set; }
         public string OperationName { get; set; }
-        public IEnumerable<object> Args { get; set; }
+        public Dictionary<string, object?>? Arguments { get; set; }
 
         public OperationRequest()
         {
@@ -18,14 +18,14 @@ namespace Hubcon.Shared.Abstractions.Models
         {
             OperationName = operationName;
             ContractName = contractName;
-            Args = Enumerable.Empty<object>();
+            Arguments = [];
         }
 
-        public OperationRequest(string methodName, string contractName, IEnumerable<object>? args)
+        public OperationRequest(string methodName, string contractName, Dictionary<string, object?>? args)
         {
             OperationName = methodName;
             ContractName = contractName;
-            Args = args ?? Enumerable.Empty<object>();
+            Arguments = args ?? [];
         }
     }
 }

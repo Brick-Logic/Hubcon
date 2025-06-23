@@ -15,7 +15,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         MemberInfo? OperationInfo { get; }
         string OperationName { get; }
         OperationKind Kind { get; }
-        Type[] ParameterTypes { get; }
+        Dictionary<string, Type> ParameterTypes { get; }
         Type RawReturnType { get; }
         bool RequiresAuthorization { get; }
         Type ReturnType { get; }
