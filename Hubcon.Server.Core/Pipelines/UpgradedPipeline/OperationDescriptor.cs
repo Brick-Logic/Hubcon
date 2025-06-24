@@ -1,9 +1,11 @@
 ﻿using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
@@ -38,7 +40,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             Type contractType, 
             Type controllerType, 
             MemberInfo memberInfo, 
-            IPipelineBuilder pipelineBuilder, 
+            IPipelineBuilder pipelineBuilder,
+            IInternalServerOptions options,
             Func<object?, object[], object?>? invokeDelegate = null)
         {
             ArgumentException.ThrowIfNullOrEmpty(operationName);
@@ -68,9 +71,12 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                        ? methodInfo.ReturnType.GetGenericArguments()[0]
                        : methodInfo.ReturnType;
 
-                Route = methodInfo.HasCustomAttribute<RouteAttribute>() 
+                Route = options.HttpPathPrefix + (methodInfo.HasCustomAttribute<RouteAttribute>() 
                     ? methodInfo.GetCustomAttribute<RouteAttribute>()!.Template
-                    : methodInfo.GetRoute();
+                    : methodInfo.GetRoute());
+
+
+                if(options.HttpPathPrefix != null)
 
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
 

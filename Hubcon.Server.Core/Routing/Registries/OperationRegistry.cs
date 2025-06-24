@@ -51,6 +51,7 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                 foreach (var method in methods)
                 {
+                    if(options.)
 
                     var methodSignature = method.GetMethodSignature();
                     Func<object?, object[], object?> action = BuildInvoker(method);

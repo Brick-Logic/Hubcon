@@ -66,7 +66,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 return;
             }
 
-            // Si ya hay Authorization header, no hacemos nada
             if (!context.Request.Headers.ContainsKey("Authorization"))
             {
                 var accessToken = context.Request.Query["access_token"];
@@ -673,10 +672,15 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 retryable.GetPayload(out object? message);
                                 var edwa = new StreamDataWithAckMessage(subscribe.Id, JsonSerializer.SerializeToElement(message, _jsonSerializerOptions), ackId);
                                 await sender.SendAsync(JsonSerializer.SerializeToElement(edwa, _jsonSerializerOptions));
+
+                                if (!options.MessageRetryIsEnabled)
+                                {
+                                    break;
+                                }
                             }
 
                             if (_ackChannels.TryRemove(ackId.ToString(), out IRetryableMessage? channel))
-                                await channel.FailedAckAsync();
+                                await channel.AckAsync();
                         }
                         else
                         {

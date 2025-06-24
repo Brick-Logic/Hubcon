@@ -39,7 +39,7 @@ namespace Hubcon.Server.Core.Configuration
         public LogLevel GlobalLogLevel => logLevel ?? LogLevel.Information;
 
         public string WebSocketPathPrefix => wsPrefix ?? "/ws";
-        public string HttpPathPrefix => httpPrefix ?? "/";
+        public string HttpPathPrefix => httpPrefix ?? "";
 
         public bool WebSocketIngestIsAllowed => allowWsIngest ?? true;
         public bool WebSocketSubscriptionIsAllowed => allowWsSubs ?? true;

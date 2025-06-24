@@ -106,7 +106,7 @@ namespace Hubcon.Server.Core.Configuration
         int MaxWebSocketMessageSize { get; }
 
         /// <summary>
-        /// Determines the maximum incoming http message size in bytes.
+        /// Disabled. Determines the maximum incoming http message size in bytes.
         /// </summary>
         int MaxHttpMessageSize { get; }
 
@@ -116,9 +116,13 @@ namespace Hubcon.Server.Core.Configuration
         TimeSpan WebSocketTimeout { get; }
 
         /// <summary>
-        /// Http message processing timeout.
+        /// Disabled. Http message processing timeout.
         /// </summary>
         TimeSpan HttpTimeout { get; }
+
+        /// <summary>
+        /// Determines if clients need to send ping messages to keep the connection alive.
+        /// </summary>
         bool WebsocketRequiresPing { get; }
 
         /// <summary>
