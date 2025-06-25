@@ -17,5 +17,6 @@ namespace Hubcon.Client.Abstractions.Interfaces
         object GetOrCreateClient(Type contractType, IServiceProvider services);
         void LoadContractProxy(Type contractType, IServiceCollection services);
         void UseAuthenticationManager<T>(IServiceCollection services) where T : class, IAuthenticationManager;
+        void ConfigureContract<T>(Action<IContractConfigurator>? configure) where T : IControllerContract;
     }
 }

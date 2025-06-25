@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.Json;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Core.Extensions;
+using System.Collections.Concurrent;
 
 namespace Hubcon.Client.Integration.Client
 {
@@ -29,31 +30,46 @@ namespace Hubcon.Client.Integration.Client
         HttpClient httpClient = clientFactory.CreateClient();
 
         private bool IsStarted { get; set; }
+
+        private bool IsBuilt { get; set; }
+        private IDictionary<Type, IContractOptions>? ContractOptionsDict { get; set; }
+
         public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
         {
             try
             {
-                var bytes = converter.SerializeObject(request.Arguments).ToString();
-                using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
-
-                HttpMethod httpMethod = request.Arguments.Any() ? HttpMethod.Post : HttpMethod.Get;
-
-                var httpRequest = new HttpRequestMessage(httpMethod, _restHttpUrl + methodInfo.GetRoute())
+                if (ContractOptionsDict?.TryGetValue(methodInfo.ReflectedType!, out var options) ?? false && options.WebsocketMethodsEnabled)
                 {
-                    Content = content
-                };
+                    if (authenticationManagerFactory?.Invoke() == null)
+                        throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                var authManager = authenticationManagerFactory?.Invoke();
+                    var result = await client.InvokeAsync<BaseOperationResponse<T>>(request);
+                    return result.Data;
+                }
+                else
+                {
+                    var bytes = converter.SerializeObject(request.Arguments).ToString();
+                    using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
-                if (authManager != null && authManager.IsSessionActive)
-                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
+                    HttpMethod httpMethod = request.Arguments.Any() ? HttpMethod.Post : HttpMethod.Get;
 
-                var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+                    var httpRequest = new HttpRequestMessage(httpMethod, _restHttpUrl + methodInfo.GetRoute())
+                    {
+                        Content = content
+                    };
 
-                var responseBytes = await response.Content.ReadAsByteArrayAsync();
-                var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
+                    var authManager = authenticationManagerFactory?.Invoke();
 
-                return converter.DeserializeJsonElement<BaseOperationResponse<T>>(result)!.Data!;
+                    if (authManager != null && authManager.IsSessionActive)
+                        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
+
+                    var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+
+                    var responseBytes = await response.Content.ReadAsByteArrayAsync();
+                    var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
+
+                    return converter.DeserializeJsonElement<BaseOperationResponse<T>>(result)!.Data!;
+                }
             }
             catch (Exception ex)
             {
@@ -70,27 +86,37 @@ namespace Hubcon.Client.Integration.Client
         {
             try
             {
-                var bytes = converter.SerializeObject(request.Arguments).ToString();
-                using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
-
-                HttpMethod httpMethod = request.Arguments.Any() ? HttpMethod.Post : HttpMethod.Get;
-
-                var httpRequest = new HttpRequestMessage(httpMethod, _restHttpUrl + methodInfo.GetRoute())
+                if (ContractOptionsDict?.TryGetValue(methodInfo.ReflectedType!, out var options) ?? false && options.WebsocketMethodsEnabled)
                 {
-                    Content = content
-                };
+                    if (authenticationManagerFactory?.Invoke() == null)
+                        throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                var authManager = authenticationManagerFactory?.Invoke();
+                    return await client.InvokeAsync<BaseJsonResponse>(request);
+                }
+                else
+                {
+                    var bytes = converter.SerializeObject(request.Arguments).ToString();
+                    using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
-                if (authManager != null && authManager.IsSessionActive)
-                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
+                    HttpMethod httpMethod = request.Arguments.Any() ? HttpMethod.Post : HttpMethod.Get;
 
-                var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+                    var httpRequest = new HttpRequestMessage(httpMethod, _restHttpUrl + methodInfo.GetRoute())
+                    {
+                        Content = content
+                    };
 
-                var responseBytes = await response.Content.ReadAsByteArrayAsync();
-                var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
+                    var authManager = authenticationManagerFactory?.Invoke();
 
-                return converter.DeserializeJsonElement<BaseJsonResponse>(result)!;
+                    if (authManager != null && authManager.IsSessionActive)
+                        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
+
+                    var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+
+                    var responseBytes = await response.Content.ReadAsByteArrayAsync();
+                    var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
+
+                    return converter.DeserializeJsonElement<BaseJsonResponse>(result)!;
+                }
             }
             catch (Exception ex)
             {
@@ -146,10 +172,17 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        private bool IsBuilt { get; set; }
-        public void Build(Uri BaseUri, string? HttpEndpoint, string? WebsocketEndpoint, Type? AuthenticationManagerType, IServiceProvider services, bool useSecureConnection = true)
+        public void Build(Uri BaseUri, 
+            string? HttpEndpoint, 
+            string? WebsocketEndpoint, 
+            Type? AuthenticationManagerType, 
+            IServiceProvider services, 
+            IDictionary<Type, IContractOptions> contractOptions,
+            bool useSecureConnection = true)
         {
             if (IsBuilt) return;
+
+            ContractOptionsDict ??= contractOptions;
 
             var baseRestHttpUrl = $"{BaseUri!.AbsoluteUri}/{HttpEndpoint ?? ""}";
             var baseRestWebsocketUrl = $"{BaseUri!.AbsoluteUri}/{WebsocketEndpoint ?? "ws"}";

@@ -6,7 +6,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
 {
     public interface IServerModuleConfiguration
     {
-        IServerModuleConfiguration Implements<T>() where T : IControllerContract;
+        IServerModuleConfiguration Implements<T>(Action<IContractConfigurator>? configure = null) where T : IControllerContract;
         IServerModuleConfiguration UseAuthenticationManager<T>() where T : class, IAuthenticationManager;
         IServerModuleConfiguration WithBaseUrl(string baseUrl);
         IServerModuleConfiguration UseInsecureConnection();

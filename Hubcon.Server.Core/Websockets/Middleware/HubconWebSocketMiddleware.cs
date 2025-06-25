@@ -427,8 +427,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 try
                 {
-                    IOperationRequest operationRequest = JsonSerializer.Deserialize<OperationRequest>(request.Payload)!;
-                    result = entrypoint.HandleMethodWithResult(operationRequest);
+                    IOperationRequest operationRequest = JsonSerializer.Deserialize<OperationRequest>(request.Payload, _jsonSerializerOptions)!;
+                    result = await entrypoint.HandleMethodWithResult(operationRequest);
                 }
                 catch (Exception ex)
                 {

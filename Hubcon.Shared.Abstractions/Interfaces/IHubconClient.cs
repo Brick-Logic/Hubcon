@@ -10,7 +10,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         Task<IOperationResponse<JsonElement>> CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default);
         IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, CancellationToken cancellationToken = default);
         IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, CancellationToken cancellationToken = default);
-        void Build(Uri BaseUri, string? HttpEndpoint, string? WebsocketEndpoint, Type? AuthenticationManagerType, IServiceProvider services, bool useSecureConnection = true);
+        void Build(Uri BaseUri, string? HttpEndpoint, string? WebsocketEndpoint, Type? AuthenticationManagerType, IServiceProvider services, IDictionary<Type, IContractOptions> contractOptions, bool useSecureConnection = true);
         Task Ingest(IOperationRequest request, Dictionary<string, object?>? arguments = null, CancellationToken cancellationToken = default);
     }
 }

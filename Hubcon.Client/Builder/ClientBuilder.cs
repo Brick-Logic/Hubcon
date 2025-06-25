@@ -1,5 +1,6 @@
 ﻿using Castle.DynamicProxy;
 using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Client.Core.Configurations;
 using Hubcon.Client.Core.Subscriptions;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interceptor;
@@ -20,7 +21,7 @@ namespace Hubcon.Client.Builder
         public string? WebsocketEndpoint { get; set; }
         private ConcurrentDictionary<Type, Type> _subTypesCache { get; } = new();
         private ConcurrentDictionary<Type, IEnumerable<PropertyInfo>> _propTypesCache { get; } = new();
-
+        private ConcurrentDictionary<Type, IContractOptions> _contractOptions { get; } = new();
 
         public bool UseSecureConnection { get; set; } = true;
         private Dictionary<Type, object> _clients { get; } = new();
@@ -42,7 +43,7 @@ namespace Hubcon.Client.Builder
 
             var hubconClient = services.GetService<IHubconClient>();
 
-            hubconClient?.Build(BaseUri!, HttpPrefix, WebsocketEndpoint, AuthenticationManagerType, services, UseSecureConnection);
+            hubconClient?.Build(BaseUri!, HttpPrefix, WebsocketEndpoint, AuthenticationManagerType, services, _contractOptions, UseSecureConnection);
 
             var newClient = (BaseContractProxy)services.GetRequiredService(proxyType);
 
@@ -84,6 +85,19 @@ namespace Hubcon.Client.Builder
         public void LoadContractProxy(Type contractType, IServiceCollection services)
         {
             HubconClientBuilder.Current.LoadContractProxy(contractType, services);
+        }
+
+        public void ConfigureContract<T>(Action<IContractConfigurator>? configure = null) where T : IControllerContract
+        {
+            if (configure == null)
+                return;
+
+            if(!_contractOptions.TryGetValue(typeof(T), out _))
+            {
+                var options = new ContractOptions<T>();
+                configure(options);
+                _contractOptions.TryAdd(typeof(T), options);
+            }
         }
     }
 }
