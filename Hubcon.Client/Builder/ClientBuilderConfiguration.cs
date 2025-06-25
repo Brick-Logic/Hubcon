@@ -42,5 +42,17 @@ namespace Hubcon.Client.Builder
             builder.UseAuthenticationManager<T>(services);
             return this;
         }
+
+        public IServerModuleConfiguration WithPrefix(string prefix)
+        {
+            builder.HttpPrefix = prefix;
+            return this;
+        }
+
+        public IServerModuleConfiguration WithWebsocketEndpoint(string endpoint)
+        {
+            builder.WebsocketEndpoint = endpoint;
+            return this;
+        }
     }
 }

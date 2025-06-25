@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Logging;
 
 namespace Hubcon.Server.Core.Configuration
 {
@@ -42,13 +43,6 @@ namespace Hubcon.Server.Core.Configuration
         ICoreServerOptions DisableWebSocketPong(bool enabled = true);
 
         /// <summary>
-        /// Sets the framework's logging level.
-        /// </summary>
-        /// <param name="level"></param>
-        /// <returns></returns>
-        ICoreServerOptions SetGlobalLogLevel(LogLevel level);
-
-        /// <summary>
         /// Sets the path prefix that the websocket will be listening on.
         /// </summary>
         /// <param name="prefix"></param>
@@ -81,7 +75,7 @@ namespace Hubcon.Server.Core.Configuration
         /// </summary>
         /// <param name="enabled"></param>
         /// <returns></returns>
-        ICoreServerOptions DisableWebSocketNormalMethods(bool disabled = true);
+        ICoreServerOptions DisableWebSocketMethods(bool disabled = true);
 
         /// <summary>
         /// Determines if receiving ping messages from clients is required to keep the websocket connection alive.
@@ -96,6 +90,16 @@ namespace Hubcon.Server.Core.Configuration
         /// <param name="enabled"></param>
         /// <returns></returns>
         ICoreServerOptions DisabledRetryableMessages(bool enabled = true);
+
+        /// <summary>
+        /// Tells the global exception middleware to include detailed error messages in error responses.
+        /// </summary>
+        /// <param name="enabled"></param>
+        /// <returns></returns>
+        ICoreServerOptions EnableRequestDetailedErrors(bool enabled = true);
+        ICoreServerOptions DisableWebSocketStream(bool disabled = true);
+        ICoreServerOptions UseGlobalRouteHandlerBuilder(Action<RouteHandlerBuilder> configure);
+        ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure);
     }
 
     public interface IInternalServerOptions
@@ -103,12 +107,12 @@ namespace Hubcon.Server.Core.Configuration
         /// <summary>
         /// Determines the maximum incoming websocket message size in bytes.
         /// </summary>
-        int MaxWebSocketMessageSize { get; }
+        long MaxWebSocketMessageSize { get; }
 
         /// <summary>
         /// Disabled. Determines the maximum incoming http message size in bytes.
         /// </summary>
-        int MaxHttpMessageSize { get; }
+        long MaxHttpMessageSize { get; }
 
         /// <summary>
         /// Websocket connection timeout when the
@@ -136,11 +140,6 @@ namespace Hubcon.Server.Core.Configuration
         bool WebSocketPongEnabled { get; }
 
         /// <summary>
-        /// Logging level.
-        /// </summary>
-        LogLevel GlobalLogLevel { get; }
-
-        /// <summary>
         /// Websocket prefix to bind to.
         /// </summary>
         string WebSocketPathPrefix { get; }
@@ -161,8 +160,20 @@ namespace Hubcon.Server.Core.Configuration
         bool WebSocketSubscriptionIsAllowed { get; }
 
         /// <summary>
+        /// Determines if websocket streams are allowed.
+        /// </summary>
+        bool WebSocketStreamIsAllowed { get; }
+
+        /// <summary>
         /// Determines if typical controller methods are allowed.
         /// </summary>
         bool WebSocketMethodsIsAllowed { get; }
+
+        /// <summary>
+        /// Determines if responses should include detailed error messages.
+        /// </summary>
+        bool DetailedErrorsEnabled { get; }
+        Action<IEndpointConventionBuilder>? EndpointConventions { get; }
+        Action<RouteHandlerBuilder>? RouteHandlerBuilderConfig { get; }
     }
 }

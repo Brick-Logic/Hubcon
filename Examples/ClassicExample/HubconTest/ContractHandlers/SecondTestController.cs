@@ -8,7 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace HubconTest.Controllers
+namespace HubconTest.ContractHandlers
 {
     public class SecondTestController(ILogger<SecondTestController> logger) : ISecondTestContract
     {

@@ -148,8 +148,8 @@ namespace Hubcon.Server.Core.Pipelines
                 }
                 else if (result is Task task)
                 {
-                    var response = await GetTaskResultAsync(task, blueprint!.RawReturnType.GetGenericArguments()[0]);
-                    return new BaseOperationResponse<object>(true, response);
+                    var response = await GetTaskResultAsync(task);
+                    return new BaseOperationResponse<object>(true, response!);
                 }
                 else
                 {
@@ -228,7 +228,7 @@ namespace Hubcon.Server.Core.Pipelines
             };
         }
 
-        public static async Task<object?> GetTaskResultAsync(Task taskObject, Type returnType)
+        public static async Task<object?> GetTaskResultAsync(Task taskObject)
         {
             // Esperar a que el Task termine
             await taskObject;
@@ -244,7 +244,7 @@ namespace Hubcon.Server.Core.Pipelines
                 // Obtener el resultado del Task
                 var result = resultProperty?.GetValue(taskObject);
 
-                return Convert.ChangeType(result, returnType);
+                return result;
             }
 
             // Si no es un Task<T>, no hay valor que devolver

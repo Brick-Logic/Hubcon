@@ -1,27 +1,15 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
-//using Hubcon.Server.Core.Helpers;
-using Hubcon.Shared.Abstractions.Standard.Extensions;
+using Hubcon.Server.Core.Configuration;
+using Hubcon.Server.Core.Extensions;
+using Hubcon.Server.Core.Helpers;
+using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Entrypoint;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
-//using Microsoft.OpenApi.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Microsoft.OpenApi.Models;
-using Hubcon.Server.Core.Helpers;
-using Microsoft.OpenApi.Any;
-using System.Dynamic;
-using Hubcon.Server.Core.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace Hubcon.Server.Core.Routing
 {
@@ -45,6 +33,7 @@ namespace Hubcon.Server.Core.Routing
             var route = blueprint.Route;
             var operationName = blueprint.OperationName;
             var contractName = blueprint.ContractName;
+            var options = app.Services.GetRequiredService<IInternalServerOptions>();
             RouteHandlerBuilder builder = null!;
             var method = (MethodInfo)blueprint.OperationInfo!;
 
@@ -63,27 +52,99 @@ namespace Hubcon.Server.Core.Routing
                 {
                     builder = app.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter) =>
                     {
-                        var request = await ReadBodyAsJsonElementAsync(context);
+                        var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
+                        mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
+
+                        context.Request.EnableBuffering();
+
+                        if (context.Request.ContentLength > options.MaxHttpMessageSize)
+                        {
+                            await RequestTooLarge(context, new BaseOperationResponse(false, "Request too large."));
+                            return;
+                        }
+
+                        var request = await context.TryReadJsonAsync();
+
+                        if (!request.IsSuccess)
+                        {
+                            if (options.DetailedErrorsEnabled)
+                            {
+                                await BadRequest(context, new BaseOperationResponse(false, request.ErrorMessage ?? ""));
+                                return;
+                            }
+                            else
+                            {
+                                await BadRequest(context, new BaseOperationResponse(false, "The request is malformed."));
+                                return;
+                            }
+                        }
 
                         var operationRequest = new OperationRequest(
                             operationName,
                             contractName,
-                            converter.DeserializeData<Dictionary<string, object?>>(request)
+                            converter.DeserializeData<Dictionary<string, object?>>(request.JsonElement)
                         );
 
                         var res = await requestHandler.HandleWithResultAsync(operationRequest);
-                        return Results.Ok(res);
+
+                        if (!res.Success)
+                        {
+                            if (options.DetailedErrorsEnabled)
+                            {
+                                await InternalServerError(context, new BaseOperationResponse(false, request.ErrorMessage ?? "Internal server error."));
+                                return;
+                            }
+                            else
+                            {
+                                await InternalServerError(context, new BaseOperationResponse(false, "Internal server error."));
+                                return;
+                            }
+                        }
+
+                        await Ok(context, res);
+                        return;
                     })
                     .ApplyOpenApiFromMethod(controllerMethod!);
+                    builder.WithRequestTimeout(options.HttpTimeout);
+                    options.EndpointConventions?.Invoke(builder);
                 }
                 else
                 {
                     builder = app.MapGet(route, async (IRequestHandler requestHandler, HttpContext context) =>
                     {
+                        var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
+                        mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
+
+                        context.Request.EnableBuffering();
+
+                        if (context.Request.ContentLength > options.MaxHttpMessageSize)
+                        {
+                            await RequestTooLarge(context, new BaseOperationResponse(false, "Request too large."));
+                            return;
+                        }
+
                         var operationRequest = new OperationRequest(operationName, contractName);
                         var res = await requestHandler.HandleWithResultAsync(operationRequest);
-                        return Results.Ok(res);
+
+                        if (!res.Success)
+                        {
+                            if (options.DetailedErrorsEnabled)
+                            {
+                                await InternalServerError(context, new BaseOperationResponse(false, res.Error ?? "Internal error"));
+                                return;
+                            }
+                            else
+                            {
+                                await InternalServerError(context, new BaseOperationResponse(false, "Internal error"));
+                                return;
+                            }
+                        }
+
+                        await Ok(context, res);
+                        return;
                     }).ApplyOpenApiFromMethod(controllerMethod!);
+                    builder.WithRequestTimeout(options.HttpTimeout);
+                    options.EndpointConventions?.Invoke(builder);
                 }
             }
             else
@@ -92,39 +153,130 @@ namespace Hubcon.Server.Core.Routing
                 {
                     builder = app.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter) =>
                     {
-                        var request = await ReadBodyAsJsonElementAsync(context);
+                        var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
+                        mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
+
+                        context.Request.EnableBuffering();
+
+                        if (context.Request.ContentLength > options.MaxHttpMessageSize)
+                        {
+                            await RequestTooLarge(context, new BaseOperationResponse(false, "Request too large."));
+                            return;
+                        }
+
+                        var request = await context.TryReadJsonAsync();
+
+                        if (!request.IsSuccess)
+                        {
+                            if (options.DetailedErrorsEnabled)
+                            {
+                                await BadRequest(context, new BaseOperationResponse(false, request.ErrorMessage ?? ""));
+                                return;
+                            }
+                            else
+                            {
+                                await BadRequest(context, new BaseOperationResponse(false, "Request invalido."));
+                                return;
+                            }
+                        }
 
                         var operationRequest = new OperationRequest(
                             operationName,
                             contractName,
-                            converter.DeserializeData<Dictionary<string, object?>>(request)
+                            converter.DeserializeData<Dictionary<string, object?>>(request.JsonElement)
                         );
 
                         var res = await requestHandler.HandleWithoutResultAsync(operationRequest);
-                        return Results.Ok(res);
-                    }).ApplyOpenApiFromMethod(controllerMethod!);
+
+                        if (!res.Success)
+                        {
+                            if (options.DetailedErrorsEnabled)
+                            {
+                                await InternalServerError(context, new BaseOperationResponse(false, request.ErrorMessage ?? "Internal error"));
+                                return;
+                            }
+                            else
+                            {
+                                await InternalServerError(context, new BaseOperationResponse(false, "Internal error"));
+                                return;
+                            }
+                        }
+
+                        await Ok(context, res);
+                        return;
+                    })
+                    .ApplyOpenApiFromMethod(controllerMethod!);
+                    builder.WithRequestTimeout(options.HttpTimeout);
+                    options.EndpointConventions?.Invoke(builder);
                 }
                 else
                 {
                     builder = app.MapGet(route, async (IRequestHandler requestHandler, HttpContext context) =>
                     {
+                        var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
+                        mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
+
+                        context.Request.EnableBuffering();
+
+                        if (context.Request.ContentLength > options.MaxHttpMessageSize)
+                        {
+                            await RequestTooLarge(context, new BaseOperationResponse(false, "Request too large."));
+                            return;
+                        }
+
                         var operationRequest = new OperationRequest(operationName, contractName);
                         var res = await requestHandler.HandleWithoutResultAsync(operationRequest);
-                        return Results.Ok(res);
-                    }).ApplyOpenApiFromMethod(controllerMethod!); ;
+
+                        if (!res.Success)
+                        {
+                            if (options.DetailedErrorsEnabled)
+                            {
+                                await InternalServerError(context, new BaseOperationResponse(false, res.Error ?? "Internal error"));
+                                return;
+                            }
+                            else
+                            {
+                                await InternalServerError(context, new BaseOperationResponse(false, "Internal error"));
+                                return;
+                            }
+                        }
+
+                        await Ok(context, res);
+                        return;
+                    }).ApplyOpenApiFromMethod(controllerMethod!);
+                    builder.WithRequestTimeout(options.HttpTimeout);
+                    options.EndpointConventions?.Invoke(builder);
                 }
+
+                options.RouteHandlerBuilderConfig?.Invoke(builder);
             }
         }
-      
-        public static async Task<JsonElement> ReadBodyAsJsonElementAsync(HttpContext context)
+        private static async Task Ok<T>(HttpContext context, T response)
         {
-            context.Request.EnableBuffering(); // Permite releer el body
-            using var reader = new StreamReader(context.Request.Body, Encoding.UTF8, leaveOpen: true);
-            var bodyText = await reader.ReadToEndAsync();
-            context.Request.Body.Position = 0; // Reinicia el stream para futuras lecturas
+            context.Response.StatusCode = 200;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(response);
+        }
 
-            using var doc = JsonDocument.Parse(bodyText);
-            return doc.RootElement.Clone(); // ¡Importante! Clonar porque `JsonDocument` se va a liberar
+        private static async Task BadRequest(HttpContext context, IResponse response)
+        {
+            context.Response.StatusCode = 400;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(response);
+        }
+
+        private static async Task InternalServerError(HttpContext context, IResponse response)
+        {
+            context.Response.StatusCode = 500;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(response);
+        }
+
+        private static async Task RequestTooLarge(HttpContext context, IResponse response)
+        {
+            context.Response.StatusCode = 413;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(response);
         }
     }
 }

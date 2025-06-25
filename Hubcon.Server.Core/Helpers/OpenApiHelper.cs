@@ -68,7 +68,7 @@ namespace Hubcon.Server.Core.Helpers
             return builder;
         }
 
-        private static string GetGroupFromMethod(MethodInfo methodInfo)
+        public static string GetGroupFromMethod(MethodInfo methodInfo)
         {
             // 1. Primero buscar ApiExplorerSettings
             var apiExplorer = methodInfo.DeclaringType?.GetCustomAttribute<ApiExplorerSettingsAttribute>();
@@ -91,9 +91,53 @@ namespace Hubcon.Server.Core.Helpers
                 return className.Replace("Controller", "");
             if (className.EndsWith("Service"))
                 return className.Replace("Service", "");
+            if (className.EndsWith("Contract"))
+                return className.Replace("Contract", "");
+            if (className.EndsWith("ContractHandler"))
+                return className.Replace("ContractHandler", "");
+            
+            RemoveInterfacePrefix(className);
 
             return Defaults.DefaultGroupName;
         }
+
+
+        /// <summary>
+        /// Remueve la 'I' inicial si la segunda letra es mayúscula (patrón de interfaz)
+        /// </summary>
+        /// <param name="name">Nombre que puede tener prefijo de interfaz</param>
+        /// <returns>Nombre sin el prefijo 'I' si aplica</returns>
+        public static string RemoveInterfacePrefix(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return name;
+
+            // Verificar si empieza con 'I' y tiene al menos 2 caracteres
+            if (name.Length >= 2 &&
+                name[0] == 'I' &&
+                char.IsUpper(name[1]))
+            {
+                return name.Substring(1);
+            }
+
+            return name;
+        }
+
+        /// <summary>
+        /// Versión que también maneja múltiples nombres separados por comas
+        /// </summary>
+        /// <param name="names">Nombres separados por comas</param>
+        /// <returns>Nombres procesados separados por comas</returns>
+        public static string RemoveInterfacePrefixFromList(string names)
+        {
+            if (string.IsNullOrEmpty(names))
+                return names;
+
+            return string.Join(", ",
+                names.Split(',')
+                        .Select(name => RemoveInterfacePrefix(name.Trim())));
+        }
+
 
         private static string GenerateDefaultEndpointName(MethodInfo methodInfo)
         {
@@ -146,8 +190,8 @@ namespace Hubcon.Server.Core.Helpers
             // Agregar respuestas de error comunes si está habilitado
             if (Defaults.AddCommonErrorResponses && !produces.Any(p => p.StatusCode >= 400))
             {
-                builder.Produces(400); // Bad Request
-                builder.Produces(500); // Internal Server Error
+                builder.Produces(400, typeof(IResponse)); // Bad Request
+                builder.Produces(500, typeof(IResponse)); // Internal Server Error
             }
         }
 

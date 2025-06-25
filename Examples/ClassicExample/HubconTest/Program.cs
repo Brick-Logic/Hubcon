@@ -1,5 +1,5 @@
 using Hubcon.Server.Injection;
-using HubconTest.Controllers;
+using HubconTest.ContractHandlers;
 using HubconTest.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Logging;
@@ -62,9 +62,16 @@ namespace HubconTest
             builder.AddHubconServer();
             builder.ConfigureHubconServer(serverOptions =>
             {
-                serverOptions.AddGlobalMiddleware<ExceptionMiddleware>();
+                serverOptions.ConfigureCore(config => 
+                {
+                    config
+                    .EnableRequestDetailedErrors()
+                    .SetHttpPathPrefix("prefix1")
+                    .SetWebSocketPathPrefix("wsprefix");
+                    
+                });
 
-                serverOptions.AddController<TestController>();
+                serverOptions.AddController<UserContractHandler>();
                 serverOptions.AddController<SecondTestController>();
             });
 

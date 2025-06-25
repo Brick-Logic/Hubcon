@@ -40,6 +40,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             Type contractType, 
             Type controllerType, 
             MemberInfo memberInfo, 
+            OperationKind kind,
             IPipelineBuilder pipelineBuilder,
             IInternalServerOptions options,
             Func<object?, object[], object?>? invokeDelegate = null)
@@ -56,6 +57,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             ControllerName = controllerType.Name;
             OperationInfo = memberInfo;
             ParameterTypes = [];
+            Kind = kind;
 
             if (memberInfo is MethodInfo methodInfo)
             {
@@ -71,19 +73,11 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                        ? methodInfo.ReturnType.GetGenericArguments()[0]
                        : methodInfo.ReturnType;
 
-                Route = options.HttpPathPrefix + (methodInfo.HasCustomAttribute<RouteAttribute>() 
-                    ? methodInfo.GetCustomAttribute<RouteAttribute>()!.Template
-                    : methodInfo.GetRoute());
-
+                Route = options.HttpPathPrefix + methodInfo.GetRoute();
 
                 if(options.HttpPathPrefix != null)
 
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
-
-                var isStream = RawReturnType.IsGenericType 
-                    && RawReturnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
-
-                Kind = isStream ? OperationKind.Stream : OperationKind.Method;
             }
             else if (memberInfo is PropertyInfo propertyInfo)
             {

@@ -2,15 +2,15 @@
 using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestDomain;
 
-namespace HubconTest.Controllers
+namespace HubconTest.ContractHandlers
 {
-    public class TestController(ILogger<TestController> logger) : IUserService
+    public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserContract
     {
-        [AllowAnonymous]
-        public ISubscription<int>? OnUserCreated { get; }
-
         public async Task<int> GetTemperatureFromServer() 
             => await Task.Run(() => new Random().Next(-10, 50));
+
+        [AllowAnonymous]
+        public ISubscription<int>? OnUserCreated { get; }
 
         public async IAsyncEnumerable<string> GetMessages(int count)
         {
@@ -31,6 +31,7 @@ namespace HubconTest.Controllers
         {
             //var number = Random.Shared.Next(-10, 50);
             //OnUserCreated?.Emit(number);
+            //throw new NotImplementedException("Error detallado");
             await Task.CompletedTask;
         }
 

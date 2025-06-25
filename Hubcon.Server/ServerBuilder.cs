@@ -138,7 +138,7 @@ namespace Hubcon.Server
                 }
             }
 
-            OperationRegistry.RegisterOperations(controllerType, options, out var services);
+            OperationRegistry.RegisterOperations(controllerType, options, ServerOptions, out var services);
             ServicesToInject.AddRange(services);
 
             return builder;

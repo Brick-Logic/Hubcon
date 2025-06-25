@@ -9,7 +9,9 @@ namespace Hubcon.Client.Abstractions.Interfaces
         Type? AuthenticationManagerType { get; set; }
         Uri? BaseUri { get; set; }
         List<Type> Contracts { get; }
+        string? HttpPrefix { get; set; }
         bool UseSecureConnection { get; set; }
+        string? WebsocketEndpoint { get; set; }
 
         T GetOrCreateClient<T>(IServiceProvider services) where T : IControllerContract;
         object GetOrCreateClient(Type contractType, IServiceProvider services);

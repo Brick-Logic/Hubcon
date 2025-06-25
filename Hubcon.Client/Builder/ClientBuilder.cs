@@ -16,11 +16,10 @@ namespace Hubcon.Client.Builder
         public Uri? BaseUri { get; set; }
         public List<Type> Contracts { get; set; } = new();
         public Type? AuthenticationManagerType { get; set; }
-        public string? HttpEndpoint { get; set; }
+        public string? HttpPrefix { get; set; }
         public string? WebsocketEndpoint { get; set; }
         private ConcurrentDictionary<Type, Type> _subTypesCache { get; } = new();
         private ConcurrentDictionary<Type, IEnumerable<PropertyInfo>> _propTypesCache { get; } = new();
-
 
 
         public bool UseSecureConnection { get; set; } = true;
@@ -43,7 +42,7 @@ namespace Hubcon.Client.Builder
 
             var hubconClient = services.GetService<IHubconClient>();
 
-            hubconClient?.Build(BaseUri!, HttpEndpoint, WebsocketEndpoint, AuthenticationManagerType, services, UseSecureConnection);
+            hubconClient?.Build(BaseUri!, HttpPrefix, WebsocketEndpoint, AuthenticationManagerType, services, UseSecureConnection);
 
             var newClient = (BaseContractProxy)services.GetRequiredService(proxyType);
 

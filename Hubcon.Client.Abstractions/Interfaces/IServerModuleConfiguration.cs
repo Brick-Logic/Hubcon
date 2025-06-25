@@ -10,5 +10,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         IServerModuleConfiguration UseAuthenticationManager<T>() where T : class, IAuthenticationManager;
         IServerModuleConfiguration WithBaseUrl(string baseUrl);
         IServerModuleConfiguration UseInsecureConnection();
+        IServerModuleConfiguration WithPrefix(string prefix);
+        IServerModuleConfiguration WithWebsocketEndpoint(string endpoint);
     }
 }

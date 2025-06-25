@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
+using Hubcon.Shared.Core.Extensions;
 
 namespace Hubcon.Client.Integration.Client
 {
@@ -41,7 +42,6 @@ namespace Hubcon.Client.Integration.Client
                 {
                     Content = content
                 };
-
 
                 var authManager = authenticationManagerFactory?.Invoke();
 
@@ -151,7 +151,7 @@ namespace Hubcon.Client.Integration.Client
         {
             if (IsBuilt) return;
 
-            var baseRestHttpUrl = $"{BaseUri!.AbsoluteUri}";
+            var baseRestHttpUrl = $"{BaseUri!.AbsoluteUri}/{HttpEndpoint ?? ""}";
             var baseRestWebsocketUrl = $"{BaseUri!.AbsoluteUri}/{WebsocketEndpoint ?? "ws"}";
 
             _restHttpUrl = useSecureConnection ? $"https://{baseRestHttpUrl}" : $"http://{baseRestHttpUrl}";

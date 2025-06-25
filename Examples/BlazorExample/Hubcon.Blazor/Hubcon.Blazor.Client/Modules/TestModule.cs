@@ -14,7 +14,7 @@ namespace Hubcon.Blazor.Client.Modules
 
             // Agrego los contratos que este servidor implementa
             // Estos contratos se resuelven por DI con la configuracion puesta en este lugar
-            configuration.Implements<IUserService>();
+            configuration.Implements<IUserContract>();
             configuration.Implements<ISecondTestContract>();
 
             // Manager de autenticación (opcional)

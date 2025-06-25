@@ -12,6 +12,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Hubcon.Server.Abstractions.Enums;
+using Hubcon.Server.Core.Configuration;
 
 namespace Hubcon.Server.Core.Routing.Registries
 {
@@ -21,7 +22,7 @@ namespace Hubcon.Server.Core.Routing.Registries
 
         private Dictionary<string, Dictionary<string, IOperationBlueprint>> AvailableOperations = new();
 
-        public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, out List<Action<ContainerBuilder>> servicesToInject)
+        public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<ContainerBuilder>> servicesToInject)
         {
             if (!typeof(IControllerContract).IsAssignableFrom(controllerType))
                 throw new NotImplementedException($"El tipo {controllerType.FullName} no implementa la interfaz {nameof(IControllerContract)} o un tipo derivado.");
@@ -51,7 +52,15 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                 foreach (var method in methods)
                 {
-                    if(options.)
+                    var isStream = method.ReturnType.IsGenericType
+                    && method.ReturnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
+                    var kind = isStream ? OperationKind.Stream : OperationKind.Method;
+
+                    if (!serverOptions.WebSocketIngestIsAllowed && kind is OperationKind.Ingest)
+                        continue;
+
+                    if (!serverOptions.WebSocketStreamIsAllowed && kind is OperationKind.Stream)
+                        continue;
 
                     var methodSignature = method.GetMethodSignature();
                     Func<object?, object[], object?> action = BuildInvoker(method);
@@ -61,7 +70,16 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                     options?.Invoke(middlewareOptions);
 
-                    var descriptor = new OperationBlueprint(methodSignature, interfaceType, controllerType, method, pipelineBuilder, action!);
+                    var descriptor = new OperationBlueprint(
+                        methodSignature, 
+                        interfaceType, 
+                        controllerType, 
+                        method, 
+                        kind, 
+                        pipelineBuilder, 
+                        serverOptions, 
+                        action!
+                    );
 
                     contractMethods.TryAdd($"{descriptor.OperationName}", descriptor);
                     OnOperationRegistered?.Invoke(descriptor);
@@ -73,12 +91,23 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                 foreach (var propertyInfo in subscriptions)
                 {
+                    if (!serverOptions.WebSocketSubscriptionIsAllowed)
+                        continue;
+
                     var pipelineBuilder = new PipelineBuilder();
                     var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);
 
                     options?.Invoke(middlewareOptions);
 
-                    var descriptor = new OperationBlueprint(propertyInfo.Name, interfaceType, controllerType, propertyInfo, pipelineBuilder);
+                    var descriptor = new OperationBlueprint(
+                        propertyInfo.Name, 
+                        interfaceType, 
+                        controllerType, 
+                        propertyInfo, 
+                        OperationKind.Subscription, 
+                        pipelineBuilder, 
+                        serverOptions
+                    );
 
                     contractMethods.TryAdd($"{descriptor.OperationName}", descriptor);
                     OnOperationRegistered?.Invoke(descriptor);
@@ -92,6 +121,12 @@ namespace Hubcon.Server.Core.Routing.Registries
             {
                 foreach (var operation in operationskvp.Value)
                 {
+                    if (operation.Value.Kind == OperationKind.Stream)
+                        continue;
+
+                    if (operation.Value.Kind == OperationKind.Subscription)
+                        continue;
+
                     if(operation.Value.OperationInfo is MethodInfo)
                     {
                         app.MapTypedEndpoint(operation.Value);

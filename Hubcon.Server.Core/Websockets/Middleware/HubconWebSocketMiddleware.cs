@@ -35,7 +35,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         ILogger<HubconWebSocketMiddleware> logger,
         IInternalServerOptions options)
     {
-        private TimeSpan timeoutSeconds = options.WebSocketTimeout;
+        private readonly TimeSpan timeoutSeconds = options.WebSocketTimeout;
         private HeartbeatWatcher _heartbeatWatcher = null!;
 
         private static readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions()

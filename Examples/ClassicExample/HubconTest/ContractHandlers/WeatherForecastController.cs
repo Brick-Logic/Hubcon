@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace HubconTest.Controllers
+namespace HubconTest.ContractHandlers
 {
     [ApiController]
     [Route("[controller]")]

@@ -9,7 +9,6 @@ namespace Hubcon.Shared.Abstractions.Standard.Extensions
     public static class MethodExtensions
     {
         private static ConcurrentDictionary<MethodInfo, string> _signatureCache = new ConcurrentDictionary<MethodInfo, string>();
-        private static ConcurrentDictionary<MethodInfo, string> _routeCache = new ConcurrentDictionary<MethodInfo, string>();
 
         public static string GetMethodSignature(this MethodInfo method)
         {
@@ -42,18 +41,6 @@ namespace Hubcon.Shared.Abstractions.Standard.Extensions
             else
             {
                 return type.FullName ?? type.Name;
-            }
-        }
-
-        public static string GetRoute(this MethodInfo method)
-        {
-            if( _routeCache.TryGetValue(method, out var route))
-                return route;
-            else
-            {
-                var result = "/" + method.DeclaringType.Name + "/" + method.Name;
-                _routeCache.TryAdd(method, result);
-                return result;
             }
         }
 

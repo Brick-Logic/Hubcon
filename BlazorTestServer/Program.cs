@@ -44,7 +44,7 @@ namespace BlazorTestServer
                         .SetHttpTimeout(TimeSpan.FromSeconds(15))
                         .DisableWebSocketIngest()
                         .DisableWebSocketSubscriptions()
-                        .DisableWebSocketNormalMethods()
+                        .DisableWebSocketMethods()
                         .DisableWebsocketPing()
                         .DisableWebSocketPong()
                 );

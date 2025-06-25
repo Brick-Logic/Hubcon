@@ -40,10 +40,10 @@ namespace HubconTestClient
             var app = builder.Build();
             var scope = app.Services.CreateScope();
 
-            var client = scope.ServiceProvider.GetRequiredService<IUserService>();
+            var client = scope.ServiceProvider.GetRequiredService<IUserContract>();
             var authManager = scope.ServiceProvider.GetRequiredService<AuthenticationManager>();
             var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserService>>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserContract>>();
 
 
             logger.LogInformation("Esperando interacción antes de continuar...");

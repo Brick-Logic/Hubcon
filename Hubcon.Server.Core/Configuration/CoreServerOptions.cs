@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,12 +10,11 @@ namespace Hubcon.Server.Core.Configuration
 {
     public class CoreServerOptions : ICoreServerOptions, IInternalServerOptions
     {
-        private int? maxWsSize;
-        private int? maxHttpSize;
+        private long? maxWsSize;
+        private long? maxHttpSize;
         private TimeSpan? wsTimeout;
         private TimeSpan? httpTimeout;
         private bool? pongEnabled;
-        private LogLevel? logLevel;
         private string? wsPrefix;
         private string? httpPrefix;
 
@@ -23,29 +23,32 @@ namespace Hubcon.Server.Core.Configuration
         private bool? allowWsMethods;
         private bool? websocketRequiresPing;
         private bool? messageRetryIsEnabled;
+        private bool? webSocketStreamIsAllowed;
+        private bool? detailedErrorsEnabled;
+        private Action<IEndpointConventionBuilder>? endpointConventions;
+        private Action<RouteHandlerBuilder>? routeHandlerBuilderConfig;
 
         // Defaults
-        public int MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
-        public int MaxHttpMessageSize => maxHttpSize ?? (128 * 1024);   // 128 KB
-
+        public long MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
+        public long MaxHttpMessageSize => maxHttpSize ?? (128 * 1024);   // 128 KB
 
         
-        public TimeSpan WebSocketTimeout => wsTimeout ?? TimeSpan.FromSeconds(30);
-      
+        public TimeSpan WebSocketTimeout => wsTimeout ?? TimeSpan.FromSeconds(30); 
         public TimeSpan HttpTimeout => httpTimeout ?? TimeSpan.FromSeconds(15);
-       
-        public bool WebSocketPongEnabled => pongEnabled ?? true;
-        
-        public LogLevel GlobalLogLevel => logLevel ?? LogLevel.Information;
-
+         
         public string WebSocketPathPrefix => wsPrefix ?? "/ws";
         public string HttpPathPrefix => httpPrefix ?? "";
 
         public bool WebSocketIngestIsAllowed => allowWsIngest ?? true;
         public bool WebSocketSubscriptionIsAllowed => allowWsSubs ?? true;
-        public bool WebSocketMethodsIsAllowed => allowWsMethods ?? false;
+        public bool WebSocketStreamIsAllowed => webSocketStreamIsAllowed ?? true;
+        public bool WebSocketMethodsIsAllowed => allowWsMethods ?? true;
         public bool WebsocketRequiresPing => websocketRequiresPing ?? true;
+        public bool WebSocketPongEnabled => pongEnabled ?? true;
         public bool MessageRetryIsEnabled => messageRetryIsEnabled ?? false;
+        public bool DetailedErrorsEnabled => detailedErrorsEnabled ?? false;
+        public Action<IEndpointConventionBuilder>? EndpointConventions => endpointConventions;
+        public Action<RouteHandlerBuilder>? RouteHandlerBuilderConfig => routeHandlerBuilderConfig;
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -77,15 +80,9 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
 
-        public ICoreServerOptions SetGlobalLogLevel(LogLevel level)
-        {
-            logLevel ??= level;
-            return this;
-        }
-
         public ICoreServerOptions SetWebSocketPathPrefix(string prefix)
         {
-            wsPrefix ??= prefix;
+            wsPrefix ??= "/" + prefix;
             return this;
         }
 
@@ -101,13 +98,19 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
 
+        public ICoreServerOptions DisableWebSocketStream(bool disabled = true)
+        {
+            webSocketStreamIsAllowed ??= !disabled;
+            return this;
+        }
+
         public ICoreServerOptions DisableWebSocketSubscriptions(bool disabled = true)
         {
             allowWsSubs ??= !disabled;
             return this;
         }
 
-        public ICoreServerOptions DisableWebSocketNormalMethods(bool disabled = true)
+        public ICoreServerOptions DisableWebSocketMethods(bool disabled = true)
         {
             allowWsMethods ??= !disabled;
             return this;
@@ -122,6 +125,24 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions DisabledRetryableMessages(bool disabled = true)
         {
             messageRetryIsEnabled ??= !disabled;
+            return this;
+        }
+
+        public ICoreServerOptions EnableRequestDetailedErrors(bool enabled = true)
+        {
+            detailedErrorsEnabled ??= enabled;
+            return this;
+        }
+        
+        public ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure)
+        {
+            endpointConventions ??= configure;
+            return this;
+        }
+
+        public ICoreServerOptions UseGlobalRouteHandlerBuilder(Action<RouteHandlerBuilder> configure)
+        {
+            routeHandlerBuilderConfig ??= configure;
             return this;
         }
     }

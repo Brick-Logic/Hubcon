@@ -4,7 +4,7 @@ using HubconTestDomain;
 
 namespace BlazorTestServer.Controllers
 {
-    public class TestController(ILogger<TestController> logger) : IUserService
+    public class TestController(ILogger<TestController> logger) : IUserContract
     {
         [AllowAnonymous]
         public ISubscription<int>? OnUserCreated { get; }
@@ -40,9 +40,46 @@ namespace BlazorTestServer.Controllers
             return Task.CompletedTask;
         }
 
-        public Task IngestMessages(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2, IAsyncEnumerable<string> source3, IAsyncEnumerable<string> source4, IAsyncEnumerable<string> source5)
+        public async Task IngestMessages(
+            IAsyncEnumerable<string> source,
+            IAsyncEnumerable<string> source2,
+            IAsyncEnumerable<string> source3,
+            IAsyncEnumerable<string> source4,
+            IAsyncEnumerable<string> source5)
         {
-            throw new NotImplementedException();
+            Task TaskRunner<T>(IAsyncEnumerable<T> source, string name)
+            {
+                return Task.Run(async () =>
+                {
+                    await foreach (var item in source)
+                    {
+                        logger.LogInformation($"source1: {item}");
+                    }
+                    logger.LogInformation($"[{name}] Stream terminado.");
+                });
+            }
+
+            List<Task> sources =
+            [
+                TaskRunner(source, nameof(source)),
+                TaskRunner(source2, nameof(source2)),
+                TaskRunner(source3, nameof(source3)),
+                TaskRunner(source4, nameof(source4)),
+                TaskRunner(source5, nameof(source5)),
+            ];
+
+            await Task.WhenAll(sources);
+            logger.LogInformation("Ingest terminado exitosamente");
+        }
+
+        public Task<IEnumerable<bool>> GetBooleans()
+        {
+            return Task.FromResult(Enumerable.Range(0, 6).Select(x => true));
+        }
+
+        public Task<MyTestClass> GetObject()
+        {
+            return Task.FromResult(new MyTestClass("hola", new TestClass2("propiedad")));
         }
     }
 }
