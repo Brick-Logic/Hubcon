@@ -24,7 +24,8 @@ A high-performance, contract-based RPC micro-framework for .NET that provides se
 On client: dotnet add package Hubcon.Client
 On server: dotnet add package Hubcon.Server
 
-You can also install both at the same time, for example, to develop multiple microservices and ensuring a statically typed integration.
+You can also install both at the same time, for example, to develop multiple
+microservices and ensuring a statically typed integration.
 ```
 
 ## 🏗️ Quick Start
@@ -58,9 +59,12 @@ public interface IUserContract : IControllerContract
 ```
 
 ### 2. Server Implementation
+
+## Controller/ContractHandler implementation
+
 Here you will implement your contract/interface, as if it were a normal interface.
 ```csharp
-public class UserContractHandler: IUserContract
+public class UserController: IUserContract
 {
     public async Task<bool> GetUserAsync(int id)
     {
@@ -90,29 +94,244 @@ public class UserContractHandler: IUserContract
             yield return myNumber;
     }
 }
-
-Pending...
 ```
+
+NOTE: Sync methods are also supported and will work normally on server side, but
+they WILL block the main thread on the client, specially on Blazor and
+any single-threaded application. The framework will show a warning explaining this.
+Task or Task<T> usage is strongly recommended, except on methods that return IAsyncEnumerable<T>,
+which already handle this. 
+
+## Server-side program.cs
+
+```csharp
+// Before 'var app = builder.Build();'
+
+builder.AddHubconServer();
+builder.ConfigureHubconServer(serverOptions =>
+{
+    serverOptions.ConfigureCore(config => 
+    {
+        config.EnableRequestDetailedErrors();
+        // Here you can configure core features, like:
+        // Disabling specific operations, timeouts, message sizes, etc
+    });
+
+    // Here you add your Controller/ContractHandler
+    serverOptions.AddController<UserController>(configure =>
+    {
+        // Here you can add custom hubcon middlewares
+        // Hubcon middlewares support dependency injection
+        // and include an extended operation context.
+    });
+});
+```
+## After Build()
+
+```csharp
+// After 'builder.Build();'
+
+// Maps and documents normal HTTP endpoints, can be omitted if you only use websockets.
+// They are also mapped to OpenAPI, so you can test on Swagger, Scalar or any OpenAPI-compatible tool.
+app.MapHubconControllers();
+
+// This enables the hubcon websocket middleware. Can also be omitted if you only want HTTP support.
+app.UseHubconWebsockets();
+```
+
+These options can be used in any order.
 
 ### 3. Client Usage
 
+## Creating a RemoteServerModule
+A RemoteServerModule represents a server as an entity. It is used to describe a remote server, and implements
+contracts automatically based on it.
+
 ```csharp
-Pending...
+internal class MyUserServerModule : RemoteServerModule
+{
+    public override void Configure(IServerModuleConfiguration server)
+    {
+        // Base url
+        server.WithBaseUrl("localhost:5000");
+
+        // Agrego los contratos que este servidor implementa
+        // Estos contratos se resuelven por DI con la configuracion puesta en este lugar
+
+        // Here you add your shared contracts. 
+        // Any contracts added here will use this server module's configuration.
+        server.Implements<IUserContract>(contractConfig =>
+        {
+            // Here you can change contract-specific settings.
+            // For now, you can only switch a contract from HTTP to websockets.
+            contractConfig.UseWebsocketMethods(); 
+        });
+
+        // Here, you can use an authentication manager which Hubcon will automatically use.
+        // Authentication managers can also inject any contracts.
+        server.UseAuthenticationManager<AuthenticationManager>();
+
+        // You can switch to insecure connections. This includes 'https -> http' and 'wss to ws' protocols.
+        server.UseInsecureConnection();
+    }
+}
 ```
+
+## Authentication manager
+The authentication manager allows Hubcon to inject an authorization tokens on HTTP requests and
+to authenticate the initial websocket connection.
+
+```csharp
+public class AuthenticationManager(IUserContract users) : BaseAuthenticationManager
+{
+    public override string? AccessToken { get; protected set; } = "";
+    public override string? RefreshToken { get; protected set; } = "";
+    public override DateTime? AccessTokenExpiresAt { get; protected set; } = DateTime.UtcNow.AddYears(1);
+
+    protected async override Task<IAuthResult> AuthenticateAsync(string username, string password)
+    {
+        // Your login logic
+        // users.MyLoginMethod()
+
+        AccessToken = "someToken";
+        RefreshToken = "";
+        AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
+
+        return AuthResult.Success(token, "", 100000);
+    }
+
+    protected override Task ClearSessionAsync()
+    {
+        AccessToken = "";
+        RefreshToken = "";
+        AccessTokenExpiresAt = null;
+
+        return Task.CompletedTask;
+    }
+
+    protected async override Task<PersistedSession?> LoadPersistedSessionAsync()
+    {
+        // Your session retrieving logic
+
+        AccessToken = "some token";
+        RefreshToken = "";
+        AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
+
+        return new PersistedSession()
+        {
+            AccessToken = token,
+            RefreshToken = ""
+        };
+    }
+
+    protected async override Task<IAuthResult> RefreshSessionAsync(string refreshToken)
+    {
+        // Your token refresh logic
+
+        AccessToken = "some token";
+        RefreshToken = "";
+        AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
+
+        return AuthResult.Success(token, "", 100000);
+    }
+
+    protected async override Task SaveSessionAsync()
+    {
+        // You save session logic
+    }
+}
+```
+All methods and subscriptions (including ISubscription<T> properties) allow the usage of the
+[Authorize] attribute, including it's variants, and the [AllowAnonymous] attribute, for public access.
 
 ## 🔧 Advanced Features
 
 ### Custom Middleware
+Hubcon has it's own execution pipeline with custom middlewares, which come AFTER the ASP.NET's pipeline.
+You can add global middlewares, and also controller-specific middlewares.
 
+Lets define some basic middleware:
 ```csharp
-Pending...
+public class LocalLoggingMiddleware(ILogger<LocalLoggingMiddleware> logger) : ILoggingMiddleware
+{
+    public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
+    {
+        try
+        {
+            logger.LogInformation($"[Local] Operation {request.OperationName} started.");
+            await next();
+        }
+        finally
+        {
+            logger.LogInformation($"[Local] Operation {request.OperationName} finished.");
+        }
+    }
+}
+
+public class GlobalLoggingMiddleware(ILogger<GlobalLoggingMiddleware> logger) : ILoggingMiddleware
+{
+    public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
+    {
+        try
+        {
+            logger.LogInformation($"[Global] Operation {request.OperationName} started.");
+            await next();
+        }
+        finally
+        {
+            logger.LogInformation($"[Global] Operation {request.OperationName} finished.");
+        }
+    }
+}
 ```
+
+Then we register their usage:
+```csharp
+// On server-side program.cs...
+builder.ConfigureHubconServer(serverOptions =>
+{
+    // This will execute for ALL controllers.
+    serverOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
+
+    serverOptions.AddController<UserController>(configure =>
+    {
+        // This will execute for this controller only.
+        configure.AddMiddleware<LocalLoggingMiddleware>();
+
+        // By default, local middlewares have priority, but you can use:
+        x.UseGlobalMiddlewaresFirst();
+    });
+});
+```
+
+NOTE: There's a hard middleware order by type, which goes like this:
+
+- ExceptionMiddleware (one local, one global)
+- LoggingMiddlewares (multiple)
+- AuthenticationMiddlewares (multiple)
+- PreRequestMiddlewares (multiple)
+- PreRequestMiddlewares(multiple)
+- AuthorizationMiddlewares (multiple)
+- GlobalRoutingMiddleware (internal middleware, cannot be changed)
+- PostRequestMiddlewares (multiple)
+- ResponseMiddlewares (multiple)
+
+This option:
+```csharp
+    x.UseGlobalMiddlewaresFirst();
+```
+
+Will set global middlewares as priority in their own group.
+
+Using that option, the global AuthorizationMiddleware will have priority over the local one, but will
+still respect the type order.
 
 ### Subscription Configuration
+Subscriptions don't need configuration by default, they are plug and play, but you
+can configure a timeout and ping/pong capabilities:
 
-```csharp
-Pending...
-```
+
+
 
 ### WebSocket Reconnection
 
