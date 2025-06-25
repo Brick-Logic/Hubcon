@@ -21,7 +21,7 @@ A high-performance, contract-based RPC micro-framework for .NET that provides se
 ## 📦 Installation
 
 ```bash
-TBA
+Pending...
 ```
 
 ## 🏗️ Quick Start
