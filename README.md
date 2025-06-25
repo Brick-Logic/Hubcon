@@ -55,6 +55,11 @@ public interface IUserContract : IControllerContract
     // This can be used to stream any type of serializable object to the client.
     // They work similarly to subscriptions, but they can receive parameters. Perfect for pub/sub.
     IAsyncEnumerable<bool> StreamBooleansAsync(int count);
+
+    // Ingest methods
+    // Methods can receive an IAsyncEnumerable<T> directly from the client.
+    // Works similarly to subscriptions.
+    Task IngestSomethingAsync(IAsyncEnumerable<string> myIngestStream);
 }
 ```
 
@@ -92,6 +97,14 @@ public class UserController: IUserContract
         // Can be infinite or you can finish it, and it will finish in the client too.
         await foreach (var myNumber in Enumerable.Range(0, count).Select(x => true))
             yield return myNumber;
+    }
+
+    public async Task IngestSomethingAsync(IAsyncEnumerable<string> myIngestStream)
+    {
+        await foreach(var item in myIngestStream)
+            Console.WriteLine(item);
+
+        // Finishes when client finishes, or a websocket silence timeout is reached.
     }
 }
 ```
