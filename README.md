@@ -1,4 +1,4 @@
-﻿# Hubcon Framework
+﻿# Hubcon
 
 A high-performance, contract-based RPC micro-framework for .NET that provides seamless communication over HTTP/WebSocket with GraphQL-style subscriptions and real-time data streaming capabilities.
 
@@ -244,6 +244,16 @@ public class AuthenticationManager(IUserContract users) : BaseAuthenticationMana
 All methods and subscriptions (including ISubscription<T> properties) allow the usage of the
 [Authorize] attribute, including it's variants, and the [AllowAnonymous] attribute, for public access.
 
+## Register your RemoteServerModule
+```csharp
+// On program.cs, before builder.Build()...
+builder.Services.AddHubconClient();
+builder.Services.AddRemoteServerModule<MyUserServerModule>();
+```
+And that's it, hubcon will internally implement the server module, and therefore all the specified contracts.
+
+NOTE: There will be exactly 1 client which includes a pooled HTTP client and a custom websocket client per contract.
+
 ## 🔧 Advanced Features
 
 ### Custom Middleware
@@ -328,71 +338,69 @@ still respect the type order.
 
 ### Subscription Configuration
 Subscriptions don't need configuration by default, they are plug and play, but you
-can configure a timeout and ping/pong capabilities:
+can configure websocket-specific settings which affect or disable them:
 
-
-
+```csharp
+// Server-side program.cs...
+builder.ConfigureHubconServer(serverOptions =>
+{
+    serverOptions.ConfigureCore(config => 
+    {
+        config
+            .DisableWebSocketIngest()
+            .DisableWebSocketMethods()
+            .DisableWebsocketPing()
+            .DisableWebSocketPong()
+            .DisableWebSocketStream()
+            .DisableWebSocketSubscriptions()
+            .SetWebSocketTimeout(TimeSpan.FromSeconds(5));
+    });
+});
+```
 
 ### WebSocket Reconnection
 
-```csharp
-Pending...
-```
+The hubcon websocket client allows automatic reconnection without breaking ongoing subscriptions, 
+which are based on IObservable<T>. They will just wait for the websocket to reconnect and keep receiving messages.
+
+This includes property subscriptions and streams (they will resend the request to restablish them), but will not recover Ingest Methods.
 
 ## 📊 Performance
 
 Hubcon is designed for high-performance scenarios:
 
-- **90,000+ RPS** on commodity hardware (Ryzen 5 4650U Pro)
+- **Theoretical ~90,000 RPS** tested on a Ryzen 5 4650U Pro laptop CPU
 - **Sub-millisecond latency** for local calls
 - **Memory efficient** with zero-allocation hot paths
-- **Leak-free** architecture with automatic resource cleanup
-- **Scalable** subscription management
+- **Leak-free** architecture
+- **Scalable** subscription management, specially when returning IAsyncEnumerable<T>, allowing parameterized subscriptions.
 
 ## 🔌 Architecture
 
 ### Transport Layer
-- **HTTP**: RESTful endpoints with JSON serialization
-- **WebSocket**: Real-time bidirectional communication
-- **Automatic Fallback**: Seamless transport switching
+- **HTTP**: RESTful endpoints with JSON serialization with partial OpenAPI compatibility
+- **WebSocket**: Real-time bidirectional communication using a lightweight messaging protocol.
 
 ### Contract System
-- **Source Generation**: Automatic proxy creation at compile-time
-- **Type Safety**: Full compile-time validation
-- **Dependency Injection**: Native DI container integration
+- **Source Generation**: Automatic proxy generation at compile-time
+- **Type Safety**: Full compile-time validation, any incompatible type will not be tolerated
+- **Dependency Injection**: Seamless DI container integration (based on Autofac)
 
 ### Subscription Model
-```csharp
-Pending...
-```
-
-## 🛠️ Configuration
-
-### Server Configuration
-
-```csharp
-Pending...
-```
-
-### Client Configuration
-
-```csharp
-Pending...
-```
+You can use ANY serializable data object, just return IAsyncCenumerable<MyType> or
+use a ISubscription<T> property.
 
 ## 🤝 Integration
 
 ### ASP.NET Core Pipeline
 Hubcon integrates seamlessly with the ASP.NET Core pipeline:
-- Compatible with existing middleware
+- Compatible with existing middleware (like Jwt middlewares)
 - Supports authentication and authorization
 - Works with model binding and validation
-- Integrates with logging and metrics
+- Integrates with logging and metrics through middlewares.
 
 ### Dependency Injection
-```csharp
-Pending...
-```
+Just inject the contract you need, and hubcon will magically do the rest.
 
 ## 📝 Requirements
 
@@ -401,16 +409,41 @@ Pending...
 
 ## 🏆 Why Hubcon?
 
-- **Developer Experience**: Write once, use everywhere contracts, never integrate again
-- **Performance**: Optimized for high-throughput scenarios  
-- **Flexibility**: HTTP or WebSocket, your choice
+- **Developer Experience**: Write once, use everywhere, never think about transport again
+- **Performance**: Optimized for high-throughput scenarios
+- **Flexibility**: HTTP or WebSocket, your contract, your choice
 - **Real-time**: Built-in subscription and streaming support
 - **Maintainable**: Strong typing and compile-time validation
 - **Scalable**: Efficient resource management and connection pooling
 
+## Where did Hubcon come from?
+
+Hubcon started as controllers for SignalR. I hated having to register every message manually, 
+so i made a custom abstract Hub class, which meant controllers for both server and client. 
+Both would implement controllers and their contracts.
+
+It was good but... **It was simply not enough**.
+
+I explored GraphQL (HotChocolate) as a transport layer for hubcon, and it worked great, until i saw
+how limiting it is for clients and general capabilities. Not to mention how hard it was to simply configure a little, **just a little** 
+more custom solution. Not to mention it **always broke** the IObservable<T>'s it generated, making everything **harder to implement**.
+
+So i made my own websocket messaging protocol. 
+
+Implemented a better subscription system which doesn't break when the connection is lost,
+it just waits for the reconnection and re-subscribes, and everything works as always.
+
+Implemented an ingest system. Servers can receive one or multiple IAsyncEnumerable<T>'s from the client and consume them in multiple tasks.
+
+Implemented a seamless method method calling system, through HTTP or Websockets, as you wish.
+
+Implemented a lightweight custom middleware pipeline with extended details about the operation, and the parsed request.
+
+Just because... **I hate manual integrations**.
+
 ## 📄 License
 
-This project is licensed under a Personal Use License - see the [LICENSE](LICENSE) file for details.
+This project is licensed, for now, under a Personal Use License - see the [LICENSE](LICENSE) file for details.
 
 ## 🤝 Contributing
 
