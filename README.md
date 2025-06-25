@@ -21,7 +21,10 @@ A high-performance, contract-based RPC micro-framework for .NET that provides se
 ## 📦 Installation
 
 ```bash
-Pending...
+On client: dotnet add package Hubcon.Client
+On server: dotnet add package Hubcon.Server
+
+You can also install both at the same time, for example, to develop multiple microservices and ensuring a statically typed integration.
 ```
 
 ## 🏗️ Quick Start
@@ -29,37 +32,62 @@ Pending...
 ### 1. Define Your Contract
 
 ```csharp
+Your contract will be an interface which implement IControllerContract, a marking interface.
+We will use this contract later to implement a contract handler in a Controller-like style.
+This contract MUST be shared with the client for this to work, and Hubcon will do the rest.
+
 public interface IUserContract : IControllerContract
 {
     // Standard RPC methods
+    // These methods use HTTP by default, but can be switched to websockets on a contract level.
     Task<User> GetUserAsync(int id);
-    Task<User> CreateUserAsync(CreateUserRequest request);
+    Task<User> CreateUserAsync(object request);
     
     // Real-time subscriptions
-    ISubscription<UserNotification> UserNotifications { get; }
+    // They work like normal C# events. You can subscribe or unsubscribe from it.
+    // Use UserNotifications.Emit(userNotification) on server-side to send a notification to the client.
+    // They are automatically injected when a controller is called, so you can notify the client when executing ANY method.
+    // The client has to subscribe to this event, otherwise it will be null on the server.
+    ISubscription<int>? UserNotifications { get; }
     
     // Data streaming
-    IAsyncEnumerable<User> StreamUsersAsync(UserFilter filter);
+    // This can be used to stream any type of serializable object to the client.
+    // They work similarly to subscriptions, but they can receive parameters. Perfect for pub/sub.
+    IAsyncEnumerable<bool> StreamBooleansAsync(int count);
 }
 ```
 
 ### 2. Server Implementation
-
+Here you will implement your contract/interface, as if it were a normal interface.
 ```csharp
 public class UserContractHandler: IUserContract
 {
-    public async Task<User> GetUserAsync(int id)
+    public async Task<bool> GetUserAsync(int id)
     {
         // Your implementation
-        return await userRepository.GetByIdAsync(id);
+
+        await Task.Delay(10); // Some work done
+        return true;
     }
-    
-    public ISubscription<UserNotification> UserNotifications { get; }
-    
-    public async IAsyncEnumerable<User> StreamUsersAsync(UserFilter filter)
+
+    // Methods can be async or not.
+    public Task<bool> CreateUserAsync(object request)
     {
-        await foreach (var user in userRepository.StreamAsync(filter))
-            yield return user;
+        // Your implementation
+
+        UserNotifications?.Emit(1); // Some notification to the client
+        return Task.FromResult(true);
+    }
+
+    // This can be null if the client isn't subscribed to this, so mark it as nullable.
+    public ISubscription<int>? UserNotifications { get; }
+    
+    public async IAsyncEnumerable<bool> StreamBooleansAsync(int count)
+    {
+        // Returns a list of booleans one by one.
+        // Can be infinite or you can finish it, and it will finish in the client too.
+        await foreach (var myNumber in Enumerable.Range(0, count).Select(x => true))
+            yield return myNumber;
     }
 }
 
