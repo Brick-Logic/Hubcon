@@ -14,8 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Examples\HubconTestDomain\HubconTestDomain.csproj" />
-    <ProjectReference Include="..\Hubcon.Server\Hubcon.Server.csproj" />
+    <ProjectReference Include="..\..\..\Hubcon.Server\Hubcon.Server.csproj" />
+    <ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
   </ItemGroup>
-
 </Project>

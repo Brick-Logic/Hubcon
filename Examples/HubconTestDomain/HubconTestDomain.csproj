@@ -7,6 +7,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Hubcon.Shared\Hubcon.Shared.csproj" />
+		<ProjectReference Include="..\..\Hubcon.Client\Hubcon.Client.csproj" />
 	</ItemGroup>
 </Project>

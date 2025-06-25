@@ -4,6 +4,23 @@
 	  <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+	<AssemblyName>Hubcon.Server</AssemblyName>
+	<RootNamespace>Hubcon.Server</RootNamespace>
+
+	<PackageOutputPath>../nupkgs</PackageOutputPath>
+	<IsPackable>true</IsPackable>
+	<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	<PackageId>Hubcon.Server</PackageId>
+	<Version>1.0.0</Version>
+	<Authors>Brick-Logic</Authors>
+	<Company>Brick-Logic</Company>
+	<Description></Description>
+	<PackageTags>http;websockets;rpc</PackageTags>
+
+	  <RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
+	  <RepositoryType>git</RepositoryType>
+	  <RepositoryBranch>main</RepositoryBranch>
   </PropertyGroup>
 
 	<ItemGroup>
@@ -15,9 +32,9 @@
 		<PackageReference Include="HotChocolate.Server" Version="10.5.5" />
 		<PackageReference Include="HotChocolate.Types" Version="15.1.5" />
 		
-		<PackageReference Include="HubconAnalyzers" Version="1.0.*" />
-		<PackageReference Include="HubconAnalyzers.CodeFixes" Version="1.0.*" />
-		<PackageReference Include="HubconAnalyzers.DiagnosticSupressors" Version="1.0.*" />
+		<PackageReference Include="Hubcon.Analyzers" Version="1.0.*" />
+		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="1.0.*" />
+		<PackageReference Include="Hubcon.Analyzers.DiagnosticSupressors" Version="1.0.*" />
 
 		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Client.Core\Hubcon.Client.Core.csproj" />

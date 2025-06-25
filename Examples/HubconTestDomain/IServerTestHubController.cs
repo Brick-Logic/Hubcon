@@ -1,5 +1,4 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace HubconTestDomain

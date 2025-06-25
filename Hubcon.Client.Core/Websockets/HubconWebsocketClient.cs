@@ -354,7 +354,9 @@ namespace Hubcon.Client.Core.Websockets
 
             var response = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), tcs.Task);
 
-            return response == null ? throw new TimeoutException("The request timed out.") : JsonSerializer.Deserialize<T>(response.Result, _jsonOptions)!;
+            return response == null 
+                ? throw new TimeoutException("The request timed out.") 
+                : JsonSerializer.Deserialize<T>(response.Result, _jsonOptions)!;
         }
 
         private async Task<Task?> WaitWithTimeoutAsync(TimeSpan timeout, CancellationToken token = default, params Task[] tasks)

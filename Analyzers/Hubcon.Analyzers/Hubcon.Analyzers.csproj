@@ -1,26 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>netstandard2.1</TargetFramework>
-		<RootNamespace>HubconAnalyzers.CodeFixes</RootNamespace>
-
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<AssemblyName>Hubcon.Analyzers</AssemblyName>
+		<RootNamespace>Hubcon.Analyzers</RootNamespace>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<PackageOutputPath>../../nupkgs</PackageOutputPath>
 
 		<IsPackable>true</IsPackable>
 
 		<!-- Empaquetar como NuGet -->
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageId>HubconAnalyzers.CodeFixes</PackageId>
+		<PackageId>Hubcon.Analyzers</PackageId>
 		<Version>1.0.0</Version>
-		<Authors>Brick-Logic</Authors>
-		<Company>Brick-Logic</Company>
 		<Description></Description>
 		<PackageTags>analyzer</PackageTags>
-		<PackageOutputPath>../nupkgs</PackageOutputPath>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.13.0" />
+		<!-- Las APIs de Roslyn -->
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -30,9 +30,8 @@
 	<ItemGroup>
 		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
 	</ItemGroup>
-
+	
 	<ItemGroup>
-		<Compile Update="CodeFixResources.Designer.cs" DesignTime="True" AutoGen="True" DependentUpon="CodeFixResources.resx" />
-		<EmbeddedResource Update="CodeFixResources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="CodeFixResources.Designer.cs" />
+	  <ProjectReference Include="..\..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
 	</ItemGroup>
 </Project>

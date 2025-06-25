@@ -75,18 +75,32 @@ namespace Hubcon.Client.Builder
             if (!contractType.IsAssignableTo(typeof(IControllerContract)))
                 return;
 
-            var proxyTypes = contractType.Assembly
-                .GetTypes()
-                .Where(t => !t.IsInterface
-                    && typeof(IControllerContract).IsAssignableFrom(t)
-                    && t.IsDefined(typeof(HubconProxyAttribute), inherit: false))
-                .ToList();
+            var proxy = GetProxyType(contractType);
 
-            var proxy = proxyTypes.Find(x => x.Name == contractType.Name + "Proxy")!;
-
-            proxyTypes.Add(proxy);
             Proxies.RegisterProxy(contractType, proxy);
             services.AddTransient(proxy);
+        }
+
+        private static Type? GetProxyType(Type interfaceType)
+        {
+            // Construir el nombre del proxy basado en la convención
+            var proxyTypeName = $"{interfaceType.FullName}Proxy";
+
+            // Buscar en el mismo assembly primero
+            var proxyType = interfaceType.Assembly.GetType(proxyTypeName);
+
+            // Si no se encuentra, buscar en todos los assemblies cargados
+            if (proxyType == null)
+            {
+                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    proxyType = assembly.GetType(proxyTypeName);
+                    if (proxyType != null)
+                        break;
+                }
+            }
+
+            return proxyType;
         }
 
         public IServiceCollection UseContractsFromAssembly(IServiceCollection services, string assemblyName)
