@@ -11,8 +11,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
-		<ProjectReference Include="..\..\..\Hubcon.Server\Hubcon.Server.csproj" />
+		<PackageReference Include="Hubcon.Client" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Server" Version="[1.0.0-beta,2.0.0-beta)" />
 		<ProjectReference Include="..\ExampleMicroservicesDomain\ExampleMicroservicesDomain.csproj" />
 	</ItemGroup>
 

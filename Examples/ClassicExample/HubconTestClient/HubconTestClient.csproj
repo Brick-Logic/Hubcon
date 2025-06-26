@@ -14,7 +14,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
+	  <PackageReference Include="Hubcon.Client" Version="1.0.7-beta" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
 	</ItemGroup>
 </Project>

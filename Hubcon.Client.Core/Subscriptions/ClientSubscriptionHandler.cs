@@ -1,5 +1,4 @@
-﻿using Castle.Core.Internal;
-using Hubcon.Shared.Abstractions.Enums;
+﻿using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
@@ -83,7 +82,7 @@ namespace Hubcon.Client.Core.Subscriptions
 
                         var interfaces = Property.ReflectedType!.GetInterfaces();
                         var baseContractType = typeof(IControllerContract);
-                        var contract = interfaces.Find(x => x.IsAssignableTo(baseContractType) && x != baseContractType) ?? baseContractType;
+                        var contract = interfaces.First(x => x.IsAssignableTo(baseContractType) && x != baseContractType) ?? baseContractType;
                         var request = new SubscriptionRequest(Property.Name, contract.Name, null);
 
                         eventSource = _client.GetSubscription(request, _tokenSource.Token);

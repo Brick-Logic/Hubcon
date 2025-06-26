@@ -7,17 +7,22 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Castle.Core" Version="4.4.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Authorization" Version="9.0.5" />
+		<PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.5" />
 		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
-		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.5" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.1" />
 	</ItemGroup>
 
-	<ItemGroup>
+
+	<!-- Development -->
+	<ItemGroup Condition="'$(UsePackages)' != 'true'">
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
+	</ItemGroup>
+
+	<!-- Nuget -->
+	<ItemGroup Condition="'$(UsePackages)' == 'true'">
+		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Shared.Abstractions" Version="[1.0.0-beta,2.0.0-beta)" />
 	</ItemGroup>
 
 </Project>

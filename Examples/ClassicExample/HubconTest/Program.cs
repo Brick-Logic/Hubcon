@@ -2,7 +2,6 @@ using Hubcon.Server.Injection;
 using HubconTest.ContractHandlers;
 using HubconTest.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Diagnostics;
@@ -68,10 +67,24 @@ namespace HubconTest
                     .EnableRequestDetailedErrors()
                     .SetHttpPathPrefix("prefix1")
                     .SetWebSocketPathPrefix("wsprefix");
+
+
+                    config
+                    .DisableWebSocketIngest()
+                    .DisableWebSocketMethods()
+                    .DisableWebsocketPing()
+                    .DisableWebSocketPong()
+                    .DisableWebSocketStream()
+                    .DisableWebSocketSubscriptions()
+                    .SetWebSocketTimeout(TimeSpan.FromSeconds(5));
                     
                 });
 
-                serverOptions.AddController<UserContractHandler>();
+
+
+                serverOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
+
+                serverOptions.AddController<UserContractHandler>(x => x.UseGlobalMiddlewaresFirst());
                 serverOptions.AddController<SecondTestController>();
             });
 

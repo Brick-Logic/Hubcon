@@ -3,35 +3,58 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		
+
 		<AssemblyName>Hubcon.Client</AssemblyName>
 		<RootNamespace>Hubcon.Client</RootNamespace>
-		
+
 		<PackageOutputPath>../nupkgs</PackageOutputPath>
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<!-- Desactivar generación automática de nuspec -->
+		<GenerateNuspecDependsOn></GenerateNuspecDependsOn>
 		<PackageId>Hubcon.Client</PackageId>
-		<Version>1.0.0</Version>
 		<Authors>Brick-Logic</Authors>
 		<Company>Brick-Logic</Company>
-		<Description></Description>
+		<Description>A .NET client for consuming remote Hubcon.Server based APIs via RPC-like strongly-typed C# contracts, through HTTP and WebSockets.</Description>
 		<PackageTags>http;websockets;rpc</PackageTags>
-
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryBranch>main</RepositoryBranch>
+
+		<!-- Configuración para incluir ensamblados -->
+		<IncludeBuildOutput>true</IncludeBuildOutput>
+		<UsePackages Condition="'$(UsePackages)' == ''">false</UsePackages>
+
+		<!-- Suprimir automáticamente todas las dependencias -->
+		<GenerateDependencyFile>false</GenerateDependencyFile>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.*" />
+	<!-- Development -->
+	<ItemGroup Condition="'$(UsePackages)' != 'true'">
+		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" PrivateAssets="all" />
+		<ProjectReference Include="..\Hubcon.Client.Core\Hubcon.Client.Core.csproj" PrivateAssets="all" />
+		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" PrivateAssets="all" />
+		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" PrivateAssets="all" />
+		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" PrivateAssets="all" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[1.0.0-beta,2.0.0-beta)" PrivateAssets="all" />
 	</ItemGroup>
 
+	<!-- Nuget -->
+	<ItemGroup Condition="'$(UsePackages)' == 'true'">
+		<PackageReference Include="Hubcon.Client.Abstractions" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Client.Core" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Shared.Core" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Shared.Abstractions" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[1.0.0-beta,2.0.0-beta)" />
+	</ItemGroup>
+
+	<!-- Usar nuspec customizado -->
+	<PropertyGroup>
+		<NuspecFile>Hubcon.Client.nuspec</NuspecFile>
+	</PropertyGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" />
-		<ProjectReference Include="..\Hubcon.Client.Core\Hubcon.Client.Core.csproj" />
-		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
-		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
+	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -40,5 +63,4 @@
 			<Pack>true</Pack>
 		</None>
 	</ItemGroup>
-
 </Project>

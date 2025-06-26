@@ -1,5 +1,4 @@
-﻿using Castle.Core.Logging;
-using Hubcon.Server.Core.Configuration;
+﻿using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Websockets.Helpers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
@@ -19,12 +18,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
-using System.Reflection;
-using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace Hubcon.Server.Core.Websockets.Middleware
 {

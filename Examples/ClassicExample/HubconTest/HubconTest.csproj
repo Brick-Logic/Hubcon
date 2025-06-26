@@ -18,6 +18,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Hubcon.Server" Version="1.0.0-beta" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
     <PackageReference Include="Microsoft.ServiceFabric" Version="10.1.2493" />
@@ -27,7 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Hubcon.Server\Hubcon.Server.csproj" />
     <ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
   </ItemGroup>
 </Project>

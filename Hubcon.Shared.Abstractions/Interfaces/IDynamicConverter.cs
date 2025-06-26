@@ -16,14 +16,11 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         IEnumerable<object?> DeserializeArgs(IEnumerable<Type> types, IEnumerable<object?> args);
         T DeserializeByteArray<T>(byte[] bytes);
         IEnumerable<object?> DeserializedArgs(Delegate del, IEnumerable<object?> args);
-        object? DeserializeData(Type type, object data);
         T? DeserializeData<T>(object? data);
         IEnumerable<object?> DeserializeJsonArgs(IEnumerable<JsonElement> elements, IEnumerable<Type> types);
         object? DeserializeJsonElement(JsonElement element, Type targetType);
         T? DeserializeJsonElement<T>(JsonElement element);
-        object?[] SerializeArgs(object?[] args);
         IEnumerable<JsonElement> SerializeArgsToJson(IEnumerable<object?> values);
-        string? SerializeData(object? data);
         JsonElement SerializeObject(object? value);
     }
 }

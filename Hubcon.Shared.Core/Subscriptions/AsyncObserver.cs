@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
 namespace Hubcon.Shared.Core.Subscriptions

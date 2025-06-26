@@ -1,11 +1,9 @@
-﻿using Castle.Core.Logging;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Xml.Linq;
 
 namespace Hubcon.Shared.Core.Serialization
 {
@@ -20,19 +18,6 @@ namespace Hubcon.Shared.Core.Serialization
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
             MaxDepth = 64,
         };
-
-        public object?[] SerializeArgs(object?[] args)
-        {
-            if(args == null)
-                return Array.Empty<object>();
-            if (args.Length == 0) 
-                return Array.Empty<object>();
-
-            for (int i = 0; i < args.Length; i++)
-                args[i] = Newtonsoft.Json.JsonConvert.SerializeObject(args[i]);
-
-            return args;
-        }
 
         public IEnumerable<object?> DeserializeArgs(IEnumerable<Type> types, IEnumerable<object?> args)
         {
@@ -88,8 +73,6 @@ namespace Hubcon.Shared.Core.Serialization
             return DeserializeArgs(parameterTypes, args);
         }
 
-        public string? SerializeData(object? data) => data == null ? null : Newtonsoft.Json.JsonConvert.SerializeObject(data);    
-        public object? DeserializeData(Type type, object data) => data == null ? null : Newtonsoft.Json.JsonConvert.DeserializeObject($"{data}", type);
         public T? DeserializeData<T>(object? data)
         {
             if (data == null) 

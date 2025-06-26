@@ -11,10 +11,18 @@
 	  <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.4" />
 	</ItemGroup>
 
-	<ItemGroup>
+	<!-- Development -->
+	<ItemGroup Condition="'$(UsePackages)' != 'true'">
 		<ProjectReference Include="..\Hubcon.Server.Abstractions\Hubcon.Server.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
-		<ProjectReference Include="..\Hubcon.Shared\Hubcon.Shared.csproj" />
+		<ProjectReference Include="..\Hubcon.Shared\Hubcon.Shared.csproj" />	
+	</ItemGroup>
+
+	<!-- Nuget -->
+	<ItemGroup Condition="'$(UsePackages)' == 'true'">
+		<PackageReference Include="Hubcon.Server.Abstractions" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Shared.Core" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Shared" Version="[1.0.0-beta,2.0.0-beta)" />
 	</ItemGroup>
 
 </Project>

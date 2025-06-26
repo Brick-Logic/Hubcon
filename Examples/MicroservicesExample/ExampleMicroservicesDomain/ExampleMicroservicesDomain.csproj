@@ -8,6 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Hubcon.Server.Abstractions\Hubcon.Server.Abstractions.csproj" />
-    <ProjectReference Include="..\..\..\Hubcon.Shared\Hubcon.Shared.csproj" />
+	<PackageReference Include="Hubcon.Client" Version="[1.0.0-beta,2.0.0)" />
   </ItemGroup>
 </Project>

@@ -1,8 +1,5 @@
-﻿using Castle.Core.Logging;
-using Hubcon.Client.Core.Extensions;
+﻿using Hubcon.Client.Core.Extensions;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Core.Serialization;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets;
 using Hubcon.Shared.Core.Websockets.Events;
@@ -18,7 +15,6 @@ using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Reflection;

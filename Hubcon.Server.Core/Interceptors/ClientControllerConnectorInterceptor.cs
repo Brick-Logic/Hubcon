@@ -1,11 +1,4 @@
-﻿using Castle.DynamicProxy;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Core.Extensions;
-using Hubcon.Shared.Entrypoint;
-
-namespace Hubcon.Server.Core.Interceptors
+﻿namespace Hubcon.Server.Core.Interceptors
 {
     //public class ClientControllerConnectorInterceptor(IHubconClient client, IDynamicConverter converter) : AsyncInterceptorBase, IClientControllerConnectorInterceptor
     //{

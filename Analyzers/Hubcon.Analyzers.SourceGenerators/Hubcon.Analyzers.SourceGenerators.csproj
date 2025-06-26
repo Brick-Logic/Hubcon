@@ -10,8 +10,8 @@
 
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageId>Hubcon.Analyzers.SourceGenerators</PackageId>
-		<Version>1.0.0</Version>
-		<Description>Generador de codigo que crea proxies de cliente para contratos de Hubcon.</Description>
+		<Version>1.0.0-beta</Version>
+		<Description>Source code generators for Hubcon.</Description>
 		<PackageTags>analyzer;source-generator</PackageTags>
 		<PackageOutputPath>../../nupkgs</PackageOutputPath>
 

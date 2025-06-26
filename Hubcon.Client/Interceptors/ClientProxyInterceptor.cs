@@ -1,15 +1,11 @@
-﻿using Castle.DynamicProxy;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Core.Extensions;
-using Hubcon.Shared.Core.Tools;
-using Hubcon.Shared.Entrypoint;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
-using System.Collections.Concurrent;
 
 namespace Hubcon.Client.Interceptors
 {

@@ -11,8 +11,8 @@
 		<!-- Empaquetar como NuGet -->
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageId>Hubcon.Analyzers.CodeFixes</PackageId>
-		<Version>1.0.0</Version>
-		<Description></Description>
+		<Version>1.0.0-beta</Version>
+		<Description>Code fixer analyzers for Hubcon.</Description>
 		<PackageTags>analyzer</PackageTags>
 		<PackageOutputPath>../../nupkgs</PackageOutputPath>
 	</PropertyGroup>
