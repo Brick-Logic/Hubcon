@@ -457,6 +457,7 @@ This project in a mature beta state, and it will soon be used in real cross-plat
 ## 📄 License
 
 This project is licensed, for now, under a Personal Use License - see the [LICENSE](LICENSE) file for details.
+This will change in the future when the first stable version is out.
 
 ## 🤝 Contributing
 
