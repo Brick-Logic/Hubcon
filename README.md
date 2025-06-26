@@ -23,6 +23,7 @@ A high-performance, contract-based RPC micro-framework for .NET that provides se
 ```bash
 On client: dotnet add package Hubcon.Client
 On server: dotnet add package Hubcon.Server
+On your shared project: dotnet add package Hubcon.Shared
 
 You can also install both at the same time, for example, to develop multiple
 microservices and ensuring a statically typed integration.
