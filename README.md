@@ -32,11 +32,11 @@ microservices and ensuring a statically typed integration.
 ## 🏗️ Quick Start
 
 ### 1. Define Your Contract
-
-```csharp
-Your contract will be an interface which implement IControllerContract, a marking interface.
+Your contract will be an interface which implements IControllerContract, a marking interface.
 We will use this contract later to implement a contract handler in a Controller-like style.
 This contract MUST be shared with the client for this to work, and Hubcon will do the rest.
+
+```csharp
 
 public interface IUserContract : IControllerContract
 {
@@ -68,7 +68,7 @@ public interface IUserContract : IControllerContract
 
 ## Controller/ContractHandler implementation
 
-Here you will implement your contract/interface, as if it were a normal interface.
+Here you will implement your contract/interface, as a normal interface.
 ```csharp
 public class UserController: IUserContract
 {
@@ -140,7 +140,6 @@ builder.ConfigureHubconServer(serverOptions =>
     });
 });
 ```
-## After Build()
 
 ```csharp
 // After 'builder.Build();'
