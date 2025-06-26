@@ -168,9 +168,6 @@ internal class MyUserServerModule : RemoteServerModule
         // Base url
         server.WithBaseUrl("localhost:5000");
 
-        // Agrego los contratos que este servidor implementa
-        // Estos contratos se resuelven por DI con la configuracion puesta en este lugar
-
         // Here you add your shared contracts. 
         // Any contracts added here will use this server module's configuration.
         server.Implements<IUserContract>(contractConfig =>
@@ -373,8 +370,8 @@ builder.ConfigureHubconServer(serverOptions =>
 
 ### WebSocket Reconnection
 
-The hubcon websocket client allows automatic reconnection without breaking ongoing subscriptions, 
-which are based on IObservable<T>. They will just wait for the websocket to reconnect and keep receiving messages.
+The hubcon websocket client allows automatic reconnection without breaking existing subscriptions on the client
+They will just wait for the websocket to reconnect and keep receiving messages.
 
 This includes property subscriptions and streams (they will resend the request to restablish them), but will not recover Ingest Methods.
 
@@ -439,7 +436,7 @@ It was good but... **It was simply not enough**.
 
 I explored GraphQL (HotChocolate) as a transport layer for hubcon, and it worked great, until i saw
 how limiting it is for clients and general capabilities. Not to mention how hard it was to simply configure a little, **just a little** 
-more custom solution. Not to mention it **always broke** the IObservable<T>'s it generated, making everything **harder to implement**.
+more custom solution. Not to mention it **always broke** the IObservable<T>'s it generated for subscriptions, making everything **harder to implement**.
 
 So i made my own websocket messaging protocol. 
 
@@ -448,11 +445,14 @@ it just waits for the reconnection and re-subscribes, and everything works as al
 
 Implemented an ingest system. Servers can receive one or multiple IAsyncEnumerable<T>'s from the client and consume them in multiple tasks.
 
-Implemented a seamless method method calling system, through HTTP or Websockets, as you wish.
+Implemented a seamless method calling system, through HTTP or Websockets, as you wish.
 
 Implemented a lightweight custom middleware pipeline with extended details about the operation, and the parsed request.
 
-Just because... **I hate manual integrations**.
+Just because **i hate manual integrations**.
+
+## Project status
+This project in a mature beta state, and it will soon be used in real cross-platform projects to show its capabilities.
 
 ## 📄 License
 
