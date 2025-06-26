@@ -5,16 +5,20 @@
 		<AssemblyName>Hubcon.Analyzers</AssemblyName>
 		<RootNamespace>Hubcon.Analyzers</RootNamespace>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-		<PackageOutputPath>../../nupkgs</PackageOutputPath>
 
+
+		<AssemblyName>$(AssemblyName)</AssemblyName>
+		<RootNamespace>$(AssemblyName)</RootNamespace>
+		<PackageId>$(AssemblyName)</PackageId>
 		<IsPackable>true</IsPackable>
-
-		<!-- Empaquetar como NuGet -->
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageId>Hubcon.Analyzers</PackageId>
-		<Version>1.0.0-beta</Version>
+		<PackageOutputPath>../../nupkgs</PackageOutputPath>
+		<Version>$(Version)</Version>
+		<Authors>$(Authors)</Authors>
+		<Company>$(Company)</Company>
 		<Description>Code analyzers for Hubcon.</Description>
 		<PackageTags>analyzer</PackageTags>
+
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -1,23 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
-		<AssemblyName>Hubcon.Analyzers.DiagnosticSuppressors</AssemblyName>
-		<RootNamespace>Hubcon.Analyzers.DiagnosticSuppressors</RootNamespace>
 		<!-- Necesario para que Roslyn cargue supresores -->
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-		<PackageOutputPath>../nupkgs</PackageOutputPath>
 
-		<IsPackable>true</IsPackable>
-
-		<!-- Empaquetar como NuGet -->
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageId>Hubcon.Analyzers.DiagnosticSupressors</PackageId>
-		<Version>1.0.0-beta</Version>
-		<Authors>Brick-Logic</Authors>
-		<Company>Brick-Logic</Company>
-		<Description>Diagnostic suppressors for Hubcon.</Description>
-		<PackageTags>analyzer</PackageTags>
+		<AssemblyName>$(AssemblyName)</AssemblyName>
+		<RootNamespace>$(AssemblyName)</RootNamespace>
+		<PackageId>$(AssemblyName)</PackageId>
 		<PackageOutputPath>../../nupkgs</PackageOutputPath>
+		<IsPackable>true</IsPackable>
+		<Description>Diagnostic suppressors for Hubcon.</Description>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Version>$(Version)</Version>
+		<Authors>$(Authors)</Authors>
+		<Company>$(Company)</Company>
+		<PackageTags>analyzer</PackageTags>
 	</PropertyGroup>
 	<ItemGroup>
 		<!-- Las APIs de Roslyn -->

@@ -4,10 +4,22 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+
+		<AssemblyName>$(AssemblyName)</AssemblyName>
+		<RootNamespace>$(AssemblyName)</RootNamespace>
+		<PackageId>$(AssemblyName)</PackageId>
+		<PackageOutputPath>../nupkgs</PackageOutputPath>
+		<IsPackable>true</IsPackable>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Description></Description>
+		<PackageTags>http;websockets;rpc</PackageTags>
+		<Version>$(Version)</Version>
+		<Authors>$(Authors)</Authors>
+		<Company>$(Company)</Company>
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.2" />
+	  <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.6" />
 	</ItemGroup>
 
 	<!-- Development -->
@@ -17,6 +29,6 @@
 
 	<!-- Nuget -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-beta*" />
 	</ItemGroup>
 </Project>

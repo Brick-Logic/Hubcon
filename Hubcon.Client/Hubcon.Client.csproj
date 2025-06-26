@@ -20,13 +20,9 @@
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryBranch>main</RepositoryBranch>
-
-		<!-- Configuración para incluir ensamblados -->
-		<IncludeBuildOutput>true</IncludeBuildOutput>
-		<UsePackages Condition="'$(UsePackages)' == ''">false</UsePackages>
-
-		<!-- Suprimir automáticamente todas las dependencias -->
-		<GenerateDependencyFile>false</GenerateDependencyFile>
+		<Version>$(Version)</Version>
+		<Authors>$(Authors)</Authors>
+		<Company>$(Company)</Company>
 	</PropertyGroup>
 
 	<!-- Development -->
@@ -36,26 +32,23 @@
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" PrivateAssets="all" />
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" PrivateAssets="all" />
 		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" PrivateAssets="all" />
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[1.0.0-beta,2.0.0-beta)" PrivateAssets="all" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta*" PrivateAssets="all" />
 	</ItemGroup>
 
 	<!-- Nuget -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Client.Abstractions" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Client.Core" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Shared.Core" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Shared.Abstractions" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta*" />
 	</ItemGroup>
 
 	<!-- Usar nuspec customizado -->
-	<PropertyGroup>
+	<!--<PropertyGroup>
 		<NuspecFile>Hubcon.Client.nuspec</NuspecFile>
-	</PropertyGroup>
-	<ItemGroup>
-	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
-	</ItemGroup>
+	</PropertyGroup>-->
 
 	<ItemGroup>
 		<None Update="README.md">

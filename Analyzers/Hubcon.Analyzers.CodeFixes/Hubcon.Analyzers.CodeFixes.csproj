@@ -6,15 +6,17 @@
 
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 
+		<AssemblyName>$(AssemblyName)</AssemblyName>
+		<RootNamespace>$(AssemblyName)</RootNamespace>
+		<PackageId>$(AssemblyName)</PackageId>
+		<PackageOutputPath>../../nupkgs</PackageOutputPath>
 		<IsPackable>true</IsPackable>
-
-		<!-- Empaquetar como NuGet -->
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageId>Hubcon.Analyzers.CodeFixes</PackageId>
-		<Version>1.0.0-beta</Version>
+		<Version>$(Version)</Version>
+		<Authors>$(Authors)</Authors>
+		<Company>$(Company)</Company>
 		<Description>Code fixer analyzers for Hubcon.</Description>
 		<PackageTags>analyzer</PackageTags>
-		<PackageOutputPath>../../nupkgs</PackageOutputPath>
 	</PropertyGroup>
 
 	<ItemGroup>

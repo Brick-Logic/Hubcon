@@ -66,25 +66,10 @@ namespace HubconTest
                     config
                     .EnableRequestDetailedErrors()
                     .SetHttpPathPrefix("prefix1")
-                    .SetWebSocketPathPrefix("wsprefix");
-
-
-                    config
-                    .DisableWebSocketIngest()
-                    .DisableWebSocketMethods()
-                    .DisableWebsocketPing()
-                    .DisableWebSocketPong()
-                    .DisableWebSocketStream()
-                    .DisableWebSocketSubscriptions()
-                    .SetWebSocketTimeout(TimeSpan.FromSeconds(5));
-                    
+                    .SetWebSocketPathPrefix("wsprefix");                   
                 });
 
-
-
-                serverOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
-
-                serverOptions.AddController<UserContractHandler>(x => x.UseGlobalMiddlewaresFirst());
+                serverOptions.AddController<UserContractHandler>();
                 serverOptions.AddController<SecondTestController>();
             });
 

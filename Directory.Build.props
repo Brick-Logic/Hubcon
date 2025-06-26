@@ -10,6 +10,8 @@
 	<RepositoryType>git</RepositoryType>
 	<RepositoryBranch>main</RepositoryBranch> 
 	<PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+	<Version>1.0.0-beta1</Version>
+	<UsePackages>false</UsePackages>
   </PropertyGroup>
 
   <ItemGroup>

@@ -13,55 +13,51 @@
 	  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	  <Description>A .NET framework to build RPC-like contract-based APIs with support for calling controller methods using HTTP/Websockets, graphql-like subscriptions, Ingest and streaming, with middleware and full dependency injection support</Description>
 	  <PackageTags>http;websockets;rpc</PackageTags>
-
-	  <IncludeBuildOutput>true</IncludeBuildOutput>
-	  <UsePackages Condition="'$(UsePackages)' == ''">false</UsePackages>
-
-	  <GenerateDependencyFile>false</GenerateDependencyFile>
-	  
-	  <IncludeProjectReferences>true</IncludeProjectReferences>
+	  <Version>$(Version)</Version>
+	  <Authors>$(Authors)</Authors>
+	  <Company>$(Company)</Company>
   </PropertyGroup>
 
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
-		<PackageReference Include="Autofac" Version="8.1.0" />
+		<!--<PackageReference Include="Autofac" Version="8.1.0" />-->
 	</ItemGroup>
 
 	<!-- Desarrollo local: ProjectReference -->
 	<ItemGroup Condition="'$(UsePackages)' != 'true'">
-		<PackageReference Include="Hubcon.Analyzers" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Analyzers.DiagnosticSupressors" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Analyzers" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="1.0.0-beta*" />
 		
-		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" Version="[1.0.0-beta,2.0.0-beta)"/>
-		<ProjectReference Include="..\Hubcon.Client.Core\Hubcon.Client.Core.csproj" Version="[1.0.0-beta,2.0.0-beta)"/>
-		<ProjectReference Include="..\Hubcon.Server.Core\Hubcon.Server.Core.csproj" Version="[1.0.0-beta,2.0.0-beta)"/>
-		<ProjectReference Include="..\Hubcon.Server.Abstractions\Hubcon.Server.Abstractions.csproj" Version="[1.0.0-beta,2.0.0-beta)"/>
-		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" Version="[1.0.0-beta,2.0.0-beta)"/>
-		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" Version="[1.0.0-beta,2.0.0-beta)"/>
-		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" Version="[1.0.0-beta,2.0.0-beta)"/>
+		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" />
+		<ProjectReference Include="..\Hubcon.Client.Core\Hubcon.Client.Core.csproj" />
+		<ProjectReference Include="..\Hubcon.Server.Core\Hubcon.Server.Core.csproj" />
+		<ProjectReference Include="..\Hubcon.Server.Abstractions\Hubcon.Server.Abstractions.csproj" />
+		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
+		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
+		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
 	</ItemGroup>
 
 	<!-- Empaquetado o distribución: PackageReference -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Analyzers" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Analyzers.DiagnosticSupressors" Version="[1.0.0-beta,2.0.0-beta)" />
-		
-		<PackageReference Include="Hubcon.Client.Abstractions" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Client.Core" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Server.Core" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Server.Abstractions" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Shared.Abstractions" Version="[1.0.0-beta,2.0.0-beta)" />
-		<PackageReference Include="Hubcon.Shared.Core" Version="[1.0.0-beta,2.0.0-beta)" />
+		<PackageReference Include="Hubcon.Analyzers" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="1.0.0-beta*" />
+
+		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Server.Core" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Server.Abstractions" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-beta*" />
 	</ItemGroup>
 
 	<!-- Usar nuspec customizado -->
-	<PropertyGroup>
+	<!--<PropertyGroup>
 		<NuspecFile>Hubcon.Server.nuspec</NuspecFile>
-	</PropertyGroup>
+	</PropertyGroup>-->
 
 	<ItemGroup>
 		<None Update="README.md">
