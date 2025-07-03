@@ -39,15 +39,9 @@ namespace BlazorTestServer
             builder.ConfigureHubconServer(serverOptions =>
             {
                 serverOptions.ConfigureCore(coreOptions =>
-                    coreOptions
-                        .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
-                        .SetHttpTimeout(TimeSpan.FromSeconds(15))
-                        .DisableWebSocketIngest()
-                        .DisableWebSocketSubscriptions()
-                        .DisableWebSocketMethods()
-                        .DisableWebsocketPing()
-                        .DisableWebSocketPong()
-                );
+                {
+                    coreOptions.SetWebSocketTimeout(TimeSpan.FromSeconds(15));
+                });
 
                 serverOptions.AddGlobalMiddleware<ExceptionMiddleware>();
                 serverOptions.AddController<TestController>();

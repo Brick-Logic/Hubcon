@@ -11,13 +11,11 @@
 
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta*"/>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Hubcon.Client" Version="1.0.0-beta1" />
-	</ItemGroup>
-
-	<ItemGroup>
+	  <ProjectReference Include="..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
 	  <ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
 	</ItemGroup>
 </Project>

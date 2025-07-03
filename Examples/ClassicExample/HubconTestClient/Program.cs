@@ -76,23 +76,23 @@ namespace HubconTestClient
 
             int eventosRecibidos = 0;
 
-            //async Task handler(int input)
-            //{
-            //    //logger.LogInformation($"Evento recibido: {input}");
-            //    Interlocked.Add(ref eventosRecibidos, 1);
-            //}
+            async Task handler(int? input)
+            {
+                logger.LogInformation($"Evento recibido: {input}");
+                Interlocked.Add(ref eventosRecibidos, 1);
+            }
 
-            ////client.OnUserCreated!.AddHandler(handler);
-            ////await client.OnUserCreated.Subscribe();
-            //logger.LogInformation("Evento conectado.");
+            client.OnUserCreated!.AddHandler(handler);
+            await client.OnUserCreated.Subscribe();
+            logger.LogInformation("Evento conectado.");
 
-            //Console.ReadKey();
+            Console.ReadKey();
 
-            //logger.LogInformation("Enviando request...");
-            //await client.CreateUser();
-            //logger.LogInformation($"Request terminado.");
+            logger.LogInformation("Enviando request...");
+            await client.CreateUser(new CreateUserCommand());
+            logger.LogInformation($"Request terminado.");
 
-            //Console.ReadKey();
+            Console.ReadKey();
 
             logger.LogInformation("Enviando request GetTemperatureFromServer...");
             var temp = await client.GetTemperatureFromServer();
@@ -198,7 +198,7 @@ namespace HubconTestClient
                     var swReq = Stopwatch.StartNew();
                     try
                     {
-                        await client.CreateUser();
+                        await client.CreateUser(new CreateUserCommand());
                         Interlocked.Increment(ref finishedRequestsCount);
                     }
                     catch

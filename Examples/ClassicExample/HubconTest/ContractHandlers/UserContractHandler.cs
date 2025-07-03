@@ -6,11 +6,27 @@ namespace HubconTest.ContractHandlers
 {
     public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserContract
     {
+        public ISubscription<int?>? OnUserCreated { get; }
+
+        public Task<CreateUserCommandResponse> CreateUser(CreateUserCommand command)
+        {
+            OnUserCreated.Emit(null);
+            return Task.FromResult(new CreateUserCommandResponse { Success = false });
+
+            var result = mediator.Send(command);
+
+            if (result.IsSuccess)
+            {
+                return Task.FromResult(result);
+            }
+            else
+            {
+            }
+        }
+
+
         public async Task<int> GetTemperatureFromServer() 
             => await Task.Run(() => new Random().Next(-10, 50));
-
-        [AllowAnonymous]
-        public ISubscription<int>? OnUserCreated { get; }
 
         public async IAsyncEnumerable<string> GetMessages(int count)
         {
@@ -26,14 +42,9 @@ namespace HubconTest.ContractHandlers
             await Task.CompletedTask;
         }
 
+        dynamic mediator = null!;
         //[Authorize(Roles = ["Admin"])]
-        public async Task CreateUser()
-        {
-            //var number = Random.Shared.Next(-10, 50);
-            //OnUserCreated?.Emit(number);
-            //throw new NotImplementedException("Error detallado");
-            await Task.CompletedTask;
-        }
+
 
         public Task ShowTextOnServer()
         {

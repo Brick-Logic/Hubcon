@@ -13,12 +13,11 @@ namespace HubconTestDomain
 
     public interface IUserContract : IControllerContract
     {
-        ISubscription<int>? OnUserCreated { get; }
+        ISubscription<int?>? OnUserCreated { get; }
         Task<int> GetTemperatureFromServer();
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();
         Task<IEnumerable<bool>> GetBooleans();
-        Task CreateUser();
         Task IngestMessages(
             IAsyncEnumerable<string> source, 
             IAsyncEnumerable<string> source2, 
@@ -26,6 +25,17 @@ namespace HubconTestDomain
             IAsyncEnumerable<string> source4, 
             IAsyncEnumerable<string> source5);
         Task<MyTestClass> GetObject();
+
+        Task<CreateUserCommandResponse> CreateUser(CreateUserCommand command);
+    }
+
+    public class CreateUserCommandResponse
+    {
+        public bool Success { get; set; }
+    }
+
+    public class CreateUserCommand
+    {
     }
 
     public record class TestClass2(string Propiedad);

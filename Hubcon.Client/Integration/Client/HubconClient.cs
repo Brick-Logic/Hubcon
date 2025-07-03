@@ -52,8 +52,9 @@ namespace Hubcon.Client.Integration.Client
                     using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
                     HttpMethod httpMethod = request.Arguments.Any() ? HttpMethod.Post : HttpMethod.Get;
+                    var url = _restHttpUrl + methodInfo.GetRoute();
 
-                    var httpRequest = new HttpRequestMessage(httpMethod, _restHttpUrl + methodInfo.GetRoute())
+                    var httpRequest = new HttpRequestMessage(httpMethod, url)
                     {
                         Content = content
                     };
@@ -100,7 +101,8 @@ namespace Hubcon.Client.Integration.Client
 
                     HttpMethod httpMethod = request.Arguments.Any() ? HttpMethod.Post : HttpMethod.Get;
 
-                    var httpRequest = new HttpRequestMessage(httpMethod, _restHttpUrl + methodInfo.GetRoute())
+                    var url = _restHttpUrl + methodInfo.GetRoute();
+                    var httpRequest = new HttpRequestMessage(httpMethod, url)
                     {
                         Content = content
                     };
@@ -184,8 +186,8 @@ namespace Hubcon.Client.Integration.Client
 
             ContractOptionsDict ??= contractOptions;
 
-            var baseRestHttpUrl = $"{BaseUri!.AbsoluteUri}/{HttpEndpoint ?? ""}";
-            var baseRestWebsocketUrl = $"{BaseUri!.AbsoluteUri}/{WebsocketEndpoint ?? "ws"}";
+            var baseRestHttpUrl = $"{BaseUri!.AbsoluteUri}/{HttpEndpoint ?? ""}".TrimEnd('/');
+            var baseRestWebsocketUrl = $"{BaseUri!.AbsoluteUri}/{WebsocketEndpoint ?? "ws"}".TrimEnd('/');
 
             _restHttpUrl = useSecureConnection ? $"https://{baseRestHttpUrl}" : $"http://{baseRestHttpUrl}";
             _websocketUrl = useSecureConnection ? $"wss://{baseRestWebsocketUrl}" : $"ws://{baseRestWebsocketUrl}";

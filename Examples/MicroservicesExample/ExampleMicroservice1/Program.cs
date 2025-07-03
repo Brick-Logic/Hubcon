@@ -19,17 +19,6 @@ namespace ExampleMicroservice1
             builder.AddHubconServer();
             builder.ConfigureHubconServer(serverOptions =>
             {
-                //serverOptions.ConfigureCore(coreOptions =>
-                //    coreOptions
-                //        .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
-                //        .SetHttpTimeout(TimeSpan.FromSeconds(15))
-                //        .AllowWebSocketIngest()
-                //        .AllowWebSocketSubscriptions()
-                //        .AllowWebSocketNormalMethods()
-                //        .RequirePing()
-                //        .EnableWebSocketPong()
-                //);
-
                 serverOptions.AddGlobalMiddleware<ExceptionMiddleware>();
 
                 serverOptions.AddController<ExampleMicroservice1ContractHandler>();
