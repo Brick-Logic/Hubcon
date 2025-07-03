@@ -13,7 +13,7 @@
 	  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	  <Description>A .NET framework to build RPC-like contract-based APIs with support for calling controller methods using HTTP/Websockets, graphql-like subscriptions, Ingest and streaming, with middleware and full dependency injection support</Description>
 	  <PackageTags>http;websockets;rpc</PackageTags>
-	  <Version>$(Version)</Version>
+	  <Version>1.0.0-beta1</Version>
 	  <Authors>$(Authors)</Authors>
 	  <Company>$(Company)</Company>
   </PropertyGroup>
