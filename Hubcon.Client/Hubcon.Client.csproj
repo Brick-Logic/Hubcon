@@ -20,7 +20,7 @@
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryBranch>main</RepositoryBranch>
-		<Version>1.0.0-beta3</Version>
+		<Version>1.0.0-beta4</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 	</PropertyGroup>
