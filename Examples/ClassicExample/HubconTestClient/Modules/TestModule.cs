@@ -11,13 +11,13 @@ namespace HubconTestClient.Modules
         {
             // Url de base, sin protocolo
             configuration.WithBaseUrl("localhost:5000");
-            configuration.WithPrefix("prefix1");
-            configuration.WithWebsocketEndpoint("wsprefix");
+            //configuration.WithPrefix("prefix1");
+            //configuration.WithWebsocketEndpoint("wsprefix");
 
             // Agrego los contratos que este servidor implementa
             // Estos contratos se resuelven por DI con la configuracion puesta en este lugar
             configuration.Implements<IUserContract>(x => x.UseWebsocketMethods());
-            configuration.Implements<ISecondTestContract>(x => x.UseWebsocketMethods());
+            configuration.Implements<ISecondTestContract>();
 
             // Manager de autenticación (opcional)
             configuration.UseAuthenticationManager<AuthenticationManager>();

@@ -89,16 +89,7 @@ namespace Hubcon.Client.Core.Subscriptions
                         await using var enumerator = eventSource.GetAsyncEnumerator(_tokenSource.Token);
                         _connected = SubscriptionState.Connected;
 
-                        if (tcs.Task.IsCompleted == false)
-                        {
-                            logger.LogInformation("Subscription connected.");
-                            tcs.SetResult();
-                        }
-                        else
-                        {
-                            logger.LogInformation("Subscription reconnected.");
-                        }
-
+                        _ = Task.Run(() => tcs.SetResult());
 
                         while (await enumerator.MoveNextAsync())
                         {

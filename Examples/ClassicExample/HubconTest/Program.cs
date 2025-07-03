@@ -64,9 +64,9 @@ namespace HubconTest
                 serverOptions.ConfigureCore(config => 
                 {
                     config
-                    .EnableRequestDetailedErrors()
-                    .SetHttpPathPrefix("prefix1")
-                    .SetWebSocketPathPrefix("wsprefix");                   
+                    .EnableRequestDetailedErrors();
+                    //.SetHttpPathPrefix("prefix1")
+                    //.SetWebSocketPathPrefix("wsprefix");                   
                 });
 
                 serverOptions.AddController<UserContractHandler>();
