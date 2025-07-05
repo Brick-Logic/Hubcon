@@ -78,7 +78,7 @@ namespace HubconTestClient
 
             async Task handler(int? input)
             {
-                logger.LogInformation($"Evento recibido: {input}");
+                //logger.LogInformation($"Evento recibido: {input}");
                 Interlocked.Add(ref eventosRecibidos, 1);
             }
 
@@ -89,7 +89,7 @@ namespace HubconTestClient
             Console.ReadKey();
 
             logger.LogInformation("Enviando request...");
-            await client.CreateUser(new CreateUserCommand());
+            await client.CreateUser();
             logger.LogInformation($"Request terminado.");
 
             Console.ReadKey();
@@ -198,7 +198,7 @@ namespace HubconTestClient
                     var swReq = Stopwatch.StartNew();
                     try
                     {
-                        await client.CreateUser(new CreateUserCommand());
+                        await client.CreateUser();
                         Interlocked.Increment(ref finishedRequestsCount);
                     }
                     catch

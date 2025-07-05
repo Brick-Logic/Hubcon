@@ -13,7 +13,7 @@
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Description></Description>
 		<PackageTags>http;websockets;rpc</PackageTags>
-		<Version>1.0.0-beta1</Version>
+		<Version>1.0.0-beta2</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 	</PropertyGroup>

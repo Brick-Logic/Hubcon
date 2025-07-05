@@ -26,7 +26,7 @@ namespace HubconTestDomain
             IAsyncEnumerable<string> source5);
         Task<MyTestClass> GetObject();
 
-        Task<CreateUserCommandResponse> CreateUser(CreateUserCommand command);
+        Task CreateUser();
     }
 
     public class CreateUserCommandResponse

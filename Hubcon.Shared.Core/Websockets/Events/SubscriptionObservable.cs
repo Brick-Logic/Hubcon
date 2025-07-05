@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Core.Websockets.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Core.Websockets.Interfaces;
 using Hubcon.Shared.Core.Websockets.Models;
 using System.Text.Json;
 
@@ -26,7 +27,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
         private readonly List<IObserver<TMessage>> _observers = new();
         private readonly object _observersLock = new();
         private readonly Type _dataType = typeof(TMessage);
-        private readonly JsonSerializerOptions jsonSerializerOptions;
+        private readonly IDynamicConverter converter;
 
         public Type DataType => _dataType;
 
@@ -35,14 +36,14 @@ namespace Hubcon.Shared.Core.Websockets.Events
             string id, 
             JsonElement request, 
             RequestType type, 
-            JsonSerializerOptions jsonSerializerOptions) : base(client, new RequestData(id, request, type))
+            IDynamicConverter converter) : base(client, new RequestData(id, request, type))
         {
-            this.jsonSerializerOptions = jsonSerializerOptions;
+            this.converter = converter;
         }
 
-        public GenericObservable(JsonSerializerOptions jsonSerializerOptions) : base(null, null)
+        public GenericObservable(IDynamicConverter converter) : base(null, null)
         {
-            this.jsonSerializerOptions = jsonSerializerOptions;
+            this.converter = converter;
         }
 
         public IDisposable Subscribe(IObserver<TMessage> observer)
@@ -57,7 +58,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
 
         public override void OnNextElement(JsonElement value)
         {
-            var data = value.Deserialize<TMessage>(jsonSerializerOptions);
+            var data = converter.DeserializeJsonElement<TMessage>(value);
             OnNext(data!);
         }
 

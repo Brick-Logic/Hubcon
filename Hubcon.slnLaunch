@@ -1,0 +1,17 @@
+[
+  {
+    "Name": "ClassicExample",
+    "Projects": [
+      {
+        "Path": "Examples\\ClassicExample\\HubconTest\\HubconTest.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Path": "Examples\\ClassicExample\\HubconTestClient\\HubconTestClient.csproj",
+        "Action": "Start",
+        "DebugTarget": "HubconTestClient"
+      }
+    ]
+  }
+]

@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Core.Serialization
 {
@@ -11,17 +12,20 @@ namespace Hubcon.Shared.Core.Serialization
     {
         public Dictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 
-        private readonly JsonSerializerOptions jsonSerializerOptions = new()
+        public JsonSerializerOptions JsonSerializerOptions { get; } = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             WriteIndented = true,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             MaxDepth = 64,
+            Converters = { new JsonStringEnumConverter() },
+            PropertyNameCaseInsensitive = true,
         };
+
 
         public IEnumerable<object?> DeserializeArgs(IEnumerable<Type> types, IEnumerable<object?> args)
         {
-            if (!types.Any() || !args.Any()) 
+            if (!types.Any() || !args.Any())
                 return [];
 
             if (types.Count() != args.Count())
@@ -32,7 +36,7 @@ namespace Hubcon.Shared.Core.Serialization
             var list = new List<object?>();
 
             int i = 0;
-            while(typesEnumerator.MoveNext() && argsEnumerator.MoveNext())
+            while (typesEnumerator.MoveNext() && argsEnumerator.MoveNext())
             {
                 if (argsEnumerator.Current == null)
                     list.Add(null);
@@ -68,18 +72,21 @@ namespace Hubcon.Shared.Core.Serialization
                 .GetParameters()
                 .Where(p => !p.ParameterType.FullName?.Contains("System.Runtime.CompilerServices.Closure") ?? true)
                 .Select(p => p.ParameterType)
-                .ToArray());           
+                .ToArray());
 
             return DeserializeArgs(parameterTypes, args);
         }
 
         public T? DeserializeData<T>(object? data)
         {
-            if (data == null) 
+            if (data == null)
                 return default;
 
-            else if(data is JsonElement element)
-                return JsonSerializer.Deserialize<T>(element, jsonSerializerOptions);
+            else if (data is JsonElement element)
+                return JsonSerializer.Deserialize<T>(element.Clone(), JsonSerializerOptions);
+
+            else if (data is string text)
+                return JsonSerializer.Deserialize<T>(text, JsonSerializerOptions);
 
             else if (typeof(T).IsAssignableFrom(data.GetType()))
                 return (T)data;
@@ -92,12 +99,12 @@ namespace Hubcon.Shared.Core.Serialization
         // 1. Convierte un objeto a JsonElement
         public JsonElement SerializeObject(object? value)
         {
-            return JsonSerializer.SerializeToElement(value, jsonSerializerOptions);
+            return JsonSerializer.SerializeToElement(value, JsonSerializerOptions).Clone();
         }
 
         public T DeserializeByteArray<T>(byte[] bytes)
         {
-            return JsonSerializer.Deserialize<T>(bytes, jsonSerializerOptions)!;
+            return JsonSerializer.Deserialize<T>(bytes, JsonSerializerOptions)!;
         }
 
         // 2. Convierte una colección de objetos a JsonElements
@@ -107,7 +114,7 @@ namespace Hubcon.Shared.Core.Serialization
 
             foreach (var val in values)
             {
-                results.Add(SerializeObject(val));
+                results.Add(SerializeObject(val).Clone());
             }
 
             return results;
@@ -119,16 +126,16 @@ namespace Hubcon.Shared.Core.Serialization
             if (element.ValueKind == JsonValueKind.Null)
                 return null;
 
-            return element.Deserialize(targetType, jsonSerializerOptions);
+            return element.Clone().Deserialize(targetType, JsonSerializerOptions);
         }
 
         // 3. Convierte un JsonElement a un objeto fuertemente tipado
         public T? DeserializeJsonElement<T>(JsonElement element)
         {
-            if ( element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
+            if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
                 return default;
 
-            return element.Deserialize<T>(jsonSerializerOptions);
+            return element.Clone().Deserialize<T>(JsonSerializerOptions);
         }
 
         // 4. Convierte una lista de JsonElements a objetos, según tipos dados
@@ -143,12 +150,12 @@ namespace Hubcon.Shared.Core.Serialization
 
                 while (elementEnum.MoveNext() && typeEnum.MoveNext())
                 {
-                    list.Add(DeserializeJsonElement(elementEnum.Current, typeEnum.Current));
+                    list.Add(DeserializeJsonElement(elementEnum.Current.Clone(), typeEnum.Current));
                 }
 
                 return list;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.LogInformation(ex.ToString());
                 return [];
@@ -166,7 +173,7 @@ namespace Hubcon.Shared.Core.Serialization
                 }
                 else
                 {
-                    yield return DeserializeJsonElement<T>(item)!;
+                    yield return DeserializeJsonElement<T>(item.Clone())!;
                 }
             }
         }
@@ -182,8 +189,32 @@ namespace Hubcon.Shared.Core.Serialization
                 else
                 {
                     var obj = SerializeObject(item)!;
-                    yield return obj;
+                    yield return obj.Clone();
                 }
+            }
+        }
+
+        public string Serialize<T>(T value)
+        {
+            try
+            {
+                return JsonSerializer.Serialize(value, JsonSerializerOptions);
+            }
+            catch (Exception ex)
+            {
+                return "";
+            }
+        }
+
+        public JsonElement SerializeToElement<T>(T value)
+        {
+            try
+            {
+                return JsonSerializer.SerializeToElement(value, JsonSerializerOptions).Clone();
+            }
+            catch (Exception ex)
+            {
+                return default;
             }
         }
     }

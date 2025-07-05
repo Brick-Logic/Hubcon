@@ -11,7 +11,7 @@
 	<RepositoryBranch>main</RepositoryBranch> 
 	<PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
 	<!--<Version>1.0.0-beta3</Version>-->
-	<UsePackages>true</UsePackages>
+	<UsePackages>false</UsePackages>
   </PropertyGroup>
 
   <ItemGroup>

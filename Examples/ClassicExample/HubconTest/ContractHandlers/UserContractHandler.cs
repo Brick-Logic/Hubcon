@@ -8,20 +8,21 @@ namespace HubconTest.ContractHandlers
     {
         public ISubscription<int?>? OnUserCreated { get; }
 
-        public Task<CreateUserCommandResponse> CreateUser(CreateUserCommand command)
+        public Task CreateUser()
         {
-            OnUserCreated.Emit(null);
-            return Task.FromResult(new CreateUserCommandResponse { Success = false });
+            //OnUserCreated.Emit(null);
+            //return Task.FromResult(new CreateUserCommandResponse { Success = false });
+            return Task.CompletedTask;
 
-            var result = mediator.Send(command);
+            //var result = mediator.Send(command);
 
-            if (result.IsSuccess)
-            {
-                return Task.FromResult(result);
-            }
-            else
-            {
-            }
+            //if (result.IsSuccess)
+            //{
+            //    return Task.FromResult(result);
+            //}
+            //else
+            //{
+            //}
         }
 
 
