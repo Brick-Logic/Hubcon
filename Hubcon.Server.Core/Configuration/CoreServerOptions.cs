@@ -10,8 +10,8 @@ namespace Hubcon.Server.Core.Configuration
 {
     public class CoreServerOptions : ICoreServerOptions, IInternalServerOptions
     {
-        private long? maxWsSize;
-        private long? maxHttpSize;
+        private int? maxWsSize;
+        private int? maxHttpSize;
         private TimeSpan? wsTimeout;
         private TimeSpan? httpTimeout;
         private bool? pongEnabled;
@@ -29,8 +29,8 @@ namespace Hubcon.Server.Core.Configuration
         private Action<RouteHandlerBuilder>? routeHandlerBuilderConfig;
 
         // Defaults
-        public long MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
-        public long MaxHttpMessageSize => maxHttpSize ?? (128 * 1024);   // 128 KB
+        public int MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
+        public int MaxHttpMessageSize => maxHttpSize ?? (128 * 1024);   // 128 KB
 
         
         public TimeSpan WebSocketTimeout => wsTimeout ?? TimeSpan.FromSeconds(30); 

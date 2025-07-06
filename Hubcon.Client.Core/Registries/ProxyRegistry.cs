@@ -1,12 +1,13 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using System.Collections.Concurrent;
 using System.Linq;
 
 namespace Hubcon.Client.Core.Registries
 {
     public class ProxyRegistry : IProxyRegistry
     {
-        private Dictionary<Type, Type> ProxyTypes { get; } = new();
+        private ConcurrentDictionary<Type, Type> ProxyTypes { get; } = new();
 
         public void RegisterProxy(Type interfaceType, Type proxyType)
         {

@@ -2,14 +2,15 @@
 using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Subscriptions;
+using System.Collections.Concurrent;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Routing.Registries
 {
     public class LiveSubscriptionRegistry : ILiveSubscriptionRegistry
     {
-        private Dictionary<string, Dictionary<string, Dictionary<string, ISubscriptionDescriptor>>> _contractHandlers = new();
-        private Dictionary<string, Dictionary<string, PropertyInfo>> _descriptorMetadata = new();
+        private ConcurrentDictionary<string, ConcurrentDictionary<string, ConcurrentDictionary<string, ISubscriptionDescriptor>>> _contractHandlers = new();
+        private ConcurrentDictionary<string, ConcurrentDictionary<string, PropertyInfo>> _descriptorMetadata = new();
 
         public ISubscriptionDescriptor RegisterHandler(string clientId, string contractName, string subscriptionName, ISubscription handler)
         {
@@ -30,13 +31,13 @@ namespace Hubcon.Server.Core.Routing.Registries
 
             if (!_contractHandlers.TryGetValue(clientId, out var clientHandlers))
             {
-                clientHandlers = new Dictionary<string, Dictionary<string, ISubscriptionDescriptor>>();
+                clientHandlers = new ConcurrentDictionary<string, ConcurrentDictionary<string, ISubscriptionDescriptor>>();
                 _contractHandlers[clientId] = clientHandlers;
             }
 
             if (!clientHandlers.TryGetValue(descriptor.ContractName, out var contractHandlers))
             {
-                contractHandlers = new Dictionary<string, ISubscriptionDescriptor>();
+                contractHandlers = new ConcurrentDictionary<string, ISubscriptionDescriptor>();
                 clientHandlers[descriptor.ContractName] = contractHandlers;
             }
 
@@ -96,17 +97,17 @@ namespace Hubcon.Server.Core.Routing.Registries
 
             if (_contractHandlers.TryGetValue(clientId, out var clientHandlers) &&
                 clientHandlers.TryGetValue(contractName, out var contractHandlers) &&
-                contractHandlers.Remove(handlerName))
+                contractHandlers.TryRemove(handlerName, out _))
             {
                 // Limpieza si el diccionario queda vacío
                 if (contractHandlers.Count == 0)
                 {
-                    clientHandlers.Remove(contractName);
+                    clientHandlers.TryRemove(contractName, out _);
                 }
 
                 if (clientHandlers.Count == 0)
                 {
-                    _contractHandlers.Remove(clientId);
+                    _contractHandlers.TryRemove(clientId, out _);
                 }
 
                 return true;

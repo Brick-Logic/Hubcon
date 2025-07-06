@@ -76,14 +76,21 @@ namespace HubconTestClient
 
             int eventosRecibidos = 0;
 
-            async Task handler(int? input)
-            {
-                //logger.LogInformation($"Evento recibido: {input}");
-                Interlocked.Add(ref eventosRecibidos, 1);
-            }
+            //async Task handler(int? input)
+            //{
+            //    logger.LogInformation($"Evento recibido: {input}");
+            //    Interlocked.Add(ref eventosRecibidos, 1);
+            //}
 
-            client.OnUserCreated!.AddHandler(handler);
-            await client.OnUserCreated.Subscribe();
+            //client.OnUserCreated!.AddHandler(handler);
+            //await client.OnUserCreated.Subscribe();
+            //client.OnUserCreated2!.AddHandler(handler);
+            //await client.OnUserCreated2.Subscribe();
+            //client.OnUserCreated3!.AddHandler(handler);
+            //await client.OnUserCreated3.Subscribe();
+            //client.OnUserCreated4!.AddHandler(handler);
+            //await client.OnUserCreated4.Subscribe();
+
             logger.LogInformation("Evento conectado.");
 
             Console.ReadKey();
@@ -180,7 +187,7 @@ namespace HubconTestClient
 
                 maxReqs = Math.Max(maxReqs, avgRequestsPerSec);
 
-                logger.LogInformation($"Requests: {finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {maxReqs} | " +
+                logger.LogInformation($"Requests: {finishedRequestsCount} | Received Events: {eventosRecibidos} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {maxReqs} | " +
                                       $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
 
                 lastRequests = finishedRequestsCount;
@@ -191,14 +198,15 @@ namespace HubconTestClient
             };
             worker.Start();
 
-            List<Task> tasks = Enumerable.Range(0, 6).Select(a => Task.Run(async () =>
+            List<Task> tasks = Enumerable.Range(0, 3).Select(a => Task.Run(async () =>
             {
-                while (true)
+                var messages = client.GetMessages2();
+                await foreach (var item in messages)
                 {
                     var swReq = Stopwatch.StartNew();
                     try
                     {
-                        await client.CreateUser();
+                        //await client.CreateUser();
                         Interlocked.Increment(ref finishedRequestsCount);
                     }
                     catch

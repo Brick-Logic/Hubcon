@@ -1,18 +1,18 @@
 ﻿using Autofac;
 using Hubcon.Server.Abstractions.Delegates;
+using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Extensions;
+using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Core.Extensions;
+using Microsoft.AspNetCore.Builder;
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.AspNetCore.Builder;
-using Hubcon.Server.Abstractions.Enums;
-using Hubcon.Server.Core.Configuration;
 
 namespace Hubcon.Server.Core.Routing.Registries
 {
@@ -20,7 +20,7 @@ namespace Hubcon.Server.Core.Routing.Registries
     {
         public event Action<IOperationBlueprint>? OnOperationRegistered;
 
-        private Dictionary<string, Dictionary<string, IOperationBlueprint>> AvailableOperations = new();
+        private ConcurrentDictionary<string, ConcurrentDictionary<string, IOperationBlueprint>> AvailableOperations = new();
 
         public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<ContainerBuilder>> servicesToInject)
         {
@@ -44,7 +44,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                 if (methods.Length == 0)
                     continue;
 
-                if (!AvailableOperations.TryGetValue(interfaceType.Name, out Dictionary<string, IOperationBlueprint>? contractMethods))
+                if (!AvailableOperations.TryGetValue(interfaceType.Name, out ConcurrentDictionary<string, IOperationBlueprint>? contractMethods))
                     contractMethods = AvailableOperations[interfaceType.Name] = new();
 
                 if (contractMethods.Count > 0)
@@ -52,9 +52,33 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                 foreach (var method in methods)
                 {
-                    var isStream = method.ReturnType.IsGenericType
-                    && method.ReturnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
-                    var kind = isStream ? OperationKind.Stream : OperationKind.Method;
+                    var returnType = method.ReturnType;
+                    var parameters = method.GetParameters();
+
+                    // Detecta si el método devuelve un IAsyncEnumerable<T>
+                    var isStream = returnType.IsGenericType &&
+                                   returnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
+
+                    // Detecta si alguno de los parámetros es IAsyncEnumerable<T>
+                    var isIngest = parameters.Any(p =>
+                        p.ParameterType.IsGenericType &&
+                        p.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>));
+
+                    // Ambos son incompatibles, por lo que se elige en orden de prioridad
+                    OperationKind kind;
+
+                    if (isStream && isIngest)
+                        throw new InvalidOperationException($"Method '{method.Name}': Returning IAsyncEnumerable<T> and also using IAsyncEnumerable<T> parameters is not supported.");
+
+                    if (isStream)
+                        kind = OperationKind.Stream;
+                    else if (isIngest)
+                        kind = OperationKind.Ingest;
+                    else
+                        kind = OperationKind.Method;
+
+                    if (!serverOptions.WebSocketMethodsIsAllowed && kind is OperationKind.Method)
+                        continue;
 
                     if (!serverOptions.WebSocketIngestIsAllowed && kind is OperationKind.Ingest)
                         continue;
@@ -154,7 +178,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                 return false;
             }
 
-            if (AvailableOperations.TryGetValue(contractName, out Dictionary<string, IOperationBlueprint>? descriptors)
+            if (AvailableOperations.TryGetValue(contractName, out ConcurrentDictionary<string, IOperationBlueprint>? descriptors)
                 && descriptors.TryGetValue(operationName, out IOperationBlueprint? descriptor))
             {
                 value = descriptor;

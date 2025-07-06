@@ -14,6 +14,10 @@ namespace HubconTestDomain
     public interface IUserContract : IControllerContract
     {
         ISubscription<int?>? OnUserCreated { get; }
+        ISubscription<int?>? OnUserCreated2 { get; }
+        ISubscription<int?>? OnUserCreated3 { get; }
+        ISubscription<int?>? OnUserCreated4 { get; }
+
         Task<int> GetTemperatureFromServer();
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();
@@ -27,6 +31,7 @@ namespace HubconTestDomain
         Task<MyTestClass> GetObject();
 
         Task CreateUser();
+        IAsyncEnumerable<string> GetMessages2();
     }
 
     public class CreateUserCommandResponse

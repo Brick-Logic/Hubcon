@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Threading.Channels;
 
 namespace Hubcon.Shared.Core.Websockets.Events
@@ -10,7 +11,15 @@ namespace Hubcon.Shared.Core.Websockets.Events
 
         public void WriteToChannelAsync(T? item)
         {
-            _ = _channel.Writer.TryWrite(item);
+            if(item is JsonElement element)
+                _ = _channel.Writer.TryWrite(GetTType(element));
+            else
+                _ = _channel.Writer.TryWrite(item);
+        }
+
+        public T GetTType(JsonElement item)
+        {
+            return (T)(object)item.Clone();
         }
 
         public IAsyncEnumerable<T?> GetAsyncEnumerable(CancellationToken cancellationToken)

@@ -97,7 +97,43 @@ namespace Hubcon.Server.Core.Configuration
         /// <param name="enabled"></param>
         /// <returns></returns>
         ICoreServerOptions EnableRequestDetailedErrors(bool enabled = true);
+
+        /// <summary>
+        /// Disables server to client streaming via websockets.
+        /// </summary>
+        /// <param name="disabled"></param>
+        /// <returns></returns>
         ICoreServerOptions DisableWebSocketStream(bool disabled = true);
+
+        /// <summary>
+        /// Sets a delay for websocket ingest message reception.
+        /// </summary>
+        /// <param name="delay"></param>
+        /// <returns></returns>
+        ICoreServerOptions ThrottleWebsocketIngest(TimeSpan delay);
+
+        /// <summary>
+        /// Sets a delay for websocket methods message reception.
+        /// </summary>
+        /// <param name="delay"></param>
+        /// <returns></returns>
+        ICoreServerOptions ThrottleWebsocketMethods(TimeSpan delay);
+
+        /// <summary>
+        /// Sets a delay for sending websocket subscriptions messages.
+        /// </summary>
+        /// <param name="delay"></param>
+        /// <returns></returns>
+        ICoreServerOptions ThrottleWebsocketSubscription(TimeSpan delay);
+
+        /// <summary>
+        /// Sets a delay for sending websocket streaming messages.
+        /// </summary>
+        /// <param name="delay"></param>
+        /// <returns></returns>
+        ICoreServerOptions ThrottleWebsocketStreaming(TimeSpan delay);
+
+
         ICoreServerOptions UseGlobalRouteHandlerBuilder(Action<RouteHandlerBuilder> configure);
         ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure);
     }
@@ -107,12 +143,12 @@ namespace Hubcon.Server.Core.Configuration
         /// <summary>
         /// Determines the maximum incoming websocket message size in bytes.
         /// </summary>
-        long MaxWebSocketMessageSize { get; }
+        int MaxWebSocketMessageSize { get; }
 
         /// <summary>
         /// Disabled. Determines the maximum incoming http message size in bytes.
         /// </summary>
-        long MaxHttpMessageSize { get; }
+        int MaxHttpMessageSize { get; }
 
         /// <summary>
         /// Websocket connection timeout when the
@@ -173,7 +209,19 @@ namespace Hubcon.Server.Core.Configuration
         /// Determines if responses should include detailed error messages.
         /// </summary>
         bool DetailedErrorsEnabled { get; }
+
+        TimeSpan IngestThrottleDelay { get; }
+        TimeSpan MethodThrottleDelay { get; }
+        TimeSpan SubscriptionThrottleDelay { get; }
+
+        /// <summary>
+        /// Allows configuring extra some global settings for HTTP endpoints.
+        /// </summary>
         Action<IEndpointConventionBuilder>? EndpointConventions { get; }
+
+        /// <summary>
+        /// Allows configuring extra some global settings for HTTP endpoints.
+        /// </summary>
         Action<RouteHandlerBuilder>? RouteHandlerBuilderConfig { get; }
     }
 }

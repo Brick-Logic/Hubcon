@@ -30,8 +30,11 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IResponse> HandleWithoutResultAsync(IOperationRequest request)
         {
-            if (!_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) 
+                && blueprint?.Kind == OperationKind.Method))
+            {
                 return new BaseOperationResponse(false);
+            }
 
             IOperationContext context = BuildContext(request, blueprint!);
 
@@ -50,8 +53,11 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IOperationResponse<JsonElement>> HandleSynchronousResult(IOperationRequest request)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) 
+                && blueprint?.Kind == OperationKind.Method))
+            {
                 return new BaseJsonResponse(false, default, null);
+            }
 
             var controller = _serviceProvider.GetRequiredService(blueprint!.ControllerType);
 
@@ -61,21 +67,22 @@ namespace Hubcon.Server.Core.Pipelines
             {
                 if (result is null)
                 {
-                    return Task.FromResult<IOperationResult>(new BaseOperationResponse<object>(true));
+                    return Task.FromResult<IOperationResult>(new BaseOperationResponse<JsonElement>(true));
                 }
 
-                return Task.FromResult<IOperationResult>(new BaseOperationResponse<object>(true, _converter.SerializeObject(result)));
+                return Task.FromResult<IOperationResult>(new BaseOperationResponse<JsonElement>(true, _converter.SerializeToElement(result)));
             }
 
             var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
 
-            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeObject(pipelineResult.Result.Data), null);
+            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeToElement(pipelineResult.Result.Data), null);
         }
 
         public async Task<IResponse> HandleSynchronous(IOperationRequest request)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) 
+                && blueprint?.Kind == OperationKind.Method))
                 return new BaseOperationResponse(false);
 
             IOperationContext context = BuildContext(request, blueprint);
@@ -134,7 +141,8 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IOperationResponse<JsonElement>> HandleWithResultAsync(IOperationRequest request)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Method))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) 
+                && blueprint?.Kind == OperationKind.Method))
                 return null!;
 
             var controller = _serviceProvider.GetRequiredService(blueprint!.ControllerType);
@@ -161,12 +169,13 @@ namespace Hubcon.Server.Core.Pipelines
             var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
 
-            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeObject(pipelineResult.Result.Data), null);
+            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeToElement(pipelineResult.Result.Data), null);
         }
 
         public async Task<IResponse> HandleIngest(IOperationRequest request, Dictionary<string, object> sources)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) /*&& blueprint?.Kind == OperationKind.Ingest*/))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) 
+                && blueprint?.Kind == OperationKind.Ingest))
                 return null!;
 
             if(request.Arguments?.Count() == 0 
