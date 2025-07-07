@@ -7,9 +7,15 @@ namespace BlazorTestServer.Controllers
     public class TestController(ILogger<TestController> logger) : IUserContract
     {
         [AllowAnonymous]
-        public ISubscription<int>? OnUserCreated { get; }
+        public ISubscription<int?>? OnUserCreated { get; }
 
-        public async Task<int> GetTemperatureFromServer() 
+        public ISubscription<int?>? OnUserCreated2 { get; }
+
+        public ISubscription<int?>? OnUserCreated3 { get; }
+
+        public ISubscription<int?>? OnUserCreated4 { get; }
+
+        public async Task<int> GetTemperatureFromServer()
             => await Task.Run(() => new Random().Next(-10, 50));
 
         public async IAsyncEnumerable<string> GetMessages(int count)
@@ -80,6 +86,11 @@ namespace BlazorTestServer.Controllers
         public Task<MyTestClass> GetObject()
         {
             return Task.FromResult(new MyTestClass("hola", new TestClass2("propiedad")));
+        }
+
+        public IAsyncEnumerable<string> GetMessages2()
+        {
+            throw new NotImplementedException();
         }
     }
 }

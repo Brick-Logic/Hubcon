@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Attributes;
+﻿using Hubcon.Server.Abstractions.CustomAttributes;
+using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestDomain;
 
@@ -43,6 +44,7 @@ namespace HubconTest.ContractHandlers
             }
         }
 
+        [StreamingSettings(ThrottleDelayMilliseconds:100)]
         public async IAsyncEnumerable<string> GetMessages2()
         {
             while(true)

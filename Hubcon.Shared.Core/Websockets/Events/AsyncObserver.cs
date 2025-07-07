@@ -4,9 +4,16 @@ using System.Threading.Channels;
 
 namespace Hubcon.Shared.Core.Websockets.Events
 {
-    public class AsyncObserver<T> : IObserver<T>
+    public class AsyncObserver<T>(BoundedChannelOptions? options = null) : IObserver<T>
     {
-        private readonly Channel<T?> _channel = Channel.CreateUnbounded<T?>();
+        private readonly Channel<T?> _channel = Channel.CreateBounded<T?>(options ?? new BoundedChannelOptions(1000)
+        {
+            SingleReader = true,
+            SingleWriter = false,
+            AllowSynchronousContinuations = false,
+            FullMode = BoundedChannelFullMode.Wait,
+        });
+
         private TaskCompletionSource<bool> _completed = new TaskCompletionSource<bool>();
 
         public void WriteToChannelAsync(T? item)

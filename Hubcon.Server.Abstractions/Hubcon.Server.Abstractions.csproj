@@ -21,7 +21,6 @@
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 		<PackageReference Include="Autofac" Version="8.1.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.5" />
 		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
 	</ItemGroup>
 

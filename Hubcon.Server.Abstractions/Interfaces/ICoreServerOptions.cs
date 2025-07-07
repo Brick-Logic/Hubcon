@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
+using System.Threading.Channels;
 
 namespace Hubcon.Server.Core.Configuration
 {
@@ -133,7 +134,6 @@ namespace Hubcon.Server.Core.Configuration
         /// <returns></returns>
         ICoreServerOptions ThrottleWebsocketStreaming(TimeSpan delay);
 
-
         ICoreServerOptions UseGlobalRouteHandlerBuilder(Action<RouteHandlerBuilder> configure);
         ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure);
     }
@@ -210,9 +210,26 @@ namespace Hubcon.Server.Core.Configuration
         /// </summary>
         bool DetailedErrorsEnabled { get; }
 
+        /// <summary>
+        /// Delay for ingest messages in the websocket channel.
+        /// </summary>
         TimeSpan IngestThrottleDelay { get; }
+
+        /// <summary>
+        /// Delay for websocket methods in the websocket channel.
+        /// </summary>
         TimeSpan MethodThrottleDelay { get; }
+
+        /// <summary>
+        /// Delay for websocket subscription messages.
+        /// </summary>
         TimeSpan SubscriptionThrottleDelay { get; }
+
+        /// <summary>
+        /// Delay for websocket streaming messages.
+        /// </summary>
+        TimeSpan StreamingThrottleDelay { get; }
+
 
         /// <summary>
         /// Allows configuring extra some global settings for HTTP endpoints.

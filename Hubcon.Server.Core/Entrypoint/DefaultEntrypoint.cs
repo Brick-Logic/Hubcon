@@ -1,9 +1,11 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Routing.Registries;
+using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Attributes;
 using System.Text.Json;
 
-namespace Hubcon.Shared.Entrypoint
+namespace Hubcon.Server.Core.Entrypoint
 {
     public class DefaultEntrypoint
     {
@@ -25,7 +27,7 @@ namespace Hubcon.Shared.Entrypoint
 
         public Task HandleIngest(IOperationRequest request, Dictionary<string, object> sources)
             => RequestHandler.HandleIngest(request, sources);
-
+     
         public void Build()
         {
         }

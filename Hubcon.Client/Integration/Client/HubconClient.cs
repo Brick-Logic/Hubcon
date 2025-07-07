@@ -1,8 +1,8 @@
 ﻿using Hubcon.Client.Core.Websockets;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Subscriptions;
-using Hubcon.Shared.Entrypoint;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
@@ -10,9 +10,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using Hubcon.Shared.Abstractions.Standard.Extensions;
-using Hubcon.Shared.Core.Extensions;
-using System.Collections.Concurrent;
 
 namespace Hubcon.Client.Integration.Client
 {

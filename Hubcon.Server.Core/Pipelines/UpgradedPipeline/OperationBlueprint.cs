@@ -1,8 +1,11 @@
-﻿using Hubcon.Server.Abstractions.Enums;
+﻿using Hubcon.Server.Abstractions.CustomAttributes;
+using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
+using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
+using System.Collections.Concurrent;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
@@ -27,6 +30,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         public bool RequiresAuthorization { get; }
         public IEnumerable<AuthorizeAttribute> AuthorizationAttributes { get; }
+        public IEnumerable<Attribute> Attributes { get; }
+        public ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         public Func<object?, object[], object?>? InvokeDelegate { get; }
         public IPipelineBuilder PipelineBuilder { get; }
         public string Route { get; }
@@ -75,6 +80,11 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 if(options.HttpPathPrefix != null)
 
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
+
+                Attributes = ControllerType.GetMethod(
+                    memberInfo.Name, 
+                    methodInfo.GetParameters().Select(x => x.ParameterType).ToArray())!
+                    .GetCustomAttributes();
             }
             else if (memberInfo is PropertyInfo propertyInfo)
             {
@@ -83,10 +93,71 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 HasReturnType = true;
 
                 Kind = OperationKind.Subscription;
+
+                Attributes = ControllerType.GetMethod(propertyInfo.Name)?.GetCustomAttributes() ?? new List<Attribute>();
             }
             else
             {
                 throw new NotSupportedException($"The type {memberInfo.GetType()} is not supported as an operation type. Use PropertyInfo o MethodInfo instead.");
+            }
+
+            ConfigurationAttributes = new();
+
+            Attributes.Where(x =>
+            {
+                if (Kind == OperationKind.Subscription)
+                {
+                    return x is SubscriptionSettingsAttribute;
+                }
+                else if (Kind == OperationKind.Stream)
+                {
+                    return x is StreamingSettingsAttribute;
+                }
+                else if (Kind == OperationKind.Ingest)
+                {
+                    return x is IngestSettingsAttribute;
+                }
+                else if (Kind == OperationKind.Method)
+                {
+                    return x is MethodSettingsAttribute;
+                }
+                else
+                    return false;
+            })
+            .ToList()
+            .ForEach(x =>
+            {
+                if (x is SubscriptionSettingsAttribute subSettings)
+                    ConfigurationAttributes.TryAdd(typeof(SubscriptionSettingsAttribute), subSettings);
+
+                else if (x is StreamingSettingsAttribute streamSettings)
+                    ConfigurationAttributes.TryAdd(typeof(StreamingSettingsAttribute), streamSettings);
+
+                else if (x is IngestSettingsAttribute ingestSettings)
+                    ConfigurationAttributes.TryAdd(typeof(IngestSettingsAttribute), ingestSettings);
+
+                else if (x is MethodSettingsAttribute methodSettings)
+                    ConfigurationAttributes.TryAdd(typeof(MethodSettingsAttribute), methodSettings);
+            });
+
+            if(ConfigurationAttributes.Count == 0)
+            {
+                if (Kind == OperationKind.Subscription)
+                {
+                    ConfigurationAttributes.TryAdd(typeof(SubscriptionSettingsAttribute), new SubscriptionSettingsAttribute());
+                }
+                else if (Kind == OperationKind.Stream)
+                {
+                    ConfigurationAttributes.TryAdd(typeof(StreamingSettingsAttribute), new StreamingSettingsAttribute());
+                }
+                else if (Kind == OperationKind.Ingest)
+                {
+                    ConfigurationAttributes.TryAdd(typeof(IngestSettingsAttribute), new IngestSettingsAttribute());
+                }
+                else if (Kind == OperationKind.Method)
+                {
+                    ConfigurationAttributes.TryAdd(typeof(MethodSettingsAttribute), new MethodSettingsAttribute());
+                }
             }
 
             RequiresAuthorization = memberInfo.HasCustomAttribute<AuthorizeAttribute>();

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace Hubcon.Server.Core.Configuration
@@ -17,7 +18,6 @@ namespace Hubcon.Server.Core.Configuration
         private bool? pongEnabled;
         private string? wsPrefix;
         private string? httpPrefix;
-
         private bool? allowWsIngest;
         private bool? allowWsSubs;
         private bool? allowWsMethods;
@@ -27,6 +27,10 @@ namespace Hubcon.Server.Core.Configuration
         private bool? detailedErrorsEnabled;
         private Action<IEndpointConventionBuilder>? endpointConventions;
         private Action<RouteHandlerBuilder>? routeHandlerBuilderConfig;
+        private TimeSpan? ingestThrottleDelay;
+        private TimeSpan? methodThrottleDelay;
+        private TimeSpan? subscriptionThrottleDelay;
+        private TimeSpan? streamingThrottleDelay;
 
         // Defaults
         public int MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
@@ -49,6 +53,14 @@ namespace Hubcon.Server.Core.Configuration
         public bool DetailedErrorsEnabled => detailedErrorsEnabled ?? false;
         public Action<IEndpointConventionBuilder>? EndpointConventions => endpointConventions;
         public Action<RouteHandlerBuilder>? RouteHandlerBuilderConfig => routeHandlerBuilderConfig;
+
+        public TimeSpan IngestThrottleDelay => ingestThrottleDelay ?? TimeSpan.FromMilliseconds(8);
+
+        public TimeSpan MethodThrottleDelay => methodThrottleDelay ?? TimeSpan.FromMilliseconds(8);
+
+        public TimeSpan SubscriptionThrottleDelay => subscriptionThrottleDelay ?? TimeSpan.FromMilliseconds(8);
+
+        public TimeSpan StreamingThrottleDelay => streamingThrottleDelay ?? TimeSpan.FromMilliseconds(8); 
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -143,6 +155,30 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions UseGlobalRouteHandlerBuilder(Action<RouteHandlerBuilder> configure)
         {
             routeHandlerBuilderConfig ??= configure;
+            return this;
+        }
+
+        public ICoreServerOptions ThrottleWebsocketIngest(TimeSpan delay)
+        {
+            ingestThrottleDelay ??= delay;
+            return this;
+        }
+
+        public ICoreServerOptions ThrottleWebsocketMethods(TimeSpan delay)
+        {
+            methodThrottleDelay ??= delay;
+            return this;
+        }
+
+        public ICoreServerOptions ThrottleWebsocketSubscription(TimeSpan delay)
+        {
+            subscriptionThrottleDelay ??= delay;
+            return this;
+        }
+
+        public ICoreServerOptions ThrottleWebsocketStreaming(TimeSpan delay)
+        {
+            streamingThrottleDelay ??= delay;
             return this;
         }
     }
