@@ -15,6 +15,12 @@ namespace HubconTestClient
     internal class Program
     {
         private const string Url = "http://localhost:5000/clienthub";
+        static int finishedRequestsCount = 0;
+        static int errors = 0;
+        static int lastRequests = 0;
+        static int maxReqs = 0;
+        static ConcurrentBag<double> latencies = new();
+
 
         static async Task Main()
         {
@@ -50,16 +56,16 @@ namespace HubconTestClient
 
             Console.ReadKey();
 
-            //Console.WriteLine($"Iniciando ingest...");
-            //IAsyncEnumerable<string> source1 = GetMessages(3);
-            //IAsyncEnumerable<string> source2 = GetMessages(5);
-            //IAsyncEnumerable<string> source3 = GetMessages(5);
-            //IAsyncEnumerable<string> source4 = GetMessages(5);
-            //IAsyncEnumerable<string> source5 = GetMessages(5);
-            //await client.IngestMessages(source1, source2, source3, source4, source5);
-            //Console.WriteLine($"Ingest terminado.");
+            Console.WriteLine($"Iniciando ingest...");
+            IAsyncEnumerable<string> source1 = GetMessages(3);
+            IAsyncEnumerable<string> source2 = GetMessages(5);
+            IAsyncEnumerable<string> source3 = GetMessages(5);
+            IAsyncEnumerable<string> source4 = GetMessages(5);
+            IAsyncEnumerable<string> source5 = GetMessages(5);
+            await client.IngestMessages(source1, source2, source3, source4, source5);
+            Console.WriteLine($"Ingest terminado.");
 
-            //Console.ReadKey();
+            Console.ReadKey();
 
             var result = await authManager.LoginAsync("miusuario", "");
             logger.LogInformation($"Login result: {result.IsSuccess}");
@@ -154,14 +160,10 @@ namespace HubconTestClient
             //    }
             //})).ToList());
 
-            int finishedRequestsCount = 0;
-            int errors = 0;
-            int lastRequests = 0;
-            int maxReqs = 0;
+            
             var sw = Stopwatch.StartNew();
 
             // Thread-safe para almacenar latencias de requests en ms
-            ConcurrentBag<double> latencies = new();
 
             var worker = new System.Timers.Timer();
             worker.Interval = 1000;
@@ -198,40 +200,56 @@ namespace HubconTestClient
             };
             worker.Start();
 
-            List<Task> tasks = Enumerable.Range(0, 3).Select(a => Task.Run(async () =>
-            {
-                var messages = client.GetMessages2();
-                await foreach (var item in messages)
-                {
-                    var swReq = Stopwatch.StartNew();
-                    try
-                    {
-                        //await client.CreateUser();
-                        Interlocked.Increment(ref finishedRequestsCount);
-                    }
-                    catch
-                    {
-                        Interlocked.Increment(ref errors);
-                    }
-                    finally
-                    {
-                        swReq.Stop();
-                        latencies.Add(swReq.Elapsed.TotalMilliseconds);
-                    }
-                }
-            })).ToList();
+            await client.IngestMessages(GetMessages2());
 
-            await Task.WhenAll(tasks);
+            //List<Task> tasks = Enumerable.Range(0, 1).Select(a => Task.Run(async () =>
+            //{
+            //    await client.IngestMessages(GetMessages(5000));
+
+            //    //await foreach (var item in messages)
+            //    //{
+            //    //    var swReq = Stopwatch.StartNew();
+            //    //    try
+            //    //    {
+            //    //        //await client.CreateUser();
+            //    //        Interlocked.Increment(ref finishedRequestsCount);
+            //    //    }
+            //    //    catch
+            //    //    {
+            //    //        Interlocked.Increment(ref errors);
+            //    //    }
+            //    //    finally
+            //    //    {
+            //    //        swReq.Stop();
+            //    //        latencies.Add(swReq.Elapsed.TotalMilliseconds);
+            //    //    }
+            //    //}
+            //})).ToList();
+
+            //await Task.WhenAll(tasks);
         }
 
-        static async IAsyncEnumerable<string> GetMessages(int count)
+        static async IAsyncEnumerable<string> GetMessages(int messages)
         {
-            for(int i = 0; i < count; i++)
+            for(int i = 0; i < messages; i++)
             {
                 var message = $"string:{i}";
                 Console.WriteLine($"Enviando mensaje... [{message}]");
                 yield return message;
                 await Task.Delay(1000);
+            }
+        }
+
+        static async IAsyncEnumerable<string> GetMessages2()
+        {
+            while (true)
+            {          
+                var swReq = Stopwatch.StartNew();
+                yield return "hola2";
+                swReq.Stop();
+                Interlocked.Increment(ref finishedRequestsCount);
+
+                latencies.Add(swReq.Elapsed.TotalMilliseconds);                          
             }
         }
 

@@ -78,6 +78,26 @@ namespace BlazorTestServer.Controllers
             logger.LogInformation("Ingest terminado exitosamente");
         }
 
+        public async Task IngestMessages(IAsyncEnumerable<string> source)
+        {
+            Task TaskRunner<T>(IAsyncEnumerable<T> source, string name)
+            {
+                return Task.Run(async () =>
+                {
+                    await foreach (var item in source)
+                    {
+                        logger.LogInformation($"source1: {item}");
+                    }
+                    logger.LogInformation($"[{name}] Stream terminado.");
+                });
+            }
+
+            List<Task> sources = [TaskRunner(source, nameof(source))];
+
+            await Task.WhenAll(sources);
+            logger.LogInformation("Ingest terminado exitosamente");
+        }
+
         public Task<IEnumerable<bool>> GetBooleans()
         {
             return Task.FromResult(Enumerable.Range(0, 6).Select(x => true));

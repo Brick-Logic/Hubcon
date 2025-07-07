@@ -535,7 +535,7 @@ namespace Hubcon.Client.Core.Websockets
                     {
                         await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Reconnect", CancellationToken.None);
                     }
-                    catch(Exception ex) {  }
+                    catch (Exception ex) { }
                     finally
                     {
                         _webSocket.Dispose();
@@ -641,7 +641,7 @@ namespace Hubcon.Client.Core.Websockets
                         return;
                     }
                     catch (Exception ex)
-                    {                
+                    {
                         _errorStream.OnNext(ex);
                         logger?.LogError(ex.Message);
                         int delay = Math.Min(1 * ++attempt, 10);
@@ -674,32 +674,6 @@ namespace Hubcon.Client.Core.Websockets
                 _reconnectLock.Release();
             }
         }
-
-        //private async Task<bool> SendIngestMessageAsync(IEnumerable<string> streamIds)
-        //{
-        //    var msg = converter.SerializeObject(new IngestInitMessage(streamIds, request.Payload));
-        //    var cts = new TaskCompletionSource<IngestInitAckMessage>();
-        //    _ingestAck.TryAdd(request.Id, cts);
-        //    await SendMessageAsync(msg);
-
-        //    var result = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), _cts.Token, cts.Task);
-
-        //    _ingestAck.TryRemove(request.Id, out _);
-
-        //    if (result != null)
-        //    {
-        //        var ackMessage = cts.Task.Result;
-
-        //        if (ackMessage.Id != null && ackMessage.Id == request.Id)
-        //        {
-        //            return true;
-        //        }
-
-        //        return false;
-        //    }
-        //    else
-        //        return false;
-        //}
 
         private async Task SendSubscribeMessageAsync(WebsocketRequest request)
         {

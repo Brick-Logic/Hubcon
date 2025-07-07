@@ -39,6 +39,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
     {
         private readonly TimeSpan timeoutSeconds = options.WebSocketTimeout;
         private HeartbeatWatcher _heartbeatWatcher = null!;
+        private int PingMessageThrottle = 250;
+        private int AckMessageThrottle = 250;
+
 
         public static async IAsyncEnumerable<object> GetSubscriptionSource([EnumeratorCancellation] CancellationToken cancellationToken)
         {
@@ -134,6 +137,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
+                            if(PingMessageThrottle > 0)
+                                await Task.Delay(TimeSpan.FromMilliseconds(PingMessageThrottle));
+
                             var ping = HandlePing(webSocket, sender, lastPingId, messageJson);
                             HandleTask(ping, _tasks);
                             break;
@@ -144,6 +150,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await HandleNotAllowed(baseMessage.Id, "Websocket subscriptions are disabled.", baseMessage, sender);
                                 break;
                             }
+
+                            if (options.SubscriptionThrottleDelay > TimeSpan.Zero)
+                                await Task.Delay(options.SubscriptionThrottleDelay);
 
                             var subInit = HandleSubscribe(context, _subscriptions, _ackChannels, _tasks, sender, messageJson);
                             HandleTask(subInit, _tasks);
@@ -156,6 +165,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
+                            if (options.SubscriptionThrottleDelay > TimeSpan.Zero)
+                                await Task.Delay(options.SubscriptionThrottleDelay);
+
                             var unsub = HandleUnsubscribe(_subscriptions, context, sender, messageJson);
                             HandleTask(unsub, _tasks);
                             break;
@@ -166,6 +178,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await HandleNotAllowed(baseMessage.Id, "Websocket streaming is disabled.", baseMessage, sender);
                                 break;
                             }
+
+                            if (options.StreamingThrottleDelay > TimeSpan.Zero)
+                                await Task.Delay(options.StreamingThrottleDelay);
 
                             var streamInit = HandleStream(context, _streams, _ackChannels, _tasks, sender, messageJson);
                             HandleTask(streamInit, _tasks);
@@ -178,6 +193,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
+                            if (options.StreamingThrottleDelay > TimeSpan.Zero)
+                                await Task.Delay(options.StreamingThrottleDelay);
+
                             var streamComplete = HandleUnsubscribe(_subscriptions, context, sender, messageJson);
                             HandleTask(streamComplete, _tasks);
                             break;
@@ -188,6 +206,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await HandleNotAllowed(baseMessage.Id, "Message ack is disabled.", baseMessage, sender);
                                 break;
                             }
+
+                            if (AckMessageThrottle > 0)
+                                await Task.Delay(AckMessageThrottle);
 
                             var ack = HandleAck(_ackChannels, messageJson);
                             HandleTask(ack, _tasks);
@@ -200,6 +221,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
+                            if (options.MethodThrottleDelay > TimeSpan.Zero)
+                                await Task.Delay(options.MethodThrottleDelay);
+
                             var operationInvoke = HandleOperationInvoke(context, sender, messageJson);
                             HandleTask(operationInvoke, _tasks);
                             break;
@@ -211,16 +235,23 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
+                            if (options.MethodThrottleDelay > TimeSpan.Zero)
+                                await Task.Delay(options.MethodThrottleDelay);
+
                             var operationCall = HandleOperationCall(context, sender, messageJson);
                             HandleTask(operationCall, _tasks);
                             break;
 
                         case MessageType.ingest_init:
+                            
                             if (!options.WebSocketIngestIsAllowed)
                             {
                                 await HandleNotAllowed(baseMessage.Id, "Websocket ingest is disabled.", baseMessage, sender);
                                 break;
                             }
+
+                            if (options.IngestThrottleDelay > TimeSpan.Zero)
+                                await Task.Delay(options.IngestThrottleDelay);
 
                             var ingestInit = HandleIngestInit(_ingests, sender, messageJson);
                             HandleTask(ingestInit, _tasks);
@@ -249,6 +280,11 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
+                            IngestSettings? ingestWithAckSettings = GetSettings<IngestSettingsAttribute>(baseMessage.Id)?.Settings;
+
+                            if (ingestWithAckSettings != null && ingestWithAckSettings.ThrottleDelay >= TimeSpan.Zero)
+                                await Task.Delay(ingestWithAckSettings.ThrottleDelay);
+
                             var ingestDataWitAck = HandleIngestDataWithAck(_ingests, sender, messageJson);
                             HandleTask(ingestDataWitAck, _tasks);
                             break;
@@ -259,6 +295,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await HandleNotAllowed(baseMessage.Id, "Websocket ingest is disabled.", baseMessage, sender);
                                 break;
                             }
+
+                            if (options.IngestThrottleDelay > TimeSpan.Zero)
+                                await Task.Delay(options.IngestThrottleDelay);
 
                             await HandleIngestComplete(_ingests, messageJson);
                             break;
@@ -357,7 +396,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 return;
 
             ingest.Item3.NotifyHeartbeat();
-            ingest.Item1.OnNextElement(ingestDataMessage.Data);
+            ingest.Item1.OnNextObject(ingestDataMessage.Data);
         }
 
         private T? GetSettings<T>(IOperationRequest operationRequest) where T: Attribute
@@ -428,9 +467,11 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     _ingests.TryRemove(id, out var complete);
                     complete.Item2?.Cancel();
                     complete.Item2?.Dispose();
+                    operationConfigRegistry.Unlink(id);
                     return cts.CancelAsync();
                 });
 
+                operationConfigRegistry.Link(id, blueprint!);
                 _ingests.TryAdd(id, (observable, cts, hw));
                 sources.TryAdd(id, observer.GetAsyncEnumerable(cts.Token));
             }

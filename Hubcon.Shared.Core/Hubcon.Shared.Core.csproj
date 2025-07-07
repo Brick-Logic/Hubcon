@@ -35,4 +35,7 @@
 		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-beta*" />
 		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-beta*" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Subscriptions\" />
+	</ItemGroup>
 </Project>

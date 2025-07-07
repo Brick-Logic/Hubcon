@@ -16,18 +16,15 @@ namespace Hubcon.Server.Core.Pipelines
     {
         private readonly IOperationRegistry _operationRegistry;
         private readonly IDynamicConverter _converter;
-        private readonly IOperationConfigRegistry _operationConfigRegistry;
         private readonly IServiceProvider _serviceProvider;
 
         public RequestHandler(
             IOperationRegistry operationRegistry,
             IDynamicConverter dynamicConverter,
-            IOperationConfigRegistry operationConfigRegistry,
             IServiceProvider serviceProvider)
         {
             _operationRegistry = operationRegistry;
             _converter = dynamicConverter;
-            _operationConfigRegistry = operationConfigRegistry;
             _serviceProvider = serviceProvider;
         }
 
@@ -173,8 +170,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IResponse> HandleIngest(IOperationRequest request, Dictionary<string, object> sources)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint)
-                && blueprint?.Kind == OperationKind.Ingest))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Ingest))
                 return null!;
 
             if (request.Arguments?.Count() == 0
@@ -185,62 +181,47 @@ namespace Hubcon.Server.Core.Pipelines
             }
 
             var arguments = new List<object?>();
-            var ids = new List<string>();
 
-            try
+            
+            foreach (var parameterType in blueprint!.ParameterTypes)
             {
-                foreach (var parameterType in blueprint!.ParameterTypes)
+                var arg = request.Arguments?[parameterType.Key];
+
+                if (parameterType.Value.IsGenericType && parameterType.Value.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
                 {
-                    var arg = request.Arguments?[parameterType.Key];
+                    var id = _converter.DeserializeData<string>(arg);
 
-                    if (parameterType.Value.IsGenericType && parameterType.Value.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
-                    {
-                        var id = _converter.DeserializeData<string>(arg);
+                    if (id == null) continue;
 
-                        if (id == null) continue;
+                    var source = sources.TryGetValue(id!, out object? value);
 
-                        var source = sources.TryGetValue(id!, out object? value);
-                        arguments.Add(value);
-                        ids.Add(id!);
-                        _operationConfigRegistry.Link(id, blueprint);
-                    }
-                    else
-                    {
-                        arguments.Add(arg!);
-                    }
-                }
-
-                IOperationContext context = BuildContext(request, blueprint, arguments.ToArray());
-
-                static async Task<IOperationResult> ResultHandler(object? result)
-                {
-                    try
-                    {
-                        if (result is Task task)
-                            await task;
-
-                        return new BaseOperationResponse<object>(true);
-                    }
-                    catch (Exception ex)
-                    {
-                        return new BaseOperationResponse<object>(false);
-                    }
-                }
-
-                var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
-                var pipelineResult = await pipeline.Execute();
-                return pipelineResult.Result!;
-            }
-            finally
-            {
-                foreach (var item in ids)
-                {
-                    _operationConfigRegistry.Unlink(item);
+                    request.Arguments![parameterType.Key] = value;
                 }
             }
+
+            IOperationContext context = BuildContext(request, blueprint);
+
+            static async Task<IOperationResult> ResultHandler(object? result)
+            {
+                try
+                {
+                    if (result is Task task)
+                        await task;
+
+                    return new BaseOperationResponse<object>(true);
+                }
+                catch (Exception ex)
+                {
+                    return new BaseOperationResponse<object>(false);
+                }
+            }
+
+            var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
+            var pipelineResult = await pipeline.Execute();
+            return pipelineResult.Result!;
         }
 
-        public IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint, object?[]? arguments = null)
+        public IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint)
         {
             return new OperationContext()
             {

@@ -6,7 +6,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
 {
     public class AsyncObserver<T>(BoundedChannelOptions? options = null) : IObserver<T>
     {
-        private readonly Channel<T?> _channel = Channel.CreateBounded<T?>(options ?? new BoundedChannelOptions(1000)
+        private readonly Channel<T?> _channel = Channel.CreateBounded<T?>(options ?? new BoundedChannelOptions(5000)
         {
             SingleReader = true,
             SingleWriter = false,

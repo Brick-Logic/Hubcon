@@ -1,12 +1,15 @@
-﻿using Hubcon.Server.Abstractions.Delegates;
+﻿using Hubcon.Server.Abstractions.CustomAttributes;
+using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Subscriptions;
 using Hubcon.Shared.Core.Tools;
+using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
+using System.Threading.Channels;
 using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
@@ -18,7 +21,9 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, PipelineDelegate next)
         {
-            if (context.Blueprint.Kind == OperationKind.Method || context.Blueprint.Kind == OperationKind.Stream)
+            if (context.Blueprint.Kind == OperationKind.Method 
+                || context.Blueprint.Kind == OperationKind.Stream 
+                || context.Blueprint.Kind == OperationKind.Ingest)
             {
                 if(context.Request.Arguments?.Count != context.Blueprint!.ParameterTypes.Count)
                 {
@@ -104,7 +109,19 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     }
                 }
 
-                var observer = new AsyncObserver<object>();
+                context.Blueprint.ConfigurationAttributes.TryGetValue(typeof(SubscriptionSettingsAttribute), out Attribute? attribute);
+                var subSettings = (attribute as SubscriptionSettingsAttribute)!.Settings;
+
+                var options = new BoundedChannelOptions(subSettings.ChannelCapacity)
+                {
+                    Capacity = subSettings.ChannelCapacity,
+                    FullMode = subSettings.ChannelFullMode,
+                    SingleReader = true,
+                    SingleWriter = false,
+                    AllowSynchronousContinuations = false
+                };
+
+                var observer = new AsyncObserver<object>(options);
 
                 Task hubconEventHandler(object? eventValue)
                 {
@@ -129,6 +146,9 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         await foreach (var newEvent in observer.GetAsyncEnumerable(new()))
                         {
                             yield return newEvent;
+
+                            if (subSettings.ThrottleDelay > TimeSpan.Zero)
+                                await Task.Delay(subSettings.ThrottleDelay);
                         }
                     }
                     finally
