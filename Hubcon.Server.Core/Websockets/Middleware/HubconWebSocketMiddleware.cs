@@ -2,7 +2,6 @@
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Entrypoint;
-using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Server.Core.Websockets.Helpers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
@@ -20,7 +19,6 @@ using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -40,23 +38,11 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         private readonly TimeSpan timeoutSeconds = options.WebSocketTimeout;
         private HeartbeatWatcher _heartbeatWatcher = null!;
         private int PingMessageThrottle = 250;
-        private int AckMessageThrottle = 250;
-
-
-        public static async IAsyncEnumerable<object> GetSubscriptionSource([EnumeratorCancellation] CancellationToken cancellationToken)
-        {
-            int i = 0;
-
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                yield return $"mensaje {i}";
-                i++;
-                await Task.Delay(2000, cancellationToken);
-            }
-        }
+        private int AckMessageThrottle = 10;
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
         {
+
             if (!context.WebSockets.IsWebSocketRequest || !(context.Request.Path == options.WebSocketPathPrefix))
             {
                 await next(context);
@@ -115,7 +101,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     try
                     {
-                        messageJson = await receiver.ReceiveAsync();
+                        if (!options.ThrottlingIsDisabled && options.WebsocketReceiveThrottleDelay > TimeSpan.Zero)
+                            await Task.Delay(options.WebsocketReceiveThrottleDelay);
+
+                            messageJson = await receiver.ReceiveAsync();
                     }
                     catch
                     {
@@ -151,7 +140,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (options.SubscriptionThrottleDelay > TimeSpan.Zero)
+                            if (!options.ThrottlingIsDisabled && options.SubscriptionThrottleDelay > TimeSpan.Zero)
                                 await Task.Delay(options.SubscriptionThrottleDelay);
 
                             var subInit = HandleSubscribe(context, _subscriptions, _ackChannels, _tasks, sender, messageJson);
@@ -165,7 +154,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (options.SubscriptionThrottleDelay > TimeSpan.Zero)
+                            if (!options.ThrottlingIsDisabled && options.SubscriptionThrottleDelay > TimeSpan.Zero)
                                 await Task.Delay(options.SubscriptionThrottleDelay);
 
                             var unsub = HandleUnsubscribe(_subscriptions, context, sender, messageJson);
@@ -179,7 +168,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (options.StreamingThrottleDelay > TimeSpan.Zero)
+                            if (!options.ThrottlingIsDisabled && options.StreamingThrottleDelay > TimeSpan.Zero)
                                 await Task.Delay(options.StreamingThrottleDelay);
 
                             var streamInit = HandleStream(context, _streams, _ackChannels, _tasks, sender, messageJson);
@@ -193,7 +182,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (options.StreamingThrottleDelay > TimeSpan.Zero)
+                            if (!options.ThrottlingIsDisabled && options.StreamingThrottleDelay > TimeSpan.Zero)
                                 await Task.Delay(options.StreamingThrottleDelay);
 
                             var streamComplete = HandleUnsubscribe(_subscriptions, context, sender, messageJson);
@@ -207,7 +196,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (AckMessageThrottle > 0)
+                            if (!options.ThrottlingIsDisabled && AckMessageThrottle > 0)
                                 await Task.Delay(AckMessageThrottle);
 
                             var ack = HandleAck(_ackChannels, messageJson);
@@ -221,7 +210,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (options.MethodThrottleDelay > TimeSpan.Zero)
+                            if (!options.ThrottlingIsDisabled && options.MethodThrottleDelay > TimeSpan.Zero)
                                 await Task.Delay(options.MethodThrottleDelay);
 
                             var operationInvoke = HandleOperationInvoke(context, sender, messageJson);
@@ -235,7 +224,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (options.MethodThrottleDelay > TimeSpan.Zero)
+                            if (!options.ThrottlingIsDisabled && options.MethodThrottleDelay > TimeSpan.Zero)
                                 await Task.Delay(options.MethodThrottleDelay);
 
                             var operationCall = HandleOperationCall(context, sender, messageJson);
@@ -250,7 +239,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (options.IngestThrottleDelay > TimeSpan.Zero)
+                            if (!options.ThrottlingIsDisabled && options.IngestThrottleDelay > TimeSpan.Zero)
                                 await Task.Delay(options.IngestThrottleDelay);
 
                             var ingestInit = HandleIngestInit(_ingests, sender, messageJson);
@@ -266,10 +255,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             IngestSettings? ingestSettings = GetSettings<IngestSettingsAttribute>(baseMessage.Id)?.Settings;
                             
-                            if (ingestSettings != null && ingestSettings.ThrottleDelay >= TimeSpan.Zero)
-                                await Task.Delay(ingestSettings.ThrottleDelay);                           
+                            if (!options.ThrottlingIsDisabled && ingestSettings != null && ingestSettings.ThrottleDelay > TimeSpan.Zero)
+                                await Task.Delay(ingestSettings.ThrottleDelay);
+                            else if(!options.ThrottlingIsDisabled && options.IngestThrottleDelay > TimeSpan.Zero)
+                                await Task.Delay(options.IngestThrottleDelay);
 
-                            var ingestData = HandleIngestData(_ingests, messageJson);
+                                var ingestData = HandleIngestData(_ingests, messageJson);
                             HandleTask(ingestData, _tasks);
                             break;
 
@@ -282,7 +273,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             IngestSettings? ingestWithAckSettings = GetSettings<IngestSettingsAttribute>(baseMessage.Id)?.Settings;
 
-                            if (ingestWithAckSettings != null && ingestWithAckSettings.ThrottleDelay >= TimeSpan.Zero)
+                            if (!options.ThrottlingIsDisabled && ingestWithAckSettings != null && ingestWithAckSettings.ThrottleDelay > TimeSpan.Zero)
                                 await Task.Delay(ingestWithAckSettings.ThrottleDelay);
 
                             var ingestDataWitAck = HandleIngestDataWithAck(_ingests, sender, messageJson);
@@ -296,7 +287,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (options.IngestThrottleDelay > TimeSpan.Zero)
+                            if (!options.ThrottlingIsDisabled && options.IngestThrottleDelay > TimeSpan.Zero)
                                 await Task.Delay(options.IngestThrottleDelay);
 
                             await HandleIngestComplete(_ingests, messageJson);
@@ -603,30 +594,30 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
         }
 
-        private async Task HandleStreamComplete(
-            ConcurrentDictionary<string, CancellationTokenSource> _streams,
-            HttpContext context,
-            WebSocketMessageSender sender,
-            string messageJson)
-        {
-            SubscriptionCompleteMessage request = null!;
-            object? result = false;
+        //private async Task HandleStreamComplete(
+        //    ConcurrentDictionary<string, CancellationTokenSource> _streams,
+        //    HttpContext context,
+        //    WebSocketMessageSender sender,
+        //    string messageJson)
+        //{
+        //    SubscriptionCompleteMessage request = null!;
+        //    object? result = false;
 
-            try
-            {
-                request = converter.DeserializeData<SubscriptionCompleteMessage>(messageJson)!;
+        //    try
+        //    {
+        //        request = converter.DeserializeData<SubscriptionCompleteMessage>(messageJson)!;
 
-                if (request == null) return;
+        //        if (request == null) return;
 
-                if (request != null && _streams.TryRemove(request.Id, out var tokenSource))
-                    tokenSource.Cancel();
-            }
-            catch (Exception ex)
-            {
-                result = false;
-                logger.LogError($"{ex.Message}");
-            }
-        }
+        //        if (request != null && _streams.TryRemove(request.Id, out var tokenSource))
+        //            tokenSource.Cancel();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        result = false;
+        //        logger.LogError($"{ex.Message}");
+        //    }
+        //}
 
         private async Task HandleAck(
             ConcurrentDictionary<string,
@@ -665,6 +656,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 try
                 {
                     IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(subscribe.Payload)!;
+
+                    var config = GetSettings<SubscriptionSettingsAttribute>(operationRequest)?.Settings;
+
                     var stream = await entrypoint.HandleSubscription(operationRequest);
 
                     if (stream == null) { return; }
@@ -699,6 +693,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await sender.SendAsync(response);
                             }
                         }
+
+                        if (!options.ThrottlingIsDisabled && config is not null)
+                            await Task.Delay(config.ThrottleDelay);
+
+                        else if (!options.ThrottlingIsDisabled && options.SubscriptionThrottleDelay > TimeSpan.Zero && !options.ThrottlingIsDisabled)
+                            await Task.Delay(options.SubscriptionThrottleDelay);
                     }
                 }
                 catch (OperationCanceledException)
@@ -773,9 +773,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             }
 
-                            if (streamingSettings != null && streamingSettings.ThrottleDelay >= TimeSpan.Zero)
-                                await Task.Delay(streamingSettings.ThrottleDelay);
-
                             if (_ackChannels.TryRemove(ackId.ToString(), out IRetryableMessage? channel))
                                 await channel.AckAsync();
                         }
@@ -792,8 +789,11 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             }
                         }
 
-                        if (streamingSettings != null && streamingSettings.ThrottleDelay >= TimeSpan.Zero)
+                        if (!options.ThrottlingIsDisabled && streamingSettings != null && streamingSettings.ThrottleDelay > TimeSpan.Zero )
                             await Task.Delay(streamingSettings.ThrottleDelay);
+
+                        else if(!options.ThrottlingIsDisabled && options.StreamingThrottleDelay > TimeSpan.Zero)
+                            await Task.Delay(options.StreamingThrottleDelay);                     
                     }
                 }
                 catch (OperationCanceledException ex)

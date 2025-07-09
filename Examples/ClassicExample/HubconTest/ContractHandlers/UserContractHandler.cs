@@ -46,7 +46,7 @@ namespace HubconTest.ContractHandlers
             }
         }
 
-        [StreamingSettings(1000)]
+        [StreamingSettings(200)]
         public async IAsyncEnumerable<string> GetMessages2()
         {
             while(true)

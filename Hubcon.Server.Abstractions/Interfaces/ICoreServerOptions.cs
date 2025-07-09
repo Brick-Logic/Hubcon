@@ -134,6 +134,20 @@ namespace Hubcon.Server.Core.Configuration
         /// <returns></returns>
         ICoreServerOptions ThrottleWebsocketStreaming(TimeSpan delay);
 
+        /// <summary>
+        /// Disables all throttling options.
+        /// </summary>
+        /// <param name="delay"></param>
+        /// <returns></returns>
+        ICoreServerOptions DisableAllThrottling();
+
+        /// <summary>
+        /// Sets a delay for receiving websocket messages from a client.
+        /// </summary>
+        /// <param name="delay"></param>
+        /// <returns></returns>
+        ICoreServerOptions ThrottleWebsocketReceiveLoop(TimeSpan delay);
+
         ICoreServerOptions UseGlobalRouteHandlerBuilder(Action<RouteHandlerBuilder> configure);
         ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure);
     }
@@ -230,6 +244,15 @@ namespace Hubcon.Server.Core.Configuration
         /// </summary>
         TimeSpan StreamingThrottleDelay { get; }
 
+        /// <summary>
+        /// Delay for websocket client receive loop.
+        /// </summary>
+        TimeSpan WebsocketReceiveThrottleDelay { get; }
+
+        /// <summary>
+        /// Delay for websocket client receive loop.
+        /// </summary>
+        bool ThrottlingIsDisabled { get; }
 
         /// <summary>
         /// Allows configuring extra some global settings for HTTP endpoints.

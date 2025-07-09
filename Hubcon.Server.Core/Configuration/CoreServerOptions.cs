@@ -1,11 +1,4 @@
 ﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Channels;
-using System.Threading.Tasks;
 
 namespace Hubcon.Server.Core.Configuration
 {
@@ -31,12 +24,13 @@ namespace Hubcon.Server.Core.Configuration
         private TimeSpan? methodThrottleDelay;
         private TimeSpan? subscriptionThrottleDelay;
         private TimeSpan? streamingThrottleDelay;
+        private TimeSpan? websocketReceiveThrottleDelay;
+        private bool? throttlingIsDisabled;
 
         // Defaults
         public int MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
         public int MaxHttpMessageSize => maxHttpSize ?? (128 * 1024);   // 128 KB
-
-        
+    
         public TimeSpan WebSocketTimeout => wsTimeout ?? TimeSpan.FromSeconds(30); 
         public TimeSpan HttpTimeout => httpTimeout ?? TimeSpan.FromSeconds(15);
          
@@ -54,13 +48,17 @@ namespace Hubcon.Server.Core.Configuration
         public Action<IEndpointConventionBuilder>? EndpointConventions => endpointConventions;
         public Action<RouteHandlerBuilder>? RouteHandlerBuilderConfig => routeHandlerBuilderConfig;
 
-        public TimeSpan IngestThrottleDelay => ingestThrottleDelay ?? TimeSpan.FromMilliseconds(8);
+        public TimeSpan IngestThrottleDelay => ingestThrottleDelay ?? (ThrottlingIsDisabled ? TimeSpan.Zero : TimeSpan.FromMilliseconds(8));
 
-        public TimeSpan MethodThrottleDelay => methodThrottleDelay ?? TimeSpan.FromMilliseconds(8);
+        public TimeSpan MethodThrottleDelay => methodThrottleDelay ?? (ThrottlingIsDisabled ? TimeSpan.Zero : TimeSpan.FromMilliseconds(8));
 
-        public TimeSpan SubscriptionThrottleDelay => subscriptionThrottleDelay ?? TimeSpan.FromMilliseconds(8);
+        public TimeSpan SubscriptionThrottleDelay => subscriptionThrottleDelay ?? (ThrottlingIsDisabled ? TimeSpan.Zero : TimeSpan.FromMilliseconds(8));
 
-        public TimeSpan StreamingThrottleDelay => streamingThrottleDelay ?? TimeSpan.FromMilliseconds(8); 
+        public TimeSpan StreamingThrottleDelay => streamingThrottleDelay ?? (ThrottlingIsDisabled ? TimeSpan.Zero : TimeSpan.FromMilliseconds(8));
+
+        public TimeSpan WebsocketReceiveThrottleDelay => websocketReceiveThrottleDelay ?? (ThrottlingIsDisabled ? TimeSpan.Zero : TimeSpan.FromMilliseconds(1));
+
+        public bool ThrottlingIsDisabled => throttlingIsDisabled ?? false;
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -179,6 +177,18 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions ThrottleWebsocketStreaming(TimeSpan delay)
         {
             streamingThrottleDelay ??= delay;
+            return this;
+        }
+
+        public ICoreServerOptions ThrottleWebsocketReceiveLoop(TimeSpan delay)
+        {
+            websocketReceiveThrottleDelay ??= delay;
+            return this;
+        }
+
+        public ICoreServerOptions DisableAllThrottling()
+        {
+            throttlingIsDisabled ??= true;
             return this;
         }
     }

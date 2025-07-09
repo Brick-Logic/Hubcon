@@ -19,6 +19,7 @@ namespace HubconTestClient
         static int errors = 0;
         static int lastRequests = 0;
         static int maxReqs = 0;
+        static int eventosRecibidos = 0;
         static ConcurrentBag<double> latencies = new();
 
 
@@ -79,8 +80,6 @@ namespace HubconTestClient
             Console.ReadKey();
 
             //logger.LogDebug("Conectando evento...");
-
-            int eventosRecibidos = 0;
 
             //async Task handler(int? input)
             //{
@@ -190,7 +189,7 @@ namespace HubconTestClient
                 maxReqs = Math.Max(maxReqs, avgRequestsPerSec);
 
                 logger.LogInformation($"Requests: {finishedRequestsCount} | Received Events: {eventosRecibidos} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {maxReqs} | " +
-                                      $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
+                                      $"p50 latency(ms): {p50:F5} | p95 latency(ms): {p95:F5} | p99 latency(ms): {p99:F5} | Avg latency(ms): {avgLatency:F5}");
 
                 lastRequests = finishedRequestsCount;
                 sw.Restart();
@@ -200,33 +199,36 @@ namespace HubconTestClient
             };
             worker.Start();
 
-            await client.IngestMessages(GetMessages2());
+            //await client.IngestMessages(GetMessages2());
 
-            //List<Task> tasks = Enumerable.Range(0, 1).Select(a => Task.Run(async () =>
-            //{
-            //    await client.IngestMessages(GetMessages(5000));
+            List<Task> tasks = Enumerable.Range(0, 1).Select(a => Task.Run(async () =>
+            {
+                //await client.IngestMessages(GetMessages(5000));
 
-            //    //await foreach (var item in messages)
-            //    //{
-            //    //    var swReq = Stopwatch.StartNew();
-            //    //    try
-            //    //    {
-            //    //        //await client.CreateUser();
-            //    //        Interlocked.Increment(ref finishedRequestsCount);
-            //    //    }
-            //    //    catch
-            //    //    {
-            //    //        Interlocked.Increment(ref errors);
-            //    //    }
-            //    //    finally
-            //    //    {
-            //    //        swReq.Stop();
-            //    //        latencies.Add(swReq.Elapsed.TotalMilliseconds);
-            //    //    }
-            //    //}
-            //})).ToList();
+                await foreach (var item in client.GetMessages2())
+                {
+                    Stopwatch? swReq = null;
 
-            //await Task.WhenAll(tasks);
+                    try
+                    {
+                        //await client.CreateUser();
+                        Interlocked.Increment(ref finishedRequestsCount);
+                    }
+                    catch
+                    {
+                        Interlocked.Increment(ref errors);
+                    }
+                    finally
+                    {
+                        swReq?.Stop();
+                        if(swReq != null) latencies.Add(swReq.Elapsed.TotalMilliseconds);
+                    }
+
+                    swReq = Stopwatch.StartNew();
+                }
+            })).ToList();
+
+            await Task.WhenAll(tasks);
         }
 
         static async IAsyncEnumerable<string> GetMessages(int messages)
@@ -242,12 +244,14 @@ namespace HubconTestClient
 
         static async IAsyncEnumerable<string> GetMessages2()
         {
+            finishedRequestsCount = 0;
+
             while (true)
             {          
                 var swReq = Stopwatch.StartNew();
                 yield return "hola2";
                 swReq.Stop();
-                Interlocked.Increment(ref finishedRequestsCount);
+                Interlocked.Increment(ref Program.finishedRequestsCount);
 
                 latencies.Add(swReq.Elapsed.TotalMilliseconds);                          
             }
