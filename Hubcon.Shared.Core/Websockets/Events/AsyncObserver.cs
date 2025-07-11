@@ -43,17 +43,11 @@ namespace Hubcon.Shared.Core.Websockets.Events
         }
 
         private async IAsyncEnumerable<T?> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken)
-        {
-            try
+        {       
+            await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
             {
-                await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
-                {
-                    yield return item;
-                }
-            }
-            finally
-            {
-
+                await Task.Delay(1, cancellationToken);
+                yield return item;
             }
         }
 

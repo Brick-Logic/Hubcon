@@ -8,9 +8,9 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
 {
     public sealed class WebsocketMethodSettings(TimeSpan? throttleDelay = null)
     {
-        public TimeSpan ThrottleDelay { get; private set; } = throttleDelay ?? TimeSpan.FromMilliseconds(1);
+        public TimeSpan ThrottleDelay { get; private set; } = throttleDelay ?? TimeSpan.FromMilliseconds(8);
 
-        public static WebsocketMethodSettings Default => new();
+        public static WebsocketMethodSettings Default { get; } = new();
     }
 
     [AttributeUsage(AttributeTargets.Method)]
@@ -18,7 +18,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
     {
         public WebsocketMethodSettings Settings { get; }
 
-        public WebsocketMethodSettingsAttribute(int ThrottleDelay = 16)
+        public WebsocketMethodSettingsAttribute(int ThrottleDelay = 8)
         {
             var delay = ThrottleDelay == 0 ? TimeSpan.Zero : TimeSpan.FromMilliseconds(ThrottleDelay);
             Settings = new WebsocketMethodSettings(delay);

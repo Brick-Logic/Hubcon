@@ -25,10 +25,13 @@ namespace HubconTestClient
 
         static async Task Main()
         {
+            Console.WriteLine($"Server GC enabled: {System.Runtime.GCSettings.IsServerGC}");
+
+
             var process = Process.GetCurrentProcess();
 
             long coreMask = 0;
-            for (int i = 0; i <= 0; i++)
+            for (int i = 0; i <= 11; i++)
             {
                 coreMask |= 1L << i;
             }
@@ -57,16 +60,16 @@ namespace HubconTestClient
 
             Console.ReadKey();
 
-            Console.WriteLine($"Iniciando ingest...");
-            IAsyncEnumerable<string> source1 = GetMessages(3);
-            IAsyncEnumerable<string> source2 = GetMessages(5);
-            IAsyncEnumerable<string> source3 = GetMessages(5);
-            IAsyncEnumerable<string> source4 = GetMessages(5);
-            IAsyncEnumerable<string> source5 = GetMessages(5);
-            await client.IngestMessages(source1, source2, source3, source4, source5);
-            Console.WriteLine($"Ingest terminado.");
+            //Console.WriteLine($"Iniciando ingest...");
+            //IAsyncEnumerable<string> source1 = GetMessages(3);
+            //IAsyncEnumerable<string> source2 = GetMessages(5);
+            //IAsyncEnumerable<string> source3 = GetMessages(5);
+            //IAsyncEnumerable<string> source4 = GetMessages(5);
+            //IAsyncEnumerable<string> source5 = GetMessages(5);
+            //await client.IngestMessages(source1, source2, source3, source4, source5);
+            //Console.WriteLine($"Ingest terminado.");
 
-            Console.ReadKey();
+            //Console.ReadKey();
 
             var result = await authManager.LoginAsync("miusuario", "");
             logger.LogInformation($"Login result: {result.IsSuccess}");
@@ -79,7 +82,7 @@ namespace HubconTestClient
             logger.LogInformation($"TestVoid llamado. Texto recibido: {text}");
             Console.ReadKey();
 
-            //logger.LogDebug("Conectando evento...");
+            logger.LogDebug("Conectando evento...");
 
             //async Task handler(int? input)
             //{
@@ -96,15 +99,18 @@ namespace HubconTestClient
             //client.OnUserCreated4!.AddHandler(handler);
             //await client.OnUserCreated4.Subscribe();
 
-            logger.LogInformation("Evento conectado.");
+            //logger.LogInformation("Evento conectado.");
 
-            Console.ReadKey();
+            //for(int j = 2; j > 0;j--)
+            //{
+            //    logger.LogInformation("Enviando request...");
+            //    await client.CreateUser();
+            //    logger.LogInformation($"Request terminado.");
+            //    await Task.Delay(1);
+            //    Console.ReadKey();
+            //}
 
-            logger.LogInformation("Enviando request...");
-            await client.CreateUser();
-            logger.LogInformation($"Request terminado.");
-
-            Console.ReadKey();
+            //Console.ReadKey();
 
             logger.LogInformation("Enviando request GetTemperatureFromServer...");
             var temp = await client.GetTemperatureFromServer();
@@ -194,24 +200,27 @@ namespace HubconTestClient
                 lastRequests = finishedRequestsCount;
                 sw.Restart();
 
-                ThreadPool.GetAvailableThreads(out var workerThreads, out _);
-                logger.LogInformation($"Threads disponibles: {workerThreads}");
+                //ThreadPool.GetAvailableThreads(out var workerThreads, out _);
+                //logger.LogInformation($"Threads disponibles: {workerThreads}");
             };
             worker.Start();
 
             //await client.IngestMessages(GetMessages2());
 
-            List<Task> tasks = Enumerable.Range(0, 1).Select(a => Task.Run(async () =>
+            List<Task> tasks = Enumerable.Range(0, 12).Select(a => Task.Run(async () =>
             {
                 //await client.IngestMessages(GetMessages(5000));
 
-                await foreach (var item in client.GetMessages2())
-                {
-                    Stopwatch? swReq = null;
+                //await foreach (var item in client.GetMessages2())
+                Stopwatch? swReq = null;
+                swReq = Stopwatch.StartNew();
 
+                while(true)
+                {
+                    swReq.Restart();
                     try
                     {
-                        //await client.CreateUser();
+                        var num = await client.GetTemperatureFromServer();
                         Interlocked.Increment(ref finishedRequestsCount);
                     }
                     catch
@@ -221,12 +230,24 @@ namespace HubconTestClient
                     finally
                     {
                         swReq?.Stop();
-                        if(swReq != null) latencies.Add(swReq.Elapsed.TotalMilliseconds);
+                        latencies.Add(swReq.Elapsed.TotalMilliseconds);
                     }
 
-                    swReq = Stopwatch.StartNew();
                 }
             })).ToList();
+
+            var heap = Task.Run(async () =>
+            {
+                var sw = Stopwatch.StartNew();
+                while (true)
+                {
+                    var allocated = GC.GetTotalMemory(forceFullCollection: false);
+                    logger.LogInformation($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {sw.Elapsed}");
+                    await Task.Delay(100);
+                }
+            });
+
+            tasks.Add(heap);
 
             await Task.WhenAll(tasks);
         }

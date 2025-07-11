@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Channels;
 
 namespace Hubcon.Client.Integration.Client
 {
@@ -40,8 +41,8 @@ namespace Hubcon.Client.Integration.Client
                     if (authenticationManagerFactory?.Invoke() == null)
                         throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                    var result = await client.InvokeAsync<BaseOperationResponse<T>>(request);
-                    return result.Data;
+                    var result = await client.InvokeAsync<IOperationRequest, BaseOperationResponse<T>>(request);
+                    return default!;
                 }
                 else
                 {
@@ -80,7 +81,7 @@ namespace Hubcon.Client.Integration.Client
 
         }
 
-        public async Task<IOperationResponse<JsonElement>> CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
+        public async Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -89,7 +90,7 @@ namespace Hubcon.Client.Integration.Client
                     if (authenticationManagerFactory?.Invoke() == null)
                         throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                    return await client.InvokeAsync<BaseJsonResponse>(request);
+                    await client.SendAsync(request);
                 }
                 else
                 {
@@ -114,16 +115,14 @@ namespace Hubcon.Client.Integration.Client
                     var responseBytes = await response.Content.ReadAsByteArrayAsync();
                     var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
 
-                    return converter.DeserializeJsonElement<BaseJsonResponse>(result)!;
+                    var methodResponse = converter.DeserializeJsonElement<BaseJsonResponse>(result)!;
+
+                    return;
                 }
             }
             catch (Exception ex)
             {
-                return new BaseJsonResponse(
-                    false,
-                    default,
-                    ex.Message
-                );
+                return;
             }
         }
 
@@ -159,7 +158,9 @@ namespace Hubcon.Client.Integration.Client
 
             IObservable<JsonElement> observable = await client.Subscribe<JsonElement>(request);
 
-            var observer = new AsyncObserver<JsonElement>();
+            var options = new BoundedChannelOptions(5000);
+
+            var observer = new AsyncObserver<JsonElement>(options);
 
             using (observable.Subscribe(observer))
             {

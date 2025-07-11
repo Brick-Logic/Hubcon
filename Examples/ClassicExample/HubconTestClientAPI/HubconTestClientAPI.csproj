@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta*"/>
+		<ProjectReference Include="..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
+		<ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
+	</ItemGroup>
+</Project>

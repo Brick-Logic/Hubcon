@@ -7,6 +7,7 @@ using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Threading.Channels;
 using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
@@ -16,6 +17,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
     public class InternalRoutingMiddleware(
         IServiceProvider serviceProvider,
         IDynamicConverter dynamicConverter,
+        ILogger<InternalRoutingMiddleware> logger,
         ILiveSubscriptionRegistry liveSubscriptionRegistry) : IInternalRoutingMiddleware
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, PipelineDelegate next)
@@ -109,7 +111,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 }
 
                 context.Blueprint.ConfigurationAttributes.TryGetValue(typeof(SubscriptionSettingsAttribute), out Attribute? attribute);
-                var subSettings = (attribute as SubscriptionSettingsAttribute)!.Settings;
+                var subSettings = (attribute as SubscriptionSettingsAttribute)?.Settings ?? SubscriptionSettings.Default;
 
                 var options = new BoundedChannelOptions(subSettings.ChannelCapacity)
                 {
@@ -130,7 +132,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     }
                     catch (Exception ex)
                     {
-                        Console.Error.WriteLine($"Error al escribir al canal de observación: {ex}");
+                        logger.LogError(ex.Message);
                     }
 
                     return Task.CompletedTask;

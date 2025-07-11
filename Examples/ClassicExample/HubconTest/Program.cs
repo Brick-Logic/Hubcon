@@ -26,14 +26,25 @@ namespace HubconTest
             process.ProcessorAffinity = (IntPtr)coreMask;
             process.PriorityClass = ProcessPriorityClass.RealTime;
 
-            worker = new System.Timers.Timer();
-            worker.Interval = 1000;
-            worker.Elapsed += (sender, eventArgs) =>
+            //worker = new System.Timers.Timer();
+            //worker.Interval = 1000;
+            //worker.Elapsed += (sender, eventArgs) =>
+            //{
+            //    ThreadPool.GetAvailableThreads(out var workerThreads, out _);
+            //    logger.LogInformation("Threads disponibles: " + workerThreads);
+            //};
+            //worker.Start();
+
+            var heap = Task.Run(async () =>
             {
-                ThreadPool.GetAvailableThreads(out var workerThreads, out _);
-                logger.LogInformation("Threads disponibles: " + workerThreads);
-            };
-            worker.Start();
+                var sw = Stopwatch.StartNew();
+                while (true)
+                {
+                    var allocated = GC.GetTotalMemory(forceFullCollection: false);
+                    Console.WriteLine($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {sw.Elapsed}");
+                    await Task.Delay(1000);
+                }
+            });
         }
     }
 
@@ -64,6 +75,7 @@ namespace HubconTest
                 serverOptions.ConfigureCore(config => 
                 {
                     config
+                    .DisableAllThrottling()
                     .EnableRequestDetailedErrors();
                     //.SetHttpPathPrefix("prefix1")
                     //.SetWebSocketPathPrefix("wsprefix");                   

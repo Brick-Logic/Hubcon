@@ -26,7 +26,7 @@ namespace Hubcon.Client.Interceptors
             var methodName = method.GetMethodSignature();
             var contractName = method.ReflectedType!.Name;
             var resultType = typeof(T);
-            logger.LogInformation(resultType.FullName);
+            //logger.LogInformation(resultType.FullName);
             using var cts = new CancellationTokenSource();
 
             if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
@@ -73,7 +73,6 @@ namespace Hubcon.Client.Interceptors
         {
             var methodName = method.GetMethodSignature();
             var contractName = method.ReflectedType!.Name;
-            using var cts = new CancellationTokenSource();
 
 
             if (_hasAsyncEnumerablesCache.GetOrAdd(
@@ -91,7 +90,7 @@ namespace Hubcon.Client.Interceptors
                     arguments
                 );
 
-                return Client.CallAsync(request, method, cts.Token);
+                return Client.CallAsync(request, method);
             }
         }
     }

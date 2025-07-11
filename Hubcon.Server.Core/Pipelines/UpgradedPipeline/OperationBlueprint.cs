@@ -127,38 +127,18 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             .ToList()
             .ForEach(x =>
             {
-                if (x is SubscriptionSettingsAttribute subSettings)
+                if (Kind == OperationKind.Subscription && x is SubscriptionSettingsAttribute subSettings)
                     ConfigurationAttributes.TryAdd(typeof(SubscriptionSettingsAttribute), subSettings);
 
-                else if (x is StreamingSettingsAttribute streamSettings)
+                else if (Kind == OperationKind.Stream && x is StreamingSettingsAttribute streamSettings)
                     ConfigurationAttributes.TryAdd(typeof(StreamingSettingsAttribute), streamSettings);
 
-                else if (x is IngestSettingsAttribute ingestSettings)
+                else if (Kind == OperationKind.Ingest && x is IngestSettingsAttribute ingestSettings)
                     ConfigurationAttributes.TryAdd(typeof(IngestSettingsAttribute), ingestSettings);
 
-                else if (x is MethodSettingsAttribute methodSettings)
+                else if (Kind == OperationKind.Method && x is MethodSettingsAttribute methodSettings)
                     ConfigurationAttributes.TryAdd(typeof(MethodSettingsAttribute), methodSettings);
             });
-
-            if(ConfigurationAttributes.Count == 0)
-            {
-                if (Kind == OperationKind.Subscription)
-                {
-                    ConfigurationAttributes.TryAdd(typeof(SubscriptionSettingsAttribute), new SubscriptionSettingsAttribute());
-                }
-                else if (Kind == OperationKind.Stream)
-                {
-                    ConfigurationAttributes.TryAdd(typeof(StreamingSettingsAttribute), new StreamingSettingsAttribute());
-                }
-                else if (Kind == OperationKind.Ingest)
-                {
-                    ConfigurationAttributes.TryAdd(typeof(IngestSettingsAttribute), new IngestSettingsAttribute());
-                }
-                else if (Kind == OperationKind.Method)
-                {
-                    ConfigurationAttributes.TryAdd(typeof(MethodSettingsAttribute), new MethodSettingsAttribute());
-                }
-            }
 
             RequiresAuthorization = memberInfo.HasCustomAttribute<AuthorizeAttribute>();
 

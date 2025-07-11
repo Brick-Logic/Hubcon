@@ -9,9 +9,9 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
 {
     public sealed class StreamingSettings(TimeSpan? throttleDelay = null)
     {
-        public TimeSpan ThrottleDelay { get; init; } = throttleDelay ?? TimeSpan.FromMilliseconds(1);
+        public TimeSpan ThrottleDelay { get; init; } = throttleDelay ?? TimeSpan.FromMilliseconds(8);
 
-        public static StreamingSettings Default => new();
+        public static StreamingSettings Default { get; } = new();
     }
 
     [AttributeUsage(AttributeTargets.Method)]
@@ -19,7 +19,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
     {
         public StreamingSettings Settings { get; }
 
-        public StreamingSettingsAttribute(int ThrottleDelayMilliseconds = 16)
+        public StreamingSettingsAttribute(int ThrottleDelayMilliseconds = 8)
         {
             var delay = ThrottleDelayMilliseconds == 0 ? TimeSpan.Zero : TimeSpan.FromMilliseconds(ThrottleDelayMilliseconds);
             Settings = new StreamingSettings(delay);

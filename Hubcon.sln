@@ -70,6 +70,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorTestServer", "Example
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MainProjects", "MainProjects", "{9AF7EB63-E5AE-4213-9A4C-850325476635}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HubconTestClientAPI", "Examples\ClassicExample\HubconTestClientAPI\HubconTestClientAPI.csproj", "{8DDFC0DF-9750-C80D-94C9-B1F999EA6A32}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -172,6 +174,10 @@ Global
 		{9F232A3C-8B77-8005-AE3C-BEC4C58BC2A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9F232A3C-8B77-8005-AE3C-BEC4C58BC2A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9F232A3C-8B77-8005-AE3C-BEC4C58BC2A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8DDFC0DF-9750-C80D-94C9-B1F999EA6A32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DDFC0DF-9750-C80D-94C9-B1F999EA6A32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DDFC0DF-9750-C80D-94C9-B1F999EA6A32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DDFC0DF-9750-C80D-94C9-B1F999EA6A32}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -197,6 +203,7 @@ Global
 		{66F0E785-D92D-4FA2-162E-F5968AF3BF4B} = {54E578AE-AFE8-44CC-882E-3F1553647A54}
 		{9D16F037-3CB4-4C3E-E64D-9F75B32441F4} = {54E578AE-AFE8-44CC-882E-3F1553647A54}
 		{9F232A3C-8B77-8005-AE3C-BEC4C58BC2A7} = {FD864E60-D8EF-4BA0-ACF4-58C748092E7D}
+		{8DDFC0DF-9750-C80D-94C9-B1F999EA6A32} = {4D910D74-FA9E-4A18-8D1F-6AEBCF967CF4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1B50F528-C46C-4120-AEAF-8768F535DD28}

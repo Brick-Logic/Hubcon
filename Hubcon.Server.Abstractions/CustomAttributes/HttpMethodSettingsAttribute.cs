@@ -9,9 +9,9 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
 { 
     public sealed class MethodSettings(TimeSpan? throttleDelay = null)
     {
-        public TimeSpan ThrottleDelay { get; private set; } = throttleDelay ?? TimeSpan.FromMilliseconds(1);
+        public TimeSpan ThrottleDelay { get; private set; } = throttleDelay ?? TimeSpan.FromMilliseconds(8);
 
-        public static MethodSettingsAttribute Default => new();
+        public static MethodSettingsAttribute Default { get; } = new();
     }
 
     [AttributeUsage(AttributeTargets.Method)]
@@ -19,7 +19,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
     {
         public MethodSettings Settings { get; }
 
-        public MethodSettingsAttribute(int ThrottleDelay = 16)
+        public MethodSettingsAttribute(int ThrottleDelay = 8)
         {
             var delay = ThrottleDelay == 0 ? TimeSpan.Zero : TimeSpan.FromMilliseconds(ThrottleDelay);
             Settings = new MethodSettings(delay);

@@ -8,9 +8,9 @@
         "DebugTarget": "http"
       },
       {
-        "Path": "Examples\\ClassicExample\\HubconTestClient\\HubconTestClient.csproj",
+        "Path": "Examples\\ClassicExample\\HubconTestClientAPI\\HubconTestClientAPI.csproj",
         "Action": "Start",
-        "DebugTarget": "HubconTestClient"
+        "DebugTarget": "http"
       }
     ]
   }
