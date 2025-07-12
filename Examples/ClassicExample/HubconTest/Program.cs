@@ -64,6 +64,10 @@ namespace HubconTest
                 serverOptions.ConfigureCore(config => 
                 {
                     config
+                    .ThrottleWebsocketIngest(TimeSpan.Zero)
+                    .ThrottleWebsocketMethods(TimeSpan.Zero)
+                    .ThrottleWebsocketSubscription(TimeSpan.Zero)
+                    .ThrottleWebsocketStreaming(TimeSpan.Zero)
                     .EnableRequestDetailedErrors();
                     //.SetHttpPathPrefix("prefix1")
                     //.SetWebSocketPathPrefix("wsprefix");                   

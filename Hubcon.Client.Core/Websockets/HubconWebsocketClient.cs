@@ -414,6 +414,7 @@ namespace Hubcon.Client.Core.Websockets
                     var json = await _messageChannel.Reader.ReadAsync();
                     var baseMessage = converter.DeserializeData<BaseMessage>(json);
 
+                    
                     if (baseMessage == null) return;
 
                     switch (baseMessage?.Type)
