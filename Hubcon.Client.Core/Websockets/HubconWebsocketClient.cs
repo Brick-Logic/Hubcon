@@ -20,7 +20,6 @@ using System.Reactive.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Channels;
 
 namespace Hubcon.Client.Core.Websockets

@@ -190,6 +190,9 @@ namespace HubconTestClient
                 logger.LogInformation($"Requests: {finishedRequestsCount} | Received Events: {eventosRecibidos} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {maxReqs} | " +
                                       $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
 
+                var allocated = GC.GetTotalMemory(forceFullCollection: false);
+                logger.LogInformation($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {sw.Elapsed}");
+
                 lastRequests = finishedRequestsCount;
                 sw.Restart();
             };
