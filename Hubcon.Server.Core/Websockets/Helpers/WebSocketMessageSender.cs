@@ -1,6 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
 
 namespace Hubcon.Server.Core.Websockets.Helpers
 {
@@ -8,14 +9,9 @@ namespace Hubcon.Server.Core.Websockets.Helpers
     {
         public async Task SendAsync<T>(T message)
         {
-            var serialized = converter.Serialize(message);
-
-            await _webSocket!.SendAsync(
-                Encoding.UTF8.GetBytes(serialized),
-                WebSocketMessageType.Text,
-                true,
-                CancellationToken.None
-            );
+            var json = converter.Serialize(message);
+            var bytes = Encoding.UTF8.GetBytes(json);
+            await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
         }
     }
 }

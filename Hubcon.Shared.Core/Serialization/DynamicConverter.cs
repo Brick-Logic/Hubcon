@@ -1,13 +1,10 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Websockets.Messages.Operation;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Xml.Linq;
 
 namespace Hubcon.Shared.Core.Serialization
 {
@@ -21,9 +18,8 @@ namespace Hubcon.Shared.Core.Serialization
             WriteIndented = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             MaxDepth = 64,
-            Converters = { new JsonStringEnumConverter(null) },
+            Converters = { new JsonStringEnumConverter() },
             PropertyNameCaseInsensitive = true,
-            //DefaultBufferSize = 8192
         };
 
 
@@ -87,7 +83,7 @@ namespace Hubcon.Shared.Core.Serialization
                 return default;
 
             else if (data is JsonElement element)
-                return JsonSerializer.Deserialize<T>(element, JsonSerializerOptions);
+                return JsonSerializer.Deserialize<T>(element.Clone(), JsonSerializerOptions);
 
             else if (data is string text)
                 return JsonSerializer.Deserialize<T>(text, JsonSerializerOptions);
@@ -99,39 +95,11 @@ namespace Hubcon.Shared.Core.Serialization
                 return default;
         }
 
-        public T? DeserializeData<T>(byte[]? jsonBytes)
-        {
-            if (jsonBytes == null || jsonBytes.Length == 0)
-                return default;
-
-            try
-            {
-                return JsonSerializer.Deserialize<T>(jsonBytes, JsonSerializerOptions);
-            }
-            catch (JsonException)
-            {
-                return default;
-            }
-        }
-
-        // Sobrecarga para ReadOnlySpan<byte> (más eficiente si ya tienes el span)
-        public T? DeserializeData<T>(ReadOnlySpan<byte> jsonBytes)
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<T>(jsonBytes, JsonSerializerOptions);
-            }
-            catch (JsonException)
-            {
-                return default;
-            }
-        }
-
 
         // 1. Convierte un objeto a JsonElement
         public JsonElement SerializeObject(object? value)
         {
-            return JsonSerializer.SerializeToElement(value, JsonSerializerOptions);
+            return JsonSerializer.SerializeToElement(value, JsonSerializerOptions).Clone();
         }
 
         public T DeserializeByteArray<T>(byte[] bytes)
@@ -146,7 +114,7 @@ namespace Hubcon.Shared.Core.Serialization
 
             foreach (var val in values)
             {
-                results.Add(SerializeObject(val));
+                results.Add(SerializeObject(val).Clone());
             }
 
             return results;
@@ -158,7 +126,7 @@ namespace Hubcon.Shared.Core.Serialization
             if (element.ValueKind == JsonValueKind.Null)
                 return null;
 
-            return element.Deserialize(targetType, JsonSerializerOptions);
+            return element.Clone().Deserialize(targetType, JsonSerializerOptions);
         }
 
         // 3. Convierte un JsonElement a un objeto fuertemente tipado
@@ -167,7 +135,7 @@ namespace Hubcon.Shared.Core.Serialization
             if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
                 return default;
 
-            return element.Deserialize<T>(JsonSerializerOptions);
+            return element.Clone().Deserialize<T>(JsonSerializerOptions);
         }
 
         // 4. Convierte una lista de JsonElements a objetos, según tipos dados
@@ -182,7 +150,7 @@ namespace Hubcon.Shared.Core.Serialization
 
                 while (elementEnum.MoveNext() && typeEnum.MoveNext())
                 {
-                    list.Add(DeserializeJsonElement(elementEnum.Current, typeEnum.Current));
+                    list.Add(DeserializeJsonElement(elementEnum.Current.Clone(), typeEnum.Current));
                 }
 
                 return list;
@@ -205,7 +173,7 @@ namespace Hubcon.Shared.Core.Serialization
                 }
                 else
                 {
-                    yield return DeserializeJsonElement<T>(item!);
+                    yield return DeserializeJsonElement<T>(item.Clone())!;
                 }
             }
         }
@@ -221,7 +189,7 @@ namespace Hubcon.Shared.Core.Serialization
                 else
                 {
                     var obj = SerializeObject(item)!;
-                    yield return obj;
+                    yield return obj.Clone();
                 }
             }
         }
@@ -242,20 +210,12 @@ namespace Hubcon.Shared.Core.Serialization
         {
             try
             {
-                return JsonSerializer.SerializeToElement(value, JsonSerializerOptions);
+                return JsonSerializer.SerializeToElement(value, JsonSerializerOptions).Clone();
             }
             catch (Exception ex)
             {
                 return default;
             }
-        }
-
-        public byte[] SerializeToBytes<T>(T value)
-        {
-            if (value == null)
-                return Array.Empty<byte>();
-
-            return JsonSerializer.SerializeToUtf8Bytes(value, value.GetType(), JsonSerializerOptions);
         }
     }
 }

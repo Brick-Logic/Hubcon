@@ -41,7 +41,7 @@ namespace Hubcon.Client.Integration.Client
                     if (authenticationManagerFactory?.Invoke() == null)
                         throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                    var result = await client.InvokeAsync<IOperationRequest, BaseOperationResponse<T>>(request);
+                    var result = await client.InvokeAsync<BaseOperationResponse<T>>(request);
                     return default!;
                 }
                 else

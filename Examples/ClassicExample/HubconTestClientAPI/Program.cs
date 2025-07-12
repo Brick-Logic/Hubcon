@@ -2,29 +2,22 @@ using Hubcon.Client;
 using HubconTestClientAPI.Auth;
 using HubconTestClientAPI.Modules;
 using HubconTestDomain;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
 internal class Program
 {
     private const string Url = "http://localhost:5000/clienthub";
-    static int finishedRequestsCount = 0;
-    static int errors = 0;
-    static int lastRequests = 0;
-    static int maxReqs = 0;
-    static int eventosRecibidos = 0;
-    static ConcurrentBag<double> latencies = new();
-
 
     static async Task Main()
     {
-        Console.WriteLine($"Server GC enabled: {System.Runtime.GCSettings.IsServerGC}");
-
-
         var process = Process.GetCurrentProcess();
 
         long coreMask = 0;
-        for (int i = 0; i <= 11; i++)
+        for (int i = 0; i <= 0; i++)
         {
             coreMask |= 1L << i;
         }
@@ -75,7 +68,9 @@ internal class Program
         logger.LogInformation($"TestVoid llamado. Texto recibido: {text}");
         Console.ReadKey();
 
-        logger.LogDebug("Conectando evento...");
+        //logger.LogDebug("Conectando evento...");
+
+        int eventosRecibidos = 0;
 
         //async Task handler(int? input)
         //{
@@ -92,18 +87,15 @@ internal class Program
         //client.OnUserCreated4!.AddHandler(handler);
         //await client.OnUserCreated4.Subscribe();
 
-        //logger.LogInformation("Evento conectado.");
+        logger.LogInformation("Evento conectado.");
 
-        //for(int j = 2; j > 0;j--)
-        //{
-        //    logger.LogInformation("Enviando request...");
-        //    await client.CreateUser();
-        //    logger.LogInformation($"Request terminado.");
-        //    await Task.Delay(1);
-        //    Console.ReadKey();
-        //}
+        Console.ReadKey();
 
-        //Console.ReadKey();
+        logger.LogInformation("Enviando request...");
+        await client.CreateUser();
+        logger.LogInformation($"Request terminado.");
+
+        Console.ReadKey();
 
         logger.LogInformation("Enviando request GetTemperatureFromServer...");
         var temp = await client.GetTemperatureFromServer();
@@ -111,14 +103,14 @@ internal class Program
 
         Console.ReadKey();
 
-        //logger.LogInformation("Enviando request...");
+        logger.LogInformation("Enviando request...");
 
-        //await foreach (var item in client.GetMessages(10))
-        //{
-        //    logger.LogInformation($"Respuesta recibida: {item}");
-        //}
+        await foreach (var item in client.GetMessages(10))
+        {
+            logger.LogInformation($"Respuesta recibida: {item}");
+        }
 
-        //Console.ReadKey();
+        Console.ReadKey();
 
         //int finishedRequestsCount = 0;
         //int errors = 0;
@@ -158,10 +150,14 @@ internal class Program
         //    }
         //})).ToList());
 
-
+        int finishedRequestsCount = 0;
+        int errors = 0;
+        int lastRequests = 0;
+        int maxReqs = 0;
         var sw = Stopwatch.StartNew();
 
         // Thread-safe para almacenar latencias de requests en ms
+        ConcurrentBag<double> latencies = new();
 
         var worker = new System.Timers.Timer();
         worker.Interval = 1000;
@@ -188,29 +184,21 @@ internal class Program
             maxReqs = Math.Max(maxReqs, avgRequestsPerSec);
 
             logger.LogInformation($"Requests: {finishedRequestsCount} | Received Events: {eventosRecibidos} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {maxReqs} | " +
-                                  $"p50 latency(ms): {p50:F5} | p95 latency(ms): {p95:F5} | p99 latency(ms): {p99:F5} | Avg latency(ms): {avgLatency:F5}");
+                                  $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
+
+            var allocated = GC.GetTotalMemory(forceFullCollection: false);
+            logger.LogInformation($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {sw.Elapsed}");
 
             lastRequests = finishedRequestsCount;
             sw.Restart();
-
-            //ThreadPool.GetAvailableThreads(out var workerThreads, out _);
-            //logger.LogInformation($"Threads disponibles: {workerThreads}");
         };
         worker.Start();
 
-        //await client.IngestMessages(GetMessages2());
-
-        List<Task> tasks = Enumerable.Range(0, 12).Select(a => Task.Run(async () =>
+        List<Task> tasks = Enumerable.Range(0, 6).Select(a => Task.Run(async () =>
         {
-            //await client.IngestMessages(GetMessages(5000));
-
-            //await foreach (var item in client.GetMessages2())
-            Stopwatch? swReq = null;
-            swReq = Stopwatch.StartNew();
-
             while (true)
             {
-                swReq.Restart();
+                var swReq = Stopwatch.StartNew();
                 try
                 {
                     await client.CreateUser();
@@ -222,51 +210,23 @@ internal class Program
                 }
                 finally
                 {
-                    swReq?.Stop();
-                    //latencies.Add(swReq.Elapsed.TotalMilliseconds);
+                    swReq.Stop();
+                    latencies.Add(swReq.Elapsed.TotalMilliseconds);
                 }
             }
         })).ToList();
 
-        var heap = Task.Run(async () =>
-        {
-            var sw = Stopwatch.StartNew();
-            while (true)
-            {
-                var allocated = GC.GetTotalMemory(forceFullCollection: false);
-                logger.LogInformation($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {sw.Elapsed}");
-                await Task.Delay(100);
-            }
-        });
-
-        tasks.Add(heap);
-
         await Task.WhenAll(tasks);
     }
 
-    static async IAsyncEnumerable<string> GetMessages(int messages)
+    static async IAsyncEnumerable<string> GetMessages(int count)
     {
-        for (int i = 0; i < messages; i++)
+        for (int i = 0; i < count; i++)
         {
             var message = $"string:{i}";
             Console.WriteLine($"Enviando mensaje... [{message}]");
             yield return message;
             await Task.Delay(1000);
-        }
-    }
-
-    static async IAsyncEnumerable<string> GetMessages2()
-    {
-        finishedRequestsCount = 0;
-
-        while (true)
-        {
-            var swReq = Stopwatch.StartNew();
-            yield return "hola2";
-            swReq.Stop();
-            Interlocked.Increment(ref Program.finishedRequestsCount);
-
-            latencies.Add(swReq.Elapsed.TotalMilliseconds);
         }
     }
 
