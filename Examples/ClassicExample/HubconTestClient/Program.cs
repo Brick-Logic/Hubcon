@@ -192,21 +192,17 @@ namespace HubconTestClient
 
                 lastRequests = finishedRequestsCount;
                 sw.Restart();
-
-                ThreadPool.GetAvailableThreads(out var workerThreads, out _);
-                logger.LogInformation($"Threads disponibles: {workerThreads}");
             };
             worker.Start();
 
-            List<Task> tasks = Enumerable.Range(0, 3).Select(a => Task.Run(async () =>
+            List<Task> tasks = Enumerable.Range(0, 6).Select(a => Task.Run(async () =>
             {
-                var messages = client.GetMessages2();
-                await foreach (var item in messages)
+                while(true)
                 {
                     var swReq = Stopwatch.StartNew();
                     try
                     {
-                        //await client.CreateUser();
+                        await client.CreateUser();
                         Interlocked.Increment(ref finishedRequestsCount);
                     }
                     catch
