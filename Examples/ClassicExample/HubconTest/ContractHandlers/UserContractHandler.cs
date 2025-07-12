@@ -2,6 +2,7 @@
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestDomain;
+using System.Threading.Channels;
 
 namespace HubconTest.ContractHandlers
 {
@@ -36,6 +37,7 @@ namespace HubconTest.ContractHandlers
         public async Task<int> GetTemperatureFromServer() 
             => await Task.Run(() => new Random().Next(-10, 50));
 
+        [StreamingSettings(0)]
         public async IAsyncEnumerable<string> GetMessages(int count)
         {
             for (int i = 0; i < count; i++)
@@ -44,7 +46,7 @@ namespace HubconTest.ContractHandlers
             }
         }
 
-        [StreamingSettings(ThrottleDelayMilliseconds:100)]
+        [StreamingSettings(0)]
         public async IAsyncEnumerable<string> GetMessages2()
         {
             while(true)
@@ -69,6 +71,7 @@ namespace HubconTest.ContractHandlers
             return Task.CompletedTask;
         }
 
+        [IngestSettings(5000, BoundedChannelFullMode.Wait, 5)]
         public async Task IngestMessages(
             IAsyncEnumerable<string> source, 
             IAsyncEnumerable<string> source2, 
@@ -101,6 +104,29 @@ namespace HubconTest.ContractHandlers
             logger.LogInformation("Ingest terminado exitosamente");
         }
 
+        [IngestSettings(5000, BoundedChannelFullMode.Wait, 500)]
+        public async Task IngestMessages(IAsyncEnumerable<string> source)
+        {
+            Task TaskRunner<T>(IAsyncEnumerable<T> source, string name)
+            {
+                return Task.Run(async () =>
+                {
+                    await foreach (var item in source)
+                    {
+                        logger.LogInformation($"source1: {item}");
+                    }
+                    logger.LogInformation($"[{name}] Stream terminado.");
+                });
+            }
+
+            List<Task> sources =
+            [
+                TaskRunner(source, nameof(source)),
+            ];
+
+            await Task.WhenAll(sources);
+            logger.LogInformation("Ingest terminado exitosamente");
+        }
 
         public Task<MyTestClass> GetObject()
         {

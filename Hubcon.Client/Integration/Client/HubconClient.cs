@@ -3,6 +3,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Subscriptions;
+using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
@@ -143,7 +144,7 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        public async Task Ingest(IOperationRequest request, Dictionary<string, object?> arguments, CancellationToken cancellationToken = default)
+        public async Task Ingest(IOperationRequest request, CancellationToken cancellationToken = default)
         {
             if (authenticationManagerFactory?.Invoke() == null)
                 throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");

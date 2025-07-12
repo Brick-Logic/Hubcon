@@ -3,7 +3,7 @@ using System.Threading.Channels;
 
 namespace Hubcon.Shared.Core.Subscriptions
 {
-    public class AsyncObserver<T> : IObserver<T>
+    public class AsyncObserverClient<T> : IObserver<T>
     {
         private readonly Channel<T?> _channel = Channel.CreateUnbounded<T?>();
         private TaskCompletionSource<bool> _completed = new TaskCompletionSource<bool>();

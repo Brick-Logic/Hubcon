@@ -32,6 +32,8 @@ namespace HubconTestDomain
 
         Task CreateUser();
         IAsyncEnumerable<string> GetMessages2();
+
+        Task IngestMessages(IAsyncEnumerable<string> source);
     }
 
     public class CreateUserCommandResponse

@@ -7,9 +7,14 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Server.Abstractions.CustomAttributes
 {
-    public sealed class SubscriptionSettings(TimeSpan? throttleDelay = null)
+    public sealed class SubscriptionSettings(
+        int? channelCapacity = null,
+        BoundedChannelFullMode? channelFullMode = null,
+        TimeSpan? throttleDelay = null)
     {
-        public TimeSpan ThrottleDelay { get; init; } = throttleDelay ?? TimeSpan.FromMilliseconds(1);
+        public int ChannelCapacity { get; private set; } = channelCapacity ?? 1000;
+        public BoundedChannelFullMode ChannelFullMode { get; private set; } = channelFullMode ?? BoundedChannelFullMode.Wait;
+        public TimeSpan ThrottleDelay { get; private set; } = throttleDelay ?? TimeSpan.FromMilliseconds(10);
 
         public static SubscriptionSettings Default => new();
     }
@@ -19,10 +24,13 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
     {
         public SubscriptionSettings Settings { get; }
 
-        public SubscriptionSettingsAttribute(int ThrottleDelayMilliseconds = 16)
+        public SubscriptionSettingsAttribute(
+            int ChannelCapacity = 1000,
+            BoundedChannelFullMode ChannelFullMode = BoundedChannelFullMode.Wait,
+            int ThrottleDelay = 10)
         {
-            var delay = ThrottleDelayMilliseconds == 0 ? TimeSpan.Zero : TimeSpan.FromMilliseconds(ThrottleDelayMilliseconds);
-            Settings = new SubscriptionSettings(delay);
+            var delay = ThrottleDelay == 0 ? TimeSpan.Zero : TimeSpan.FromMilliseconds(ThrottleDelay);
+            Settings = new SubscriptionSettings(ChannelCapacity, ChannelFullMode, delay);
         }
     }
 }

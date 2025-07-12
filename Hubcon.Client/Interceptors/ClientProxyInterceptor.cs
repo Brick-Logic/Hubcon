@@ -80,8 +80,8 @@ namespace Hubcon.Client.Interceptors
                 method, 
                 x => method.GetParameters().Any(x => x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
             {
-                var request = new OperationRequest(methodName, contractName, null);
-                return Client.Ingest(request, arguments);
+                var request = new OperationRequest(methodName, contractName, arguments);
+                return Client.Ingest(request);
             }
             else
             {
