@@ -88,14 +88,13 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 else
                 {
                     string? jwtToken = JwtHelper.ExtractTokenFromHeader(context.HttpContext);
-                    string? userId = JwtHelper.GetUserId(jwtToken);
 
-                    if (userId == null)
+                    if (jwtToken == null)
                         throw new UnauthorizedAccessException();
 
-                    clientId = userId;
+                    clientId = jwtToken;
 
-                    subDescriptor = liveSubscriptionRegistry.GetHandler(userId, request.ContractName, request.OperationName);
+                    subDescriptor = liveSubscriptionRegistry.GetHandler(jwtToken, request.ContractName, request.OperationName);
 
 
                     if (subDescriptor == null)
@@ -106,7 +105,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                             throw new InvalidOperationException($"No se encontró un servicio que implemente la interfaz {nameof(ISubscription)}.");
 
 
-                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(userId, request.ContractName, request.OperationName, subscription);
+                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(jwtToken, request.ContractName, request.OperationName, subscription);
                     }
                 }
 
@@ -117,25 +116,23 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 {
                     Capacity = subSettings.ChannelCapacity,
                     FullMode = subSettings.ChannelFullMode,
-                    SingleReader = true,
+                    SingleReader = false,
                     SingleWriter = false,
-                    AllowSynchronousContinuations = false
+                    AllowSynchronousContinuations = true
                 };
 
                 var observer = new AsyncObserver<object>(options);
 
-                Task hubconEventHandler(object? eventValue)
+                async Task hubconEventHandler(object? eventValue)
                 {
                     try
                     {
-                        observer.WriteToChannelAsync(eventValue!);
+                        await observer.WriteToChannelAsync(eventValue!);
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex.Message);
                     }
-
-                    return Task.CompletedTask;
                 }
 
                 subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
@@ -144,7 +141,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 {
                     try
                     {
-                        await foreach (var newEvent in observer.GetAsyncEnumerable(new()))
+                        await foreach (var newEvent in observer.GetAsyncEnumerable(default))
                         {
                             yield return newEvent;
 
@@ -154,6 +151,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     }
                     finally
                     {
+                        observer.OnCompleted();
                         liveSubscriptionRegistry.RemoveHandler(clientId, request.ContractName, request.OperationName);
                         subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
                     };

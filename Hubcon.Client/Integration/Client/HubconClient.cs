@@ -198,6 +198,8 @@ namespace Hubcon.Client.Integration.Client
 
             client = new HubconWebSocketClient(new Uri(_websocketUrl), converter, services.GetRequiredService<ILogger<HubconWebSocketClient>>());
 
+            client.AuthorizationTokenProvider = () => authenticationManagerFactory?.Invoke()?.AccessToken;
+
             IsBuilt = true;
         }
     }

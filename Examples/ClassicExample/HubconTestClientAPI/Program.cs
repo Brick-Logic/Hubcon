@@ -194,14 +194,14 @@ internal class Program
         };
         worker.Start();
 
-        List<Task> tasks = Enumerable.Range(0, 6).Select(a => Task.Run(async () =>
+        List<Task> tasks = Enumerable.Range(0, 500).Select(a => Task.Run(async () =>
         {
             while (true)
             {
                 var swReq = Stopwatch.StartNew();
                 try
                 {
-                    await client.CreateUser();
+                    await client.GetTemperatureFromServer();
                     Interlocked.Increment(ref finishedRequestsCount);
                 }
                 catch

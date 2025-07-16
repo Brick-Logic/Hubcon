@@ -29,7 +29,7 @@ namespace Hubcon.Server.Core.Routing.Registries
 
             servicesToInject = new List<Action<ContainerBuilder>>();
 
-            void Injector(ContainerBuilder x) => x.RegisterWithInjector(x => x.RegisterType(controllerType).AsScoped().IfNotRegistered(controllerType));
+            void Injector(ContainerBuilder x) => x.RegisterWithInjector(x => x.RegisterType(controllerType).AsTransient().IfNotRegistered(controllerType));
             servicesToInject.Add(Injector);
 
             var interfaces = controllerType.GetInterfaces().Where(x => typeof(IControllerContract).IsAssignableFrom(x));
@@ -44,46 +44,37 @@ namespace Hubcon.Server.Core.Routing.Registries
                 if (methods.Length == 0)
                     continue;
 
-                if (!AvailableOperations.TryGetValue(interfaceType.Name, out ConcurrentDictionary<string, IOperationBlueprint>? contractMethods))
-                    contractMethods = AvailableOperations[interfaceType.Name] = new();
+                var contractMethods = AvailableOperations.GetOrAdd(interfaceType.Name, _ => new ConcurrentDictionary<string, IOperationBlueprint>());
 
-                if (contractMethods.Count > 0)
-                    continue;
+                // Ya no hacemos "if (contractMethods.Count > 0) continue;" porque puede llevar a race conditions
+                // Si querés evitar sobreescribir, chequealo aquí con TryAdd abajo
 
                 foreach (var method in methods)
                 {
                     var returnType = method.ReturnType;
                     var parameters = method.GetParameters();
 
-                    // Detecta si el método devuelve un IAsyncEnumerable<T>
                     var isStream = returnType.IsGenericType &&
                                    returnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
 
-                    // Detecta si alguno de los parámetros es IAsyncEnumerable<T>
                     var isIngest = parameters.Any(p =>
                         p.ParameterType.IsGenericType &&
                         p.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>));
 
-                    // Ambos son incompatibles, por lo que se elige en orden de prioridad
-                    OperationKind kind;
-
                     if (isStream && isIngest)
                         throw new InvalidOperationException($"Method '{method.Name}': Returning IAsyncEnumerable<T> and also using IAsyncEnumerable<T> parameters is not supported.");
 
-                    if (isStream)
-                        kind = OperationKind.Stream;
-                    else if (isIngest)
-                        kind = OperationKind.Ingest;
-                    else
-                        kind = OperationKind.Method;
+                    OperationKind kind = isStream ? OperationKind.Stream :
+                                         isIngest ? OperationKind.Ingest :
+                                         OperationKind.Method;
 
-                    if (!serverOptions.WebSocketMethodsIsAllowed && kind is OperationKind.Method)
+                    if (!serverOptions.WebSocketMethodsIsAllowed && kind == OperationKind.Method)
                         continue;
 
-                    if (!serverOptions.WebSocketIngestIsAllowed && kind is OperationKind.Ingest)
+                    if (!serverOptions.WebSocketIngestIsAllowed && kind == OperationKind.Ingest)
                         continue;
 
-                    if (!serverOptions.WebSocketStreamIsAllowed && kind is OperationKind.Stream)
+                    if (!serverOptions.WebSocketStreamIsAllowed && kind == OperationKind.Stream)
                         continue;
 
                     var methodSignature = method.GetMethodSignature();
@@ -95,17 +86,18 @@ namespace Hubcon.Server.Core.Routing.Registries
                     options?.Invoke(middlewareOptions);
 
                     var descriptor = new OperationBlueprint(
-                        methodSignature, 
-                        interfaceType, 
-                        controllerType, 
-                        method, 
-                        kind, 
-                        pipelineBuilder, 
-                        serverOptions, 
+                        methodSignature,
+                        interfaceType,
+                        controllerType,
+                        method,
+                        kind,
+                        pipelineBuilder,
+                        serverOptions,
                         action!
                     );
 
-                    contractMethods.TryAdd($"{descriptor.OperationName}", descriptor);
+                    // Usa TryAdd para evitar sobreescritura accidental
+                    contractMethods.TryAdd(descriptor.OperationName, descriptor);
                     OnOperationRegistered?.Invoke(descriptor);
                 }
 
@@ -124,16 +116,16 @@ namespace Hubcon.Server.Core.Routing.Registries
                     options?.Invoke(middlewareOptions);
 
                     var descriptor = new OperationBlueprint(
-                        propertyInfo.Name, 
-                        interfaceType, 
-                        controllerType, 
-                        propertyInfo, 
-                        OperationKind.Subscription, 
-                        pipelineBuilder, 
+                        propertyInfo.Name,
+                        interfaceType,
+                        controllerType,
+                        propertyInfo,
+                        OperationKind.Subscription,
+                        pipelineBuilder,
                         serverOptions
                     );
 
-                    contractMethods.TryAdd($"{descriptor.OperationName}", descriptor);
+                    contractMethods.TryAdd(descriptor.OperationName, descriptor);
                     OnOperationRegistered?.Invoke(descriptor);
                 }
             }
@@ -141,7 +133,7 @@ namespace Hubcon.Server.Core.Routing.Registries
 
         public void MapControllers(WebApplication app)
         {
-            foreach(var operationskvp in AvailableOperations)
+            foreach (var operationskvp in AvailableOperations)
             {
                 foreach (var operation in operationskvp.Value)
                 {
@@ -151,7 +143,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                     if (operation.Value.Kind == OperationKind.Subscription)
                         continue;
 
-                    if(operation.Value.OperationInfo is MethodInfo)
+                    if (operation.Value.OperationInfo is MethodInfo)
                     {
                         app.MapTypedEndpoint(operation.Value);
                     }
@@ -178,8 +170,8 @@ namespace Hubcon.Server.Core.Routing.Registries
                 return false;
             }
 
-            if (AvailableOperations.TryGetValue(contractName, out ConcurrentDictionary<string, IOperationBlueprint>? descriptors)
-                && descriptors.TryGetValue(operationName, out IOperationBlueprint? descriptor))
+            if (AvailableOperations.TryGetValue(contractName, out var descriptors)
+                && descriptors.TryGetValue(operationName, out var descriptor))
             {
                 value = descriptor;
                 return true;

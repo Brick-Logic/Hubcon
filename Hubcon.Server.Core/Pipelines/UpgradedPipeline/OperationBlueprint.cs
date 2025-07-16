@@ -2,6 +2,7 @@
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
+using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -85,6 +86,13 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                     memberInfo.Name, 
                     methodInfo.GetParameters().Select(x => x.ParameterType).ToArray())!
                     .GetCustomAttributes();
+
+                RequiresAuthorization =
+                    memberInfo.HasCustomAttribute<AuthorizeAttribute>() ? true
+                    : memberInfo.HasCustomAttribute<AllowAnonymousAttribute>() ? false
+                    : true;
+
+                AuthorizationAttributes = memberInfo.GetCustomAttributes<AuthorizeAttribute>();
             }
             else if (memberInfo is PropertyInfo propertyInfo)
             {
@@ -95,6 +103,13 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 Kind = OperationKind.Subscription;
 
                 Attributes = ControllerType.GetMethod(propertyInfo.Name)?.GetCustomAttributes() ?? new List<Attribute>();
+
+                RequiresAuthorization =
+                    memberInfo.HasCustomAttribute<AuthorizeAttribute>() ? true
+                    : memberInfo.HasCustomAttribute<BroadcastAttribute>() ? false
+                    : true;
+
+                AuthorizationAttributes = memberInfo.GetCustomAttributes<AuthorizeAttribute>();
             }
             else
             {
@@ -139,12 +154,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 else if (Kind == OperationKind.Method && x is MethodSettingsAttribute methodSettings)
                     ConfigurationAttributes.TryAdd(typeof(MethodSettingsAttribute), methodSettings);
             });
-
-            RequiresAuthorization = memberInfo.HasCustomAttribute<AuthorizeAttribute>();
-
-            AuthorizationAttributes = RequiresAuthorization == true
-                ? memberInfo.GetCustomAttributes<AuthorizeAttribute>()
-                : Array.Empty<AuthorizeAttribute>();
 
             PipelineBuilder = pipelineBuilder;
             InvokeDelegate = invokeDelegate;

@@ -510,11 +510,11 @@ namespace Hubcon.Client.Core.Websockets
         {
             await _reconnectLock.WaitAsync();
 
-            if (_webSocket?.State is WebSocketState.Open or WebSocketState.Connecting)
-                return;
-
             try
             {
+                if (_webSocket?.State is WebSocketState.Open or WebSocketState.Connecting)
+                    return;
+
                 if (_webSocket != null && _webSocket.State == WebSocketState.Open)
                 {
                     try

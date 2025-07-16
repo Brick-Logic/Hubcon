@@ -7,13 +7,8 @@
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
-		<!--<ServerGarbageCollection>true</ServerGarbageCollection>-->
-		<!--<ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>-->
+		<ServerGarbageCollection>false</ServerGarbageCollection>
 	</PropertyGroup>
-
-	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta*"/>

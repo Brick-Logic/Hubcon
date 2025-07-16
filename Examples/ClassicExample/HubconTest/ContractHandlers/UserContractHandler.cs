@@ -15,10 +15,10 @@ namespace HubconTest.ContractHandlers
 
         public Task CreateUser()
         {
-            //OnUserCreated?.Emit(1);
-            //OnUserCreated2?.Emit(2);
-            //OnUserCreated3?.Emit(3);
-            //OnUserCreated4?.Emit(4);
+            OnUserCreated?.Emit(1);
+            OnUserCreated2?.Emit(2);
+            OnUserCreated3?.Emit(3);
+            OnUserCreated4?.Emit(4);
             //return Task.FromResult(new CreateUserCommandResponse { Success = false });
             return Task.CompletedTask;
 

@@ -16,7 +16,7 @@ namespace Hubcon.Server.Core.Routing.Registries
 
         public bool Link(string observableId, IOperationBlueprint blueprint) => _map.TryAdd(observableId, blueprint);
 
-        public bool TryGet(string observableId, out IOperationBlueprint blueprint) => _map.TryGetValue(observableId, out blueprint);
+        public bool TryGet(string observableId, out IOperationBlueprint blueprint) => _map.TryGetValue(observableId, out blueprint!);
 
         public bool Unlink(string observableId) => _map.TryRemove(observableId, out _);
     }

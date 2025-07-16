@@ -16,12 +16,28 @@ namespace Hubcon.Shared.Core.Websockets.Events
 
         private TaskCompletionSource<bool> _completed = new TaskCompletionSource<bool>();
 
-        public void WriteToChannelAsync(T? item)
+        public async Task<bool> WriteToChannelAsync(T? item)
         {
-            if(item is JsonElement element)
-                _ = _channel.Writer.TryWrite(GetTType(element));
-            else
-                _ = _channel.Writer.TryWrite(item);
+            try
+            {
+                var toWrite = item is JsonElement element
+                    ? GetTType(element)
+                    : item;
+
+                await _channel.Writer.WriteAsync(toWrite!);
+                return true;
+            }
+            catch (ChannelClosedException ex)
+            {
+                // El canal ya fue completado/cerrado
+                return false;
+            }
+            catch(Exception ex)
+            {
+                // Manejar otras excepciones según sea necesario
+                OnError(ex);
+                return false;
+            }
         }
 
         public T GetTType(JsonElement item)
@@ -46,7 +62,6 @@ namespace Hubcon.Shared.Core.Websockets.Events
         {       
             await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
             {
-                await Task.Delay(1, cancellationToken);
                 yield return item;
             }
         }
@@ -63,10 +78,10 @@ namespace Hubcon.Shared.Core.Websockets.Events
             _completed.SetException(error);
         }
 
-        public void OnNext(T value)
+        public async void OnNext(T value)
         {
             // Enviar el valor al canal
-            WriteToChannelAsync(value);
+            var result = await WriteToChannelAsync(value);
         }
 
         public Task WaitUntilCompleted()

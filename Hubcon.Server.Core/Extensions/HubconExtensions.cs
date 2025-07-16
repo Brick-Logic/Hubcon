@@ -59,14 +59,13 @@ namespace Hubcon.Server.Core.Extensions
                             if (blueprint.RequiresAuthorization)
                             {
                                 var token = JwtHelper.ExtractTokenFromHeader(accessor.HttpContext);
-                                var userId = JwtHelper.GetUserId(token);
 
-                                var descriptor = sub.GetHandler(userId!, contract!, prop.Name);
+                                var descriptor = sub.GetHandler(token!, contract!, prop.Name);
                                 PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);
                             }
                             else
                             {
-                                var descriptor = sub.GetHandler("", contract!, prop.Name);
+                                var descriptor = sub.GetHandler("anonymous", contract!, prop.Name);
                                 PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);
                             }
                         }

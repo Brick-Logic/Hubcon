@@ -55,6 +55,11 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 {
                     context.Request.Headers["Authorization"] = $"Bearer {accessToken}";
                 }
+                else
+                {
+                    return;
+                }
+
             }
 
             using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
@@ -504,7 +509,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             await ingestTask;
         }
 
-        public async Task HandleTask(Task task, ConcurrentDictionary<CancellationTokenSource, Task> tasks)
+        public void HandleTask(Task task, ConcurrentDictionary<CancellationTokenSource, Task> tasks)
         {
             var cts = new CancellationTokenSource();
             tasks.TryAdd(cts, task);
