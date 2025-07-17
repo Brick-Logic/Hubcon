@@ -31,6 +31,8 @@ namespace Hubcon.Client.Core.Websockets
         private readonly ILogger<HubconWebSocketClient>? logger;
         private ClientWebSocket? _webSocket;
 
+        public bool LoggingEnabled { get; set; } = true;
+
         public Action<ClientWebSocketOptions>? WebSocketOptions { get; set; }
         public Func<string?>? AuthorizationTokenProvider { get; set; }
 
@@ -122,60 +124,6 @@ namespace Hubcon.Client.Core.Websockets
             return observable;
         }
 
-        //public async Task Ingest<T>(IAsyncEnumerable<T> source, object payload, bool needsAck = false)
-        //{
-        //    var request = new WebsocketRequest(Guid.NewGuid().ToString(), converter.SerializeObject(payload));
-
-        //    try
-        //    {
-        //        var canIngest = await SendIngestMessageAsync(request);
-
-        //        if (!canIngest) throw new TimeoutException("Se excedió el tiempo limite para la confirmación de ingesta al servidor.");
-
-        //        if (needsAck)
-        //        {
-        //            await foreach (var item in source)
-        //            {
-        //                var id = Guid.NewGuid().ToString();
-        //                var message = new IngestDataMessage(id, converter.SerializeObject(item));
-        //                var msg = converter.SerializeObject(message);
-
-        //                var tcs = new TaskCompletionSource<IngestDataAckMessage>();
-        //                _ingestDataAck.TryAdd(id, tcs);
-
-        //                await SendMessageAsync(msg);
-
-        //                var ackResult = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), tcs.Task);
-
-        //                if (ackResult == null) throw new TimeoutException("Se excedió el tiempo limite para la confirmación de ingesta al servidor.");
-
-        //                if (ackResult.Id != request.Id)
-        //                {
-        //                    throw new InvalidOperationException("La confirmación recibida no coincide con los datos enviados.");
-        //                }
-        //            }
-        //        }
-        //        else
-        //        {
-        //            await foreach (var item in source)
-        //            {
-        //                var message = new IngestDataWithAckMessage(request.Id, converter.SerializeObject(item));
-        //                var msg = converter.SerializeObject(message);
-        //                await SendMessageAsync(msg);
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _errorStream.OnNext(ex);
-        //        logger?.Error(ex.Message);
-        //    }
-        //    finally
-        //    {
-        //        var msg = converter.SerializeObject(new IngestCompleteMessage(request.Id));
-        //        await SendMessageAsync(msg);
-        //    }
-        //}
 
         public async Task IngestMultiple(IOperationRequest payload, bool needsAck = false)
         {
@@ -207,69 +155,73 @@ namespace Hubcon.Client.Core.Websockets
                 {
                     var sourceTask = Task.Run(async () =>
                     {
-                        var initAckResult = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(15), initAckTcs.Task);
-
-                        if (initAckResult == null)
+                        try
                         {
-                            initAckTcs.TrySetCanceled();
-                            throw new TimeoutException("Se excedió el tiempo limite para la confirmación de ingesta al servidor.");
+                            var initAckResult = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(15), initAckTcs.Task);
+                            if (initAckResult == null || initAckResult.Id != initialAckId)
+                                throw new TimeoutException("Timeout o ID incorrecto en IngestInitAck");
+
+                            await foreach (var item in source.Value.WithCancellation(cts.Token))
+                            {
+                                if (generalTcs.Task.IsCompleted || cts.IsCancellationRequested)
+                                    break;
+
+                                var message = new IngestDataMessage(source.Key, converter.SerializeObject(item));
+                                var msg = converter.Serialize(message);
+
+                                try
+                                {
+                                    await Task.WhenAny(SendMessageAsync(msg, cts.Token), generalTcs.Task);
+                                }
+                                catch (Exception ex)
+                                {
+                                    if (LoggingEnabled)
+                                        logger?.LogError(ex, $"Error al enviar dato en ingest stream {source.Key}");
+                                    _errorStream.OnNext(ex);
+                                }
+
+                                if (generalTcs.Task.IsCompleted || cts.IsCancellationRequested)
+                                    break;
+                            }
                         }
-
-                        if (initAckResult.Id != initialAckId)
+                        catch (Exception ex)
                         {
-                            initAckTcs.TrySetCanceled();
-                            throw new InvalidOperationException("La confirmación recibida no coincide con los datos enviados.");
-                        }
-
-                        await foreach (var item in source.Value.WithCancellation(cts.Token))
-                        {
-                            //var tcs = new TaskCompletionSource<IngestDataAckMessage>();
-                            //_ingestDataAck.TryAdd(source.Key, tcs);
-
-                            if (generalTcs.Task.IsCompleted || cts.IsCancellationRequested)
-                                throw new OperationCanceledException("Stream cancelado.");
-
-                            var message = new IngestDataMessage(source.Key, converter.SerializeObject(item));
-                            var msg = converter.Serialize(message);
-
-                            await Task.WhenAny(SendMessageAsync(msg, cts.Token), generalTcs.Task);
-
-                            if (generalTcs.Task.IsCompleted || cts.IsCancellationRequested)
-                                throw new OperationCanceledException("Stream cancelado.");
-
-                            //var ackResult = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), tcs.Task);
-
-                            //if (ackResult == null) 
-                            //    throw new TimeoutException("Se excedió el tiempo limite para la confirmación de ingesta al servidor.");
-
-                            //if (ackResult.Id != source.Key)
-                            //    throw new InvalidOperationException("La confirmación recibida no coincide con los datos enviados.");               
+                            if (LoggingEnabled)
+                                logger?.LogError(ex, $"Error en ingest stream {source.Key}");
+                            _errorStream.OnNext(ex);
+                            cts.Cancel();
                         }
                     }, cts.Token);
 
                     sourceTasks.Add(sourceTask);
                 }
 
-                var ingestRequest = new IngestInitMessage(
-                    initialAckId,
-                    sources.Keys.ToArray(),
-                    payload
-                );
-
+                var ingestRequest = new IngestInitMessage(initialAckId, sources.Keys.ToArray(), payload);
                 var msg = converter.Serialize(ingestRequest);
 
-                await SendMessageAsync(msg);
+                try
+                {
+                    await SendMessageAsync(msg);
+                }
+                catch (Exception ex)
+                {
+                    if (LoggingEnabled)
+                        logger?.LogError(ex, "Error al enviar IngestInitMessage");
+                    _errorStream.OnNext(ex);
+                    cts.Cancel();
+                }
 
                 await Task.WhenAll(sourceTasks);
             }
             catch (Exception ex)
             {
+                if (LoggingEnabled)
+                    logger?.LogError(ex, "Error general en IngestMultiple");
                 _errorStream.OnNext(ex);
-                logger?.LogError(ex.Message);
             }
             finally
             {
-                if (IsReady)
+                if (IsReady && !cts.IsCancellationRequested)
                 {
                     var msg = converter.Serialize(new IngestCompleteMessage(initialAckId, sources.Keys.ToArray()));
                     await SendMessageAsync(msg);
@@ -336,6 +288,13 @@ namespace Hubcon.Client.Core.Websockets
 
                 response = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), tcs.Task);
             }
+            catch (Exception ex)
+            {
+                if (LoggingEnabled)
+                    logger?.LogError(ex.Message);
+
+                _errorStream.OnNext(ex);
+            }
             finally
             {
                 _operationTcs.TryRemove(request.Id, out _);
@@ -344,18 +303,6 @@ namespace Hubcon.Client.Core.Websockets
             return response == null
                 ? throw new TimeoutException("The request timed out.")
                 : converter.DeserializeJsonElement<T>(response.Result)!;
-        }
-
-        private async Task<Task?> WaitWithTimeoutAsync(TimeSpan timeout, CancellationToken token = default, params Task[] tasks)
-        {
-            var timeoutTask = Task.Delay(timeout, token);
-            var allTasks = Task.WhenAny(tasks);
-            var result = await Task.WhenAny(allTasks, timeoutTask);
-
-            if (result == allTasks)
-                return allTasks.Result;
-            else
-                return null;
         }
 
         private async Task<T> WaitWithTimeoutAsync<T>(TimeSpan timeout, Task<T> task)
@@ -374,18 +321,11 @@ namespace Hubcon.Client.Core.Websockets
 
             if (completedTask == task)
             {
-                // Cancelamos el timeout para liberar recursos
                 cts.Cancel();
-
-                // Esperamos la tarea en caso de que haya lanzado excepción
                 return await task;
             }
             else
             {
-                // Timeout ocurrió, no esperamos más la tarea
-
-                // Opcional: si querés cancelar la tarea original, y si soporta cancellation,
-                // podrías propagar la cancelación usando externalToken (o otro mecanismo).
                 return default!;
             }
         }
@@ -494,11 +434,20 @@ namespace Hubcon.Client.Core.Websockets
                         default:
                             var msg = $"Tipo de mensaje no soportado. Tipo recibido: {baseMessage?.Type}";
                             _errorStream.OnNext(new NotSupportedException(msg));
-                            logger?.LogError(msg);
+
+                            if (LoggingEnabled)
+                                logger?.LogError(msg);
+
                             break;
                     }
-
                 }
+            }
+            catch(Exception ex)
+            {
+                if (LoggingEnabled)
+                    logger?.LogError($"Error en HandleIncomingMessage: {ex.Message}");
+
+                _errorStream.OnNext(ex);
             }
             finally
             {
@@ -521,7 +470,13 @@ namespace Hubcon.Client.Core.Websockets
                     {
                         await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Reconnect", CancellationToken.None);
                     }
-                    catch (Exception ex) { }
+                    catch (Exception ex) 
+                    {
+                        if (LoggingEnabled)
+                            logger?.LogError(ex, ex.Message);
+                        
+                        _errorStream.OnNext(ex);
+                    }
                     finally
                     {
                         _webSocket.Dispose();
@@ -555,7 +510,9 @@ namespace Hubcon.Client.Core.Websockets
                             _heartbeatWatcher = null;
                         }
 
-                        logger?.LogInformation("Intentando conectar...");
+                        if (LoggingEnabled)
+                            logger?.LogInformation("Intentando conectar...");
+
                         WebSocketOptions?.Invoke(_webSocket.Options);
 
                         var uriBuilder = new UriBuilder(_uri);
@@ -567,7 +524,9 @@ namespace Hubcon.Client.Core.Websockets
 
                         await _webSocket.ConnectAsync(uriBuilder.Uri, _cts.Token);
 
-                        logger?.LogInformation("Conectado, intentando handshake...");
+                        if (LoggingEnabled)
+                            logger?.LogInformation("Conectado, intentando handshake...");
+
                         await SendMessageAsync(converter.Serialize(new ConnectionInitMessage()));
 
                         var buffer = new byte[16384];
@@ -591,25 +550,26 @@ namespace Hubcon.Client.Core.Websockets
                         if (ackMessage?.Type != MessageType.connection_ack)
                             throw new Exception("No se recibió el connection_ack del servidor.");
 
-                        logger?.LogInformation("Confirmación recibida, iniciando loop de respuesta...");
+                        if (LoggingEnabled)
+                            logger?.LogInformation("Confirmación recibida, iniciando loop de respuesta...");
 
                         _websocketCts = new CancellationTokenSource();
                         _receiveLoopCts = new CancellationTokenSource();
                         _pingLoopCts = new CancellationTokenSource();
 
                         _timeoutTask ??= Task.Run(ReconnectLoop);
-                        //await _timeoutTask.ConfigureAwait(false);
 
                         _processingTask ??= Task.Run(HandleIncomingMessage);
-                        //await _processingTask.ConfigureAwait(false);
 
                         _pingTask = Task.Run(() => PingMessageLoop(_pingLoopCts.Token));
-                        //await _pingTask.ConfigureAwait(false);
 
                         _heartbeatWatcher = new HeartbeatWatcher(_timeoutSeconds, async () =>
                         {
                             IsReady = false;
-                            logger?.LogInformation("Socket timed out.");
+
+                            if (LoggingEnabled)
+                                logger?.LogInformation("Socket timed out.");
+
                             await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Socket timed out.", default);
                         });
 
@@ -629,9 +589,14 @@ namespace Hubcon.Client.Core.Websockets
                     catch (Exception ex)
                     {
                         _errorStream.OnNext(ex);
-                        logger?.LogError(ex.Message);
+                        if (LoggingEnabled)
+                            logger?.LogError(ex.Message);
+
                         int delay = Math.Min(1 * ++attempt, 10);
-                        logger?.LogInformation($"Reconectando en {delay} segundos...");
+
+                        if (LoggingEnabled)
+                            logger?.LogInformation($"Reconectando en {delay} segundos...");
+
                         await Task.Delay(delay * 1000, _cts.Token);
 
                         foreach (var item in _ingests)
@@ -660,32 +625,6 @@ namespace Hubcon.Client.Core.Websockets
                 _reconnectLock.Release();
             }
         }
-
-        //private async Task<bool> SendIngestMessageAsync(IEnumerable<string> streamIds)
-        //{
-        //    var msg = converter.SerializeObject(new IngestInitMessage(streamIds, request.Payload));
-        //    var cts = new TaskCompletionSource<IngestInitAckMessage>();
-        //    _ingestAck.TryAdd(request.Id, cts);
-        //    await SendMessageAsync(msg);
-
-        //    var result = await WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), _cts.Token, cts.Task);
-
-        //    _ingestAck.TryRemove(request.Id, out _);
-
-        //    if (result != null)
-        //    {
-        //        var ackMessage = cts.Task.Result;
-
-        //        if (ackMessage.Id != null && ackMessage.Id == request.Id)
-        //        {
-        //            return true;
-        //        }
-
-        //        return false;
-        //    }
-        //    else
-        //        return false;
-        //}
 
         private async Task SendSubscribeMessageAsync(WebsocketRequest request)
         {
@@ -751,7 +690,8 @@ namespace Hubcon.Client.Core.Websockets
                 }
                 catch (Exception ex)
                 {
-                    logger?.LogError($"Error en PingMessageLoop: {ex.Message}");
+                    if (LoggingEnabled)
+                        logger?.LogError($"Error en PingMessageLoop: {ex.Message}");
                 }
             }
         }
@@ -760,8 +700,12 @@ namespace Hubcon.Client.Core.Websockets
         private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
         {
             var buffer = new byte[16384];
-            Interlocked.Increment(ref cantidad);
-            logger?.LogInformation($"ReceiveLoop iniciado. Cantidad: {Volatile.Read(ref cantidad)}");
+
+            if (LoggingEnabled)
+                Interlocked.Increment(ref cantidad);
+
+            if (LoggingEnabled)
+                logger?.LogInformation($"ReceiveLoop iniciado. Cantidad: {Volatile.Read(ref cantidad)}");
 
             try
             {
@@ -794,7 +738,9 @@ namespace Hubcon.Client.Core.Websockets
                     }
                     catch (Exception ex)
                     {
-                        logger?.LogError(ex.ToString());
+                        if (LoggingEnabled)
+                            logger?.LogError(ex.ToString());
+
                         break;
                     }
                 }
@@ -802,13 +748,18 @@ namespace Hubcon.Client.Core.Websockets
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
+                if (LoggingEnabled)
+                    logger?.LogError("Error en ReceiveLoop: " + ex.Message);
+
                 _errorStream.OnNext(ex);
-                logger?.LogError("Error en ReceiveLoop: " + ex.Message);
             }
             finally
             {
-                logger?.LogInformation($"ReceiveLoop terminado. Cantidad: {Volatile.Read(ref cantidad)}");
-                Interlocked.Decrement(ref cantidad);
+                if (LoggingEnabled)
+                {
+                    logger?.LogInformation($"ReceiveLoop terminado. Cantidad: {Volatile.Read(ref cantidad)}");
+                    Interlocked.Decrement(ref cantidad);
+                }
             }
         }
         private async Task ReconnectLoop()
@@ -821,13 +772,16 @@ namespace Hubcon.Client.Core.Websockets
 
                     if (_webSocket?.State != WebSocketState.Open && _webSocket?.State != WebSocketState.Connecting)
                     {
-                        logger?.LogInformation("WebSocket no está abierto. Reconectando...");
+                        if (LoggingEnabled)
+                            logger?.LogInformation("WebSocket no está abierto. Reconectando...");
+
                         await EnsureConnectedAsync();
                     }
                 }
                 catch (Exception ex)
                 {
-                    logger?.LogError($"Error en ReconnectLoop: {ex.Message}");
+                    if (LoggingEnabled)
+                        logger?.LogError($"Error en ReconnectLoop: {ex.Message}");
                 }
             }
         }
@@ -844,6 +798,9 @@ namespace Hubcon.Client.Core.Websockets
             }
             catch (Exception ex)
             {
+                if (LoggingEnabled)
+                    logger?.LogError(ex, ex.Message);
+
                 _errorStream.OnNext(ex);
             }
         }

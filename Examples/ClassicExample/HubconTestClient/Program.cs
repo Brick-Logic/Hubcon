@@ -14,7 +14,7 @@ internal class Program
         var process = Process.GetCurrentProcess();
 
         long coreMask = 0;
-        for (int i = 0; i <= 0; i++)
+        for (int i = 0; i <= 1; i++)
         {
             coreMask |= 1L << i;
         }
@@ -43,25 +43,25 @@ internal class Program
 
         Console.ReadKey();
 
-        Console.WriteLine($"Probando login...");
+        logger.LogWarning($"Probando login...");
         var result = await authManager.LoginAsync("miusuario", "");
         logger.LogInformation($"Login result: {result.IsSuccess}");
-        Console.WriteLine($"Login OK.");
+        logger.LogInformation($"Login OK.");
 
-        await Task.Delay(1000); 
+        await Task.Delay(1000);
 
-        Console.WriteLine($"Probando ingest...");
+        logger.LogWarning($"Probando ingest...");
         IAsyncEnumerable<string> source1 = GetMessages(2);
         IAsyncEnumerable<string> source2 = GetMessages(2);
         IAsyncEnumerable<string> source3 = GetMessages(2);
         IAsyncEnumerable<string> source4 = GetMessages(2);
         IAsyncEnumerable<string> source5 = GetMessages(2);
         await client.IngestMessages(source1, source2, source3, source4, source5);
-        Console.WriteLine($"Ingest OK.");
+        logger.LogInformation($"Ingest OK.");
 
         await Task.Delay(1000);
 
-        Console.WriteLine($"Probando invocación sin parametros...");
+        logger.LogWarning($"Probando invocación sin parametros...");
         var text = await client2.TestReturn();
 
         if( text != null )
@@ -73,7 +73,7 @@ internal class Program
 
         int eventosRecibidos = 0;
 
-        Console.WriteLine($"Comenzando prueba de suscripciónes...");
+        logger.LogWarning($"Comenzando prueba de suscripciones...");
 
         bool evento1 = false;
         async Task handler(int? input)
@@ -120,7 +120,7 @@ internal class Program
 
         await Task.Delay(1000);
 
-        logger.LogInformation("Enviando request de prueba...");
+        logger.LogWarning("Enviando request de prueba...");
         await client.CreateUser();
         logger.LogInformation($"Esperando eventos...");
 
@@ -130,7 +130,7 @@ internal class Program
 
         if (eventosRecibidos == 4)
         {
-            Console.WriteLine($"Eventos recibidos correctamente.");
+            logger.LogInformation($"Eventos recibidos correctamente.");
         }
         else
         {
@@ -139,18 +139,20 @@ internal class Program
 
         await Task.Delay(1000);
 
-        logger.LogInformation("Probando invocación con retorno...");
+        logger.LogWarning("Probando invocación con retorno...");
         var temp = await client.GetTemperatureFromServer();
         logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
         
         await Task.Delay(1000);
 
-        logger.LogInformation("Probando streaming de 10 mensajes...");
+        logger.LogWarning("Probando streaming de 10 mensajes...");
 
         await foreach (var item in client.GetMessages(10))
         {
             logger.LogInformation($"Respuesta recibida: {item}");
         }
+
+        logger.LogInformation("Streaming OK.");
 
         await Task.Delay(1000);
 
