@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Hubcon.Server.Core.Websockets.Helpers
 {
-    public class WebSocketMessageReceiver(WebSocket socket, IInternalServerOptions options)
+    internal sealed class WebSocketMessageReceiver(WebSocket socket, IInternalServerOptions options)
     {
         private readonly WebSocket _socket = socket;
         private readonly byte[] _buffer = new byte[options.MaxWebSocketMessageSize];

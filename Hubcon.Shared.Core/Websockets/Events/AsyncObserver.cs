@@ -1,10 +1,12 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Channels;
 
 namespace Hubcon.Shared.Core.Websockets.Events
 {
-    public class AsyncObserver<T>(BoundedChannelOptions? options = null) : IObserver<T>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class AsyncObserver<T>(BoundedChannelOptions? options = null) : IObserver<T>
     {
         private readonly Channel<T?> _channel = Channel.CreateBounded<T?>(options ?? new BoundedChannelOptions(5000)
         {

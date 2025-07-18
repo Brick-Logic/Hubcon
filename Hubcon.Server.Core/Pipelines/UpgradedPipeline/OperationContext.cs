@@ -5,7 +5,7 @@ using System.Security.Claims;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 {
-    public class OperationContext : IOperationContext
+    internal sealed class OperationContext : IOperationContext
     {
         public string OperationName { get; init; }
         public IServiceProvider RequestServices { get; init; }

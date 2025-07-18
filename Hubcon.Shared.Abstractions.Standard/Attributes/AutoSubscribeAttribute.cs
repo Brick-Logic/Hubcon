@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Hubcon.Shared.Abstractions.Standard.Attributes
 {
-    public class AutoSubscribeAttribute : Attribute
+    internal sealed class AutoSubscribeAttribute : Attribute
     {
         public AutoSubscribeAttribute() { }
     }

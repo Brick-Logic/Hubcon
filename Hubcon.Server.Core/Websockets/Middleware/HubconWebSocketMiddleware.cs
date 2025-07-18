@@ -19,13 +19,15 @@ using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading.Channels;
 
 namespace Hubcon.Server.Core.Websockets.Middleware
 {
-    public class HubconWebSocketMiddleware(
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class HubconWebSocketMiddleware(
         RequestDelegate next,
         DefaultEntrypoint entrypoint,
         IDynamicConverter converter,
@@ -41,25 +43,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
         {
-
             if (!context.WebSockets.IsWebSocketRequest || !(context.Request.Path == options.WebSocketPathPrefix))
             {
                 await next(context);
                 return;
-            }
-
-            if (!context.Request.Headers.ContainsKey("Authorization"))
-            {
-                var accessToken = context.Request.Query["access_token"];
-                if (!string.IsNullOrEmpty(accessToken))
-                {
-                    context.Request.Headers["Authorization"] = $"Bearer {accessToken}";
-                }
-                else
-                {
-                    return;
-                }
-
             }
 
             using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
@@ -91,6 +78,49 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 }
 
                 await sender.SendAsync(new ConnectionAckMessage());
+
+                if (options.WebsocketRequiresAuthorization)
+                {
+                    var accessToken = context.Request.Query["access_token"];
+
+                    if (string.IsNullOrWhiteSpace(accessToken))
+                        return;
+
+                    if (options.WebsocketTokenHandler != null)
+                    {
+                        try
+                        {
+                            var user = options.WebsocketTokenHandler.Invoke(accessToken!, context.RequestServices)!;
+
+                            if (user is null)
+                            {                        
+                                await webSocket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Unauthorized", default);                          
+
+                                logger?.LogInformation("Websocket authorization failed, user is null.");
+                                return;
+                            }
+
+                            context.Request.Headers.Authorization = accessToken;
+                            context.User = user;
+                        }
+                        catch (Exception ex)
+                        {            
+                            await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Internal server error.", default);
+                           
+                            logger?.LogInformation(ex, "Error while validating websocket token.");
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        logger?.LogInformation("Websocket requires authorization, but token handler is not configured or is invalid.");
+                        return;
+                    }
+                }
+                else
+                {
+                    context.Request.Headers.Authorization = Guid.NewGuid().ToString("N");
+                }
 
                 var lastPingId = string.Empty;
 
@@ -333,7 +363,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             catch (Exception ex)
             {
-                logger.LogError(ex.Message);
+                logger?.LogInformation(ex.Message);
             }
             finally
             {
@@ -350,7 +380,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex.Message);
+                        logger?.LogError(ex.Message);
                     }
                 }
 
@@ -362,7 +392,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex.Message);
+                        logger?.LogError(ex.Message);
                     }
                 }
 
@@ -376,7 +406,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex.Message);
+                        logger?.LogError(ex.Message);
                     }
                 }
             }
@@ -547,7 +577,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex.Message);
+                    logger?.LogError(ex.Message);
 
                     if (context.RequestAborted.IsCancellationRequested)
                         result = null;
@@ -557,7 +587,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             catch (Exception ex)
             {
                 result = null;
-                logger.LogError($"{ex.Message}");
+                logger?.LogError($"{ex.Message}");
             }
 
             var response = new OperationResponseMessage(
@@ -583,7 +613,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             catch (Exception ex)
             {
-                logger.LogError($"{ex.Message}");
+                logger?.LogError($"{ex.Message}");
             }
         }
 
@@ -604,34 +634,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             catch (Exception ex)
             {
-                logger.LogError($"{ex.Message}");
+                logger?.LogError($"{ex.Message}");
             }
         }
-
-        //private async Task HandleStreamComplete(
-        //    ConcurrentDictionary<string, CancellationTokenSource> _streams,
-        //    HttpContext context,
-        //    WebSocketMessageSender sender,
-        //    string messageJson)
-        //{
-        //    SubscriptionCompleteMessage request = null!;
-        //    object? result = false;
-
-        //    try
-        //    {
-        //        request = converter.DeserializeData<SubscriptionCompleteMessage>(messageJson)!;
-
-        //        if (request == null) return;
-
-        //        if (request != null && _streams.TryRemove(request.Id, out var tokenSource))
-        //            tokenSource.Cancel();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        result = false;
-        //        logger.LogError($"{ex.Message}");
-        //    }
-        //}
 
         private async Task HandleAck(
             ConcurrentDictionary<string, IRetryableMessage> _ackChannels,
@@ -732,7 +737,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 if (x.IsFaulted)
                 {
                     var ex = x.Exception;
-                    logger.LogError(ex.Message);
+                    logger?.LogError(ex.Message);
                 }
             });
 
@@ -828,7 +833,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 if (x.IsFaulted)
                 {
                     var ex = x.Exception;
-                    logger.LogError(ex.Message);
+                    logger?.LogError(ex.Message);
                 }
 
                 await sender.SendAsync(new StreamCompleteMessage(streamInit.Id));

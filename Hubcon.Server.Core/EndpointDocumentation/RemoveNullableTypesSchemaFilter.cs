@@ -1,15 +1,12 @@
 ﻿using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel;
 
 namespace Hubcon.Server.Core.EndpointDocumentation
 {
-    public class RemoveNullableTypesOperationFilter : IOperationFilter
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class RemoveNullableTypesOperationFilter : IOperationFilter
     {
         public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {

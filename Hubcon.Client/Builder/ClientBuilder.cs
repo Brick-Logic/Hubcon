@@ -11,7 +11,7 @@ using System.Reflection;
 
 namespace Hubcon.Client.Builder
 {
-    public class ClientBuilder(IProxyRegistry proxyRegistry) : IClientBuilder
+    internal sealed class ClientBuilder(IProxyRegistry proxyRegistry) : IClientBuilder
     {
         public Uri? BaseUri { get; set; }
         public List<Type> Contracts { get; set; } = new();

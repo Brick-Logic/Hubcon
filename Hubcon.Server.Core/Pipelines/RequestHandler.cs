@@ -12,7 +12,7 @@ using System.Text.Json;
 namespace Hubcon.Server.Core.Pipelines
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public class RequestHandler : IRequestHandler
+    public sealed class RequestHandler : IRequestHandler
     {
         private readonly IOperationRegistry _operationRegistry;
         private readonly IDynamicConverter _converter;

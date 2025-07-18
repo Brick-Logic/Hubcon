@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
 
 namespace Hubcon.Shared.Core.Websockets.Heartbeat
 {
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class HeartbeatWatcher : IAsyncDisposable
     {
         private bool timeoutExecuted = false;

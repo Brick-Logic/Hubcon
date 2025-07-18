@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Builder;
+using System.ComponentModel;
+using System.Security.Claims;
 
 namespace Hubcon.Server.Core.Configuration
 {
-    public class CoreServerOptions : ICoreServerOptions, IInternalServerOptions
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class CoreServerOptions : ICoreServerOptions, IInternalServerOptions
     {
         private int? maxWsSize;
         private int? maxHttpSize;
@@ -26,6 +29,10 @@ namespace Hubcon.Server.Core.Configuration
         private TimeSpan? streamingThrottleDelay;
         private TimeSpan? websocketReceiveThrottleDelay;
         private bool? throttlingIsDisabled;
+        private Func<string, IServiceProvider, ClaimsPrincipal?>? websocketTokenHandler;
+        private bool? websocketRequiresAuthorization;
+        private bool? websocketLoggingEnabled;
+        private bool? httpLoggingEnabled;
 
         // Defaults
         public int MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
@@ -59,6 +66,14 @@ namespace Hubcon.Server.Core.Configuration
         public TimeSpan WebsocketReceiveThrottleDelay => websocketReceiveThrottleDelay ?? (ThrottlingIsDisabled ? TimeSpan.Zero : TimeSpan.FromMilliseconds(1));
 
         public bool ThrottlingIsDisabled => throttlingIsDisabled ?? false;
+
+        public Func<string, IServiceProvider, ClaimsPrincipal?>? WebsocketTokenHandler => websocketTokenHandler;
+
+        public bool WebsocketRequiresAuthorization => websocketRequiresAuthorization ?? false;
+
+        public bool WebsocketLoggingEnabled => websocketLoggingEnabled ?? false;
+
+        public bool HttpLoggingEnabled => httpLoggingEnabled ?? false;
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -189,6 +204,27 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions DisableAllThrottling()
         {
             throttlingIsDisabled ??= true;
+            return this;
+        }
+
+        public ICoreServerOptions UseWebsocketTokenHandler(Func<string, IServiceProvider, ClaimsPrincipal?> tokenHandler)
+        {
+            websocketTokenHandler ??= tokenHandler;
+            websocketRequiresAuthorization ??= true;
+            return this;
+        }
+        
+
+
+        public ICoreServerOptions EnableWebsocketsLogging(bool enabled = true)
+        {
+            websocketLoggingEnabled ??= enabled;
+            return this;
+        }
+
+        public ICoreServerOptions EnableHttpLogging(bool enabled = true)
+        {
+            httpLoggingEnabled ??= enabled;
             return this;
         }
     }

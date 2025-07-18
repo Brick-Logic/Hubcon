@@ -20,7 +20,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
     }
 
     [AttributeUsage(AttributeTargets.Method)]
-    public class IngestSettingsAttribute : Attribute
+    public sealed class IngestSettingsAttribute : Attribute
     {
         public IngestSettings Settings { get; }
 

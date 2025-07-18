@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Tools
 {
-    public class EnumerableTools
+    public static class EnumerableTools
     {
         public static bool IsAsyncEnumerable(object? obj)
         {

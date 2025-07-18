@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -47,6 +48,22 @@ namespace Hubcon.Shared.Core.Tools
             }
 
             return null;
+        }
+
+        public static ClaimsPrincipal? ValidateJwtToken(string token, TokenValidationParameters validationParameters, out SecurityToken? validatedToken)
+        {
+            var handler = new JwtSecurityTokenHandler();
+
+            try
+            {
+                var principal = handler.ValidateToken(token, validationParameters, out validatedToken);
+                return principal;
+            }
+            catch (Exception ex)
+            {
+                validatedToken = null;
+                return null;
+            }
         }
     }
 }

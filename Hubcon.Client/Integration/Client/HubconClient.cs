@@ -1,4 +1,5 @@
-﻿using Hubcon.Client.Core.Websockets;
+﻿using Hubcon.Client.Core.Exceptions;
+using Hubcon.Client.Core.Websockets;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Extensions;
@@ -6,6 +7,7 @@ using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
+using System.Reactive.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -14,7 +16,7 @@ using System.Threading.Channels;
 
 namespace Hubcon.Client.Integration.Client
 {
-    public class HubconClient(
+    internal sealed class HubconClient(
         IDynamicConverter converter,
         IHttpClientFactory clientFactory,
         ILogger<HubconClient> logger) : IHubconClient
@@ -41,8 +43,13 @@ namespace Hubcon.Client.Integration.Client
                     if (authenticationManagerFactory?.Invoke() == null)
                         throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                    var result = await client.InvokeAsync<BaseOperationResponse<T>>(request);
-                    return default!;
+                    var result = await client.InvokeAsync<BaseOperationResponse<T>>(request) 
+                        ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
+                    
+                    if (!result.Success)
+                        throw new HubconRemoteException($"Ocurrió un error en el servidor. Mensaje recibido: {result.Error}");
+
+                    return result.Data!;
                 }
                 else
                 {
@@ -67,7 +74,16 @@ namespace Hubcon.Client.Integration.Client
                     var responseBytes = await response.Content.ReadAsByteArrayAsync();
                     var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
 
-                    return converter.DeserializeJsonElement<BaseOperationResponse<T>>(result)!.Data!;
+                    if (result.ValueKind == JsonValueKind.Null)
+                        throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
+
+                    var operationResponse = converter.DeserializeJsonElement<BaseOperationResponse<T>>(result) 
+                        ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor."); ;
+
+                    if (!operationResponse.Success)
+                        throw new HubconRemoteException($"Ocurrió un error en el servidor. Mensaje recibido: {operationResponse.Error}");
+
+                    return operationResponse.Data;
                 }
             }
             catch (Exception ex)
@@ -83,52 +99,47 @@ namespace Hubcon.Client.Integration.Client
 
         public async Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
         {
-            try
+            if (ContractOptionsDict?.TryGetValue(methodInfo.ReflectedType!, out var options) ?? false && options.WebsocketMethodsEnabled)
             {
-                if (ContractOptionsDict?.TryGetValue(methodInfo.ReflectedType!, out var options) ?? false && options.WebsocketMethodsEnabled)
-                {
-                    if (authenticationManagerFactory?.Invoke() == null)
-                        throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
+                if (authenticationManagerFactory?.Invoke() == null)
+                    throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                    await client.SendAsync(request);
-                }
-                else
-                {
-                    var bytes = converter.SerializeObject(request.Arguments).ToString();
-                    using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
-
-                    HttpMethod httpMethod = request.Arguments.Any() ? HttpMethod.Post : HttpMethod.Get;
-
-                    var url = _restHttpUrl + methodInfo.GetRoute();
-                    var httpRequest = new HttpRequestMessage(httpMethod, url)
-                    {
-                        Content = content
-                    };
-
-                    var authManager = authenticationManagerFactory?.Invoke();
-
-                    if (authManager != null && authManager.IsSessionActive)
-                        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
-
-                    var response = await httpClient.SendAsync(httpRequest, cancellationToken);
-
-                    var responseBytes = await response.Content.ReadAsByteArrayAsync();
-                    var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
-
-                    var methodResponse = converter.DeserializeJsonElement<BaseJsonResponse>(result)!;
-
-                    return;
-                }
+                await client.SendAsync(request);
             }
-            catch (Exception ex)
+            else
             {
-                return;
+                var bytes = converter.SerializeObject(request.Arguments).ToString();
+                using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
+
+                HttpMethod httpMethod = request.Arguments!.Any() ? HttpMethod.Post : HttpMethod.Get;
+
+                var url = _restHttpUrl + methodInfo.GetRoute();
+                var httpRequest = new HttpRequestMessage(httpMethod, url)
+                {
+                    Content = content
+                };
+
+                var authManager = authenticationManagerFactory?.Invoke();
+
+                if (authManager != null && authManager.IsSessionActive)
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
+
+                _ = await httpClient.SendAsync(httpRequest, cancellationToken);
             }
         }
 
         public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            IObservable<JsonElement> observable = await client.Stream<JsonElement>(request);
+            IObservable<JsonElement> observable; 
+
+            try
+            {
+                observable = await client.Stream<JsonElement>(request);
+            }
+            catch (Exception ex)
+            {
+                throw new HubconGenericException($"Error al obtener el stream del servidor. Mensaje: {ex.Message}", ex);
+            }
 
             var observer = new AsyncObserver<JsonElement>();
 
@@ -144,19 +155,35 @@ namespace Hubcon.Client.Integration.Client
 
         public async Task Ingest(IOperationRequest request, Dictionary<string, object?> arguments, CancellationToken cancellationToken = default)
         {
-            if (authenticationManagerFactory?.Invoke() == null)
-                throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
+            try
+            {
+                if (authenticationManagerFactory?.Invoke() == null)
+                    throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
 
-            await client.IngestMultiple(request);
+                await client.IngestMultiple(request);
+            }
+            catch (Exception ex)
+            {
+                throw new HubconGenericException($"Error al obtener el stream del servidor. Mensaje: {ex.Message}", ex);
+            }
         }
 
 
         public async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            if (authenticationManagerFactory?.Invoke() == null)
-                throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
+            IObservable<JsonElement> observable;
 
-            IObservable<JsonElement> observable = await client.Subscribe<JsonElement>(request);
+            try
+            {
+                if (authenticationManagerFactory?.Invoke() == null)
+                    throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
+
+                observable = await client.Subscribe<JsonElement>(request);
+            }
+            catch (Exception ex)
+            {
+                throw new HubconGenericException($"Error al obtener el stream del servidor. Mensaje: {ex.Message}", ex);
+            }
 
             var options = new BoundedChannelOptions(5000);
 

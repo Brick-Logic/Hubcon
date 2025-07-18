@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace Hubcon.Server.Core.Injectors
 {
-    public class PropertyInjector : IPropertyInjector
+    internal sealed class PropertyInjector : IPropertyInjector
     {
         IServiceProvider _serviceProvider;
         private readonly object _instance;

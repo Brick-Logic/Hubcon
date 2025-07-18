@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Attributes
 {
-    public class UseCommunicationHandlerAttribute : Attribute
+    internal sealed class UseCommunicationHandlerAttribute : Attribute
     {
         public Type HandlerType { get; }
 

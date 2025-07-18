@@ -3,11 +3,13 @@ using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Attributes;
+using System.ComponentModel;
 using System.Text.Json;
 
 namespace Hubcon.Server.Core.Entrypoint
 {
-    public class DefaultEntrypoint
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class DefaultEntrypoint
     {
 
         [HubconInject]

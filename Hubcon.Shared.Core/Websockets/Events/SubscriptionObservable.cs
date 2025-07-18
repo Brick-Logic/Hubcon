@@ -1,10 +1,12 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Websockets.Interfaces;
 using Hubcon.Shared.Core.Websockets.Models;
+using System.ComponentModel;
 using System.Text.Json;
 
 namespace Hubcon.Shared.Core.Websockets.Events
 {
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public abstract class BaseObservable
     {
         protected readonly IUnsubscriber? _client;
@@ -22,7 +24,8 @@ namespace Hubcon.Shared.Core.Websockets.Events
         public abstract void OnCompleted();
     }
 
-    public class GenericObservable<TMessage> : BaseObservable, IObservable<TMessage>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class GenericObservable<TMessage> : BaseObservable, IObservable<TMessage>
     {
         private readonly List<IObserver<TMessage>> _observers = new();
         private readonly object _observersLock = new();

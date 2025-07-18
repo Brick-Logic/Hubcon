@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Server.Abstractions.CustomAttributes
 {
-    public sealed class WebsocketMethodSettings(TimeSpan? throttleDelay = null)
+    internal sealed class WebsocketMethodSettings(TimeSpan? throttleDelay = null)
     {
         public TimeSpan ThrottleDelay { get; private set; } = throttleDelay ?? TimeSpan.FromMilliseconds(8);
 
@@ -14,7 +14,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
     }
 
     [AttributeUsage(AttributeTargets.Method)]
-    public class WebsocketMethodSettingsAttribute : Attribute
+    internal sealed class WebsocketMethodSettingsAttribute : Attribute
     {
         public WebsocketMethodSettings Settings { get; }
 

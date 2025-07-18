@@ -1,6 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -8,7 +9,8 @@ using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Core.Serialization
 {
-    public class DynamicConverter(ILogger<DynamicConverter> logger) : IDynamicConverter
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class DynamicConverter(ILogger<DynamicConverter> logger) : IDynamicConverter
     {
         public Dictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 

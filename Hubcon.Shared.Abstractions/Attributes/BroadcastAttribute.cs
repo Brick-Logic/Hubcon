@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Attributes
 {
-    public class BroadcastAttribute : Attribute
+    public sealed class BroadcastAttribute : Attribute
     {
     }
 }

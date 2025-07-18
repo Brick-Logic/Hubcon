@@ -1,10 +1,12 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 
 namespace Hubcon.Server.Core.Routing.Registries
 {
-    public class ClientRegistry : IClientRegistry
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class ClientRegistry : IClientRegistry
     {
         private readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, IControllerContract>> _clients = new();
 

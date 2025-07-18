@@ -3,12 +3,14 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json;
 
 namespace Hubcon.Client.Core.Subscriptions
 {
-    public class ClientSubscriptionHandler<T> : ISubscription<T>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class ClientSubscriptionHandler<T> : ISubscription<T>
     {
         public event HubconEventHandler<object>? OnEventReceived;
         private readonly IHubconClient _client;

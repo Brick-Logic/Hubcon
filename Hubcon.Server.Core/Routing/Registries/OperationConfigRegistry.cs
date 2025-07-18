@@ -1,16 +1,18 @@
-﻿using System;
+﻿using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
+using Hubcon.Shared.Abstractions.Interfaces;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
-using Hubcon.Shared.Abstractions.Interfaces;
 
 namespace Hubcon.Server.Core.Routing.Registries
 {
-    public class OperationConfigRegistry : IOperationConfigRegistry
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class OperationConfigRegistry : IOperationConfigRegistry
     {
         private readonly ConcurrentDictionary<string, IOperationBlueprint> _map = new();
 

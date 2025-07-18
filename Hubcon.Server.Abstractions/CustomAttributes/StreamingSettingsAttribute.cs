@@ -15,7 +15,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
     }
 
     [AttributeUsage(AttributeTargets.Method)]
-    public class StreamingSettingsAttribute : Attribute
+    public sealed class StreamingSettingsAttribute : Attribute
     {
         public StreamingSettings Settings { get; }
 

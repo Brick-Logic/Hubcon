@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace Hubcon.Server.Core.Websockets.Helpers
 {
-    public class WebSocketMessageSender(WebSocket _webSocket, IDynamicConverter converter)
+    internal sealed class WebSocketMessageSender(WebSocket _webSocket, IDynamicConverter converter)
     {
         public async Task SendAsync<T>(T message)
         {

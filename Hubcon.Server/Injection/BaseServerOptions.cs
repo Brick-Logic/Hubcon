@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Builder;
 
 namespace Hubcon.Server.Injection
 {
-    public class BaseServerOptions : IServerOptions
+    internal sealed class BaseServerOptions : IServerOptions
     {
         public BaseServerOptions(WebApplicationBuilder builder, ServerBuilder serverBuilder)
         {

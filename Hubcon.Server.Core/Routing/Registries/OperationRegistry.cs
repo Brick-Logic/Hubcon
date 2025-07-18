@@ -11,12 +11,14 @@ using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Routing.Registries
 {
-    public class OperationRegistry : IOperationRegistry
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class OperationRegistry : IOperationRegistry
     {
         public event Action<IOperationBlueprint>? OnOperationRegistered;
 

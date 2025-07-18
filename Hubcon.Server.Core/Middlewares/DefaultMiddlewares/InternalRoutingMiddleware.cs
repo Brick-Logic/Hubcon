@@ -2,21 +2,26 @@
 using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets.Events;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 using System.Text.Json;
 using System.Threading.Channels;
 using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
-    public class InternalRoutingMiddleware(
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class InternalRoutingMiddleware(
         IServiceProvider serviceProvider,
         IDynamicConverter dynamicConverter,
+        IInternalServerOptions options,
         ILogger<InternalRoutingMiddleware> logger,
         ILiveSubscriptionRegistry liveSubscriptionRegistry) : IInternalRoutingMiddleware
     {
@@ -87,14 +92,14 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 }
                 else
                 {
-                    string? jwtToken = JwtHelper.ExtractTokenFromHeader(context.HttpContext);
+                    string websocketToken = context.HttpContext?.Request.Headers.Authorization.ToString()!;
 
-                    if (jwtToken == null)
+                    if (options.WebsocketRequiresAuthorization && context.HttpContext?.User == null)
                         throw new UnauthorizedAccessException();
 
-                    clientId = jwtToken;
+                    clientId = websocketToken;
 
-                    subDescriptor = liveSubscriptionRegistry.GetHandler(jwtToken, request.ContractName, request.OperationName);
+                    subDescriptor = liveSubscriptionRegistry.GetHandler(websocketToken, request.ContractName, request.OperationName);
 
 
                     if (subDescriptor == null)
@@ -105,14 +110,14 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                             throw new InvalidOperationException($"No se encontró un servicio que implemente la interfaz {nameof(ISubscription)}.");
 
 
-                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(jwtToken, request.ContractName, request.OperationName, subscription);
+                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(websocketToken, request.ContractName, request.OperationName, subscription);
                     }
                 }
 
                 context.Blueprint.ConfigurationAttributes.TryGetValue(typeof(SubscriptionSettingsAttribute), out Attribute? attribute);
                 var subSettings = (attribute as SubscriptionSettingsAttribute)?.Settings ?? SubscriptionSettings.Default;
 
-                var options = new BoundedChannelOptions(subSettings.ChannelCapacity)
+                var channelOptions = new BoundedChannelOptions(subSettings.ChannelCapacity)
                 {
                     Capacity = subSettings.ChannelCapacity,
                     FullMode = subSettings.ChannelFullMode,
@@ -121,7 +126,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     AllowSynchronousContinuations = true
                 };
 
-                var observer = new AsyncObserver<object>(options);
+                var observer = new AsyncObserver<object>(channelOptions);
 
                 async Task hubconEventHandler(object? eventValue)
                 {

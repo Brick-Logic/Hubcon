@@ -1,10 +1,12 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
 
 namespace Hubcon.Server.Core.Injectors
 {
-    public class HubconServiceProvider : IHubconServiceProvider
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class HubconServiceProvider : IHubconServiceProvider
     {
         private readonly IServiceProvider _innerService;
 

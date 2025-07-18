@@ -11,7 +11,7 @@ using System.Reflection;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 {
-    public class OperationBlueprint : IOperationBlueprint
+    internal sealed class OperationBlueprint : IOperationBlueprint
     {
         public string OperationName { get; }
         public OperationKind Kind { get; }

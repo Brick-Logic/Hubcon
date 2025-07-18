@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Hubcon.Shared.Abstractions.Standard.Attributes
 {
     [AttributeUsage(AttributeTargets.Property)]
-    public class HubconInjectAttribute : Attribute
+    public sealed class HubconInjectAttribute : Attribute
     {
         public Type Type { get; }
 

@@ -57,11 +57,12 @@ namespace Hubcon.Server.Core.Extensions
                             var sub = e.Context.Resolve<ILiveSubscriptionRegistry>();
 
                             if (blueprint.RequiresAuthorization)
-                            {
-                                var token = JwtHelper.ExtractTokenFromHeader(accessor.HttpContext);
+                            {             
+                                var token = JwtHelper.ExtractTokenFromHeader(accessor.HttpContext) 
+                                                    ?? accessor.HttpContext?.Request.Headers.Authorization.ToString();
 
                                 var descriptor = sub.GetHandler(token!, contract!, prop.Name);
-                                PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);
+                                PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);                     
                             }
                             else
                             {

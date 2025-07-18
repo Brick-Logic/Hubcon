@@ -115,6 +115,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine($"using Hubcon.Shared.Core.Attributes;");
             sb.AppendLine($"using System.Diagnostics.CodeAnalysis;");
             sb.AppendLine($"using System.Reflection;");
+            sb.AppendLine($"using System.ComponentModel;");
             sb.AppendLine($"using System.Runtime.CompilerServices;");
             sb.AppendLine($"");
 
@@ -130,6 +131,7 @@ namespace HubconAnalyzers.SourceGenerators
             }
 
             sb.AppendLine($"{baseIndent}[HubconProxy]");
+            sb.AppendLine($"{baseIndent}[EditorBrowsable(EditorBrowsableState.Never)]");
             sb.AppendLine($"{baseIndent}public class {proxyName} : {nameof(BaseContractProxy)}, {iface.ToDisplayString()}");
             sb.AppendLine($"{baseIndent}{{");
 
@@ -247,6 +249,7 @@ namespace HubconAnalyzers.SourceGenerators
             var baseIndent = hasNamespace ? "    " : "";
 
             // El PreserverModule también va en el mismo namespace con la indentación correcta
+            sb.AppendLine($"{baseIndent}[EditorBrowsable(EditorBrowsableState.Never)]");
             sb.AppendLine($"{baseIndent}public static class {proxyName}PreserverModule");
             sb.AppendLine($"{baseIndent}{{");
             sb.AppendLine($"{baseIndent}    [ModuleInitializer]");

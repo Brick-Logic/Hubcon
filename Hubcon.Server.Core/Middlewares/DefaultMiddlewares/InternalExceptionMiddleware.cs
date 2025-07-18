@@ -3,12 +3,13 @@ using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
-    public class InternalExceptionMiddleware(IInternalServerOptions options, ILogger<InternalExceptionMiddleware> logger) : IInternalExceptionMiddleware
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class InternalExceptionMiddleware(IInternalServerOptions options, ILogger<InternalExceptionMiddleware> logger) : IInternalExceptionMiddleware
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {

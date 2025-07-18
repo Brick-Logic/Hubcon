@@ -37,18 +37,13 @@
 
 	<!-- Nuget -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-beta*" />
-		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-beta*" />
-		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-beta*" />
-		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-beta*" />
-		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-beta*" PrivateAssets="True" />
+		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-beta*" PrivateAssets="True"/>
+		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-beta*" PrivateAssets="True" />
+		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-beta*" PrivateAssets="True" />
+		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-beta*" PrivateAssets="True" />
 		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta*" />
 	</ItemGroup>
-
-	<!-- Usar nuspec customizado -->
-	<!--<PropertyGroup>
-		<NuspecFile>Hubcon.Client.nuspec</NuspecFile>
-	</PropertyGroup>-->
 
 	<ItemGroup>
 		<None Update="README.md">

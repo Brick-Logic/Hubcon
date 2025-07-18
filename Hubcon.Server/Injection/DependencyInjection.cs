@@ -17,7 +17,7 @@ using System.Text.Json.Serialization;
 
 namespace Hubcon.Server.Injection
 {
-    public class RemoveNullableSchemaFilter : ISchemaFilter
+    internal sealed class RemoveNullableSchemaFilter : ISchemaFilter
     {
         public void Apply(OpenApiSchema schema, SchemaFilterContext context)
         {

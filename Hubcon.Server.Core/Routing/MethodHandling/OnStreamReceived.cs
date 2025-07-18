@@ -3,7 +3,7 @@ using System.Threading.Channels;
 
 namespace Hubcon.Server.Core.Routing.MethodHandling
 {
-    public class OnStreamReceived : IOnStreamReceived
+    internal sealed class OnStreamReceived : IOnStreamReceived
     {
         public event Func<ChannelReader<object>, Task>? OnStreamReceivedEvent;
 

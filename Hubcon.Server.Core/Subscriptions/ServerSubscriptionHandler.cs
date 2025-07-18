@@ -1,10 +1,12 @@
 ﻿using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
+using System.ComponentModel;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Subscriptions
 {
-    public class ServerSubscriptionHandler<T> : ISubscription<T>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class ServerSubscriptionHandler<T> : ISubscription<T>
     {
         public PropertyInfo Property { get; } = null!;
 

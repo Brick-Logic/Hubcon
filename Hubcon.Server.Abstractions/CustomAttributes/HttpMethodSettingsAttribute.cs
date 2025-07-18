@@ -6,7 +6,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace Hubcon.Server.Abstractions.CustomAttributes
-{ 
+{
     public sealed class MethodSettings(TimeSpan? throttleDelay = null)
     {
         public TimeSpan ThrottleDelay { get; private set; } = throttleDelay ?? TimeSpan.FromMilliseconds(8);
@@ -15,7 +15,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
     }
 
     [AttributeUsage(AttributeTargets.Method)]
-    public class MethodSettingsAttribute : Attribute
+    public sealed class MethodSettingsAttribute : Attribute
     {
         public MethodSettings Settings { get; }
 

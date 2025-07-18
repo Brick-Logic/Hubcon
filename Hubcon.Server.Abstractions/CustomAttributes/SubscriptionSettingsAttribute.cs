@@ -20,7 +20,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
     }
 
     [AttributeUsage(AttributeTargets.Property)]
-    public class SubscriptionSettingsAttribute : Attribute
+    public sealed class SubscriptionSettingsAttribute : Attribute
     {
         public SubscriptionSettings Settings { get; }
 

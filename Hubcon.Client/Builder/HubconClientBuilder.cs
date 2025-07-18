@@ -9,10 +9,12 @@ using Hubcon.Shared.Core.Attributes;
 using Hubcon.Shared.Core.Injection;
 using Hubcon.Shared.Core.Serialization;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
 
 namespace Hubcon.Client.Builder
 {
-    public class HubconClientBuilder
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class HubconClientBuilder
     {
         private ProxyRegistry Proxies { get; }
         private ClientBuilderRegistry ClientBuilders { get; }
@@ -21,17 +23,6 @@ namespace Hubcon.Client.Builder
         {
             Proxies = new();
             ClientBuilders = new ClientBuilderRegistry(Proxies);
-
-            //var worker2 = new System.Timers.Timer();
-            //worker2.Interval = 10000;
-            //worker2.Elapsed += (sender, eventArgs) =>
-            //{
-            //    GC.Collect();
-            //    GC.WaitForPendingFinalizers();
-            //    GC.Collect();
-            //};
-            //worker2.AutoReset = true;
-            //worker2.Start();
         }
 
         private static HubconClientBuilder _current = null!;

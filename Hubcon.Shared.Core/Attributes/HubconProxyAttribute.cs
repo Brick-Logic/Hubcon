@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Attributes
 {
-    public class HubconProxyAttribute : Attribute
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class HubconProxyAttribute : Attribute
     {
         public HubconProxyAttribute()
         {

@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 
 namespace Hubcon.Client.Builder
 {
-    public class ClientBuilderRegistry : IClientBuilderRegistry
+    internal sealed class ClientBuilderRegistry : IClientBuilderRegistry
     {
         private readonly IProxyRegistry _proxyRegistry;
 

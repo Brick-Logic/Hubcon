@@ -2,11 +2,13 @@
 using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Shared.Abstractions.Interfaces;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Routing.Registries
 {
-    public class LiveSubscriptionRegistry : ILiveSubscriptionRegistry
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class LiveSubscriptionRegistry : ILiveSubscriptionRegistry
     {
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, ConcurrentDictionary<string, ISubscriptionDescriptor>>> _contractHandlers = new();
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, PropertyInfo>> _descriptorMetadata = new();

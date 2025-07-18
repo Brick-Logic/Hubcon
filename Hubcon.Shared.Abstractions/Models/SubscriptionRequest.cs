@@ -1,9 +1,11 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using System.ComponentModel;
 using System.Text.Json;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
-    public class SubscriptionRequest : IOperationRequest
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class SubscriptionRequest : IOperationRequest
     {
         public string ContractName { get; }
         public string OperationName { get; }

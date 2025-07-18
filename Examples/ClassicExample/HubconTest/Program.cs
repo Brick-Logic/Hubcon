@@ -1,4 +1,5 @@
 using Hubcon.Server.Injection;
+using Hubcon.Shared.Core.Tools;
 using HubconTest.ContractHandlers;
 using HubconTest.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -69,36 +70,42 @@ namespace HubconTest
 
             builder.Services.AddOpenApi();
 
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = "clave",
+                ValidAudience = "clave",
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
+            };
+
+            builder.Services.AddSingleton(tokenValidationParameters);
+
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+               .AddJwtBearer(options =>
+               {
+                   options.TokenValidationParameters = tokenValidationParameters;
+               });
+
             builder.AddHubconServer();
             builder.ConfigureHubconServer(serverOptions =>
             {
                 serverOptions.ConfigureCore(config => 
                 {
                     config
+                    .UseWebsocketTokenHandler((token, serviceProvider) =>
+                    {
+                        return JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
+                    })
                     .DisableAllThrottling()
                     .EnableRequestDetailedErrors();
-                    //.SetHttpPathPrefix("prefix1")
-                    //.SetWebSocketPathPrefix("wsprefix");                   
                 });
 
                 serverOptions.AddController<UserContractHandler>();
                 serverOptions.AddController<SecondTestController>();
-            });
-
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-                {
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        ValidIssuer = "clave",
-                        ValidAudience = "clave",
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
-                    };
-                });
+            });     
 
             builder.Services.AddAuthorization();
 

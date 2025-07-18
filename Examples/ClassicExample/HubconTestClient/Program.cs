@@ -124,9 +124,7 @@ internal class Program
         await client.CreateUser();
         logger.LogInformation($"Esperando eventos...");
 
-        await Task.Delay(100);
-
-        Console.ReadKey();
+        await Task.Delay(1000);
 
         if (eventosRecibidos == 4)
         {

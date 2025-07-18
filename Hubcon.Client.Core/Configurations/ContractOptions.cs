@@ -2,13 +2,15 @@
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Configurations
 {
-    public class ContractOptions<T> : IContractOptions, IContractConfigurator where T : IControllerContract
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class ContractOptions<T> : IContractOptions, IContractConfigurator where T : IControllerContract
     {
         public Type ContractType { get; } = typeof(T);
 

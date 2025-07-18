@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace Hubcon.Client.Interceptors
 {
-    public class ClientProxyInterceptor(
+    internal sealed class ClientProxyInterceptor(
         IHubconClient client,
         IDynamicConverter converter,
         ILogger<ClientProxyInterceptor> logger) : IClientProxyInterceptor

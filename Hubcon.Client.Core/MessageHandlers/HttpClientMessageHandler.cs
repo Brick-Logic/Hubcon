@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 
 namespace Hubcon.Client.Core.MessageHandlers
 {
-    public class HttpClientMessageHandler : HttpClientHandler
+    internal sealed class HttpClientMessageHandler : HttpClientHandler
     {
         private readonly IAuthenticationManager? _authenticationManager;
 

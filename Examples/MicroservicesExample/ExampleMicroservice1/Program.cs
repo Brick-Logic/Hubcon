@@ -15,7 +15,6 @@ namespace ExampleMicroservice1
 
             builder.Services.AddHubconClient();
             builder.Services.AddRemoteServerModule<Microservice2ServerModule>();
-
             builder.AddHubconServer();
             builder.ConfigureHubconServer(serverOptions =>
             {
