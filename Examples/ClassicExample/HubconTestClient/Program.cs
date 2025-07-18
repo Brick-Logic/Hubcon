@@ -11,10 +11,32 @@ internal class Program
 
     static async Task Main()
     {
+
+        ///**​
+        // * Given a collection of intervals, merge all overlapping intervals.​
+        // * Input : [[1,3],[2,6],[8,10],[15,18]]​
+        // * Output : [[1,6],[8,10],[15,18]]​
+        // * 
+        // * Input : [[1,5],[4,10],[8,15],[16,20]]
+        // * Output: [[1,15],[16,20]]
+        // **/
+
+        //int[][] intervals = new int[][] { 
+        //    new int[] { 1, 3 }, 
+        //    new int[] { 2, 6 }, 
+        //    new int[] { 8, 10 }, 
+        //    new int[] { 15, 18 } 
+        //};
+
+        //List<int[]> merged = new List<int[]>();
+
+
+        //Console.ReadKey();
+
         var process = Process.GetCurrentProcess();
 
         long coreMask = 0;
-        for (int i = 0; i <= 1; i++)
+        for (int i = 0; i <= 11; i++)
         {
             coreMask |= 1L << i;
         }
@@ -197,9 +219,14 @@ internal class Program
         };
         worker.Start();
 
-        List<Task> tasks = Enumerable.Range(0, 500).Select(a => Task.Run(async () =>
+        var options = new ParallelOptions
         {
-            while (true)
+            MaxDegreeOfParallelism = 4096
+        };
+
+        await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
+        {
+            while (!ct.IsCancellationRequested)
             {
                 var swReq = Stopwatch.StartNew();
                 try
@@ -217,9 +244,7 @@ internal class Program
                     latencies.Add(swReq.Elapsed.TotalMilliseconds);
                 }
             }
-        })).ToList();
-
-        await Task.WhenAll(tasks);
+        });
     }
 
     static async IAsyncEnumerable<string> GetMessages(int count)

@@ -97,19 +97,19 @@ namespace Hubcon.Client.Integration.Client
 
         }
 
-        public async Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
+        public Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
         {
             if (ContractOptionsDict?.TryGetValue(methodInfo.ReflectedType!, out var options) ?? false && options.WebsocketMethodsEnabled)
             {
                 if (authenticationManagerFactory?.Invoke() == null)
                     throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                await client.SendAsync(request);
+                return client.SendAsync(request);
             }
             else
             {
-                var bytes = converter.SerializeObject(request.Arguments).ToString();
-                using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
+                var arguments = converter.Serialize(request.Arguments);
+                using var content = new StringContent(arguments, Encoding.UTF8, "application/json");
 
                 HttpMethod httpMethod = request.Arguments!.Any() ? HttpMethod.Post : HttpMethod.Get;
 
@@ -124,7 +124,7 @@ namespace Hubcon.Client.Integration.Client
                 if (authManager != null && authManager.IsSessionActive)
                     httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
 
-                _ = await httpClient.SendAsync(httpRequest, cancellationToken);
+                return httpClient.SendAsync(httpRequest, cancellationToken);
             }
         }
 
@@ -153,14 +153,14 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        public async Task Ingest(IOperationRequest request, Dictionary<string, object?> arguments, CancellationToken cancellationToken = default)
+        public Task Ingest(IOperationRequest request, Dictionary<string, object?> arguments, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (authenticationManagerFactory?.Invoke() == null)
                     throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
 
-                await client.IngestMultiple(request);
+                return client.IngestMultiple(request);
             }
             catch (Exception ex)
             {
@@ -226,6 +226,10 @@ namespace Hubcon.Client.Integration.Client
             client = new HubconWebSocketClient(new Uri(_websocketUrl), converter, services.GetRequiredService<ILogger<HubconWebSocketClient>>());
 
             client.AuthorizationTokenProvider = () => authenticationManagerFactory?.Invoke()?.AccessToken;
+            client.WebSocketOptions = x =>
+            {
+                x.SetBuffer(1024 * 1024, 1024 * 1024);
+            };
 
             IsBuilt = true;
         }
