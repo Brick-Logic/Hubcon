@@ -4,39 +4,16 @@ using HubconTestClient.Modules;
 using HubconTestDomain;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 
 internal class Program
 {
-    private const string Url = "http://localhost:5000/clienthub";
-
     static async Task Main()
     {
-
-        ///**​
-        // * Given a collection of intervals, merge all overlapping intervals.​
-        // * Input : [[1,3],[2,6],[8,10],[15,18]]​
-        // * Output : [[1,6],[8,10],[15,18]]​
-        // * 
-        // * Input : [[1,5],[4,10],[8,15],[16,20]]
-        // * Output: [[1,15],[16,20]]
-        // **/
-
-        //int[][] intervals = new int[][] { 
-        //    new int[] { 1, 3 }, 
-        //    new int[] { 2, 6 }, 
-        //    new int[] { 8, 10 }, 
-        //    new int[] { 15, 18 } 
-        //};
-
-        //List<int[]> merged = new List<int[]>();
-
-
-        //Console.ReadKey();
-
         var process = Process.GetCurrentProcess();
 
         long coreMask = 0;
-        for (int i = 0; i <= 11; i++)
+        for (int i = 0; i <= Environment.ProcessorCount-1; i++)
         {
             coreMask |= 1L << i;
         }
@@ -221,7 +198,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 4096
+            MaxDegreeOfParallelism = 16384
         };
 
         await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
