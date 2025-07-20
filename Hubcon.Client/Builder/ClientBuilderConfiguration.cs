@@ -2,26 +2,12 @@
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.WebSockets;
 
 namespace Hubcon.Client.Builder
 {
     internal class ServerModuleConfiguration(IClientBuilder builder, IServiceCollection services) : IServerModuleConfiguration
     {
-        public IServerModuleConfiguration WithBaseUrl(string hostUrl)
-        {
-            if (builder.BaseUri != null)
-                return this;
-
-            builder.BaseUri = new Uri(hostUrl);
-            return this;
-        }
-
-        public IServerModuleConfiguration UseInsecureConnection()
-        {
-            builder.UseSecureConnection = false;
-            return this;
-        }
-
         public IServerModuleConfiguration Implements<T>(Action<IContractConfigurator>? configure = null) where T : IControllerContract
         {
             if (typeof(T).IsClass || builder.Contracts.Any(x => x == typeof(T)))
@@ -46,15 +32,45 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
-        public IServerModuleConfiguration WithPrefix(string prefix)
+        public IServerModuleConfiguration WithBaseUrl(string hostUrl)
         {
-            builder.HttpPrefix = prefix;
+            builder.BaseUri ??= new Uri(hostUrl);
+            return this;
+        }
+
+        public IServerModuleConfiguration UseInsecureConnection()
+        {
+            builder.UseSecureConnection = false;
+            return this;
+        }
+
+        public IServerModuleConfiguration ConfigureWebsockets(Action<ClientWebSocketOptions> options)
+        {
+            builder.WebSocketOptions ??= options;
+            return this;
+        }
+
+        public IServerModuleConfiguration ConfigureHttpClient(Action<HttpClient> configure)
+        {
+            builder.HttpClientOptions ??= configure;
+            return this;
+        }
+
+        public IServerModuleConfiguration WithHttpPrefix(string prefix)
+        {
+            builder.HttpPrefix ??= prefix;
             return this;
         }
 
         public IServerModuleConfiguration WithWebsocketEndpoint(string endpoint)
         {
-            builder.WebsocketEndpoint = endpoint;
+            builder.WebsocketPrefix ??= endpoint;
+            return this;
+        }
+
+        public IServerModuleConfiguration SetWebsocketPingInterval(TimeSpan timeSpan)
+        {
+            builder.WebsocketPingInterval ??= timeSpan;
             return this;
         }
     }

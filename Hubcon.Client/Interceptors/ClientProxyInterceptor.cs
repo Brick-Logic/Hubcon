@@ -1,32 +1,37 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 
 namespace Hubcon.Client.Interceptors
 {
-    internal sealed class ClientProxyInterceptor(
-        IHubconClient client,
-        IDynamicConverter converter,
-        ILogger<ClientProxyInterceptor> logger) : IClientProxyInterceptor
+    internal sealed class ClientProxyInterceptor(IDynamicConverter converter) : IClientProxyInterceptor
     {
-        public IHubconClient Client => client;
 
         private static ConcurrentDictionary<Type, MethodInfo> _methodInfoCache = new();
         private static ConcurrentDictionary<MethodInfo, bool> _hasAsyncEnumerablesCache = new();
 
+        IHubconClient? Client;
+
+        public void InjectClient(IHubconClient client)
+        {
+            Client ??= client;
+        }
+
         public async Task<T> InvokeAsync<T>(MethodInfo method, Dictionary<string, object?>? arguments = null)
         {
+            if (Client is null)
+                throw new Exception("El cliente no fue inyectado.");
+
             T result;
 
             var methodName = method.GetMethodSignature();
             var contractName = method.ReflectedType!.Name;
             var resultType = typeof(T);
-            //logger.LogInformation(resultType.FullName);
             using var cts = new CancellationTokenSource();
 
             if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
@@ -71,16 +76,18 @@ namespace Hubcon.Client.Interceptors
 
         public Task CallAsync(MethodInfo method, Dictionary<string, object?>? arguments = null)
         {
+            if (Client is null)
+                throw new Exception("El cliente no fue inyectado.");
+
             var methodName = method.GetMethodSignature();
             var contractName = method.ReflectedType!.Name;
 
-
             if (_hasAsyncEnumerablesCache.GetOrAdd(
                 method, 
-                x => method.GetParameters().Any(x => x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
+                x => method.GetParameters().Any(x => x.ParameterType.IsGenericType && x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
             {
                 var request = new OperationRequest(methodName, contractName, arguments);
-                return Client.Ingest(request, arguments);
+                return Client.Ingest(request);
             }
             else
             {

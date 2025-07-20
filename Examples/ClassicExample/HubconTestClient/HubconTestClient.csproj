@@ -11,7 +11,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta*"/>
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta3"/>
 	  <ProjectReference Include="..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
 	  <ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
 	</ItemGroup>

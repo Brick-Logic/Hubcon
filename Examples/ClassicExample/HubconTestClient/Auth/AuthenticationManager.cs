@@ -6,6 +6,7 @@ namespace HubconTestClient.Auth
 {
     public class AuthenticationManager(ISecondTestContract secondTestContract) : BaseAuthenticationManager
     {
+        public override string? TokenType { get; protected set; } = "";
         public override string? AccessToken { get; protected set; } = "";
         public override string? RefreshToken { get; protected set; } = "";
         public override DateTime? AccessTokenExpiresAt { get; protected set; } = DateTime.UtcNow.AddYears(1);
@@ -14,6 +15,7 @@ namespace HubconTestClient.Auth
         {
             var token = await secondTestContract.LoginAsync(username, password);
 
+            TokenType = "Bearer";
             AccessToken = token;
             RefreshToken = "";
             AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
@@ -23,6 +25,7 @@ namespace HubconTestClient.Auth
 
         protected override Task ClearSessionAsync()
         {
+            TokenType = "";
             AccessToken = "";
             RefreshToken = "";
             AccessTokenExpiresAt = null;
@@ -34,6 +37,7 @@ namespace HubconTestClient.Auth
         {
             var token = await secondTestContract.LoginAsync("aaa", "bbb");
 
+            TokenType = "Bearer";
             AccessToken = token;
             RefreshToken = "";
             AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
@@ -50,6 +54,7 @@ namespace HubconTestClient.Auth
         {
             var token = await secondTestContract.LoginAsync(Username, Password);
 
+            TokenType = "Bearer";
             AccessToken = token;
             RefreshToken = "";
             AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);

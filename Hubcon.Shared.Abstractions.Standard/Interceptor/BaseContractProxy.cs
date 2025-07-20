@@ -14,9 +14,10 @@ namespace Hubcon.Shared.Abstractions.Standard.Interceptor
     {
         private static ConcurrentDictionary<(Type, string), MethodInfo> Methods { get; } = new ConcurrentDictionary<(Type, string), MethodInfo>();
 
-        private readonly Type _contractType;
+        private Type _contractType;
+        private IClientProxyInterceptor Interceptor { get; set; }
 
-        protected BaseContractProxy(IClientProxyInterceptor interceptor)
+        public void BuildContractProxy(IClientProxyInterceptor interceptor)
         {
             Interceptor = interceptor;
 
@@ -34,7 +35,6 @@ namespace Hubcon.Shared.Abstractions.Standard.Interceptor
             }          
         }
 
-        private IClientProxyInterceptor Interceptor { get; }
 
         private MethodInfo GetMethod(string methodSignature)
         {

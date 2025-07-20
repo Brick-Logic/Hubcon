@@ -1,4 +1,6 @@
-﻿using Hubcon.Client.Core.Exceptions;
+﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Client.Builder;
+using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.Websockets;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
@@ -6,7 +8,9 @@ using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -25,9 +29,24 @@ namespace Hubcon.Client.Integration.Client
         private string _websocketUrl = "";
 
         Func<IAuthenticationManager?>? authenticationManagerFactory;
-        HubconWebSocketClient client;
+        HubconWebSocketClient client = null!;
 
-        HttpClient httpClient = clientFactory.CreateClient();
+        HttpClient? _httpClient;      
+        HttpClient HttpClient
+        {       
+            get
+            {
+                if(_httpClient != null)
+                    return _httpClient;
+
+                _httpClient ??= clientFactory.CreateClient();
+                clientOptions?.HttpClientOptions?.Invoke(_httpClient);
+
+                return _httpClient;
+            }           
+        } 
+
+        private IClientOptions? clientOptions { get; set; }
 
         private bool IsStarted { get; set; }
 
@@ -36,6 +55,9 @@ namespace Hubcon.Client.Integration.Client
 
         public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
         {
+            if (!IsBuilt)
+                throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
+
             try
             {
                 if (ContractOptionsDict?.TryGetValue(methodInfo.ReflectedType!, out var options) ?? false && options.WebsocketMethodsEnabled)
@@ -56,7 +78,7 @@ namespace Hubcon.Client.Integration.Client
                     var bytes = converter.SerializeObject(request.Arguments).ToString();
                     using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
-                    HttpMethod httpMethod = request.Arguments.Any() ? HttpMethod.Post : HttpMethod.Get;
+                    HttpMethod httpMethod = request.Arguments!.Any() ? HttpMethod.Post : HttpMethod.Get;
                     var url = _restHttpUrl + methodInfo.GetRoute();
 
                     var httpRequest = new HttpRequestMessage(httpMethod, url)
@@ -69,7 +91,7 @@ namespace Hubcon.Client.Integration.Client
                     if (authManager != null && authManager.IsSessionActive)
                         httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
 
-                    var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+                    var response = await HttpClient.SendAsync(httpRequest, cancellationToken);
 
                     var responseBytes = await response.Content.ReadAsByteArrayAsync();
                     var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
@@ -97,14 +119,17 @@ namespace Hubcon.Client.Integration.Client
 
         }
 
-        public Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
+        public async Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
         {
+            if (!IsBuilt)
+                throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
+
             if (ContractOptionsDict?.TryGetValue(methodInfo.ReflectedType!, out var options) ?? false && options.WebsocketMethodsEnabled)
             {
                 if (authenticationManagerFactory?.Invoke() == null)
                     throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                return client.SendAsync(request);
+                await client.SendAsync(request);
             }
             else
             {
@@ -122,14 +147,17 @@ namespace Hubcon.Client.Integration.Client
                 var authManager = authenticationManagerFactory?.Invoke();
 
                 if (authManager != null && authManager.IsSessionActive)
-                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authManager.TokenType, authManager.AccessToken);
 
-                return httpClient.SendAsync(httpRequest, cancellationToken);
+                await HttpClient.SendAsync(httpRequest, cancellationToken);
             }
         }
 
         public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            if (!IsBuilt)
+                throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
+
             IObservable<JsonElement> observable; 
 
             try
@@ -153,8 +181,11 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        public Task Ingest(IOperationRequest request, Dictionary<string, object?> arguments, CancellationToken cancellationToken = default)
+        public Task Ingest(IOperationRequest request, CancellationToken cancellationToken = default)
         {
+            if (!IsBuilt)
+                throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
+
             try
             {
                 if (authenticationManagerFactory?.Invoke() == null)
@@ -171,6 +202,9 @@ namespace Hubcon.Client.Integration.Client
 
         public async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            if(!IsBuilt)
+                throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
+
             IObservable<JsonElement> observable;
 
             try
@@ -199,37 +233,44 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        public void Build(Uri BaseUri, 
-            string? HttpEndpoint, 
-            string? WebsocketEndpoint, 
-            Type? AuthenticationManagerType, 
+        public void Build(
+            IClientOptions builder,
             IServiceProvider services, 
             IDictionary<Type, IContractOptions> contractOptions,
             bool useSecureConnection = true)
         {
             if (IsBuilt) return;
 
+            var baseUri = builder.BaseUri;
+            var httpEndpoint = builder.HttpPrefix;
+            var websocketEndpoint = builder.WebsocketPrefix;
+            var authenticationManagerType = builder.AuthenticationManagerType;
+
             ContractOptionsDict ??= contractOptions;
 
-            var baseRestHttpUrl = $"{BaseUri!.AbsoluteUri}/{HttpEndpoint ?? ""}".TrimEnd('/');
-            var baseRestWebsocketUrl = $"{BaseUri!.AbsoluteUri}/{WebsocketEndpoint ?? "ws"}".TrimEnd('/');
+            var baseRestHttpUrl = $"{baseUri!.AbsoluteUri}/{httpEndpoint ?? ""}".TrimEnd('/');
+            var baseRestWebsocketUrl = $"{baseUri!.AbsoluteUri}/{websocketEndpoint ?? "ws"}".TrimEnd('/');
 
             _restHttpUrl = useSecureConnection ? $"https://{baseRestHttpUrl}" : $"http://{baseRestHttpUrl}";
             _websocketUrl = useSecureConnection ? $"wss://{baseRestWebsocketUrl}" : $"ws://{baseRestWebsocketUrl}";
 
-            if (AuthenticationManagerType is not null)
+            if (authenticationManagerType is not null)
             {
-                var lazyAuthType = typeof(Lazy<>).MakeGenericType(AuthenticationManagerType);
+                var lazyAuthType = typeof(Lazy<>).MakeGenericType(authenticationManagerType);
                 authenticationManagerFactory = () => (IAuthenticationManager)((dynamic)services.GetRequiredService(lazyAuthType)).Value;
             }
 
             client = new HubconWebSocketClient(new Uri(_websocketUrl), converter, services.GetRequiredService<ILogger<HubconWebSocketClient>>());
 
             client.AuthorizationTokenProvider = () => authenticationManagerFactory?.Invoke()?.AccessToken;
-            client.WebSocketOptions = x =>
+
+            client.WebSocketOptions = builder.WebSocketOptions ?? (x =>
             {
+                x.KeepAliveInterval = TimeSpan.FromSeconds(300);
                 x.SetBuffer(1024 * 1024, 1024 * 1024);
-            };
+            });
+
+            clientOptions = builder;
 
             IsBuilt = true;
         }

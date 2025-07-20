@@ -145,10 +145,7 @@ namespace HubconAnalyzers.SourceGenerators
                 var type = $"{baseIndent}    public {property.Type.ToString()} {property.Name} {{ {accessors} }}";
 
                 sb.AppendLine(type);
-            }
-
-            sb.AppendLine($"{baseIndent}    public {proxyName}({nameof(IClientProxyInterceptor)} interceptor) : base(interceptor) {{ }}");
-            sb.AppendLine($"");
+            }       
 
             foreach (var method in iface
                 .GetMembers()

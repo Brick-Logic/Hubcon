@@ -198,7 +198,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 16384
+            MaxDegreeOfParallelism = 500
         };
 
         await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
@@ -208,7 +208,7 @@ internal class Program
                 var swReq = Stopwatch.StartNew();
                 try
                 {
-                    await client.CreateUser();
+                    await client.GetTemperatureFromServer();
                     Interlocked.Increment(ref finishedRequestsCount);
                 }
                 catch

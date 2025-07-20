@@ -19,7 +19,6 @@ namespace Hubcon.Server.Core.Extensions
         private static readonly ConcurrentDictionary<Type, Type> _contractCache = new();
         private static readonly ConcurrentDictionary<PropertyInfo, bool> _isSubCache = new();
 
-
         public static ContainerBuilder RegisterWithInjector<TType, TActivatorData, TSingleRegistrationStyle>(
             this ContainerBuilder container,
             Func<ContainerBuilder, IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle>>? options = null)

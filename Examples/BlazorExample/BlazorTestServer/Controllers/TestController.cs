@@ -1,12 +1,12 @@
 ﻿using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestDomain;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BlazorTestServer.Controllers
 {
     public class TestController(ILogger<TestController> logger) : IUserContract
     {
-        [AllowAnonymous]
         public ISubscription<int?>? OnUserCreated { get; }
 
         public ISubscription<int?>? OnUserCreated2 { get; }

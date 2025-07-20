@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Enums;
+﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
@@ -13,7 +14,6 @@ namespace Hubcon.Client.Core.Subscriptions
     public sealed class ClientSubscriptionHandler<T> : ISubscription<T>
     {
         public event HubconEventHandler<object>? OnEventReceived;
-        private readonly IHubconClient _client;
         private readonly IDynamicConverter _converter;
         private readonly ILogger<ClientSubscriptionHandler<T>> logger;
         private CancellationTokenSource _tokenSource;
@@ -23,12 +23,12 @@ namespace Hubcon.Client.Core.Subscriptions
         public SubscriptionState Connected { get => _connected; }
 
         public PropertyInfo Property { get; } = null!;
+        public IHubconClient Client { get; }
 
         public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
 
-        public ClientSubscriptionHandler(IHubconClient client, IDynamicConverter converter, ILogger<ClientSubscriptionHandler<T>> logger)
+        public ClientSubscriptionHandler(IDynamicConverter converter, ILogger<ClientSubscriptionHandler<T>> logger)
         {
-            _client = client;
             _converter = converter;
             this.logger = logger;
             _tokenSource = new CancellationTokenSource();
@@ -87,7 +87,7 @@ namespace Hubcon.Client.Core.Subscriptions
                         var contract = interfaces.First(x => x.IsAssignableTo(baseContractType) && x != baseContractType) ?? baseContractType;
                         var request = new SubscriptionRequest(Property.Name, contract.Name, null);
 
-                        eventSource = _client.GetSubscription(request, _tokenSource.Token);
+                        eventSource = Client.GetSubscription(request, _tokenSource.Token);
                         await using var enumerator = eventSource.GetAsyncEnumerator(_tokenSource.Token);
                         _connected = SubscriptionState.Connected;
 
