@@ -514,7 +514,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     AllowSynchronousContinuations = false,
                 };
 
-                var observer = new AsyncObserver<JsonElement>(bufferOptions);
+                var observer = AsyncObserver.Create<JsonElement>(converter, bufferOptions);
                 observable.Subscribe(observer);
                 var cts = new CancellationTokenSource();
 

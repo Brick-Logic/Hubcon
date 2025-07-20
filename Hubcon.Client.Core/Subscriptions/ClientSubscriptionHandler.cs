@@ -88,18 +88,16 @@ namespace Hubcon.Client.Core.Subscriptions
                         var request = new SubscriptionRequest(Property.Name, contract.Name, null);
 
                         eventSource = Client.GetSubscription(request, _tokenSource.Token);
-                        await using var enumerator = eventSource.GetAsyncEnumerator(_tokenSource.Token);
+                        
                         _connected = SubscriptionState.Connected;
 
                         tcs.SetResult();
 
                         await foreach(var item in eventSource)
                         {
-                            await Task.Yield();
-
                             if (retry > 0) retry = 0;
 
-                            var result = _converter.DeserializeJsonElement<T>(item);
+                            var result = _converter.DeserializeData<T>(item);
 
                             if(OnEventReceived != null)
                                 await OnEventReceived.Invoke(result);

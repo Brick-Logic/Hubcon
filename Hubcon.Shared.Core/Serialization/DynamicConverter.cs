@@ -14,7 +14,7 @@ namespace Hubcon.Shared.Core.Serialization
     {
         public Dictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 
-        public JsonSerializerOptions JsonSerializerOptions { get; } = new()
+        public static JsonSerializerOptions JsonSerializerOptions { get; } = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             WriteIndented = true,

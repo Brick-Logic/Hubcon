@@ -10,9 +10,6 @@ namespace Hubcon.Shared.Abstractions.Interfaces
     public interface IDynamicConverter
     {
         Dictionary<Delegate, Type[]> TypeCache { get; }
-
-        public JsonSerializerOptions JsonSerializerOptions { get; }
-
         IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement> stream, CancellationToken cancellationToken);
         IAsyncEnumerable<JsonElement> ConvertToJsonElementStream(IAsyncEnumerable<object?> stream, CancellationToken cancellationToken = default);
         IEnumerable<object?> DeserializeArgs(IEnumerable<Type> types, IEnumerable<object?> args);

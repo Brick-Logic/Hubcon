@@ -121,7 +121,7 @@ namespace Hubcon.Server.Core.Pipelines
             CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Subscription))
-                throw new EntryPointNotFoundException();
+                throw new NotSupportedException("El metodo especificado no este soportado por el servidor.");
 
             static Task<IOperationResult> ResultHandler(object? result)
             {

@@ -169,7 +169,7 @@ namespace Hubcon.Client.Integration.Client
                 throw new HubconGenericException($"Error al obtener el stream del servidor. Mensaje: {ex.Message}", ex);
             }
 
-            var observer = new AsyncObserver<JsonElement>();
+            var observer = AsyncObserver.Create<JsonElement>(converter);
 
             using (observable.Subscribe(observer))
             {
@@ -221,7 +221,7 @@ namespace Hubcon.Client.Integration.Client
 
             var options = new BoundedChannelOptions(5000);
 
-            var observer = new AsyncObserver<JsonElement>(options);
+            var observer = AsyncObserver.Create<JsonElement>(converter, options);
 
             using (observable.Subscribe(observer))
             {
@@ -264,11 +264,7 @@ namespace Hubcon.Client.Integration.Client
 
             client.AuthorizationTokenProvider = () => authenticationManagerFactory?.Invoke()?.AccessToken;
 
-            client.WebSocketOptions = builder.WebSocketOptions ?? (x =>
-            {
-                x.KeepAliveInterval = TimeSpan.FromSeconds(300);
-                x.SetBuffer(1024 * 1024, 1024 * 1024);
-            });
+            client.WebSocketOptions = builder.WebSocketOptions;
 
             clientOptions = builder;
 

@@ -1,18 +1,27 @@
-﻿using System.ComponentModel;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Channels;
 
 namespace Hubcon.Shared.Core.Websockets.Events
 {
+    public static class AsyncObserver
+    {
+        public static IAsyncObserver<T> Create<T>(IDynamicConverter converter, BoundedChannelOptions? options = null)
+        {
+            return new ChannelAsyncObserver<T>(converter, options);
+        }
+    }
+
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class AsyncObserver<T>(BoundedChannelOptions? options = null) : IObserver<T>
+    public sealed class ChannelAsyncObserver<T>(IDynamicConverter converter, BoundedChannelOptions? options = null) : IAsyncObserver<T>, IObserver<T>
     {
         private readonly Channel<T?> _channel = Channel.CreateBounded<T?>(options ?? new BoundedChannelOptions(5000)
         {
             SingleReader = true,
             SingleWriter = false,
-            AllowSynchronousContinuations = false,
             FullMode = BoundedChannelFullMode.Wait,
         });
 
@@ -36,15 +45,19 @@ namespace Hubcon.Shared.Core.Websockets.Events
             }
             catch(Exception ex)
             {
-                // Manejar otras excepciones según sea necesario
                 OnError(ex);
                 return false;
             }
         }
 
-        public T GetTType(JsonElement item)
+        private T GetTType(JsonElement item)
         {
-            return (T)(object)item.Clone();
+            // Si T es JsonElement, devolver directamente sin Clone()
+            if (typeof(T) == typeof(JsonElement))
+                return (T)(object)item;
+
+            // Para otros tipos, deserializar desde JSON string
+            return converter.DeserializeData<T>(item)!;
         }
 
         public IAsyncEnumerable<T?> GetAsyncEnumerable(CancellationToken cancellationToken)
@@ -61,10 +74,30 @@ namespace Hubcon.Shared.Core.Websockets.Events
         }
 
         private async IAsyncEnumerable<T?> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken)
-        {       
-            await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
+        {
+            try
             {
-                yield return item;
+                await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
+                {
+                    yield return item;
+                }
+            }
+            finally
+            {
+                Console.WriteLine("hola");
+            }
+        }
+
+        public async Task<T?> ReadItemAsync(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var result = await _channel.Reader.ReadAsync(cancellationToken);
+                return result;
+            }
+            catch (ChannelClosedException)
+            {
+                return default;
             }
         }
 
@@ -82,8 +115,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
 
         public async void OnNext(T value)
         {
-            // Enviar el valor al canal
-            var result = await WriteToChannelAsync(value);
+            await WriteToChannelAsync(value);
         }
 
         public Task WaitUntilCompleted()

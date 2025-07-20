@@ -9,14 +9,13 @@ namespace Hubcon.Shared.Abstractions.Models
     {
         public string ContractName { get; }
         public string OperationName { get; }
-
         public Dictionary<string, object> Arguments { get; }
 
-        public SubscriptionRequest(string operationName, string contractName, Dictionary<string, object>? args)
+        public SubscriptionRequest(string operationName, string contractName, Dictionary<string, object>? arguments)
         {
             OperationName = operationName;
             ContractName = contractName;
-            Arguments = args ?? [];
+            Arguments = arguments ?? [];
         }
     }
 }

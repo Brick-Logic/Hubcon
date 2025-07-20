@@ -2,7 +2,9 @@ using BlazorTestServer.Controllers;
 using BlazorTestServer.Middlewares;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Injection;
+using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Text;
@@ -15,7 +17,6 @@ namespace BlazorTestServer
 
         public static void Main(string[] args)
         {
-
             var builder = WebApplication.CreateBuilder(args);
             // Add services to the container.
 
@@ -33,6 +34,25 @@ namespace BlazorTestServer
                 });
             });
 
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = "clave",
+                ValidAudience = "clave",
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
+            };
+
+            builder.Services.AddSingleton(tokenValidationParameters);
+
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+               .AddJwtBearer(options =>
+               {
+                   options.TokenValidationParameters = tokenValidationParameters;
+               });
+
             builder.Services.AddOpenApi();
 
             builder.AddHubconServer();
@@ -41,29 +61,20 @@ namespace BlazorTestServer
                 serverOptions.ConfigureCore(coreOptions =>
                 {
                     coreOptions.SetWebSocketTimeout(TimeSpan.FromSeconds(15));
+
+                    coreOptions
+                    .UseWebsocketTokenHandler((token, serviceProvider) =>
+                    {
+                        return JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
+                    })
+                    .DisableAllThrottling()
+                    .EnableRequestDetailedErrors();
                 });
 
                 serverOptions.AddGlobalMiddleware<ExceptionMiddleware>();
                 serverOptions.AddController<TestController>();
                 serverOptions.AddController<SecondTestController>();
             });
-
-            //builder.UseContractsFromAssembly(nameof(HubconTestDomain));
-
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-                {
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        ValidIssuer = "clave",
-                        ValidAudience = "clave",
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
-                    };
-                });
 
             builder.Services.AddAuthorization();
 

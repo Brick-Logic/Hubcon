@@ -35,7 +35,7 @@ namespace Hubcon.Shared.Core.Serialization
             try
             {
                 // Serializar directamente a UTF-8 bytes sin crear string intermedio
-                JsonSerializer.Serialize(writer, data, converter.JsonSerializerOptions);
+                JsonSerializer.Serialize(writer, data, DynamicConverter.JsonSerializerOptions);
                 await writer.FlushAsync(cancellationToken);
 
                 int bytesWritten = (int)writer.BytesCommitted;

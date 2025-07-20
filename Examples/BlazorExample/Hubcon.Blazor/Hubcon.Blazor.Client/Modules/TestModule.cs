@@ -17,7 +17,6 @@ namespace Hubcon.Blazor.Client.Modules
 
             server.Implements<IUserContract>(x => x.UseWebsocketMethods());
 
-
             server.Implements<ISecondTestContract>();
 
             // Manager de autenticación (opcional)

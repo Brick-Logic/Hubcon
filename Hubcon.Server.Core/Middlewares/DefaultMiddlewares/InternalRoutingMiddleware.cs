@@ -126,7 +126,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     AllowSynchronousContinuations = true
                 };
 
-                var observer = new AsyncObserver<object>(channelOptions);
+                IAsyncObserver<object>? observer = AsyncObserver.Create<object>(dynamicConverter, channelOptions);
 
                 async Task hubconEventHandler(object? eventValue)
                 {
