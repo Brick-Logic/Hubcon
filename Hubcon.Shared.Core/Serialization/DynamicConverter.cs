@@ -84,24 +84,42 @@ namespace Hubcon.Shared.Core.Serialization
             if (data == null)
                 return default;
 
-            else if (data is JsonElement element)
-                return DeserializeJsonElement<T>(element.Clone());
+            if (data is JsonElement element)
+            {
+                if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
+                    return default;
 
-            else if (data is string text)
+                return element.Deserialize<T>(JsonSerializerOptions);
+            }
+
+            if (data is string text)
+            {
+                if (string.IsNullOrEmpty(text))
+                    return default;
+
                 return JsonSerializer.Deserialize<T>(text, JsonSerializerOptions);
+            }
 
-            else if (typeof(T).IsAssignableFrom(data.GetType()))
-                return (T)data;
+            // Si ya es del tipo esperado, lo casteamos directamente
+            if (data is T t)
+                return t;
 
-            else
-                return default;
+            // No sabemos cómo deserializar, devolvemos default
+            return default;
         }
 
+        public T? DeserializeFromString<T>(string? json)
+        {
+            if (string.IsNullOrEmpty(json))
+                return default;
+
+            return JsonSerializer.Deserialize<T>(json, JsonSerializerOptions);
+        }
 
         // 1. Convierte un objeto a JsonElement
         public JsonElement SerializeObject(object? value)
         {
-            return JsonSerializer.SerializeToElement(value, JsonSerializerOptions).Clone();
+            return JsonSerializer.SerializeToElement(value, JsonSerializerOptions);
         }
 
         public T DeserializeByteArray<T>(byte[] bytes)
@@ -116,7 +134,7 @@ namespace Hubcon.Shared.Core.Serialization
 
             foreach (var val in values)
             {
-                results.Add(SerializeObject(val).Clone());
+                results.Add(SerializeObject(val));
             }
 
             return results;

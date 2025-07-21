@@ -23,5 +23,6 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         JsonElement SerializeObject(object? value);
         string Serialize<T>(T value);
         JsonElement SerializeToElement<T>(T value);
+        T? DeserializeFromString<T>(string? json);
     }
 }

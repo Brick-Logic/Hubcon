@@ -14,7 +14,7 @@ internal class Program
 
         long coreMask = 0;
 
-        int? customCores = null;
+        int? customCores = 0;
         int cores = customCores ?? Environment.ProcessorCount - 1;
 
         for (int i = 0; i <= cores; i++)

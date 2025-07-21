@@ -201,7 +201,7 @@ namespace Hubcon.Client.Core.Websockets
                     {
                         try
                         {
-                            var initAckResult = await TimeoutHelper.WaitWithTimeoutAsync(TimeSpan.FromSeconds(15), initAckTcs.Task);
+                            var initAckResult = await TimeoutHelper.WaitWithTimeoutAsync(initAckTcs.Task.WaitAsync, TimeSpan.FromSeconds(15));
                             if (initAckResult == null || initAckResult.Id != initialAckId)
                                 throw new TimeoutException("Timeout o ID incorrecto en IngestInitAck");
 
@@ -260,7 +260,7 @@ namespace Hubcon.Client.Core.Websockets
 
                 await SendMessageAsync(new IngestCompleteMessage(initialAckId, sources.Keys.ToArray()));
 
-                var result = await TimeoutHelper.WaitWithTimeoutAsync(TimeSpan.FromSeconds(15), generalTcs.Task);
+                var result = await TimeoutHelper.WaitWithTimeoutAsync(generalTcs.Task.WaitAsync, TimeSpan.FromSeconds(15));
 
                 if (result == null) throw new HubconRemoteException("Received an empty response.");
 
@@ -321,7 +321,7 @@ namespace Hubcon.Client.Core.Websockets
             {
                 await SendMessageAsync(request);
 
-                response = await TimeoutHelper.WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), tcs.Task);
+                response = await TimeoutHelper.WaitWithTimeoutAsync(tcs.Task.WaitAsync, TimeSpan.FromSeconds(5));
             }
             catch (Exception ex)
             {
@@ -356,15 +356,17 @@ namespace Hubcon.Client.Core.Websockets
                         await EnsureConnectedAsync();
 
                     var json = await _messageChannel.Reader.ReadAsync();
-                    var baseMessage = converter.DeserializeData<BaseMessage>(json);
 
+                    if (json == null)
+                        continue;
 
-                    if (baseMessage == null) return;
+                    if (!JsonHelper.TryGetEnumFromJson(json, "type", out MessageType type, out JsonElement element))
+                        continue;
 
-                    switch (baseMessage?.Type)
+                    switch (type)
                     {
                         case MessageType.pong:
-                            var pongMessage = converter.DeserializeData<PongMessage>(json)!;
+                            var pongMessage = converter.DeserializeJsonElement<PongMessage>(element)!;
                             if (_lastPongId == pongMessage.Id)
                             {
                                 await _webSocket!.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "Pong error", default);
@@ -377,7 +379,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.subscription_data:
-                            var eventData = converter.DeserializeData<SubscriptionDataMessage>(json);
+                            var eventData = converter.DeserializeJsonElement<SubscriptionDataMessage>(element);
                             if (eventData?.Id != null && _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
                             {
                                 sub.OnNextElement(eventData.Data);
@@ -385,7 +387,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.stream_data:
-                            var streamData = converter.DeserializeData<StreamDataMessage>(json);
+                            var streamData = converter.DeserializeJsonElement<StreamDataMessage>(element);
 
                             if (streamData?.Id != null && _streams.TryGetValue(streamData.Id, out var stream))
                             {
@@ -396,7 +398,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.stream_complete:
-                            var streamComplete = converter.DeserializeData<StreamCompleteMessage>(json);
+                            var streamComplete = converter.DeserializeJsonElement<StreamCompleteMessage>(element);
 
                             if (streamComplete?.Id != null && _streams.TryGetValue(streamComplete.Id, out var streamCompleteInfo))
                             {
@@ -406,7 +408,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.error:
-                            var errorData = converter.DeserializeData<ErrorMessage>(json);
+                            var errorData = converter.DeserializeJsonElement<ErrorMessage>(element);
                             if (errorData?.Id != null && _subscriptions.TryGetValue(errorData.Id, out var subToError))
                             {
                                 subToError.OnError(new Exception(errorData.Error));
@@ -414,7 +416,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.ingest_init_ack:
-                            var ingestInitAckMessage = converter.DeserializeData<IngestInitAckMessage>(json);
+                            var ingestInitAckMessage = converter.DeserializeJsonElement<IngestInitAckMessage>(element);
 
                             if (ingestInitAckMessage == null) break;
 
@@ -426,7 +428,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.ingest_result:
-                            var ingestResultMessage = converter.DeserializeData<IngestResultMessage>(json);
+                            var ingestResultMessage = converter.DeserializeJsonElement<IngestResultMessage>(element);
 
                             if (ingestResultMessage == null) break;
 
@@ -438,7 +440,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.ingest_data_ack:
-                            var ingestDataAckMessage = converter.DeserializeData<IngestDataAckMessage>(json);
+                            var ingestDataAckMessage = converter.DeserializeJsonElement<IngestDataAckMessage>(element);
 
                             if (ingestDataAckMessage == null) break;
 
@@ -450,7 +452,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.operation_response:
-                            var operationResponseMessage = converter.DeserializeData<OperationResponseMessage>(json);
+                            var operationResponseMessage = converter.DeserializeJsonElement<OperationResponseMessage>(element);
 
                             if (operationResponseMessage == null) break;
 
@@ -462,7 +464,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         default:
-                            var msg = $"Tipo de mensaje no soportado. Tipo recibido: {baseMessage?.Type}";
+                            var msg = $"Tipo de mensaje no soportado. Tipo recibido: {type.ToString()}";
                             _errorStream.OnNext(new HubconGenericException(msg));
 
                             if (LoggingEnabled)
@@ -569,7 +571,7 @@ namespace Hubcon.Client.Core.Websockets
 
                         var receiveTask = _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
 
-                        var connectionResult = await TimeoutHelper.WaitWithTimeoutAsync(TimeSpan.FromSeconds(5), receiveTask);
+                        var connectionResult = await TimeoutHelper.WaitWithTimeoutAsync(receiveTask.WaitAsync, TimeSpan.FromSeconds(5));
 
                         if (connectionResult == null || connectionResult.GetType() != typeof(WebSocketReceiveResult))
                             throw new TimeoutException("Connection failed.");
