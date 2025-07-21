@@ -154,13 +154,13 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     switch (baseMessage.Type)
                     {
                         case MessageType.ping:
-                            if (!options.ThrottlingIsDisabled && !options.WebsocketRequiresPing)
+                            if (!options.WebsocketRequiresPing)
                             {
                                 await HandleNotAllowed(baseMessage.Id, "Ping is disabled.", baseMessage, sender);
                                 break;
                             }
 
-                            if (PingMessageThrottle > 0)
+                            if (!options.ThrottlingIsDisabled && PingMessageThrottle > 0)
                                 await Task.Delay(TimeSpan.FromMilliseconds(PingMessageThrottle));
 
                             var ping = HandlePing(webSocket, sender, lastPingId, message);

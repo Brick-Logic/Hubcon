@@ -55,13 +55,13 @@ namespace Hubcon.Client.Interceptors
                     cts.Token
                 })!;
             }
-            //else if (_hasAsyncEnumerablesCache.GetOrAdd(
-            //    method,
-            //    x => method.GetParameters().Any(x => x.ParameterType.IsGenericType && x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
-            //{
-            //    var request = new OperationRequest(methodName, contractName, arguments);
-            //    return await Client.Ingest<T>(request);
-            //}
+            else if (_hasAsyncEnumerablesCache.GetOrAdd(
+                method,
+                x => method.GetParameters().Any(x => x.ParameterType.IsGenericType && x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
+            {
+                var request = new OperationRequest(methodName, contractName, arguments);
+                return await Client.Ingest<T>(request);
+            }
             else
             {
                 OperationRequest request = new(
