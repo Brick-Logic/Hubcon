@@ -89,16 +89,8 @@ namespace Hubcon.Server.Core.Routing
 
                         if (!res.Success)
                         {
-                            if (options.DetailedErrorsEnabled)
-                            {
-                                await InternalServerError(context, new BaseOperationResponse(false, request.ErrorMessage ?? "Internal server error."));
-                                return;
-                            }
-                            else
-                            {
-                                await InternalServerError(context, new BaseOperationResponse(false, "Internal server error."));
-                                return;
-                            }
+                            await InternalServerError(context, res);
+                            return;
                         }
 
                         await Ok(context, res);
@@ -128,16 +120,8 @@ namespace Hubcon.Server.Core.Routing
 
                         if (!res.Success)
                         {
-                            if (options.DetailedErrorsEnabled)
-                            {
-                                await InternalServerError(context, new BaseOperationResponse(false, res.Error ?? "Internal error"));
-                                return;
-                            }
-                            else
-                            {
-                                await InternalServerError(context, new BaseOperationResponse(false, "Internal error"));
-                                return;
-                            }
+                            await InternalServerError(context, res);
+                            return;
                         }
 
                         await Ok(context, res);

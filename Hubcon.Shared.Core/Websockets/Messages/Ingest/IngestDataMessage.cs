@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
 {
-    public record class IngestDataMessage(string Id, JsonElement Data) : BaseMessage(MessageType.ingest_data, Id);
+    public record class IngestDataMessage(Guid Id, JsonElement Data) : BaseMessage(MessageType.ingest_data, Id);
 }

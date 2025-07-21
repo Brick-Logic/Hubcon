@@ -50,7 +50,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     {
                         context.Request.Arguments[kvp.Key] = EnumerableTools.ConvertAsyncEnumerableDynamic(
                             type,
-                            (IAsyncEnumerable<JsonElement>)context.Request.Arguments[kvp.Key]!,
+                            ((IAsyncEnumerable<JsonElement>)context.Request.Arguments[kvp.Key]!),
                             dynamicConverter);
 
                         continue;
@@ -75,7 +75,11 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 string clientId = "";
 
-                if (context.Blueprint.OperationInfo == null) throw new KeyNotFoundException($"Suscripcion no encontrada.");
+                if (context.Blueprint.OperationInfo == null)
+                {
+                    context.Result = new BaseOperationResponse<object>(false, null!, "Suscripcion no encontrada");
+                    return;
+                }
 
                 ISubscriptionDescriptor? subDescriptor = null;
 
@@ -95,7 +99,10 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     string websocketToken = context.HttpContext?.Request.Headers.Authorization.ToString()!;
 
                     if (options.WebsocketRequiresAuthorization && context.HttpContext?.User == null)
-                        throw new UnauthorizedAccessException();
+                    {
+                        context.Result = new BaseOperationResponse<object>(false, null!, "Unauthorized");
+                        return;
+                    }
 
                     clientId = websocketToken;
 
@@ -107,8 +114,10 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         var subscription = (ISubscription)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
 
                         if (subscription is null)
-                            throw new InvalidOperationException($"No se encontró un servicio que implemente la interfaz {nameof(ISubscription)}.");
-
+                        {
+                            context.Result = new BaseOperationResponse<object>(false, "No se encontró un servicio que implemente la interfaz ISubscription.");
+                            return;
+                        }
 
                         subDescriptor = liveSubscriptionRegistry.RegisterHandler(websocketToken, request.ContractName, request.OperationName, subscription);
                     }

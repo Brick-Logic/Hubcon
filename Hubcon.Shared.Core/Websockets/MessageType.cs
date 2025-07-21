@@ -25,6 +25,7 @@
         stream_complete,
         stream_data_ack,
         stream_data,
-        stream_data_with_ack
+        stream_data_with_ack,
+        ingest_result
     }
 }

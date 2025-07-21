@@ -49,9 +49,9 @@ namespace Hubcon.Server.Core.Routing.Registries
         public T? TryGetClient<T>(Type controllerType, string clientId) where T : IControllerContract
         {
             if (controllerType == null)
-                throw new ArgumentNullException(nameof(controllerType));
+                return default;
             if (string.IsNullOrWhiteSpace(clientId))
-                throw new ArgumentNullException(nameof(clientId), "El clientId no puede ser nulo o vacío.");
+                return default;
 
             if (_clients.TryGetValue(controllerType, out var clientList))
             {

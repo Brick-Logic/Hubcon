@@ -9,5 +9,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
 {
-    public record class IngestInitMessage(string Id, string[] StreamIds, object Payload) : BaseMessage(MessageType.ingest_init, Id);
+    public record class IngestInitMessage(Guid Id, Guid[] StreamIds, object Payload) : BaseMessage(MessageType.ingest_init, Id);
 }

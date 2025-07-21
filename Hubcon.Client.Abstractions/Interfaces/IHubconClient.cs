@@ -12,6 +12,6 @@ namespace Hubcon.Client.Abstractions.Interfaces
         IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, CancellationToken cancellationToken = default);
         IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, CancellationToken cancellationToken = default);
         void Build(IClientOptions builder, IServiceProvider services, IDictionary<Type, IContractOptions> contractOptions, bool useSecureConnection = true);
-        Task Ingest(IOperationRequest request, CancellationToken cancellationToken = default);
+        Task<T> Ingest<T>(IOperationRequest request, CancellationToken cancellationToken = default);
     }
 }

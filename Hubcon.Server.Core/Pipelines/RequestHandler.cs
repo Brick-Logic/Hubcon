@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
 using System.Text.Json;
+using System.Threading;
 
 namespace Hubcon.Server.Core.Pipelines
 {
@@ -28,7 +29,7 @@ namespace Hubcon.Server.Core.Pipelines
             _serviceProvider = serviceProvider;
         }
 
-        public async Task<IResponse> HandleWithoutResultAsync(IOperationRequest request)
+        public async Task<IResponse> HandleWithoutResultAsync(IOperationRequest request, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint)
                 && blueprint?.Kind == OperationKind.Method))
@@ -36,22 +37,30 @@ namespace Hubcon.Server.Core.Pipelines
                 return new BaseOperationResponse(false);
             }
 
-            IOperationContext context = BuildContext(request, blueprint!);
+            IOperationContext context = BuildContext(request, blueprint!, cancellationToken);
 
-            static async Task<IOperationResult> ResultHandler(object? result)
-            {
-                if (result is Task task)
-                    await task;
-
-                return new BaseOperationResponse<object>(true);
-            }
-
-            var pipeline = blueprint!.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
+            var pipeline = blueprint!.PipelineBuilder.Build(request, context, NoResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
             return new BaseOperationResponse(pipelineResult.Result!.Success, pipelineResult.Result.Error);
         }
 
-        public async Task<IOperationResponse<JsonElement>> HandleSynchronousResult(IOperationRequest request)
+        Task<IOperationResult> ResultHandler(object? result)
+        {
+            if (result is null)
+            {
+                return Task.FromResult<IOperationResult>(new BaseOperationResponse<JsonElement>(true));
+            }
+            else if (result is IOperationResponse<JsonElement> response)
+            {
+                return Task.FromResult<IOperationResult>(response);
+            }
+            else
+            {
+                return Task.FromResult<IOperationResult>(new BaseOperationResponse<JsonElement>(true, _converter.SerializeToElement(result)));
+            }
+        }
+
+        public async Task<IOperationResponse<JsonElement>> HandleSynchronousResult(IOperationRequest request, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint)
                 && blueprint?.Kind == OperationKind.Method))
@@ -59,116 +68,129 @@ namespace Hubcon.Server.Core.Pipelines
                 return new BaseJsonResponse(false, default, null);
             }
 
-            IOperationContext context = BuildContext(request, blueprint);
-
-            Task<IOperationResult> ResultHandler(object? result)
-            {
-                if (result is null)
-                {
-                    return Task.FromResult<IOperationResult>(new BaseOperationResponse<JsonElement>(true));
-                }
-
-                return Task.FromResult<IOperationResult>(new BaseOperationResponse<JsonElement>(true, _converter.SerializeToElement(result)));
-            }
+            IOperationContext context = BuildContext(request, blueprint, cancellationToken);
 
             var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
 
-            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeToElement(pipelineResult.Result.Data), null);
+            return (IOperationResponse<JsonElement>)pipelineResult.Result!;
         }
 
-        public async Task<IResponse> HandleSynchronous(IOperationRequest request)
+        static async Task<IOperationResult> NoResultHandler(object? result)
+        {
+            if (result is Task task)
+                await task;
+
+            else if (result is IResponse response)
+                return new BaseOperationResponse<object?>(response.Success, null, response.Error);
+
+            return new BaseOperationResponse<object>(true);
+        }
+
+        public async Task<IResponse> HandleSynchronous(IOperationRequest request, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint)
                 && blueprint?.Kind == OperationKind.Method))
                 return new BaseOperationResponse(false);
 
-            IOperationContext context = BuildContext(request, blueprint);
+            IOperationContext context = BuildContext(request, blueprint, cancellationToken);
 
-            static async Task<IOperationResult> ResultHandler(object? result)
-            {
-                if (result is Task task)
-                    await task;
-
-                return new BaseOperationResponse<object>(true);
-            }
-
-            var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
+            var pipeline = blueprint.PipelineBuilder.Build(request, context, NoResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
             return pipelineResult.Result!;
         }
 
-        public async Task<IAsyncEnumerable<object?>> GetStream(IOperationRequest request)
+        public async Task<IOperationResponse<IAsyncEnumerable<object?>?>> GetStream(IOperationRequest request, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Stream))
                 return null!;
 
-            static Task<IOperationResult> ResultHandler(object? result)
-            {
-                return Task.FromResult<IOperationResult>(new BaseOperationResponse<object>(true, result));
-            }
-
-            IOperationContext context = BuildContext(request, blueprint);
-            var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
+            IOperationContext context = BuildContext(request, blueprint, cancellationToken);
+            var pipeline = blueprint.PipelineBuilder.Build(request, context, StreamResultHandler, _serviceProvider);
             var pipelineTask = pipeline.Execute();
             await pipelineTask;
+            var res = pipelineTask.Result.Result;
 
-            return (IAsyncEnumerable<object>)pipelineTask.Result.Result!.Data!;
+            if (res == null)
+                return new BaseOperationResponse<IAsyncEnumerable<object?>?>(false, null, "Internal server error");
+
+            if (!res.Success)
+                return new BaseOperationResponse<IAsyncEnumerable<object?>?>(false, null, res.Error);
+
+            return new BaseOperationResponse<IAsyncEnumerable<object?>?>(true, (IAsyncEnumerable<object?>)res.Data!);
         }
 
-        public async Task<IAsyncEnumerable<object?>> GetSubscription(
-            IOperationRequest request,
-            CancellationToken cancellationToken = default)
+        static Task<IOperationResult> StreamResultHandler(object? result)
+        {
+            if (result is IAsyncEnumerable<object?> sub)
+            {
+                return Task.FromResult<IOperationResult>(
+                    new BaseOperationResponse<IAsyncEnumerable<object?>?>(true, sub!)
+                );
+            }
+            else if (result is IOperationResult opResult)
+            {
+                return Task.FromResult(opResult);
+            }
+            else
+            {
+                return Task.FromResult<IOperationResult>(
+                    new BaseOperationResponse<IAsyncEnumerable<object?>?>(false, null, "Internal server error")
+                );
+            }
+        }
+
+        public async Task<IOperationResponse<IAsyncEnumerable<object?>?>> GetSubscription(IOperationRequest request, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Subscription))
-                throw new NotSupportedException("El metodo especificado no este soportado por el servidor.");
+                return new BaseOperationResponse<IAsyncEnumerable<object?>?>(false, null, "The specified method was not found on the server");
 
-            static Task<IOperationResult> ResultHandler(object? result)
-            {
-                return Task.FromResult<IOperationResult>(new BaseOperationResponse<object>(true, result));
-            }
-
-            IOperationContext context = BuildContext(request, blueprint);
-            var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
+            IOperationContext context = BuildContext(request, blueprint, cancellationToken);
+            var pipeline = blueprint.PipelineBuilder.Build(request, context, StreamResultHandler, _serviceProvider);
             var pipelineTask = pipeline.Execute();
             await pipelineTask;
-            var res = pipelineTask.Result.Result!.Data!;
-            return (IAsyncEnumerable<object?>)res;
+            var res = pipelineTask.Result.Result;
+
+            if (res == null)
+                return new BaseOperationResponse<IAsyncEnumerable<object?>?>(false, null, "Internal server error");
+
+            if (!res.Success)
+                return new BaseOperationResponse<IAsyncEnumerable<object?>?>(false, null, res.Error);
+
+            return new BaseOperationResponse<IAsyncEnumerable<object?>?>(true, (IAsyncEnumerable<object?>)res.Data!);
         }
 
+        async Task<IOperationResult> WithResultHandler(object? result)
+        {
+            if (result is null)
+            {
+                return new BaseOperationResponse<object>(true);
+            }
+            else if (result is Task task)
+            {
+                var response = await GetTaskResultAsync(task);
+                return new BaseOperationResponse<object>(true, response!);
+            }
+            else
+            {
+                return new BaseOperationResponse<object>(true, result);
+            }
+        }
 
-        public async Task<IOperationResponse<JsonElement>> HandleWithResultAsync(IOperationRequest request)
+        public async Task<IOperationResponse<JsonElement>> HandleWithResultAsync(IOperationRequest request, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint)
                 && blueprint?.Kind == OperationKind.Method))
                 return null!;
 
-            async Task<IOperationResult> ResultHandler(object? result)
-            {
-                if (result is null)
-                {
-                    return new BaseOperationResponse<object>(true);
-                }
-                else if (result is Task task)
-                {
-                    var response = await GetTaskResultAsync(task);
-                    return new BaseOperationResponse<object>(true, response!);
-                }
-                else
-                {
-                    return new BaseOperationResponse<object>(true, result);
-                }
-            }
-            ;
-
-            var context = BuildContext(request, blueprint);
-            var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
+            var context = BuildContext(request, blueprint, cancellationToken);
+            var pipeline = blueprint.PipelineBuilder.Build(request, context, WithResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
 
-            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeToElement(pipelineResult.Result.Data), null);
+            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeToElement(pipelineResult.Result.Data), pipelineResult.Result.Error);
         }
 
-        public async Task<IResponse> HandleIngest(IOperationRequest request, Dictionary<string, object> sources)
+        public async Task<IOperationResponse<JsonElement>> HandleIngest(IOperationRequest request, Dictionary<Guid, object> sources, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Ingest))
                 return null!;
@@ -177,7 +199,7 @@ namespace Hubcon.Server.Core.Pipelines
                 || blueprint?.ParameterTypes.Count == 0
                 || blueprint?.ParameterTypes.Count != request.Arguments?.Count())
             {
-                return new BaseOperationResponse(false);
+                return new BaseOperationResponse<JsonElement>(false);
             }
 
             var arguments = new List<object?>();
@@ -189,9 +211,9 @@ namespace Hubcon.Server.Core.Pipelines
 
                 if (parameterType.Value.IsGenericType && parameterType.Value.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
                 {
-                    var id = _converter.DeserializeData<string>(arg);
+                    var id = _converter.DeserializeData<Guid>(arg);
 
-                    if (id == null) continue;
+                    if (id == Guid.Empty) continue;
 
                     var source = sources.TryGetValue(id!, out object? value);
 
@@ -199,29 +221,15 @@ namespace Hubcon.Server.Core.Pipelines
                 }
             }
 
-            IOperationContext context = BuildContext(request, blueprint);
+            IOperationContext context = BuildContext(request, blueprint, cancellationToken);
 
-            static async Task<IOperationResult> ResultHandler(object? result)
-            {
-                try
-                {
-                    if (result is Task task)
-                        await task;
-
-                    return new BaseOperationResponse<object>(true);
-                }
-                catch (Exception ex)
-                {
-                    return new BaseOperationResponse<object>(false);
-                }
-            }
-
-            var pipeline = blueprint.PipelineBuilder.Build(request, context, ResultHandler, _serviceProvider);
+            var pipeline = blueprint.PipelineBuilder.Build(request, context, WithResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
-            return pipelineResult.Result!;
+
+            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeToElement(pipelineResult.Result.Data), pipelineResult.Result.Error);
         }
 
-        public IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint)
+        private IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint, CancellationToken cancellationToken)
         {
             return new OperationContext()
             {
@@ -229,30 +237,25 @@ namespace Hubcon.Server.Core.Pipelines
                 RequestServices = _serviceProvider,
                 Blueprint = blueprint,
                 HttpContext = _serviceProvider.GetRequiredService<IHttpContextAccessor>()?.HttpContext,
-                Request = request
+                Request = request,
+                RequestAborted = cancellationToken
             };
         }
 
-        public static async Task<object?> GetTaskResultAsync(Task taskObject)
+        private static async Task<object?> GetTaskResultAsync(Task taskObject)
         {
-            // Esperar a que el Task termine
             await taskObject;
 
-            // Verificar si es un Task<T> (Task con resultado)
             var taskType = taskObject.GetType();
 
             if (taskType.IsGenericType)
             {
-                // Obtener el tipo del resultado (T)
                 var resultProperty = taskType.GetProperty("Result");
-
-                // Obtener el resultado del Task
                 var result = resultProperty?.GetValue(taskObject);
 
                 return result;
             }
 
-            // Si no es un Task<T>, no hay valor que devolver
             return null;
         }
     }

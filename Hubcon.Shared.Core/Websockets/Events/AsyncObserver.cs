@@ -69,7 +69,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
             catch (Exception ex)
             {
                 OnError(ex);
-                throw;
+                return default!;
             }
         }
 
@@ -84,7 +84,6 @@ namespace Hubcon.Shared.Core.Websockets.Events
             }
             finally
             {
-                Console.WriteLine("hola");
             }
         }
 

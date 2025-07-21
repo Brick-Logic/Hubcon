@@ -4,14 +4,12 @@ namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IRequestHandler
     {
-        public Task<IResponse> HandleSynchronous(IOperationRequest request);
-        public Task<IResponse> HandleWithoutResultAsync(IOperationRequest request);
-
-        public Task<IOperationResponse<JsonElement>> HandleSynchronousResult(IOperationRequest request);
-        public Task<IOperationResponse<JsonElement>> HandleWithResultAsync(IOperationRequest request);
-
-        public Task<IAsyncEnumerable<object?>> GetStream(IOperationRequest request);
-        public Task<IAsyncEnumerable<object?>> GetSubscription(IOperationRequest request, CancellationToken cancellationToken = default);
-        public Task<IResponse> HandleIngest(IOperationRequest request, Dictionary<string, object> sources);
+        Task<IOperationResponse<IAsyncEnumerable<object?>?>> GetStream(IOperationRequest request, CancellationToken cancellationToken = default);
+        Task<IOperationResponse<IAsyncEnumerable<object?>?>> GetSubscription(IOperationRequest request, CancellationToken cancellationToken = default);
+        Task<IOperationResponse<JsonElement>> HandleIngest(IOperationRequest request, Dictionary<Guid, object> sources, CancellationToken cancellationToken = default);
+        Task<IResponse> HandleSynchronous(IOperationRequest request, CancellationToken cancellationToken = default);
+        Task<IOperationResponse<JsonElement>> HandleSynchronousResult(IOperationRequest request, CancellationToken cancellationToken = default);
+        Task<IResponse> HandleWithoutResultAsync(IOperationRequest request, CancellationToken cancellationToken = default);
+        Task<IOperationResponse<JsonElement>> HandleWithResultAsync(IOperationRequest request, CancellationToken cancellationToken = default);
     }
 }

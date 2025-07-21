@@ -55,7 +55,7 @@ internal class Program
         IAsyncEnumerable<string> source3 = GetMessages(2);
         IAsyncEnumerable<string> source4 = GetMessages(2);
         IAsyncEnumerable<string> source5 = GetMessages(2);
-        await client.IngestMessages(source1, source2, source3, source4, source5);
+        await client.IngestMessages2(source1, source2, source3, source4, source5);
         logger.LogInformation($"Ingest OK.");
 
         await Task.Delay(1000);

@@ -17,8 +17,8 @@ namespace Hubcon.Shared.Core.Serialization
         public static JsonSerializerOptions JsonSerializerOptions { get; } = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            WriteIndented = false,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
             MaxDepth = 64,
             Converters = { new JsonStringEnumConverter() },
             PropertyNameCaseInsensitive = true,
@@ -210,6 +210,9 @@ namespace Hubcon.Shared.Core.Serialization
 
         public JsonElement SerializeToElement<T>(T value)
         {
+            if(value == null)
+                return default;
+
             try
             {
                 return JsonSerializer.SerializeToElement(value, JsonSerializerOptions).Clone();

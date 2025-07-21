@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Operation
 {
-    public record class OperationResponseMessage(string Id, JsonElement Result) : BaseMessage(MessageType.operation_response, Id);
+    public record class OperationResponseMessage(Guid Id, JsonElement Result) : BaseMessage(MessageType.operation_response, Id);
 }

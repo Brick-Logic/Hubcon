@@ -10,7 +10,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         public object Data { get; set; }
     }
 
-    public interface IOperationResponse<T> : IOperationResult
+    public interface IOperationResponse<T> : IOperationResult, IResponse
     {
         [Required]
         [JsonRequired]

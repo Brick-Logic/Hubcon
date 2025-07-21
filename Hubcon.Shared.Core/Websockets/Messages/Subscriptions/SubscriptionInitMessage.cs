@@ -4,5 +4,5 @@ using System.Text.Json;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
 {
-    public record class SubscriptionInitMessage(string Id, JsonElement Payload) : BaseMessage(MessageType.subscription_init, Id);
+    public record class SubscriptionInitMessage(Guid Id, JsonElement Payload) : BaseMessage(MessageType.subscription_init, Id);
 }

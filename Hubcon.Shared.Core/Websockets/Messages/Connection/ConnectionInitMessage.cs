@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Connection
 {
-    public record class ConnectionInitMessage(string Id = "") : BaseMessage(MessageType.connection_init, Id);
+    public record class ConnectionInitMessage(Guid Id) : BaseMessage(MessageType.connection_init, Id);
 }

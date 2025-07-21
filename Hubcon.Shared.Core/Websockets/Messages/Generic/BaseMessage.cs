@@ -2,7 +2,7 @@
 {
     public record class BaseMessage
     {
-        public string Id { get; set; }
+        public Guid Id { get; set; }
         public MessageType Type { get; set; } = default!;
 
         public BaseMessage()
@@ -10,7 +10,7 @@
             
         }
 
-        protected BaseMessage(MessageType type, string id)
+        protected BaseMessage(MessageType type, Guid id)
         {
 
             Type = type;

@@ -1,4 +1,5 @@
-﻿using Hubcon.Client.Core.Extensions;
+﻿using Hubcon.Client.Core.Exceptions;
+using Hubcon.Client.Core.Extensions;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Tools;
@@ -38,13 +39,13 @@ namespace Hubcon.Client.Core.Websockets
         public Action<ClientWebSocketOptions>? WebSocketOptions { get; set; }
         public Func<string?>? AuthorizationTokenProvider { get; set; }
 
-        private readonly ConcurrentDictionary<string, BaseObservable> _subscriptions = new();
-        private readonly ConcurrentDictionary<string, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)> _streams = new();
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<IngestDataAckMessage>> _streamDataAck = new();
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<IngestInitAckMessage>> _ingestAck = new();
-        private readonly ConcurrentDictionary<string, (TaskCompletionSource<IngestCompleteMessage>, CancellationTokenSource)> _ingests = new();
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<IngestDataAckMessage>> _ingestDataAck = new();
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<OperationResponseMessage>> _operationTcs = new();
+        private readonly ConcurrentDictionary<Guid, BaseObservable> _subscriptions = new();
+        private readonly ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)> _streams = new();
+        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<IngestDataAckMessage>> _streamDataAck = new();
+        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<IngestInitAckMessage>> _ingestAck = new();
+        private readonly ConcurrentDictionary<Guid, (TaskCompletionSource<IngestResultMessage>, CancellationTokenSource)> _ingests = new();
+        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<IngestDataAckMessage>> _ingestDataAck = new();
+        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<OperationResponseMessage>> _operationTcs = new();
         private readonly SemaphoreSlim _sendLock = new(1, 1);
         private readonly SemaphoreSlim _reconnectLock = new(1, 1);
 
@@ -72,10 +73,14 @@ namespace Hubcon.Client.Core.Websockets
         private Task? _receiveTask;
         private Task? _sendTask;
 
-        private string _lastPongId = Guid.Empty.ToString();
+        private Guid _lastPongId = Guid.Empty;
         private DateTime _lastPongTime = DateTime.UtcNow;
-        private readonly TimeSpan _timeoutSeconds = TimeSpan.FromSeconds(5);
 
+        private TimeSpan? _timeout;
+        private TimeSpan Timeout => _timeout ?? TimeSpan.FromSeconds(120);
+
+        private TimeSpan? _pingInterval;
+        private TimeSpan PingInterval => _pingInterval ?? TimeSpan.FromSeconds(30);
 
         private readonly Channel<string> _messageChannel;
         private readonly Channel<byte[]> _sendChannel;
@@ -103,11 +108,22 @@ namespace Hubcon.Client.Core.Websockets
             });
         }
 
+        public void SetConnectionTimeout(TimeSpan interval)
+        {
+            _timeout ??= interval;         
+        }
+
+        public void SetPingInterval(TimeSpan interval)
+        {
+            _pingInterval ??= interval;
+        }
+
         public async Task<IObservable<T>> Subscribe<T>(IOperationRequest payload)
         {
-            var request = new SubscriptionInitMessage(Guid.NewGuid().ToString(), converter.SerializeToElement(payload));
+            var request = new SubscriptionInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
             var observable = new GenericObservable<T>(this, request.Id, converter.SerializeToElement(request), RequestType.Subscription, converter);
+
             if (!_subscriptions.TryAdd(request.Id, observable))
                 throw new InvalidOperationException($"Ya existe una suscripción con Id {request.Id}");
 
@@ -121,7 +137,7 @@ namespace Hubcon.Client.Core.Websockets
 
         public async Task<IObservable<T>> Stream<T>(IOperationRequest payload)
         {
-            var request = new StreamInitMessage(Guid.NewGuid().ToString(), converter.SerializeToElement(payload));
+            var request = new StreamInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
             var observable = new GenericObservable<T>(this, request.Id, converter.SerializeToElement(request), RequestType.Subscription, converter);
             var tcs = new CancellationTokenSource();
 
@@ -151,17 +167,16 @@ namespace Hubcon.Client.Core.Websockets
         }
 
 
-        public async Task IngestMultiple(IOperationRequest payload, bool needsAck = false)
+        public async Task<IOperationResponse<T>> IngestMultiple<T>(IOperationRequest payload, bool needsAck = false)
         {
             using var cts = new CancellationTokenSource();
             var sourceTasks = new List<Task>();
             var initAckTcs = new TaskCompletionSource<IngestInitAckMessage>();
-            var generalTcs = new TaskCompletionSource<IngestCompleteMessage>();
-            var sources = new Dictionary<string, IAsyncEnumerable<JsonElement>>();
-            var generalId = Guid.NewGuid().ToString();
-            var initialAckId = Guid.NewGuid().ToString();
+            var generalTcs = new TaskCompletionSource<IngestResultMessage>();
+            var sources = new Dictionary<Guid, IAsyncEnumerable<JsonElement>>();
+            var initialAckId = Guid.NewGuid();
             _ingestAck.TryAdd(initialAckId, initAckTcs);
-            _ingests.TryAdd(generalId, (generalTcs, cts));
+            _ingests.TryAdd(initialAckId, (generalTcs, cts));
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
@@ -173,7 +188,7 @@ namespace Hubcon.Client.Core.Websockets
                     if (kvp.Value != null && EnumerableTools.IsAsyncEnumerable(kvp.Value))
                     {
                         var obj = kvp.Value;
-                        var id = Guid.NewGuid().ToString();
+                        var id = Guid.NewGuid();
                         payload.Arguments[kvp.Key] = id;
                         var stream = EnumerableTools.WrapEnumeratorAsJsonElementEnumerable(obj);
                         sources.TryAdd(id, stream!);
@@ -239,7 +254,23 @@ namespace Hubcon.Client.Core.Websockets
                     cts.Cancel();
                 }
 
-                await Task.WhenAll(sourceTasks);
+                var allIngests = Task.WhenAll(sourceTasks);
+
+                await Task.WhenAny(allIngests, generalTcs.Task);
+
+                await SendMessageAsync(new IngestCompleteMessage(initialAckId, sources.Keys.ToArray()));
+
+                var result = await TimeoutHelper.WaitWithTimeoutAsync(TimeSpan.FromSeconds(15), generalTcs.Task);
+
+                if (result == null) throw new HubconRemoteException("Received an empty response.");
+
+                var response = converter.DeserializeJsonElement<BaseOperationResponse<T>>(result.Data)
+                    ?? throw new HubconRemoteException("Received an empty response.");
+
+                if (!response.Success)
+                    throw new HubconRemoteException(response.Error);
+
+                return response;
             }
             catch (Exception ex)
             {
@@ -247,6 +278,8 @@ namespace Hubcon.Client.Core.Websockets
                     logger?.LogError(ex, "Error general en IngestMultiple");
 
                 _errorStream.OnNext(ex);
+
+                throw new HubconGenericException(ex.Message, ex);
             }
             finally
             {
@@ -258,16 +291,15 @@ namespace Hubcon.Client.Core.Websockets
 
                 _ingestAck.TryRemove(initialAckId, out var removedCts);
                 removedCts?.TrySetCanceled();
-                _ingests.TryRemove(generalId, out var removedIngest);
+                _ingests.TryRemove(initialAckId, out var removedIngest);
                 removedIngest.Item1?.TrySetCanceled();
                 removedIngest.Item2?.Cancel();
             }
         }
 
-
         public async Task SendAsync(IOperationRequest payload)
         {
-            var request = new OperationCallMessage(Guid.NewGuid().ToString("N"), converter.SerializeToElement(payload));
+            var request = new OperationCallMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
@@ -275,9 +307,9 @@ namespace Hubcon.Client.Core.Websockets
             await SendMessageAsync(request);
         }
 
-        public async Task<T> InvokeAsync<T>(IOperationRequest payload)
+        public async Task<IOperationResponse<T>> InvokeAsync<T>(IOperationRequest payload)
         {
-            var request = new OperationInvokeMessage(Guid.NewGuid().ToString("N"), converter.SerializeToElement(payload));
+            var request = new OperationInvokeMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
             var tcs = new TaskCompletionSource<OperationResponseMessage>();
             _operationTcs.TryAdd(request.Id, tcs);
             OperationResponseMessage? response = null;
@@ -303,9 +335,15 @@ namespace Hubcon.Client.Core.Websockets
                 _operationTcs.TryRemove(request.Id, out _);
             }
 
-            return response == null
-                ? throw new TimeoutException("The request timed out.")
-                : converter.DeserializeJsonElement<T>(response.Result)!;
+            if (response == null)
+                throw new HubconGenericException("There was an unknown error or the request timed out.");
+
+            var converted = converter.DeserializeJsonElement<BaseOperationResponse<T>>(response.Result)!;
+
+            if (!converted.Success)
+                throw new HubconRemoteException(converted.Error ?? "An error occurred on the server while processing the request.");
+
+            return converted;
         }
 
         private async Task HandleIncomingMessage()
@@ -387,6 +425,18 @@ namespace Hubcon.Client.Core.Websockets
 
                             break;
 
+                        case MessageType.ingest_result:
+                            var ingestResultMessage = converter.DeserializeData<IngestResultMessage>(json);
+
+                            if (ingestResultMessage == null) break;
+
+                            if (_ingests.TryGetValue(ingestResultMessage.Id, out var ingestResultMessageTcs))
+                            {
+                                ingestResultMessageTcs.Item1.TrySetResult(ingestResultMessage);
+                            }
+
+                            break;
+
                         case MessageType.ingest_data_ack:
                             var ingestDataAckMessage = converter.DeserializeData<IngestDataAckMessage>(json);
 
@@ -413,7 +463,7 @@ namespace Hubcon.Client.Core.Websockets
 
                         default:
                             var msg = $"Tipo de mensaje no soportado. Tipo recibido: {baseMessage?.Type}";
-                            _errorStream.OnNext(new NotSupportedException(msg));
+                            _errorStream.OnNext(new HubconGenericException(msg));
 
                             if (LoggingEnabled)
                                 logger?.LogError(msg);
@@ -513,7 +563,7 @@ namespace Hubcon.Client.Core.Websockets
                         if (LoggingEnabled)
                             logger?.LogInformation("Conectado, intentando handshake...");
 
-                        await SendMessageAsync(new ConnectionInitMessage());
+                        await SendMessageAsync(new ConnectionInitMessage(Guid.NewGuid()));
 
                         var buffer = new byte[16384];
 
@@ -548,7 +598,7 @@ namespace Hubcon.Client.Core.Websockets
                         _pingTask = Task.Run(() => PingMessageLoop(_pingLoopCts.Token));
                         _receiveTask = Task.Run(() => ReceiveLoopAsync(_receiveLoopCts.Token));
 
-                        _heartbeatWatcher = new HeartbeatWatcher(_timeoutSeconds, async () =>
+                        _heartbeatWatcher = new HeartbeatWatcher(Timeout, async () =>
                         {
                             IsReady = false;
 
@@ -625,9 +675,9 @@ namespace Hubcon.Client.Core.Websockets
                     cancellationToken.ThrowIfCancellationRequested();
 
                     if (_webSocket?.State == WebSocketState.Open && IsReady == true)
-                        await SendMessageAsync(new PingMessage(Guid.NewGuid().ToString("N")));
+                        await SendMessageAsync(new PingMessage(Guid.NewGuid()));
 
-                    await Task.Delay(4000, cancellationToken);
+                    await Task.Delay(PingInterval, cancellationToken);
                 }
                 catch (Exception ex)
                 {

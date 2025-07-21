@@ -35,8 +35,8 @@ namespace Hubcon.Shared.Core.Websockets.Events
         public Type DataType => _dataType;
 
         public GenericObservable(
-            IUnsubscriber client, 
-            string id, 
+            IUnsubscriber client,
+            Guid id, 
             JsonElement request, 
             RequestType type, 
             IDynamicConverter converter) : base(client, new RequestData(id, request, type))

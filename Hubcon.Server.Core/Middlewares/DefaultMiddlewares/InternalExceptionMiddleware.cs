@@ -5,6 +5,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
+using System.Text;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
@@ -13,39 +14,86 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
+            Exception? exception = null;
+
             try
             {
                 await next();
-
-                if(context.Exception is not null)
-                {
-                    if (options.DetailedErrorsEnabled)
-                    {
-                        context.Result = new BaseOperationResponse<object>(false, null!, context.Exception.ToString());
-                        logger.LogInformation(context.Exception.ToString());
-                    }
-                    else
-                    {
-                        context.Result = new BaseOperationResponse<object>(false, null!, context.Exception.Message);
-
-                        logger.LogInformation(context.Exception.ToString());
-                    }
-                    return;
-                }
             }
             catch(Exception ex)
             {
-                if (options.DetailedErrorsEnabled)
+                exception = ex;
+            }
+            finally
+            {
+                bool? isError = null;
+                StringBuilder? logMsg = null;
+                StringBuilder? responseMsg = null;
+
+                if (context.Result != null && !context.Result.Success)
                 {
-                    context.Result = new BaseOperationResponse<object>(false, null!, ex.ToString());
-                    logger.LogInformation(ex.ToString());
+                    isError ??= true;
+
+                    logMsg ??= new StringBuilder();
+                    logMsg.AppendLine(context.Result.Error);
+
+                    responseMsg ??= new StringBuilder();
+                    responseMsg.AppendLine(context.Result.Error);
                 }
-                else
+
+                if (context.Exception != null)
                 {
-                    context.Result = new BaseOperationResponse<object>(false, null!, ex.Message);
-                    logger.LogInformation(ex.ToString());
+                    isError ??= true;
+
+                    logMsg ??= new StringBuilder();
+                    responseMsg ??= new StringBuilder();
+
+                    logMsg.AppendLine(context.Exception.ToString());
+
+                    if (options.DetailedErrorsEnabled)
+                    {
+                        responseMsg.AppendLine(context.Exception.ToString());
+                    }
+                    else
+                    {
+                        responseMsg.AppendLine(context.Exception.Message);
+                    }
                 }
-                return;
+
+                if (exception != null)
+                {
+                    isError ??= true;
+                    logMsg ??= new StringBuilder();
+                    responseMsg ??= new StringBuilder();
+
+                    logMsg.AppendLine(exception.ToString());
+
+                    if (options.DetailedErrorsEnabled)
+                    {
+                        responseMsg.AppendLine(exception.Message);
+                    }
+                    else
+                    {
+                        responseMsg.AppendLine(exception.ToString());
+                    }
+                }
+
+                if (isError == true)
+                {
+                    var createdLogMessage = logMsg!.ToString();
+                    var createdResponseMsg = responseMsg!.ToString();
+
+                    var response = new BaseOperationResponse<object>(
+                        false,
+                        null!,
+                        options.DetailedErrorsEnabled ? createdResponseMsg : "Internal server error");
+
+                    var result = context.Result;
+
+                    logger?.LogError("{createdLogMessage}\n{request}\n{result}", createdLogMessage, request, result);
+
+                    context.Result = response;
+                }
             }
         }
     }

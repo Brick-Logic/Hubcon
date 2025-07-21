@@ -7,5 +7,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Generic
 {
-    public record class ErrorMessage(string Id, string? Error = null, object? Payload = null) : BaseMessage(MessageType.error, Id);
+    public record class ErrorMessage(Guid Id, string? Error = null, object? Payload = null) : BaseMessage(MessageType.error, Id);
 }

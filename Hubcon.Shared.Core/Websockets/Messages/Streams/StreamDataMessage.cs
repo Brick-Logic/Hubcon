@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Streams
 {
-    public record class StreamDataMessage(string Id, JsonElement Data) : BaseMessage(MessageType.stream_data, Id);
+    public record class StreamDataMessage(Guid Id, JsonElement Data) : BaseMessage(MessageType.stream_data, Id);
 }

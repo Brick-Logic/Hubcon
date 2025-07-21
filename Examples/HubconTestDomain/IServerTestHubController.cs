@@ -22,17 +22,12 @@ namespace HubconTestDomain
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();
         Task<IEnumerable<bool>> GetBooleans();
-        Task IngestMessages(
-            IAsyncEnumerable<string> source, 
-            IAsyncEnumerable<string> source2, 
-            IAsyncEnumerable<string> source3, 
-            IAsyncEnumerable<string> source4, 
-            IAsyncEnumerable<string> source5);
         Task<MyTestClass> GetObject();
-
         Task CreateUser();
         IAsyncEnumerable<string> GetMessages2();
         Task IngestMessages(IAsyncEnumerable<string> source);
+        Task<string> IngestMessages(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2, IAsyncEnumerable<string> source3, IAsyncEnumerable<string> source4, IAsyncEnumerable<string> source5);
+        Task IngestMessages2(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2, IAsyncEnumerable<string> source3, IAsyncEnumerable<string> source4, IAsyncEnumerable<string> source5);
     }
 
     public class CreateUserCommandResponse

@@ -7,5 +7,5 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
 {
-    public record class SubscriptionCompleteMessage(string Id) : BaseMessage(MessageType.subscription_complete, Id);
+    public record class SubscriptionCompleteMessage(Guid Id) : BaseMessage(MessageType.subscription_complete, Id);
 }

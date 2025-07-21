@@ -58,11 +58,45 @@ namespace HubconTest.ContractHandlers
         }
 
         [IngestSettings(5000, BoundedChannelFullMode.Wait, 5)]
-        public async Task IngestMessages(
-            IAsyncEnumerable<string> source, 
-            IAsyncEnumerable<string> source2, 
-            IAsyncEnumerable<string> source3, 
-            IAsyncEnumerable<string> source4, 
+        public async Task<string> IngestMessages(
+            IAsyncEnumerable<string> source,
+            IAsyncEnumerable<string> source2,
+            IAsyncEnumerable<string> source3,
+            IAsyncEnumerable<string> source4,
+            IAsyncEnumerable<string> source5)
+        {
+            Task TaskRunner<T>(IAsyncEnumerable<T> source, string name)
+            {
+                return Task.Run(async () =>
+                {
+                    await foreach (var item in source)
+                    {
+                        logger.LogInformation($"source1: {item}");
+                    }
+                    logger.LogInformation($"[{name}] Stream terminado.");
+                });
+            }
+
+            List<Task> sources =
+            [
+                TaskRunner(source, nameof(source)),
+                TaskRunner(source2, nameof(source2)),
+                TaskRunner(source3, nameof(source3)),
+                TaskRunner(source4, nameof(source4)),
+                TaskRunner(source5, nameof(source5)),
+            ];
+
+            await Task.WhenAll(sources);
+            logger.LogInformation("Ingest terminado exitosamente");
+
+            return "Ok";
+        }
+
+        public async Task IngestMessages2(
+            IAsyncEnumerable<string> source,
+            IAsyncEnumerable<string> source2,
+            IAsyncEnumerable<string> source3,
+            IAsyncEnumerable<string> source4,
             IAsyncEnumerable<string> source5)
         {
             Task TaskRunner<T>(IAsyncEnumerable<T> source, string name)

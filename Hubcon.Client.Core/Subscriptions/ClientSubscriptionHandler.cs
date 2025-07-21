@@ -107,8 +107,7 @@ namespace Hubcon.Client.Core.Subscriptions
                     {
                         retry += 1;
                         _connected = SubscriptionState.Reconnecting;
-                        logger.LogInformation("Reconnecting...");
-                        logger.LogInformation(ex.ToString());
+                        logger.LogError(ex.Message, ex);
 
                         int baseReconnectionDelay = 1000;
                         int maxReconnectionDelay = 3000;

@@ -99,8 +99,10 @@ namespace HubconTest
                     {
                         return JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
                     })
-                    .DisableAllThrottling()
-                    .EnableRequestDetailedErrors();
+                    .SetHttpTimeout(TimeSpan.FromSeconds(15))
+                    .SetWebSocketTimeout(TimeSpan.FromSeconds(120))
+                    .EnableRequestDetailedErrors()
+                    .DisableAllThrottling();
                 });
 
                 serverOptions.AddController<UserContractHandler>();

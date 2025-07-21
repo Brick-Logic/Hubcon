@@ -11,13 +11,13 @@ namespace HubconTestClient.Modules
         {
             configuration.WithBaseUrl("localhost:5000");
 
-            configuration.Implements<IUserContract>();
+            configuration.Implements<IUserContract>(x => x.UseWebsocketMethods());
             configuration.Implements<ISecondTestContract>();
 
             configuration.ConfigureWebsockets(x =>
             {
-                x.SetBuffer(1024 * 1024, 1024 * 1024);
-                x.KeepAliveInterval = TimeSpan.FromSeconds(30);
+                x.SetBuffer(2048 * 1024, 2048 * 1024);
+                x.KeepAliveInterval = TimeSpan.FromSeconds(180);
             });
 
             configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(30));
