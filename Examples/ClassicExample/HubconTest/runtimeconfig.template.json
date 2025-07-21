@@ -1,0 +1,13 @@
+﻿{
+  "runtimeOptions": {
+    "configProperties": {
+      "System.GC.Server": true,
+      "System.GC.Concurrent": false,
+      "System.GC.RetainVM": false,
+      "System.GC.HeapHardLimit": true,
+      "System.GC.HeapHardLimitPercent": 70,
+      "System.GC.MinHeapSizePercent": 5,
+      "System.Threading.ThreadPool.UnsafeQueueUserWorkItem": true
+    }
+  }
+}

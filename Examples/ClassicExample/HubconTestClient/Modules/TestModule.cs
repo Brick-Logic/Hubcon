@@ -16,7 +16,7 @@ namespace HubconTestClient.Modules
 
             configuration.ConfigureWebsockets(x =>
             {
-                x.SetBuffer(2048 * 1024, 2048 * 1024);
+                x.SetBuffer(4 * 1024, 4 * 1024);
                 x.KeepAliveInterval = TimeSpan.FromSeconds(180);
             });
 

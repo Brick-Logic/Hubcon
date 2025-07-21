@@ -101,6 +101,8 @@ namespace HubconTest
                     })
                     .SetHttpTimeout(TimeSpan.FromSeconds(15))
                     .SetWebSocketTimeout(TimeSpan.FromSeconds(120))
+                    .SetMaxHttpMessageSize(4 * 1024)
+                    .SetMaxWebSocketMessageSize(4 * 1024)
                     .EnableRequestDetailedErrors()
                     .DisableAllThrottling();
                 });
