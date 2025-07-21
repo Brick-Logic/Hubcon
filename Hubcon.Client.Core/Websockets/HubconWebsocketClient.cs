@@ -307,7 +307,7 @@ namespace Hubcon.Client.Core.Websockets
             await SendMessageAsync(request);
         }
 
-        public async Task<IOperationResponse<T>> InvokeAsync<T>(IOperationRequest payload)
+        public async ValueTask<IOperationResponse<T>> InvokeAsync<T>(IOperationRequest payload)
         {
             var request = new OperationInvokeMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
             var tcs = new TaskCompletionSource<OperationResponseMessage>();

@@ -13,7 +13,11 @@ internal class Program
         var process = Process.GetCurrentProcess();
 
         long coreMask = 0;
-        for (int i = 0; i <= Environment.ProcessorCount-1; i++)
+
+        int? customCores = null;
+        int cores = customCores ?? Environment.ProcessorCount - 1;
+
+        for (int i = 0; i <= cores; i++)
         {
             coreMask |= 1L << i;
         }
@@ -198,7 +202,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 16384
+            MaxDegreeOfParallelism = 8
         };
 
         await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>

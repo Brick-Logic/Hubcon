@@ -3,6 +3,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Core.Cache;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
@@ -11,9 +12,9 @@ namespace Hubcon.Client.Interceptors
 {
     internal sealed class ClientProxyInterceptor(IDynamicConverter converter) : IClientProxyInterceptor
     {
-
-        private static ConcurrentDictionary<Type, MethodInfo> _methodInfoCache = new();
-        private static ConcurrentDictionary<MethodInfo, bool> _hasAsyncEnumerablesCache = new();
+        private readonly static ImmutableCache<Type, MethodInfo> _methodInfoCache = new();
+        private readonly static ImmutableCache<MethodInfo, bool> _hasAsyncEnumerablesCache = new();
+        private readonly static ImmutableCache<Type, bool> _isAsyncEnumerablesCache = new();
 
         IHubconClient? Client;
 
@@ -22,7 +23,7 @@ namespace Hubcon.Client.Interceptors
             Client ??= client;
         }
 
-        public async Task<T> InvokeAsync<T>(MethodInfo method, Dictionary<string, object?>? arguments = null)
+        public async ValueTask<T> InvokeAsync<T>(MethodInfo method, Dictionary<string, object?>? arguments = null)
         {
             if (Client is null)
                 throw new Exception("El cliente no fue inyectado.");
@@ -34,7 +35,7 @@ namespace Hubcon.Client.Interceptors
             var resultType = typeof(T);
             using var cts = new CancellationTokenSource();
 
-            if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
+            if (_isAsyncEnumerablesCache.GetOrAdd(resultType, x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>)))
             {
                 var streamMethod = _methodInfoCache.GetOrAdd(
                     resultType.GetGenericArguments()[0],
@@ -49,11 +50,7 @@ namespace Hubcon.Client.Interceptors
 
                 IAsyncEnumerable<JsonElement> stream = Client.GetStream(request, cts.Token);
 
-                result = (T)streamMethod.Invoke(converter, new object[]
-                {
-                    stream,
-                    cts.Token
-                })!;
+                result = (T)streamMethod.Invoke(converter, [stream, cts.Token])!;
             }
             else if (_hasAsyncEnumerablesCache.GetOrAdd(
                 method,

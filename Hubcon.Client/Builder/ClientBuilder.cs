@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Reflection;
 
+
 namespace Hubcon.Client.Builder
 {
     internal sealed class ClientBuilder(IProxyRegistry proxyRegistry) : IClientBuilder, IClientOptions

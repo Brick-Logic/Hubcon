@@ -52,7 +52,7 @@ namespace Hubcon.Client.Integration.Client
 
         private IDictionary<Type, IContractOptions>? ContractOptionsDict { get; set; }
 
-        public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
+        public async ValueTask<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
         {
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");

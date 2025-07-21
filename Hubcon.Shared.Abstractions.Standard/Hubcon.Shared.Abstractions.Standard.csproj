@@ -15,4 +15,9 @@
 	<Company>$(Company)</Company>
 	<PackageTags>http;websockets;rpc</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+  </ItemGroup>
 </Project>

@@ -8,7 +8,7 @@ namespace Hubcon.Shared.Core.Tools
 {
     public static class TimeoutHelper
     {
-        public static async Task<T> WaitWithTimeoutAsync<T>(TimeSpan timeout, Task<T> task)
+        public static async ValueTask<T> WaitWithTimeoutAsync<T>(TimeSpan timeout, Task<T> task)
         {
             if (timeout == TimeSpan.Zero)
             {
