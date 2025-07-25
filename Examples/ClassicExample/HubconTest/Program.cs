@@ -19,7 +19,11 @@ namespace HubconTest
             var process = Process.GetCurrentProcess();
 
             long coreMask = 0;
-            for (int i = 1; i <= Environment.ProcessorCount-1; i++)
+
+            int? customCores = null;
+            int cores = customCores ?? Environment.ProcessorCount - 1;
+
+            for (int i = 0; i <= cores; i++)
             {
                 coreMask |= 1L << i;
             }

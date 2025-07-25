@@ -212,7 +212,7 @@ internal class Program
                 var swReq = Stopwatch.StartNew();
                 try
                 {
-                    await client.GetTemperatureFromServer();
+                    var a = await client.GetTemperatureFromServer().ConfigureAwait(false);
                     Interlocked.Increment(ref finishedRequestsCount);
                 }
                 catch
