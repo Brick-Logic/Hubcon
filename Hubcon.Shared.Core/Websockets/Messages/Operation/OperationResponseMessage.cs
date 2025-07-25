@@ -4,9 +4,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Operation
 {
-    public record class OperationResponseMessage(Guid Id, JsonElement Result) : BaseMessage(MessageType.operation_response, Id);
+    public record class OperationResponseMessage : BaseMessage
+    {
+        private JsonElement? _result;
+
+        public OperationResponseMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        {
+        }
+
+        [JsonConstructor]
+        public OperationResponseMessage(Guid id, JsonElement result) : base(MessageType.operation_response, id)
+        {
+            _result = result;
+        }
+
+        public JsonElement Result => _result ??= Extract<JsonElement>("result");
+    }
 }

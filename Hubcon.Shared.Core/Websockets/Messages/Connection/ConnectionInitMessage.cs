@@ -4,9 +4,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Connection
 {
-    public record class ConnectionInitMessage(Guid Id) : BaseMessage(MessageType.connection_init, Id);
+    public record class ConnectionInitMessage : BaseMessage
+    {
+        public ConnectionInitMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        {
+        }
+
+        [JsonConstructor]
+        public ConnectionInitMessage(Guid id) : base(MessageType.connection_init, id)
+        {
+        }
+    }
 }

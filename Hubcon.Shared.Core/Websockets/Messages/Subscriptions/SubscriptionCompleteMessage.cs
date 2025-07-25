@@ -3,9 +3,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
 {
-    public record class SubscriptionCompleteMessage(Guid Id) : BaseMessage(MessageType.subscription_complete, Id);
+    public record class SubscriptionCompleteMessage : BaseMessage
+    {
+        public SubscriptionCompleteMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        {
+        }
+
+        [JsonConstructor]
+        public SubscriptionCompleteMessage(Guid id) : base(MessageType.subscription_complete, id)
+        {
+        }
+    }
 }

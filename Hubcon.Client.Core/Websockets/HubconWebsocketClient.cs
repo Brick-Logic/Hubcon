@@ -82,7 +82,7 @@ namespace Hubcon.Client.Core.Websockets
         private TimeSpan? _pingInterval;
         private TimeSpan PingInterval => _pingInterval ?? TimeSpan.FromSeconds(30);
 
-        private readonly Channel<string> _messageChannel;
+        private readonly Channel<TrimmedMemoryOwner> _messageChannel;
         private readonly Channel<byte[]> _sendChannel;
 
         public HubconWebSocketClient(Uri uri, IDynamicConverter converter, ILogger<HubconWebSocketClient>? logger = null)
@@ -93,7 +93,7 @@ namespace Hubcon.Client.Core.Websockets
             this.converter = converter;
             this.logger = logger;
 
-            _messageChannel = Channel.CreateBounded<string>(new BoundedChannelOptions(20000)
+            _messageChannel = Channel.CreateBounded<TrimmedMemoryOwner>(new BoundedChannelOptions(20000)
             {
                 FullMode = BoundedChannelFullMode.Wait,
                 SingleWriter = true,
@@ -355,18 +355,20 @@ namespace Hubcon.Client.Core.Websockets
                     if (_webSocket?.State != WebSocketState.Open)
                         await EnsureConnectedAsync();
 
-                    var json = await _messageChannel.Reader.ReadAsync();
+                    var tmo = await _messageChannel.Reader.ReadAsync();
 
-                    if (json == null)
+                    var message = new BaseMessage(tmo.Memory);
+
+                    if (message.Id == Guid.Empty)
                         continue;
 
-                    if (!JsonHelper.TryGetEnumFromJson(json, "type", out MessageType type, out JsonElement element))
-                        continue;
+                    //if (!JsonHelper.TryGetEnumFromJson(json, "type", out MessageType type, out JsonElement element))
+                    //    continue;
 
-                    switch (type)
+                    switch (message.Type)
                     {
                         case MessageType.pong:
-                            var pongMessage = converter.DeserializeJsonElement<PongMessage>(element)!;
+                            var pongMessage = new PongMessage(tmo.Memory)!;
                             if (_lastPongId == pongMessage.Id)
                             {
                                 await _webSocket!.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "Pong error", default);
@@ -379,7 +381,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.subscription_data:
-                            var eventData = converter.DeserializeJsonElement<SubscriptionDataMessage>(element);
+                            var eventData = new SubscriptionDataMessage(tmo.Memory);
                             if (eventData?.Id != null && _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
                             {
                                 sub.OnNextElement(eventData.Data);
@@ -387,7 +389,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.stream_data:
-                            var streamData = converter.DeserializeJsonElement<StreamDataMessage>(element);
+                            var streamData = new StreamDataMessage(tmo.Memory);
 
                             if (streamData?.Id != null && _streams.TryGetValue(streamData.Id, out var stream))
                             {
@@ -398,7 +400,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.stream_complete:
-                            var streamComplete = converter.DeserializeJsonElement<StreamCompleteMessage>(element);
+                            var streamComplete = new StreamCompleteMessage(tmo.Memory);
 
                             if (streamComplete?.Id != null && _streams.TryGetValue(streamComplete.Id, out var streamCompleteInfo))
                             {
@@ -408,7 +410,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.error:
-                            var errorData = converter.DeserializeJsonElement<ErrorMessage>(element);
+                            var errorData = new ErrorMessage(tmo.Memory);
                             if (errorData?.Id != null && _subscriptions.TryGetValue(errorData.Id, out var subToError))
                             {
                                 subToError.OnError(new Exception(errorData.Error));
@@ -416,7 +418,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.ingest_init_ack:
-                            var ingestInitAckMessage = converter.DeserializeJsonElement<IngestInitAckMessage>(element);
+                            var ingestInitAckMessage = new IngestInitAckMessage(tmo.Memory);
 
                             if (ingestInitAckMessage == null) break;
 
@@ -428,7 +430,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.ingest_result:
-                            var ingestResultMessage = converter.DeserializeJsonElement<IngestResultMessage>(element);
+                            var ingestResultMessage = new IngestResultMessage(tmo.Memory);
 
                             if (ingestResultMessage == null) break;
 
@@ -440,7 +442,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.ingest_data_ack:
-                            var ingestDataAckMessage = converter.DeserializeJsonElement<IngestDataAckMessage>(element);
+                            var ingestDataAckMessage = new IngestDataAckMessage(tmo.Memory);
 
                             if (ingestDataAckMessage == null) break;
 
@@ -452,7 +454,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.operation_response:
-                            var operationResponseMessage = converter.DeserializeJsonElement<OperationResponseMessage>(element);
+                            var operationResponseMessage = new OperationResponseMessage(tmo.Memory);
 
                             if (operationResponseMessage == null) break;
 
@@ -464,7 +466,7 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         default:
-                            var msg = $"Tipo de mensaje no soportado. Tipo recibido: {type.ToString()}";
+                            var msg = $"Tipo de mensaje no soportado. Tipo recibido: {message.Type.ToString()}";
                             _errorStream.OnNext(new HubconGenericException(msg));
 
                             if (LoggingEnabled)
@@ -692,14 +694,11 @@ namespace Hubcon.Client.Core.Websockets
         int cantidad = 0;
         private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
         {
-
             if (LoggingEnabled)
                 Interlocked.Increment(ref cantidad);
 
             if (LoggingEnabled)
                 logger?.LogInformation($"ReceiveLoop iniciado. Cantidad: {Volatile.Read(ref cantidad)}");
-
-            var buffer = ArrayPool<byte>.Shared.Rent(1024 * 1024);
 
             try
             {
@@ -709,14 +708,17 @@ namespace Hubcon.Client.Core.Websockets
                     {
                         if (_webSocket == null) break;
 
-                        var sb = new StringBuilder();
-                        WebSocketReceiveResult result;
+                        var parts = new List<IMemoryOwner<byte>>();
+                        int totalBytes = 0;
+
+                        ValueWebSocketReceiveResult result;
 
                         do
                         {
-                            var receiveTask = _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
-                            result = await receiveTask;
+                            var part = MemoryPool<byte>.Shared.Rent(4096);
+                            var segment = part.Memory;
 
+                            result = await _webSocket.ReceiveAsync(segment, cancellationToken);
                             cancellationToken.ThrowIfCancellationRequested();
 
                             if (result.MessageType == WebSocketMessageType.Close)
@@ -725,10 +727,27 @@ namespace Hubcon.Client.Core.Websockets
                                 throw new OperationCanceledException();
                             }
 
-                            sb.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
-                        } while (!result.EndOfMessage);
+                            if (result.Count < segment.Length)
+                                part = new TrimmedMemoryOwner(part, result.Count); // Recorta a lo usado
 
-                        await _messageChannel.Writer.WriteAsync(sb.ToString(), cancellationToken);
+                            totalBytes += result.Count;
+                            parts.Add(part);
+                        }
+                        while (!result.EndOfMessage);
+
+                        // Concatenamos todos los fragmentos a un solo buffer
+                        var finalOwner = MemoryPool<byte>.Shared.Rent(totalBytes);
+                        var finalMemory = finalOwner.Memory.Slice(0, totalBytes);
+                        int offset = 0;
+
+                        foreach (var part in parts)
+                        {
+                            part.Memory.Slice(0).CopyTo(finalMemory.Slice(offset));
+                            offset += part.Memory.Length;
+                            part.Dispose(); // Liberamos cada fragmento individual
+                        }
+
+                        await _messageChannel.Writer.WriteAsync(new TrimmedMemoryOwner(finalOwner, totalBytes), cancellationToken);
                     }
                     catch (Exception ex)
                     {
@@ -749,8 +768,6 @@ namespace Hubcon.Client.Core.Websockets
             }
             finally
             {
-                ArrayPool<byte>.Shared.Return(buffer);
-
                 if (LoggingEnabled)
                 {
                     logger?.LogInformation($"ReceiveLoop terminado. Cantidad: {Volatile.Read(ref cantidad)}");
@@ -758,6 +775,7 @@ namespace Hubcon.Client.Core.Websockets
                 }
             }
         }
+
 
         private async Task SendLoopAsync(ClientWebSocket _webSocket, CancellationToken cancellationToken)
         {
