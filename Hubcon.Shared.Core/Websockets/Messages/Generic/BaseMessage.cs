@@ -46,6 +46,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
                     return typeof(T) switch
                     {
                         Type t when t == typeof(Guid) => (T?)(object)reader.GetGuid()!,
+                        Type t when t == typeof(Guid[]) => (T?)(object)ReadGuidArray(ref reader),
                         Type t when t == typeof(string) => (T?)(object)reader.GetString()!,
                         Type t when t == typeof(MessageType) => Enum.TryParse(reader.GetString(), ignoreCase: true, out MessageType result) ? (T)(object)result : default,
                         Type t when t == typeof(JsonElement) => (T)(object)JsonDocument.ParseValue(ref reader).RootElement,
@@ -55,6 +56,34 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             }
 
             return default;
+        }
+
+        public static Guid[] ReadGuidArray(ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType != JsonTokenType.StartArray)
+                throw new JsonException("Expected StartArray token");
+
+            var guids = new List<Guid>();
+
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndArray)
+                    break;
+
+                if (reader.TokenType == JsonTokenType.String)
+                {
+                    if (reader.TryGetGuid(out var guid))
+                        guids.Add(guid);
+                    else
+                        throw new JsonException("Invalid GUID format");
+                }
+                else
+                {
+                    throw new JsonException("Expected GUID string");
+                }
+            }
+
+            return guids.ToArray();
         }
     }
 }

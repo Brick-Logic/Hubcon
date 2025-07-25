@@ -1,4 +1,5 @@
 ﻿using Hubcon.Server.Core.Configuration;
+using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.Extensions.Options;
 using System.Buffers;
 using System.Net.WebSockets;
@@ -9,38 +10,54 @@ namespace Hubcon.Server.Core.Websockets.Helpers
     internal sealed class WebSocketMessageReceiver(WebSocket socket, IInternalServerOptions options)
     {
         private readonly WebSocket _socket = socket;
-        private readonly byte[] _buffer = new byte[options.MaxWebSocketMessageSize];
-        private readonly Decoder _decoder = Encoding.UTF8.GetDecoder();
-        private readonly int _charBufferSize = options.MaxWebSocketMessageSize;
+        private readonly int _maxMessageSize = options.MaxWebSocketMessageSize;
 
-        public async Task<string?> ReceiveAsync()
+        public async Task<TrimmedMemoryOwner?> ReceiveAsync(CancellationToken cancellationToken = default)
         {
-            WebSocketReceiveResult result;
-            var charBuffer = ArrayPool<char>.Shared.Rent(_charBufferSize);
-            var stringBuilder = new StringBuilder();
+            var parts = new List<IMemoryOwner<byte>>();
+            int totalBytes = 0;
 
             try
             {
+                ValueWebSocketReceiveResult result;
                 do
                 {
-                    result = await _socket.ReceiveAsync(new ArraySegment<byte>(_buffer), CancellationToken.None);
-                    if (result.MessageType == WebSocketMessageType.Close) return null;
+                    var part = MemoryPool<byte>.Shared.Rent(4096);
+                    var segment = part.Memory;
 
-                    int charsDecoded = _decoder.GetChars(
-                        _buffer, 0, result.Count,
-                        charBuffer, 0,
-                        flush: result.EndOfMessage
-                    );
+                    result = await _socket.ReceiveAsync(segment, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                    stringBuilder.Append(charBuffer, 0, charsDecoded);
+                    if (result.MessageType == WebSocketMessageType.Close)
+                        return null;
 
-                } while (!result.EndOfMessage);
+                    if (result.Count < segment.Length)
+                        part = new TrimmedMemoryOwner(part, result.Count);
 
-                return stringBuilder.ToString();
+                    totalBytes += result.Count;
+                    parts.Add(part);
+                }
+                while (!result.EndOfMessage);
+
+                var finalOwner = MemoryPool<byte>.Shared.Rent(totalBytes);
+                var finalMemory = finalOwner.Memory.Slice(0, totalBytes);
+                int offset = 0;
+
+                foreach (var part in parts)
+                {
+                    part.Memory.Span.CopyTo(finalMemory.Span.Slice(offset));
+                    offset += part.Memory.Length;
+                    part.Dispose();
+                }
+
+                return new TrimmedMemoryOwner(finalOwner, totalBytes);
             }
-            finally
+            catch
             {
-                ArrayPool<char>.Shared.Return(charBuffer);
+                foreach (var part in parts)
+                    part.Dispose();
+
+                return null;
             }
         }
     }

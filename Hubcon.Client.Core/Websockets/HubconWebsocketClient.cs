@@ -239,7 +239,7 @@ namespace Hubcon.Client.Core.Websockets
                     sourceTasks.Add(sourceTask);
                 }
 
-                var ingestRequest = new IngestInitMessage(initialAckId, sources.Keys.ToArray(), payload);
+                var ingestRequest = new IngestInitMessage(initialAckId, sources.Keys.ToArray(), converter.SerializeToElement(payload));
 
                 try
                 {
@@ -355,7 +355,7 @@ namespace Hubcon.Client.Core.Websockets
                     if (_webSocket?.State != WebSocketState.Open)
                         await EnsureConnectedAsync();
 
-                    var tmo = await _messageChannel.Reader.ReadAsync();
+                    TrimmedMemoryOwner? tmo = await _messageChannel.Reader.ReadAsync();
 
                     var message = new BaseMessage(tmo.Memory);
 
