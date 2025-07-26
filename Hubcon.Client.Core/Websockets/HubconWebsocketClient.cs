@@ -93,11 +93,11 @@ namespace Hubcon.Client.Core.Websockets
             this.converter = converter;
             this.logger = logger;
 
-            _messageChannel = Channel.CreateBounded<TrimmedMemoryOwner>(new BoundedChannelOptions(20000)
+            _messageChannel = Channel.CreateBounded<TrimmedMemoryOwner>(new BoundedChannelOptions(40000)
             {
                 FullMode = BoundedChannelFullMode.Wait,
                 SingleWriter = true,
-                SingleReader = true
+                SingleReader = false
             });
 
             _sendChannel = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(20000)
@@ -151,7 +151,7 @@ namespace Hubcon.Client.Core.Websockets
                 await obs.Item3.DisposeAsync();
             });
 
-            var hw = new HeartbeatWatcher(TimeSpan.FromSeconds(5000), async () =>
+            var hw = new HeartbeatWatcher(TimeSpan.FromSeconds(15000), async () =>
             {
                 if (_streams.TryGetValue(request.Id, out var obs) && obs.Item2.IsCancellationRequested)
                 {
@@ -598,8 +598,15 @@ namespace Hubcon.Client.Core.Websockets
                         _receiveLoopCts = new CancellationTokenSource();
 
                         _timeoutTask ??= Task.Run(ReconnectLoop);
-                        _processingTask ??= Task.Run(HandleIncomingMessage);
+                        _processingTask ??= Parallel.ForEachAsync(Enumerable.Range(0, 2), async (x, y) =>
+                        {
+                            await HandleIncomingMessage();
+                        });
+
+                        /*Task.Run(HandleIncomingMessage);*/
+
                         _pingTask = Task.Run(() => PingMessageLoop(_pingLoopCts.Token));
+
                         _receiveTask = Task.Run(() => ReceiveLoopAsync(_receiveLoopCts.Token));
 
                         _heartbeatWatcher = new HeartbeatWatcher(Timeout, async () =>
@@ -629,7 +636,7 @@ namespace Hubcon.Client.Core.Websockets
                         if (LoggingEnabled)
                             logger?.LogError(ex.Message);
 
-                        int delay = Math.Min(1 * ++attempt, 10);
+                        int delay = Math.Min(1 * ++attempt, 30);
 
                         if (LoggingEnabled)
                             logger?.LogInformation($"Reconectando en {delay} segundos...");
