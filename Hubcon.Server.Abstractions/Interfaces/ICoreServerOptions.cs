@@ -37,6 +37,13 @@ namespace Hubcon.Server.Core.Configuration
         /// <returns></returns>
         ICoreServerOptions SetHttpTimeout(TimeSpan timeout);
 
+        /// <summary>
+        /// Set the timeout for websocket ingest connections. If the connection remains silent for the specified time, the connection will automatically be closed.
+        /// Use Timespan.Zero to disable the timeout. The default is 30 seconds.
+        /// </summary>
+        /// <param name="timeout"></param>
+        /// <returns></returns>
+        ICoreServerOptions SetWebSocketIngestTimeout(TimeSpan timeout);
 
         /// <summary>
         /// Determines if the server should send a pong message to the client.
@@ -213,6 +220,11 @@ namespace Hubcon.Server.Core.Configuration
         /// Disabled. Http message processing timeout.
         /// </summary>
         TimeSpan HttpTimeout { get; }
+
+        /// <summary>
+        /// Websocket ingest timeout.
+        /// </summary>
+        TimeSpan IngestTimeout { get; }
 
         /// <summary>
         /// Determines if clients need to send ping messages to keep the connection alive.

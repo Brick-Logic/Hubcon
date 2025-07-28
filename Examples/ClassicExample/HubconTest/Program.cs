@@ -107,8 +107,10 @@ namespace HubconTest
                     .SetWebSocketTimeout(TimeSpan.FromSeconds(120))
                     .SetMaxHttpMessageSize(4 * 1024)
                     .SetMaxWebSocketMessageSize(4 * 1024)
-                    .EnableRequestDetailedErrors()
-                    .DisableAllThrottling();
+                    .ThrottleWebsocketReceiveLoop(TimeSpan.Zero)
+                    .ThrottleWebsocketIngest(TimeSpan.Zero)
+                    .EnableRequestDetailedErrors();
+                    //.DisableAllThrottling();
                 });
 
                 serverOptions.AddController<UserContractHandler>();

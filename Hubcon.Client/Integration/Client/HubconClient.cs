@@ -2,6 +2,7 @@
 using Hubcon.Client.Builder;
 using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.Websockets;
+using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Extensions;
@@ -50,7 +51,7 @@ namespace Hubcon.Client.Integration.Client
 
         private bool IsBuilt { get; set; }
 
-        private IDictionary<Type, IContractOptions>? ContractOptionsDict { get; set; }
+        private IDictionary<Type, IContractOptions> ContractOptionsDict { get; set; } = null!;
 
         public async ValueTask<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
         {
@@ -59,7 +60,16 @@ namespace Hubcon.Client.Integration.Client
 
             try
             {
-                if (ContractOptionsDict?.TryGetValue(methodInfo.ReflectedType!, out var options) ?? false && options.WebsocketMethodsEnabled)
+                bool isWebsocketMethod = false;
+                IOperationOptions? operationOptions = null;
+
+                if (ContractOptionsDict!.TryGetValue(methodInfo.ReflectedType!, out IContractOptions? contractOptions))
+                {
+                    isWebsocketMethod = contractOptions.IsWebsocketOperation(request.OperationName);
+                    operationOptions = contractOptions.GetOperationOptions(request.OperationName);
+                }
+
+                if (isWebsocketMethod)
                 {
                     if (authenticationManagerFactory?.Invoke() == null)
                         throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
@@ -126,7 +136,16 @@ namespace Hubcon.Client.Integration.Client
 
             try
             {
-                if (ContractOptionsDict?.TryGetValue(methodInfo.ReflectedType!, out var options) ?? false && options.WebsocketMethodsEnabled)
+                bool isWebsocketOperation = false;
+                IOperationOptions? operationOptions = null;
+
+                if (ContractOptionsDict!.TryGetValue(methodInfo.ReflectedType!, out IContractOptions? callContractOptions))
+                {
+                    isWebsocketOperation = callContractOptions.IsWebsocketOperation(request.OperationName);
+                    operationOptions = callContractOptions.GetOperationOptions(request.OperationName);
+                }
+
+                if (isWebsocketOperation)
                 {
                     if (authenticationManagerFactory?.Invoke() == null)
                         throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
@@ -294,17 +313,17 @@ namespace Hubcon.Client.Integration.Client
         }
 
         public void Build(
-            IClientOptions builder,
+            IClientOptions options,
             IServiceProvider services,
             IDictionary<Type, IContractOptions> contractOptions,
             bool useSecureConnection = true)
         {
             if (IsBuilt) return;
 
-            var baseUri = builder.BaseUri;
-            var httpEndpoint = builder.HttpPrefix;
-            var websocketEndpoint = builder.WebsocketPrefix;
-            var authenticationManagerType = builder.AuthenticationManagerType;
+            var baseUri = options.BaseUri;
+            var httpEndpoint = options.HttpPrefix;
+            var websocketEndpoint = options.WebsocketPrefix;
+            var authenticationManagerType = options.AuthenticationManagerType;
 
             ContractOptionsDict ??= contractOptions;
 
@@ -320,13 +339,13 @@ namespace Hubcon.Client.Integration.Client
                 authenticationManagerFactory = () => (IAuthenticationManager)((dynamic)services.GetRequiredService(lazyAuthType)).Value;
             }
 
-            client = new HubconWebSocketClient(new Uri(_websocketUrl), converter, services.GetRequiredService<ILogger<HubconWebSocketClient>>());
+            client = new HubconWebSocketClient(new Uri(_websocketUrl), converter, options, services.GetRequiredService<ILogger<HubconWebSocketClient>>());
 
             client.AuthorizationTokenProvider = () => authenticationManagerFactory?.Invoke()?.AccessToken;
 
-            client.WebSocketOptions = builder.WebSocketOptions;
+            client.WebSocketOptions = options.WebSocketOptions;
 
-            clientOptions = builder;
+            clientOptions = options;
 
             IsBuilt = true;
         }

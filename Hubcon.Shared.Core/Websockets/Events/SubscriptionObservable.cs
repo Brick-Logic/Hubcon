@@ -10,12 +10,15 @@ namespace Hubcon.Shared.Core.Websockets.Events
     public abstract class BaseObservable
     {
         protected readonly IUnsubscriber? _client;
+
+        public bool ShouldReconnect { get; private set; } = false;
         public IRequest? RequestData { get; }
 
-        protected BaseObservable(IUnsubscriber? client, IRequest? request)
+        protected BaseObservable(IUnsubscriber? client, IRequest? request, bool shouldReconnect = false)
         {
             _client = client;
             RequestData = request;
+            ShouldReconnect = shouldReconnect;
         }
 
         public abstract void OnNextElement(JsonElement value);
@@ -39,7 +42,8 @@ namespace Hubcon.Shared.Core.Websockets.Events
             Guid id, 
             JsonElement request, 
             RequestType type, 
-            IDynamicConverter converter) : base(client, new RequestData(id, request, type))
+            IDynamicConverter converter,
+            bool shouldReconnect = false) : base(client, new RequestData(id, request, type), shouldReconnect)
         {
             this.converter = converter;
         }

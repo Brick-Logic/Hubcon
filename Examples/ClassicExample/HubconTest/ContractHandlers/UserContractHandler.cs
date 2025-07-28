@@ -2,7 +2,10 @@
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestDomain;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading.Channels;
+using System.Xml.Linq;
 
 namespace HubconTest.ContractHandlers
 {
@@ -36,7 +39,7 @@ namespace HubconTest.ContractHandlers
             }
         }
 
-        [StreamingSettings(200)]
+        [StreamingSettings(0)]
         public async IAsyncEnumerable<string> GetMessages2()
         {
             while(true)
@@ -135,27 +138,91 @@ namespace HubconTest.ContractHandlers
             return Enumerable.Range(0, 5).Select(x => true);
         }
 
-        [IngestSettings(5000, BoundedChannelFullMode.Wait, 500)]
-        public async Task IngestMessages(IAsyncEnumerable<string> source)
+        private static Task? _monitor;
+
+        private async Task Monitor()
         {
-            Task TaskRunner<T>(IAsyncEnumerable<T> source, string name)
+            // Método auxiliar para calcular percentiles
+            static double Percentile(double[] sortedData, double percentile)
             {
-                return Task.Run(async () =>
-                {
-                    await foreach (var item in source)
-                    {
-                        logger.LogInformation($"source1: {item}");
-                    }
-                    logger.LogInformation($"[{name}] Stream terminado.");
-                });
+                if (sortedData == null || sortedData.Length == 0)
+                    return 0;
+
+                double position = (percentile / 100.0) * (sortedData.Length + 1);
+                int index = (int)position;
+
+                if (index < 1) return sortedData[0];
+                if (index >= sortedData.Length) return sortedData[^1];
+
+                double fraction = position - index;
+                return sortedData[index - 1] + fraction * (sortedData[index] - sortedData[index - 1]);
             }
 
-            List<Task> sources =
-            [
-                TaskRunner(source, nameof(source)),
-            ];
+            sw = Stopwatch.StartNew();
 
-            await Task.WhenAll(sources);
+            var worker = new System.Timers.Timer();
+            worker.Interval = 1000;
+            worker.Elapsed += (sender, eventArgs) =>
+            {
+                var avgRequestsPerSec = finishedRequestsCount - lastRequests;
+
+                double avgLatency = 0;
+                double p50 = 0, p95 = 0, p99 = 0;
+
+                var latenciesSnapshot = latencies.ToArray();
+                latencies.Clear();
+
+                if (latenciesSnapshot.Length > 0)
+                {
+                    Array.Sort(latenciesSnapshot);
+                    avgLatency = latenciesSnapshot.Average();
+
+                    p50 = Percentile(latenciesSnapshot, 50);
+                    p95 = Percentile(latenciesSnapshot, 95);
+                    p99 = Percentile(latenciesSnapshot, 99);
+                }
+
+                maxReqs = Math.Max(maxReqs, avgRequestsPerSec);
+
+                logger.LogInformation($"Requests: {finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {maxReqs} | " +
+                                      $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
+
+                var allocated = GC.GetTotalMemory(forceFullCollection: false);
+                logger.LogInformation($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {sw.Elapsed}");
+
+                lastRequests = finishedRequestsCount;
+                sw.Restart();
+            };
+            worker.Start();
+        }
+
+        static ConcurrentBag<double> latencies = new();
+        static int finishedRequestsCount = 0;
+        static int lastRequests = 0;
+        static int maxReqs = 0;
+        static Stopwatch sw;
+
+        [IngestSettings(5000, BoundedChannelFullMode.Wait, 1)]
+        public async Task IngestMessages(IAsyncEnumerable<string> source)
+        {
+            _monitor ??= Monitor();
+
+            Stopwatch? swReq;
+
+            await foreach (var item in source)
+            {
+                swReq = Stopwatch.StartNew();
+
+                try
+                {
+                    Interlocked.Increment(ref finishedRequestsCount);
+                }
+                finally
+                {
+                    swReq.Stop();
+                    latencies.Add(swReq.Elapsed.TotalMilliseconds);
+                }
+            }
             logger.LogInformation("Ingest terminado exitosamente");
         }
     }

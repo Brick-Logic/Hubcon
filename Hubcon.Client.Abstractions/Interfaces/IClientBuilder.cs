@@ -15,12 +15,20 @@ namespace Hubcon.Client.Abstractions.Interfaces
         string? WebsocketPrefix { get; set; }
         Action<ClientWebSocketOptions>? WebSocketOptions { get; set; }
         Action<HttpClient>? HttpClientOptions { get; set; }
-        TimeSpan? WebsocketPingInterval { get; set; }
+        TimeSpan WebsocketPingInterval { get; set; }
+        bool WebsocketRequiresPong { get; set; }
+        int MessageProcessorsCount { get; set; }
+        bool AutoReconnect { get; set; }
+        bool ReconnectStreams { get; set; }
+        bool ReconnectSubscriptions { get; set; }
+        bool ReconnectIngests { get; set; }
+        TimeSpan WebsocketTimeout { get; set; }
+        TimeSpan HttpTimeout { get; set; }
 
         T GetOrCreateClient<T>(IServiceProvider services) where T : IControllerContract;
         object GetOrCreateClient(Type contractType, IServiceProvider services);
         void LoadContractProxy(Type contractType, IServiceCollection services);
         void UseAuthenticationManager<T>(IServiceCollection services) where T : class, IAuthenticationManager;
-        void ConfigureContract<T>(Action<IContractConfigurator>? configure) where T : IControllerContract;
+        void ConfigureContract<T>(Action<IContractConfigurator<T>>? configure) where T : IControllerContract;
     }
 }

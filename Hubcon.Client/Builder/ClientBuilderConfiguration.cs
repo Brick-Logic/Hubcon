@@ -8,15 +8,14 @@ namespace Hubcon.Client.Builder
 {
     internal class ServerModuleConfiguration(IClientBuilder builder, IServiceCollection services) : IServerModuleConfiguration
     {
-        public IServerModuleConfiguration Implements<T>(Action<IContractConfigurator>? configure = null) where T : IControllerContract
+        public IServerModuleConfiguration Implements<T>(Action<IContractConfigurator<T>>? configure = null) where T : IControllerContract
         {
             if (typeof(T).IsClass || builder.Contracts.Any(x => x == typeof(T)))
                 return this;
 
             LoadContractProxy(typeof(T));
             builder.Contracts.Add(typeof(T));
-
-            builder.ConfigureContract<T>(configure);
+            builder.ConfigureContract(configure);
 
             return this;
         }
@@ -44,7 +43,7 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
-        public IServerModuleConfiguration ConfigureWebsockets(Action<ClientWebSocketOptions> options)
+        public IServerModuleConfiguration ConfigureWebsocketClient(Action<ClientWebSocketOptions> options)
         {
             builder.WebSocketOptions ??= options;
             return this;
@@ -70,7 +69,55 @@ namespace Hubcon.Client.Builder
 
         public IServerModuleConfiguration SetWebsocketPingInterval(TimeSpan timeSpan)
         {
-            builder.WebsocketPingInterval ??= timeSpan;
+            builder.WebsocketPingInterval = timeSpan;
+            return this;
+        }
+
+        public IServerModuleConfiguration RequirePongResponse(bool value = true)
+        {
+            builder.WebsocketRequiresPong = value;
+            return this;
+        }
+
+        public IServerModuleConfiguration ScaleMessageProcessors(int count = 1)
+        {
+            builder.MessageProcessorsCount = count;
+            return this;
+        }
+
+        public IServerModuleConfiguration EnableWebsocketAutoReconnect(bool value = true)
+        {
+            builder.AutoReconnect = value;
+            return this;
+        }
+
+        public IServerModuleConfiguration ResubcribeStreamingOnReconnect(bool value = true)
+        {
+            builder.ReconnectStreams = value;
+            return this;
+        }
+
+        public IServerModuleConfiguration ResubscribeOnReconnect(bool value = true)
+        {
+            builder.ReconnectSubscriptions = value;
+            return this;
+        }
+
+        public IServerModuleConfiguration ResubscribeIngestOnReconnect(bool value = true)
+        {
+            builder.ReconnectIngests = value;
+            return this;
+        }
+
+        public IServerModuleConfiguration SetWebsocketTimeout(TimeSpan timeSpan)
+        {
+            builder.WebsocketTimeout = timeSpan;
+            return this;
+        }
+
+        public IServerModuleConfiguration SetHttpTimeout(TimeSpan timeSpan)
+        {
+            builder.HttpTimeout = timeSpan;
             return this;
         }
     }

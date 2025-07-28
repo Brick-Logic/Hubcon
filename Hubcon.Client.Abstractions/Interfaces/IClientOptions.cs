@@ -17,6 +17,14 @@ namespace Hubcon.Client.Abstractions.Interfaces
         public Action<ClientWebSocketOptions>? WebSocketOptions { get; }
         public Action<HttpClient>? HttpClientOptions { get; }
         public bool UseSecureConnection { get; }
-        TimeSpan? WebsocketPingInterval { get; }
+        TimeSpan WebsocketPingInterval { get; }
+        bool WebsocketRequiresPong { get; }
+        int MessageProcessorsCount { get; }
+        bool AutoReconnect { get; }
+        bool ReconnectStreams { get; }
+        bool ReconnectSubscriptions { get; }
+        bool ReconnectIngests { get; }
+        TimeSpan WebsocketTimeout { get; }
+        TimeSpan HttpTimeout { get; }
     }
 }

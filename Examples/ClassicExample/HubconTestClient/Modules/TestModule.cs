@@ -1,5 +1,6 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Builder;
+using Hubcon.Shared.Abstractions.Enums;
 using HubconTestClient.Auth;
 using HubconTestDomain;
 
@@ -11,16 +12,30 @@ namespace HubconTestClient.Modules
         {
             configuration.WithBaseUrl("localhost:5000");
 
-            configuration.Implements<IUserContract>(x => x.UseWebsocketMethods());
+            configuration.Implements<IUserContract>(x =>
+            {
+                x.UseWebsocketMethods();
+
+                x.ConfigureOperations(operationSelector =>
+                {
+                    operationSelector.Configure(contract => contract.GetTemperatureFromServer)
+                        .UseTransport(TransportType.Http);
+
+                    operationSelector.Configure(contract => contract.CreateUser)
+                        .UseTransport(TransportType.Websockets);
+                });
+            });
+
             configuration.Implements<ISecondTestContract>();
 
-            configuration.ConfigureWebsockets(x =>
+            configuration.ConfigureWebsocketClient(x =>
             {
                 x.SetBuffer(4 * 1024, 4 * 1024);
-                x.KeepAliveInterval = TimeSpan.FromSeconds(180);
             });
 
             configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(30));
+            configuration.RequirePongResponse(true);
+            configuration.ScaleMessageProcessors(2);
 
             configuration.ConfigureHttpClient(x =>
             {

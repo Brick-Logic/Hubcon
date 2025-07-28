@@ -203,7 +203,6 @@ namespace Hubcon.Server.Core.Pipelines
             }
 
             var arguments = new List<object?>();
-
             
             foreach (var parameterType in blueprint!.ParameterTypes)
             {

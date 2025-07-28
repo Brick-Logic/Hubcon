@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Interfaces
 {
-    public interface IContractOptions
+    public interface IGlobalOperationOptions
     {
-        public bool WebsocketMethodsEnabled { get; }
-        public Type ContractType { get; }
         Dictionary<string, IOperationOptions> OperationOptions { get; }
-
-        IOperationOptions? GetOperationOptions(string operationName);
-        bool IsWebsocketOperation(string operationName);
     }
 }

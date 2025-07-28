@@ -33,6 +33,7 @@ namespace Hubcon.Server.Core.Configuration
         private bool? websocketRequiresAuthorization;
         private bool? websocketLoggingEnabled;
         private bool? httpLoggingEnabled;
+        private TimeSpan? ingestTimeout;
 
         // Defaults
         public int MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
@@ -74,6 +75,8 @@ namespace Hubcon.Server.Core.Configuration
         public bool WebsocketLoggingEnabled => websocketLoggingEnabled ?? false;
 
         public bool HttpLoggingEnabled => httpLoggingEnabled ?? false;
+
+        public TimeSpan IngestTimeout => ingestTimeout ?? TimeSpan.FromSeconds(30);
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -225,6 +228,12 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions EnableHttpLogging(bool enabled = true)
         {
             httpLoggingEnabled ??= enabled;
+            return this;
+        }
+
+        public ICoreServerOptions SetWebSocketIngestTimeout(TimeSpan timeout)
+        {
+            ingestTimeout ??= timeout;
             return this;
         }
     }

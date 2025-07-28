@@ -8,6 +8,12 @@ using System.Linq;
 
 internal class Program
 {
+    static int finishedRequestsCount = 0;
+    static int errors = 0;
+    static int lastRequests = 0;
+    static int maxReqs = 0;
+    static Stopwatch sw;
+
     static async Task Main()
     {
         var process = Process.GetCurrentProcess();
@@ -51,7 +57,7 @@ internal class Program
         logger.LogInformation($"Login result: {result.IsSuccess}");
         logger.LogInformation($"Login OK.");
 
-        await Task.Delay(1000);
+        await Task.Delay(100);
 
         logger.LogWarning($"Probando ingest...");
         IAsyncEnumerable<string> source1 = GetMessages(2);
@@ -62,7 +68,7 @@ internal class Program
         await client.IngestMessages2(source1, source2, source3, source4, source5);
         logger.LogInformation($"Ingest OK.");
 
-        await Task.Delay(1000);
+        await Task.Delay(100);
 
         logger.LogWarning($"Probando invocación sin parametros...");
         var text = await client2.TestReturn();
@@ -72,7 +78,7 @@ internal class Program
         else
             throw new Exception("Invocación sin parametros fallida.");
 
-        await Task.Delay(1000);
+        await Task.Delay(100);
 
         int eventosRecibidos = 0;
 
@@ -121,13 +127,13 @@ internal class Program
 
         logger.LogInformation("Eventos conectados.");
 
-        await Task.Delay(1000);
+        await Task.Delay(100);
 
         logger.LogWarning("Enviando request de prueba...");
         await client.CreateUser();
         logger.LogInformation($"Esperando eventos...");
 
-        await Task.Delay(1000);
+        await Task.Delay(100);
 
         if (eventosRecibidos == 4)
         {
@@ -138,13 +144,13 @@ internal class Program
             throw new Exception("No se recibieron todos los eventos esperados.");
         }
 
-        await Task.Delay(1000);
+        await Task.Delay(100);
 
         logger.LogWarning("Probando invocación con retorno...");
         var temp = await client.GetTemperatureFromServer();
         logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
         
-        await Task.Delay(1000);
+        await Task.Delay(100);
 
         logger.LogWarning("Probando streaming de 10 mensajes...");
 
@@ -155,15 +161,11 @@ internal class Program
 
         logger.LogInformation("Streaming OK.");
 
-        await Task.Delay(1000);
-
-        int finishedRequestsCount = 0;
-        int errors = 0;
-        int lastRequests = 0;
-        int maxReqs = 0;
-        var sw = Stopwatch.StartNew();
+        await Task.Delay(100);
 
         ConcurrentBag<double> latencies = new();
+
+        sw = Stopwatch.StartNew();
 
         var worker = new System.Timers.Timer();
         worker.Interval = 1000;
@@ -202,17 +204,18 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 500
+            MaxDegreeOfParallelism = 24
         };
 
         await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
         {
+            //await foreach(var item in client.GetMessages2())
             while (!ct.IsCancellationRequested)
             {
                 var swReq = Stopwatch.StartNew();
                 try
                 {
-                    var a = await client.GetTemperatureFromServer();
+                    await client.IngestMessages(GetMessages2());
                     Interlocked.Increment(ref finishedRequestsCount);
                 }
                 catch
@@ -236,6 +239,15 @@ internal class Program
             Console.WriteLine($"Enviando mensaje... [{message}]");
             yield return message;
             await Task.Delay(1000);
+        }
+    }
+
+    static async IAsyncEnumerable<string> GetMessages2()
+    {
+        while(true)
+        { 
+            yield return "hola";
+            Interlocked.Increment(ref finishedRequestsCount);
         }
     }
 

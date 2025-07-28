@@ -29,6 +29,12 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
 
         private async Task RunAsync(CancellationToken token)
         {
+            if(_timeoutSeconds <= TimeSpan.Zero)
+            {
+                await Task.Delay(Timeout.Infinite, token);
+                return;
+            }
+
             while (!token.IsCancellationRequested)
             {
                 await Task.Delay(_timeoutSeconds * 1000 / 5, token);
