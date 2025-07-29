@@ -78,9 +78,18 @@ namespace Hubcon.Client.Interceptors
         }
 
         public Task CallAsync(MethodInfo method, Dictionary<string, object?>? arguments = null)
-        {
-            if (Client is null)
+        {            if (Client is null)
                 throw new Exception("El cliente no fue inyectado.");
+
+            var tokens = arguments?.Where(x => x.Value?.GetType() == typeof(CancellationToken));
+            
+            if(tokens != null)
+            {
+                foreach(var token in tokens!)
+                {
+                    arguments!.Remove(token.Key);
+                }
+            }
 
             var methodName = method.GetMethodSignature();
             var contractName = method.ReflectedType!.Name;

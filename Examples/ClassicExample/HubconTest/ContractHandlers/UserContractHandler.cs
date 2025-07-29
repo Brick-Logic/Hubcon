@@ -4,6 +4,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestDomain;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Channels;
 using System.Xml.Linq;
 
@@ -16,7 +17,7 @@ namespace HubconTest.ContractHandlers
         public ISubscription<int?>? OnUserCreated3 { get; }
         public ISubscription<int?>? OnUserCreated4 { get; }
 
-        public Task CreateUser()
+        public Task CreateUser(CancellationToken cancellationToken)
         {
             OnUserCreated?.Emit(1);
             OnUserCreated2?.Emit(2);
@@ -27,7 +28,7 @@ namespace HubconTest.ContractHandlers
         }
 
 
-        public async Task<int> GetTemperatureFromServer() 
+        public async Task<int> GetTemperatureFromServer(CancellationToken cancellationToken) 
             => await Task.Run(() => new Random().Next(-10, 50));
 
         [StreamingSettings(1000)]
@@ -40,7 +41,7 @@ namespace HubconTest.ContractHandlers
         }
 
         [StreamingSettings(0)]
-        public async IAsyncEnumerable<string> GetMessages2()
+        public async IAsyncEnumerable<string> GetMessages2(CancellationToken cancellationToken)
         {
             while(true)
             {
@@ -139,8 +140,7 @@ namespace HubconTest.ContractHandlers
         }
 
         private static Task? _monitor;
-
-        private async Task Monitor()
+        private async Task Monitor(CancellationToken cancellationToken)
         {
             // Método auxiliar para calcular percentiles
             static double Percentile(double[] sortedData, double percentile)
@@ -164,6 +164,9 @@ namespace HubconTest.ContractHandlers
             worker.Interval = 1000;
             worker.Elapsed += (sender, eventArgs) =>
             {
+                if (cancellationToken.IsCancellationRequested)
+                    worker.Stop();
+
                 var avgRequestsPerSec = finishedRequestsCount - lastRequests;
 
                 double avgLatency = 0;
@@ -202,14 +205,14 @@ namespace HubconTest.ContractHandlers
         static int maxReqs = 0;
         static Stopwatch sw;
 
-        [IngestSettings(5000, BoundedChannelFullMode.Wait, 1)]
-        public async Task IngestMessages(IAsyncEnumerable<string> source)
+        [IngestSettings(100, BoundedChannelFullMode.Wait, 1)]
+        public async Task IngestMessages(IAsyncEnumerable<string> source, CancellationToken cancellationToken)
         {
-            _monitor ??= Monitor();
+            _monitor ??= Monitor(cancellationToken);
 
             Stopwatch? swReq;
 
-            await foreach (var item in source)
+            await foreach (var item in source.WithCancellation(cancellationToken))
             {
                 swReq = Stopwatch.StartNew();
 
@@ -223,6 +226,7 @@ namespace HubconTest.ContractHandlers
                     latencies.Add(swReq.Elapsed.TotalMilliseconds);
                 }
             }
+
             logger.LogInformation("Ingest terminado exitosamente");
         }
     }

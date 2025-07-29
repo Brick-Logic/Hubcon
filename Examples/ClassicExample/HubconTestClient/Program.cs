@@ -13,6 +13,7 @@ internal class Program
     static int lastRequests = 0;
     static int maxReqs = 0;
     static Stopwatch sw;
+    static ConcurrentBag<double> latencies = new();
 
     static async Task Main()
     {
@@ -73,7 +74,7 @@ internal class Program
         logger.LogWarning($"Probando invocación sin parametros...");
         var text = await client2.TestReturn();
 
-        if( text != null )
+        if (text != null)
             logger.LogInformation($"Invocación sin parametros OK.");
         else
             throw new Exception("Invocación sin parametros fallida.");
@@ -149,7 +150,7 @@ internal class Program
         logger.LogWarning("Probando invocación con retorno...");
         var temp = await client.GetTemperatureFromServer();
         logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
-        
+
         await Task.Delay(100);
 
         logger.LogWarning("Probando streaming de 10 mensajes...");
@@ -162,8 +163,6 @@ internal class Program
         logger.LogInformation("Streaming OK.");
 
         await Task.Delay(100);
-
-        ConcurrentBag<double> latencies = new();
 
         sw = Stopwatch.StartNew();
 
@@ -191,7 +190,7 @@ internal class Program
 
             maxReqs = Math.Max(maxReqs, avgRequestsPerSec);
 
-            logger.LogInformation($"Requests: {finishedRequestsCount} | Received Events: {eventosRecibidos} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {maxReqs} | " +
+            logger.LogInformation($"Requests: {finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {maxReqs} | " +
                                   $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
 
             var allocated = GC.GetTotalMemory(forceFullCollection: false);
@@ -204,7 +203,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 24
+            MaxDegreeOfParallelism = 1
         };
 
         await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
@@ -215,7 +214,7 @@ internal class Program
                 var swReq = Stopwatch.StartNew();
                 try
                 {
-                    await client.IngestMessages(GetMessages2());
+                    await client.IngestMessages(GetMessages2(), default);
                     Interlocked.Increment(ref finishedRequestsCount);
                 }
                 catch
@@ -245,9 +244,19 @@ internal class Program
     static async IAsyncEnumerable<string> GetMessages2()
     {
         while(true)
-        { 
-            yield return "hola";
-            Interlocked.Increment(ref finishedRequestsCount);
+        {
+            var swReq = Stopwatch.StartNew();
+            try
+            {
+                yield return "hola";
+                Interlocked.Increment(ref finishedRequestsCount);
+                //await Task.Delay(1);
+            }
+            finally
+            {
+                swReq.Stop();
+                latencies.Add(swReq.Elapsed.TotalMilliseconds);
+            }
         }
     }
 

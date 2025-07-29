@@ -7,6 +7,8 @@ namespace Hubcon.Server.Core.Websockets.Helpers
 {
     internal sealed class WebSocketMessageSender(WebSocket _webSocket, IDynamicConverter converter)
     {
+        public WebSocketState State => _webSocket.State;
+
         public async Task SendAsync<T>(T message)
         {
             var json = converter.Serialize(message);

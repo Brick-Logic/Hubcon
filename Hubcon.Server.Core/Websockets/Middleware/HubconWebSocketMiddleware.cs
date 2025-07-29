@@ -42,6 +42,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         private HeartbeatWatcher _heartbeatWatcher = null!;
         private int PingMessageThrottle = 1;
         private int AckMessageThrottle = 1;
+        private readonly CancellationTokenSource cts = new();
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
         {
@@ -51,7 +52,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 return;
             }
 
-            using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+            using WebSocket? webSocket = await context.WebSockets.AcceptWebSocketAsync();
 
             ConcurrentDictionary<Guid, CancellationTokenSource> _subscriptions = null!;
             ConcurrentDictionary<Guid, CancellationTokenSource> _streams = null!;
@@ -134,6 +135,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 _heartbeatWatcher = new HeartbeatWatcher(timeoutSeconds, () =>
                 {
+                    cts.Cancel();
                     return webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Socket timeout", default);
                 });
 
@@ -386,7 +388,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             finally
             {
-
                 if (_subscriptions != null)
                 {
                     foreach (var sub in _subscriptions.Values)
@@ -394,7 +395,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         sub.Cancel();
                     }
                 }
-
 
                 if (_ackChannels != null)
                 {
@@ -557,7 +557,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         complete.Item2?.Cancel();
                         complete.Item2?.Dispose();
                         operationConfigRegistry.Unlink(id);
-                        return cts.CancelAsync();
+                        return Task.CompletedTask;
                     });
 
                     watchers.Add(hw);
@@ -570,7 +570,20 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 await Task.Delay(100);
                 await sender.SendAsync(new IngestInitAckMessage(ingestInitMessage.Id));
                 var result = await ingestTask;
+
+                if (sender.State != WebSocketState.Open)
+                    return;
+
                 await sender.SendAsync(new IngestResultMessage(ingestInitMessage.Id, converter.SerializeToElement(result)));
+            }
+            catch(Exception ex)
+            {
+                logger?.LogError(ex.Message);
+
+                if (sender.State != WebSocketState.Open)
+                    return;
+
+                await sender.SendAsync(new IngestResultMessage(ingestInitMessage.Id, converter.SerializeToElement(ex.Message)));
             }
             finally
             {

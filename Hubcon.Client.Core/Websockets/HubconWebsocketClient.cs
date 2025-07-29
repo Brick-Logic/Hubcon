@@ -604,8 +604,6 @@ namespace Hubcon.Client.Core.Websockets
 
                             if (LoggingEnabled)
                                 logger?.LogInformation("Socket timed out.");
-
-                            await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Socket timed out.", default);
                         });
 
 
@@ -799,7 +797,6 @@ namespace Hubcon.Client.Core.Websockets
                 }
             }
         }
-
 
         private async Task SendLoopAsync(ClientWebSocket _webSocket, CancellationToken cancellationToken)
         {

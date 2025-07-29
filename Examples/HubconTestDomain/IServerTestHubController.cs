@@ -18,14 +18,14 @@ namespace HubconTestDomain
         ISubscription<int?>? OnUserCreated3 { get; }
         ISubscription<int?>? OnUserCreated4 { get; }
 
-        Task<int> GetTemperatureFromServer();
+        Task<int> GetTemperatureFromServer(CancellationToken cancellationToken = default);
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();
         Task<IEnumerable<bool>> GetBooleans();
         Task<MyTestClass> GetObject();
-        Task CreateUser();
-        IAsyncEnumerable<string> GetMessages2();
-        Task IngestMessages(IAsyncEnumerable<string> source);
+        Task CreateUser(CancellationToken cancellationToken = default);
+        IAsyncEnumerable<string> GetMessages2(CancellationToken cancellationToken = default);
+        Task IngestMessages(IAsyncEnumerable<string> source, CancellationToken cancellationToken = default);
         Task<string> IngestMessages(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2, IAsyncEnumerable<string> source3, IAsyncEnumerable<string> source4, IAsyncEnumerable<string> source5);
         Task IngestMessages2(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2, IAsyncEnumerable<string> source3, IAsyncEnumerable<string> source4, IAsyncEnumerable<string> source5);
     }

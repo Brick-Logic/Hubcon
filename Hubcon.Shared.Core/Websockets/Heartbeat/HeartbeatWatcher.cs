@@ -37,7 +37,7 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
 
             while (!token.IsCancellationRequested)
             {
-                await Task.Delay(_timeoutSeconds * 1000 / 5, token);
+                await Task.Delay(_timeoutSeconds / 5, token);
 
                 var elapsed = (DateTime.UtcNow - _lastHeartbeat).TotalSeconds;
                 if (TimeSpan.FromSeconds(elapsed) > _timeoutSeconds)
@@ -56,10 +56,15 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
         {
             if (!timeoutExecuted)
             {
-                _cts.Cancel();
-                _cts.Dispose();
+                if (!_cts.IsCancellationRequested)
+                {
+                    _cts.Cancel();
+                    _cts.Dispose();
+                }
+
                 timeoutExecuted = true;
-                await _onTimeout();
+                
+                try { await _onTimeout(); } catch { /* swallow */ }
             }
 
             try { await _loop; } catch { /* swallow */ }

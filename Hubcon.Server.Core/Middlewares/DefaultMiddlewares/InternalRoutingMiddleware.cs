@@ -31,17 +31,15 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 || context.Blueprint.Kind == OperationKind.Stream 
                 || context.Blueprint.Kind == OperationKind.Ingest)
             {
-                if(context.Request.Arguments?.Count != context.Blueprint!.ParameterTypes.Count)
-                {
-                    context.Result = new BaseOperationResponse<object>(false);
-                    return;
-                }
-
-                foreach(var kvp in context.Request.Arguments)
+                foreach(var kvp in context.Blueprint!.ParameterTypes)
                 {
                     var type = context.Blueprint!.ParameterTypes[kvp.Key];
 
-                    if (context.Request.Arguments[kvp.Key] is JsonElement element)
+                    if (type == typeof(CancellationToken))
+                    {
+                        context.Request.Arguments[kvp.Key] = context.RequestAborted;
+                    }
+                    else if (context.Request.Arguments[kvp.Key] is JsonElement element)
                     {
                         context.Request.Arguments[kvp.Key] = dynamicConverter.DeserializeJsonElement(element, type);
                     }
@@ -64,6 +62,12 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         context.Result = new BaseOperationResponse<object>(false);
                         return;
                     }
+                }
+
+                if(context.Blueprint!.ParameterTypes.Count != context.Request.Arguments!.Count)
+                {
+                    context.Result = new BaseOperationResponse<JsonElement>(false, default, "Argument count mismatch.");
+                    return;
                 }
 
                 var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);

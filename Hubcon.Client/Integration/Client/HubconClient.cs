@@ -60,6 +60,15 @@ namespace Hubcon.Client.Integration.Client
 
             try
             {
+                var items = request.Arguments?.Count > 0 
+                    ? request.Arguments?.Where(x => x.Value?.GetType() == typeof(CancellationToken)) 
+                    : Enumerable.Empty<KeyValuePair<string, object?>>();
+
+                foreach(var item in items ?? Enumerable.Empty<KeyValuePair<string, object?>>())
+                {
+                    request.Arguments!.Remove(item.Key);
+                }
+
                 bool isWebsocketMethod = false;
                 IOperationOptions? operationOptions = null;
 
@@ -84,7 +93,7 @@ namespace Hubcon.Client.Integration.Client
                 }
                 else
                 {
-                    var bytes = converter.SerializeObject(request.Arguments).ToString();
+                    var bytes = converter.SerializeToElement(request.Arguments).ToString();
                     using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
                     HttpMethod httpMethod = request.Arguments!.Any() ? HttpMethod.Post : HttpMethod.Get;
@@ -98,7 +107,7 @@ namespace Hubcon.Client.Integration.Client
                     var authManager = authenticationManagerFactory?.Invoke();
 
                     if (authManager != null && authManager.IsSessionActive)
-                        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authManager.AccessToken);
+                        httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authManager.TokenType!, authManager.AccessToken);
 
                     var response = await HttpClient.SendAsync(httpRequest, cancellationToken);
 
@@ -109,7 +118,7 @@ namespace Hubcon.Client.Integration.Client
                         throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
 
                     var operationResponse = converter.DeserializeJsonElement<BaseOperationResponse<T>>(result)
-                        ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor."); ;
+                        ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
 
                     if (!operationResponse.Success)
                         throw new HubconRemoteException($"Ocurrió un error en el servidor. Mensaje recibido: {operationResponse.Error}");
@@ -136,6 +145,15 @@ namespace Hubcon.Client.Integration.Client
 
             try
             {
+                var items = request.Arguments?.Count > 0
+                    ? request.Arguments?.Where(x => x.Value?.GetType() == typeof(CancellationToken))
+                    : Enumerable.Empty<KeyValuePair<string, object?>>();
+
+                foreach (var item in items ?? Enumerable.Empty<KeyValuePair<string, object?>>())
+                {
+                    request.Arguments!.Remove(item.Key);
+                }
+
                 bool isWebsocketOperation = false;
                 IOperationOptions? operationOptions = null;
 
@@ -190,6 +208,15 @@ namespace Hubcon.Client.Integration.Client
         {
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
+
+            var items = request.Arguments?.Count > 0
+                    ? request.Arguments?.Where(x => x.Value?.GetType() == typeof(CancellationToken))
+                    : Enumerable.Empty<KeyValuePair<string, object?>>();
+
+            foreach (var item in items ?? Enumerable.Empty<KeyValuePair<string, object?>>())
+            {
+                request.Arguments!.Remove(item.Key);
+            }
 
             IObservable<JsonElement> observable;
 
@@ -247,6 +274,15 @@ namespace Hubcon.Client.Integration.Client
             if (authenticationManagerFactory?.Invoke() == null)
                 throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
 
+            var items = request.Arguments?.Count > 0
+                    ? request.Arguments?.Where(x => x.Value?.GetType() == typeof(CancellationToken))
+                    : Enumerable.Empty<KeyValuePair<string, object?>>();
+
+            foreach (var item in items ?? Enumerable.Empty<KeyValuePair<string, object?>>())
+            {
+                request.Arguments!.Remove(item.Key);
+            }
+
             var response = await client.IngestMultiple<T>(request);
             return response.Data;          
         }
@@ -256,6 +292,15 @@ namespace Hubcon.Client.Integration.Client
         {
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
+
+            var items = request.Arguments?.Count > 0
+                    ? request.Arguments?.Where(x => x.Value?.GetType() == typeof(CancellationToken))
+                    : Enumerable.Empty<KeyValuePair<string, object?>>();
+
+            foreach (var item in items ?? Enumerable.Empty<KeyValuePair<string, object?>>())
+            {
+                request.Arguments!.Remove(item.Key);
+            }
 
             IObservable<JsonElement> observable;
 

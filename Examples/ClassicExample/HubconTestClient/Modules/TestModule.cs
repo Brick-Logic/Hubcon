@@ -12,6 +12,8 @@ namespace HubconTestClient.Modules
         {
             configuration.WithBaseUrl("localhost:5000");
 
+            configuration.EnableWebsocketAutoReconnect(true);
+
             configuration.Implements<IUserContract>(x =>
             {
                 x.UseWebsocketMethods();
@@ -19,10 +21,10 @@ namespace HubconTestClient.Modules
                 x.ConfigureOperations(operationSelector =>
                 {
                     operationSelector.Configure(contract => contract.GetTemperatureFromServer)
-                        .UseTransport(TransportType.Http);
+                        .UseTransport(TransportType.Websockets);
 
                     operationSelector.Configure(contract => contract.CreateUser)
-                        .UseTransport(TransportType.Websockets);
+                        .UseTransport(TransportType.Http);
                 });
             });
 
@@ -33,13 +35,13 @@ namespace HubconTestClient.Modules
                 x.SetBuffer(4 * 1024, 4 * 1024);
             });
 
-            configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(30));
+            configuration.SetWebsocketPingInterval(TimeSpan.FromMilliseconds(100));
             configuration.RequirePongResponse(true);
             configuration.ScaleMessageProcessors(2);
 
             configuration.ConfigureHttpClient(x =>
             {
-                x.Timeout = TimeSpan.FromSeconds(30);
+                x.Timeout = TimeSpan.FromSeconds(15);
                 x.DefaultRequestHeaders.Add("User-Agent", "HubconTestClient");
             });
 

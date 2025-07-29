@@ -195,18 +195,25 @@ namespace Hubcon.Server.Core.Pipelines
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Ingest))
                 return null!;
 
-            if (request.Arguments?.Count() == 0
-                || blueprint?.ParameterTypes.Count == 0
-                || blueprint?.ParameterTypes.Count != request.Arguments?.Count())
+            var count = request.Arguments?.Count + blueprint?.ParameterTypes.Count(x => x.GetType() == typeof(CancellationToken));
+
+            if (request.Arguments?.Count == 0
+                || count == 0
+                || count != request.Arguments?.Count)
             {
-                return new BaseOperationResponse<JsonElement>(false);
+                return new BaseOperationResponse<JsonElement>(false, default, "Parameter count mismatch.");
             }
 
             var arguments = new List<object?>();
             
             foreach (var parameterType in blueprint!.ParameterTypes)
             {
-                var arg = request.Arguments?[parameterType.Key];
+                object? arg = null;
+
+                if (!request.Arguments!.TryGetValue(parameterType.Key, out arg))
+                {
+                    continue;
+                }
 
                 if (parameterType.Value.IsGenericType && parameterType.Value.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
                 {

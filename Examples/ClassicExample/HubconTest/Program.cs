@@ -104,7 +104,7 @@ namespace HubconTest
                         return JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
                     })
                     .SetHttpTimeout(TimeSpan.FromSeconds(15))
-                    .SetWebSocketTimeout(TimeSpan.FromSeconds(120))
+                    .SetWebSocketTimeout(TimeSpan.FromSeconds(5))
                     .SetMaxHttpMessageSize(4 * 1024)
                     .SetMaxWebSocketMessageSize(4 * 1024)
                     .ThrottleWebsocketReceiveLoop(TimeSpan.Zero)
