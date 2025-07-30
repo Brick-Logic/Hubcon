@@ -21,8 +21,11 @@ A high-performance, contract-based RPC micro-framework for .NET that provides se
 ## Features implementation state
 
 ✅ Complete – Implemented and functional.
+
 ⚠️ In progress – Currently being developed or partially functional.
+
 🟡 Planned – Designed, pending implementation.
+
 🔜 Coming – Planned for the next version.
 
 ### 🌐 HTTP – Features
@@ -128,7 +131,7 @@ public interface IUserContract : IControllerContract
 
 ### 2. Server Implementation
 
-## Controller/ContractHandler implementation
+#### ⚪ Controller/ContractHandler implementation
 
 Here you will implement your contract/interface, as a normal interface.
 ```csharp
@@ -178,7 +181,7 @@ any single-threaded application. The framework will show a warning explaining th
 Task or Task<T> usage is strongly recommended, except on methods that return IAsyncEnumerable<T>,
 which already handle this. 
 
-## Server-side program.cs
+#### ⚪ Server-side program.cs
 
 ```csharp
 // Before 'var app = builder.Build();'
@@ -218,7 +221,7 @@ These options can be used in any order.
 
 ### 3. Client Usage
 
-## Creating a RemoteServerModule
+#### ⚪ Creating a RemoteServerModule
 A RemoteServerModule represents a server as an entity. It is used to describe a remote server, and implements
 contracts automatically based on it.
 
@@ -249,7 +252,7 @@ internal class MyUserServerModule : RemoteServerModule
 }
 ```
 
-## Authentication manager
+## 🔐 Authentication manager
 The authentication manager allows Hubcon to inject an authorization tokens on HTTP requests and
 to authenticate the initial websocket connection.
 
@@ -316,7 +319,7 @@ public class AuthenticationManager(IUserContract users) : BaseAuthenticationMana
 All methods and subscriptions (including ISubscription<T> properties) allow the usage of the
 [Authorize] attribute, including it's variants, and the [AllowAnonymous] attribute, for public access.
 
-## Register your RemoteServerModule
+### ⚪ Register your RemoteServerModule
 ```csharp
 // On program.cs, before builder.Build()...
 builder.Services.AddHubconClient();
@@ -328,7 +331,7 @@ NOTE: There will be exactly 1 client which includes a pooled HTTP client and a c
 
 ## 🔧 Advanced Features
 
-### Custom Middleware
+### ⚪ Custom Middleware
 Hubcon has it's own execution pipeline with custom middlewares, which come AFTER the ASP.NET's pipeline.
 You can add global middlewares, and also controller-specific middlewares.
 
@@ -408,7 +411,7 @@ Will set global middlewares as priority in their own group.
 Using that option, the global AuthorizationMiddleware will have priority over the local one, but will
 still respect the type order.
 
-### Subscription Configuration
+### ⚪ Subscription Configuration
 Subscriptions don't need configuration by default, they are plug and play, but you
 can configure websocket-specific settings which affect or disable them:
 
@@ -430,7 +433,7 @@ builder.ConfigureHubconServer(serverOptions =>
 });
 ```
 
-### WebSocket Reconnection
+### ⚪ WebSocket Reconnection
 
 The hubcon websocket client allows automatic reconnection without breaking existing subscriptions on the client
 They will just wait for the websocket to reconnect and keep receiving messages.
@@ -441,11 +444,11 @@ This includes property subscriptions and streams (they will resend the request t
 
 Hubcon is designed for high-performance scenarios:
 
-- **Theoretical ~90,000 RPS** tested on a Ryzen 5 4650U Pro laptop CPU
+- **From 50k RPS on round trips up to 450k events per second on streaming** Both tested on a Ryzen 5 5600X CPU. Streaming was tested using a single receiver, which can be **horizontally scaled on server modules**.
 - **Sub-millisecond latency** for local calls
-- **Memory efficient** with zero-allocation hot paths
-- **Leak-free** architecture
-- **Scalable** subscription management, specially when returning IAsyncEnumerable<T>, allowing parameterized subscriptions.
+- **Memory efficient** with zero-allocation hot paths and minimal memory footprint
+- **Leak-free** architecture, tested on ultra high throughput scenarios.
+- **Scalable** subscription management when returning IAsyncEnumerable<T>, allowing parameterized subscriptions.
 
 ## 🔌 Architecture
 
