@@ -1,6 +1,6 @@
 ﻿# Hubcon
 
-A high-performance, contract-based RPC micro-framework for .NET that provides seamless communication over HTTP/WebSocket with GraphQL-style subscriptions and real-time data streaming capabilities.
+A high-performance, contract-based RPC micro-framework for .NET that provides seamless communication over HTTP/WebSocket with interface-based usage, GraphQL-style subscriptions and real-time data streaming capabilities.
 
 ## 🚀 Key Features
 
@@ -12,11 +12,73 @@ A high-performance, contract-based RPC micro-framework for .NET that provides se
 - **Automatic Proxy Generation**: Source generators create client proxies automatically
 - **Dependency Injection**: Full DI support for contracts on both client and server
 - **Middleware Pipeline**: Compatible with ASP.NET Core middleware + custom middleware with DI, featuring an extended operation context.
-- **Plug & Play**: Minimalistic configuration setup, extensive customization options
-- **High Performance**: Up to 90,000 RPS on Ryzen 5 4650U Pro
-- **Memory Optimized**: Minimal footprint, leak-free architecture
+- **Plug & Play**: Minimalistic configuration setup, extensive customization options.
+- **High Performance**: Invoke with return: 55k RPS, Fire and forget: 120k RPS, Ingest: 140k event/s, Streaming: up to 450k events/s (single receiver), tested on a Ryzen 5 5600X CPU,
+- **Memory Optimized**: Made to sustain a very high throughput with minimal memory footprint. Leak-free, minimal alloc architecture.
 - **OpenAPI Compatible**: Partial compatibility with OpenAPI specifications and partial automatic documentation.
 - **Working examples**: This project includes a classic Client-Server example, a BlazorWasm-Server example and a triple microservice loop example.
+
+## Features implementation state
+
+✅ Complete – Implemented and functional.
+⚠️ In progress – Currently being developed or partially functional.
+🟡 Planned – Designed, pending implementation.
+🔜 Coming – Planned for the next version.
+
+### 🌐 HTTP – Features
+
+| Feature                          | Description                                                                    | Status       |
+|----------------------------------|--------------------------------------------------------------------------------|--------------|
+| Invoke (Round Trip)              | RPC call with return value. Handles response coordination and exception propagation | ✅ Complete |
+| Invoke with multiple parameters  | Supports serializable parameters + optional CancellationToken                  | ✅ Complete |
+| TaskCompletionSource coordination | Auto-cleanup when Task is cancelled                                           | ✅ Complete |
+| Remote exception propagation     | Server exceptions are thrown as `HubconRemoteException` on client             | ✅ Complete |
+| Stress test (50k to 450k RPS)    | Stable under high concurrency via `Channel`-based routing                     | ✅ Complete |
+| Fire and Forget (FaF)            | One-way call with no response or wait                                         | ✅ Complete |
+| Exception handling in FaF        | Exceptions on server do not propagate to client                               | ✅ Complete |
+| Throttling support               | Rate limiting to prevent overload                                             | ✅ Complete |
+| Cancellation on disconnect       | FaF auto-cancels if connection or context is terminated                       | ✅ Complete |
+
+### 📡 WebSocket – Features
+
+| Feature                          | Description                                                                    | Status       |
+|----------------------------------|--------------------------------------------------------------------------------|--------------|
+| Stream (Server → Client)         | Stream data from server via `IAsyncEnumerable<T>`                              | ✅ Complete |
+| Disconnection cancels stream     | Auto-cancel stream when connection is closed                                  | ✅ Complete |
+| Idle timeout                     | Cleanup triggered on inactivity (no pull)                                     | ✅ Complete |
+| Ingest (Client → Server)         | Push data from client via `IAsyncEnumerable<T>`                               | ✅ Complete |
+| Heartbeat timeout                | Detects silent/lost connections automatically                                 | ✅ Complete |
+| Error propagation in ingest      | Exceptions during ingest are sent to client                                   | ✅ Complete |
+| Subscriptions (server → client)  | Push-based updates (observer style)                                           | ✅ Complete |
+| Bounded channel for subs         | Prevents memory pressure under high load                                      | ✅ Complete |
+| Manual unsubscription            | Client can unsubscribe explicitly via `ISubscription<T>`                      | ✅ Complete |
+| Cleanup on disconnect            | All server-side handlers cleaned automatically                                | ✅ Complete |
+| Server-only cancellation token   | Server operations receive `HubconContext.CancellationToken`                   | ✅ Complete |
+
+### 🧩 Shared – Cross Transport Features
+
+| Feature                                 | Description                                                                                      | Status       |
+|-----------------------------------------|--------------------------------------------------------------------------------------------------|--------------|
+| Source Generator (SG)                   | Auto-generates strongly-typed client proxies based on interfaces                                | ✅ Complete  |
+| Ignores external CancellationToken      | Prevents serialization of external `CancellationToken` in contract methods                      | ✅ Complete  |
+| Propagation of CancellationToken        | Unified cancellation behavior across all operations (stream, ingest, invoke, etc.)              | ⚠️ In progress |
+| Auto-reconnect (client)                 | Optional reconnect for stream & ingest (manual retry logic currently)                           | ⚠️ In progress   |
+| WebSocket auto-reconnect                | Optional automatic reconnection when WebSocket connection drops                                 | ⚠️ In progress   |
+| Enable/disable ping/pong                | Configurable ping/pong heartbeat behavior (server & client)                                     | 🟡 Planned   |
+| Precise throttling mechanism            | New internal throttling system with per-operation granularity                                   | ⚠️ In progress |
+| Throttling configuration                | Throttling limits can be configured globally, per contract, or per method                       | ✅ Complete  |
+| Optional certificate support            | Supports using client/server TLS certificates for HTTP and WebSocket                            | ✅ Complete  |
+| Dependency injection for RemoteModule   | `RemoteServerModule` now supports `Transient` registration to allow injected logic/configs      | ⚠️ In progress  |
+| Configuration via DI                    | Global, per-contract, per-handler, or per-method configuration                                  | ✅ Complete  |
+| ASP.NET & custom middlewares            | Fully integrates with existing ASP.NET pipeline                                                 | ✅ Complete  |
+| Analyzers                               | Detects sync methods, invalid return types, or bad patterns                                     | ✅ Complete  |
+| Config attributes on contract controllers | ❗ Planned: `[UseWebSocket]`, `[MyCustomMiddleware]`, etc.                                     | 🟡 Planned   |
+| Observability                           | Supports logging via `ILogger`; extensible to tracing / metrics (e.g., OpenTelemetry)           | ✅ Partial   |
+| Semantic Versioning                     | Uses beta versions (`1.0.0-betaX`) with clear release goals                                     | ✅ Partial   |
+| RC1 milestone                           | First stable RC will include improved cancellation and token coordination                       | 🔜 Coming    |
+| Operation multiplexing                  | All operations internally routed using `operationId` to enable full concurrency                 | ✅ Complete  |
+
+
 
 ## 📦 Installation
 
