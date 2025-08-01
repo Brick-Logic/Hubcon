@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
-    public record class OperationRequest : IOperationRequest
+    public sealed class OperationRequest : IOperationRequest
     {
         public string ContractName { get; set; }
         public string OperationName { get; set; }
@@ -27,5 +27,22 @@ namespace Hubcon.Shared.Abstractions.Models
             ContractName = contractName;
             Arguments = args ?? [];
         }
+
+        public override bool Equals(object? obj)
+        {
+            if (ReferenceEquals(this, obj))
+                return true;
+
+            if (obj is null || obj.GetType() != GetType())
+                return false;
+
+            var other = (OperationRequest)obj;
+
+            return string.Equals(ContractName, other.ContractName, StringComparison.Ordinal) &&
+                   string.Equals(OperationName, other.OperationName, StringComparison.Ordinal);
+        }
+
+        public override int GetHashCode() => HashCode.Combine(ContractName ?? string.Empty, OperationName ?? string.Empty);
+
     }
 }

@@ -10,6 +10,7 @@ using Hubcon.Server.Core.Injectors;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Server.Core.Pipelines;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
+using Hubcon.Server.Core.RateLimiting;
 using Hubcon.Server.Core.Routing.MethodHandling;
 using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Shared.Abstractions.Attributes;
@@ -65,12 +66,14 @@ namespace Hubcon.Server
                     .RegisterWithInjector(x => x.RegisterInstance(Proxies).As<IProxyRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterInstance(SubscriptionRegistry).As<ILiveSubscriptionRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<OperationConfigRegistry>().As<IOperationConfigRegistry>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<InternalRoutingMiddleware>().As<IInternalRoutingMiddleware>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().As<IDynamicConverter>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<StreamNotificationHandler>().As<IStreamNotificationHandler>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<ClientRegistry>().As<IClientRegistry>().AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterType<SettingsManager>().As<ISettingsManager>().AsScoped())
+                    .RegisterWithInjector(x => x.RegisterType<RateLimiterManager>().As<IRateLimiterManager>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<HubconServiceProvider>().As<IHubconServiceProvider>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped());
+                    .RegisterWithInjector(x => x.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped())
+                    .RegisterWithInjector(x => x.RegisterType<InternalRoutingMiddleware>().As<IInternalRoutingMiddleware>().AsTransient());
 
                 foreach (var services in additionalServices)
                     services?.Invoke(container);

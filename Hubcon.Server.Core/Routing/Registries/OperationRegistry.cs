@@ -153,7 +153,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             }
         }
 
-        public bool GetOperationBlueprint(IOperationRequest request, out IOperationBlueprint? value)
+        public bool GetOperationBlueprint(IOperationEndpoint request, out IOperationBlueprint? value)
         {
             if (request == null)
             {

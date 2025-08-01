@@ -354,15 +354,17 @@ namespace Hubcon.Client.Core.Websockets
                     switch (message.Type)
                     {
                         case MessageType.pong:
-                            if (options.WebsocketRequiresPong)
+                            if (!options.WebsocketRequiresPong)
                                 break;
 
                             var pongMessage = new PongMessage(tmo.Memory)!;
+
                             if (_lastPongId == pongMessage.Id)
                             {
                                 await _webSocket!.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "Pong error", default);
                                 return;
                             }
+
                             _lastPongId = pongMessage.Id;
                             _lastPongTime = DateTime.UtcNow;
                             _heartbeatWatcher?.NotifyHeartbeat();
@@ -598,13 +600,16 @@ namespace Hubcon.Client.Core.Websockets
 
                         _receiveTask = ReceiveLoopAsync(_receiveLoopCts.Token);
 
-                        _heartbeatWatcher = new HeartbeatWatcher(options.WebsocketTimeout, async () =>
+                        if (options.WebsocketRequiresPong)
                         {
-                            IsReady = false;
+                            _heartbeatWatcher = new HeartbeatWatcher(options.WebsocketTimeout, async () =>
+                            {
+                                IsReady = false;
 
-                            if (LoggingEnabled)
-                                logger?.LogInformation("Socket timed out.");
-                        });
+                                if (LoggingEnabled)
+                                    logger?.LogInformation("Socket timed out.");
+                            });
+                        }
 
 
                         IsReady = true;

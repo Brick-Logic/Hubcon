@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace BlazorTestServer.Controllers
 {
-    public class TestController(ILogger<TestController> logger) : IUserContract
+    public class TestController(ILogger<TestController> logger)
     {
         public ISubscription<int?>? OnUserCreated { get; }
 

@@ -9,7 +9,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
     {
         event Action<IOperationBlueprint>? OnOperationRegistered;
 
-        bool GetOperationBlueprint(IOperationRequest request, out IOperationBlueprint? value);
+        bool GetOperationBlueprint(IOperationEndpoint request, out IOperationBlueprint? value);
         bool GetOperationBlueprint(string contractName, string operationName, out IOperationBlueprint? value);
         void MapControllers(WebApplication app);
         void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<ContainerBuilder>> servicesToInject);

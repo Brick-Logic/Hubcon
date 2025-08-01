@@ -2,6 +2,7 @@
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Entrypoint;
+using Hubcon.Server.Core.RateLimiting;
 using Hubcon.Server.Core.Websockets.Helpers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
@@ -35,13 +36,13 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         IDynamicConverter converter,
         IOperationConfigRegistry operationConfigRegistry,
         IOperationRegistry operationRegistry,
+        ISettingsManager settingsManager,
+        IRateLimiterManager rateLimiterManager,
         ILogger<HubconWebSocketMiddleware> logger,
         IInternalServerOptions options)
     {
         private readonly TimeSpan timeoutSeconds = options.WebSocketTimeout;
         private HeartbeatWatcher _heartbeatWatcher = null!;
-        private int PingMessageThrottle = 1;
-        private int AckMessageThrottle = 1;
         private readonly CancellationTokenSource cts = new();
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
@@ -56,9 +57,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
             ConcurrentDictionary<Guid, CancellationTokenSource> _subscriptions = null!;
             ConcurrentDictionary<Guid, CancellationTokenSource> _streams = null!;
-            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)> _ingests = null!;
+            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingests = null!;
             ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels = null!;
             ConcurrentDictionary<CancellationTokenSource, Task> _tasks = null!;
+            settingsManager = new SettingsManager(operationRegistry, operationConfigRegistry);
 
             try
             {
@@ -151,9 +153,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     try
                     {
-                        if (!options.ThrottlingIsDisabled && options.WebsocketReceiveThrottleDelay > TimeSpan.Zero)
-                            await Task.Delay(options.WebsocketReceiveThrottleDelay);
-
                         message = await receiver.ReceiveAsync();
                     }
                     catch
@@ -178,8 +177,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (!options.ThrottlingIsDisabled && PingMessageThrottle > 0)
-                                await Task.Delay(TimeSpan.FromMilliseconds(PingMessageThrottle));
+                            if (!options.ThrottlingIsDisabled)
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ping, baseMessage.Id);
 
                             var ping = HandlePing(webSocket, sender, lastPingId, new PingMessage(message.Memory));
                             HandleTask(ping, _tasks);
@@ -192,11 +191,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (!options.ThrottlingIsDisabled && options.SubscriptionThrottleDelay > TimeSpan.Zero)
-                                await Task.Delay(options.SubscriptionThrottleDelay);
+                            if (!options.ThrottlingIsDisabled)
+                                await rateLimiterManager.TryAcquireAsync(MessageType.subscription_init, baseMessage.Id);
 
                             var subInit = HandleSubscribe(
                                 context,
+                                MessageType.subscription_init,
                                 _subscriptions,
                                 _ackChannels,
                                 _tasks,
@@ -213,8 +213,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (!options.ThrottlingIsDisabled && options.SubscriptionThrottleDelay > TimeSpan.Zero)
-                                await Task.Delay(options.SubscriptionThrottleDelay);
+                            if (!options.ThrottlingIsDisabled)
+                                await rateLimiterManager.TryAcquireAsync(MessageType.subscription_complete, baseMessage.Id);
 
                             var unsub = HandleUnsubscribe(
                                 _subscriptions,
@@ -232,8 +232,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (!options.ThrottlingIsDisabled && options.StreamingThrottleDelay > TimeSpan.Zero)
-                                await Task.Delay(options.StreamingThrottleDelay);
+                            if (!options.ThrottlingIsDisabled)
+                                await rateLimiterManager.TryAcquireAsync(MessageType.stream_init, baseMessage.Id);
 
                             var streamInit = HandleStream(
                                 context,
@@ -253,8 +253,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (!options.ThrottlingIsDisabled && options.StreamingThrottleDelay > TimeSpan.Zero)
-                                await Task.Delay(options.StreamingThrottleDelay);
+                            if (!options.ThrottlingIsDisabled)
+                                await rateLimiterManager.TryAcquireAsync(MessageType.stream_complete, baseMessage.Id);
 
                             var streamComplete = HandleUnsubscribe(
                                 _subscriptions,
@@ -272,8 +272,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (!options.ThrottlingIsDisabled && AckMessageThrottle > 0)
-                                await Task.Delay(AckMessageThrottle);
+                            if (!options.ThrottlingIsDisabled)
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ack, baseMessage.Id);
 
                             var ack = HandleAck(_ackChannels, new AckMessage(message.Memory));
                             HandleTask(ack, _tasks);
@@ -286,8 +286,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (!options.ThrottlingIsDisabled && options.MethodThrottleDelay > TimeSpan.Zero)
-                                await Task.Delay(options.MethodThrottleDelay);
+                            if (!options.ThrottlingIsDisabled)
+                                await rateLimiterManager.TryAcquireAsync(MessageType.operation_invoke, baseMessage.Id);
 
                             var operationInvoke = HandleOperationInvoke(context, sender, new OperationInvokeMessage(message.Memory));
                             HandleTask(operationInvoke, _tasks);
@@ -300,8 +300,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (!options.ThrottlingIsDisabled && options.MethodThrottleDelay > TimeSpan.Zero)
-                                await Task.Delay(options.MethodThrottleDelay);
+                            if (!options.ThrottlingIsDisabled)
+                                await rateLimiterManager.TryAcquireAsync(MessageType.operation_call, baseMessage.Id);
 
                             var operationCall = HandleOperationCall(context, sender, new OperationCallMessage(message.Memory));
                             HandleTask(operationCall, _tasks);
@@ -315,8 +315,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (!options.ThrottlingIsDisabled && options.IngestThrottleDelay > TimeSpan.Zero)
-                                await Task.Delay(options.IngestThrottleDelay);
+                            if (!options.ThrottlingIsDisabled)
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_init, baseMessage.Id);
 
                             var ingestInit = HandleIngestInit(_ingests, sender, new IngestInitMessage(message.Memory));
                             HandleTask(ingestInit, _tasks);
@@ -329,15 +329,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            IngestSettings? ingestSettings = GetSettings<IngestSettingsAttribute>(baseMessage.Id)?.Settings;
-
                             if (!options.ThrottlingIsDisabled)
-                            {
-                                var delay = ingestSettings?.ThrottleDelay ?? options.IngestThrottleDelay;
-
-                                if (delay > TimeSpan.Zero)
-                                    await Task.Delay(delay);
-                            }
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data, baseMessage.Id);
 
                             var ingestData = HandleIngestData(_ingests, new IngestDataMessage(message.Memory));
                             HandleTask(ingestData, _tasks);
@@ -350,14 +343,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            IngestSettings? ingestWithAckSettings = GetSettings<IngestSettingsAttribute>(baseMessage.Id)?.Settings;
-
                             if (!options.ThrottlingIsDisabled)
-                            {
-                                var delay = ingestWithAckSettings?.ThrottleDelay ?? options.IngestThrottleDelay;
-                                if (delay > TimeSpan.Zero)
-                                    await Task.Delay(delay);
-                            }
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data_with_ack, baseMessage.Id);
 
                             var ingestDataWitAck = HandleIngestDataWithAck(_ingests, sender, new IngestDataWithAckMessage(message.Memory));
                             HandleTask(ingestDataWitAck, _tasks);
@@ -370,8 +357,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            if (!options.ThrottlingIsDisabled && options.IngestThrottleDelay > TimeSpan.Zero)
-                                await Task.Delay(options.IngestThrottleDelay);
+                            if (!options.ThrottlingIsDisabled)
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_complete, baseMessage.Id);
 
                             var ingestCompleteTask = HandleIngestComplete(_ingests, new IngestCompleteMessage(message.Memory));
                             HandleTask(ingestCompleteTask, _tasks);
@@ -450,11 +437,15 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             await sender.SendAsync(new ErrorMessage(id, messageJson, payload));
         }
 
-        private async Task HandleIngestComplete(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)> _ingests, IngestCompleteMessage ingestCompleteMessage)
+        private async Task HandleIngestComplete(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingests, IngestCompleteMessage ingestCompleteMessage)
         {
             foreach (var id in ingestCompleteMessage.StreamIds)
             {
                 _ingests.TryRemove(id, out var complete);
+
+                complete.Item1?.OnCompleted();
+                complete.Item2?.Cancel();
+                complete.Item4?.RateBucket.Dispose();              
 
                 if (complete.Item3 != null)
                     await complete.Item3.DisposeAsync();
@@ -462,7 +453,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         }
 
         private async Task HandleIngestDataWithAck(
-            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)> _ingests,
+            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingests,
             WebSocketMessageSender sender,
             IngestDataWithAckMessage ingestDataWithAckMessage
             )
@@ -477,7 +468,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             await sender.SendAsync(ingestDataAckMessage);
         }
 
-        private async Task HandleIngestData(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)> _ingests, IngestDataMessage ingestDataMessage)
+        private async Task HandleIngestData(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingests, IngestDataMessage ingestDataMessage)
         {
             if (ingestDataMessage == null || !_ingests.TryGetValue(ingestDataMessage.Id, out var ingest))
                 return;
@@ -486,34 +477,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             ingest.Item1.OnNextObject(ingestDataMessage.Data);
         }
 
-        private T? GetSettings<T>(IOperationRequest operationRequest) where T : Attribute
-        {
-            if (!operationRegistry.GetOperationBlueprint(operationRequest, out var blueprint))
-                return null;
-
-            if (blueprint!.ConfigurationAttributes.TryGetValue(typeof(T), out Attribute? value)
-                && value is T ingestSettingsAttribute)
-            {
-                return ingestSettingsAttribute;
-            }
-
-            return null;
-        }
-
-        private T? GetSettings<T>(Guid linkId) where T : Attribute
-        {
-            if (operationConfigRegistry.TryGet(linkId, out var blueprint)
-                               && blueprint.ConfigurationAttributes.TryGetValue(typeof(T), out Attribute? value)
-                                   && (value is T ingestSettings))
-            {
-                return ingestSettings;
-            }
-
-            return null;
-        }
-
         private async Task HandleIngestInit(
-            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)> _ingests,
+            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingests,
             WebSocketMessageSender sender,
             IngestInitMessage ingestInitMessage)
         {
@@ -528,19 +493,28 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 if (!operationRegistry.GetOperationBlueprint(operationRequest, out var blueprint))
                     return;
 
-                IngestSettings? ingestSettings = GetSettings<IngestSettingsAttribute>(operationRequest)?.Settings;
+                IngestSettingsAttribute ingestSettings = settingsManager.GetSettings(operationRequest, () => IngestSettingsAttribute.Default());
+
+                IngestSettings? sharedSettings = null;
 
                 foreach (var id in ingestInitMessage!.StreamIds)
                 {
+                    if (sharedSettings != null && ingestSettings.SharedRateLimiter)
+                    {
+                        sharedSettings = ingestSettings.Factory();
+                    }
+
+                    var settings = sharedSettings ?? ingestSettings.Factory();
+
                     if (_ingests.TryGetValue(id, out _))
                         return;
 
                     var observable = new GenericObservable<JsonElement>(converter);
 
-                    var bufferOptions = new BoundedChannelOptions(ingestSettings?.ChannelCapacity ?? IngestSettings.Default.ChannelCapacity)
+                    var bufferOptions = new BoundedChannelOptions(settings.ChannelCapacity)
                     {
-                        FullMode = ingestSettings?.ChannelFullMode ?? IngestSettings.Default.ChannelFullMode,
-                        Capacity = ingestSettings?.ChannelCapacity ?? IngestSettings.Default.ChannelCapacity,
+                        FullMode = settings.ChannelFullMode,
+                        Capacity = settings.ChannelCapacity,
                         SingleReader = true,
                         SingleWriter = false,
                         AllowSynchronousContinuations = false,
@@ -550,19 +524,21 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     observable.Subscribe(observer);
                     var cts = new CancellationTokenSource();
 
-                    var hw = new HeartbeatWatcher(options.IngestTimeout, () =>
+                    var hw = new HeartbeatWatcher(options.IngestTimeout, async () =>
                     {
                         observable.OnCompleted();
                         _ingests.TryRemove(id, out var complete);
                         complete.Item2?.Cancel();
                         complete.Item2?.Dispose();
+                        complete.Item4?.RateBucket.Dispose();
                         operationConfigRegistry.Unlink(id);
-                        return Task.CompletedTask;
+                        await rateLimiterManager.Unlink(id);
                     });
 
                     watchers.Add(hw);
                     operationConfigRegistry.Link(id, blueprint!);
-                    _ingests.TryAdd(id, (observable, cts, hw));
+                    await rateLimiterManager.Link(id, operationRequest);
+                    _ingests.TryAdd(id, (observable, cts, hw, settings));
                     sources.TryAdd(id, observer.GetAsyncEnumerable(cts.Token));
                 }
 
@@ -576,7 +552,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 await sender.SendAsync(new IngestResultMessage(ingestInitMessage.Id, converter.SerializeToElement(result)));
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger?.LogError(ex.Message);
 
@@ -594,6 +570,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     try
                     {
                         await watcher.DisposeAsync();
+                        watchers.Remove(watcher);
                     }
                     catch (Exception ex)
                     {
@@ -603,13 +580,14 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
         }
 
-        public void HandleTask(Task task, ConcurrentDictionary<CancellationTokenSource, Task> tasks)
+        public void HandleTask(Task task, ConcurrentDictionary<CancellationTokenSource, Task> tasks, Action? cleaningCallback = null)
         {
             var cts = new CancellationTokenSource();
             tasks.TryAdd(cts, task);
 
-            task.ContinueWith(static (t, r) =>
+            task.ContinueWith((t, r) =>
             {
+                cleaningCallback?.Invoke();
                 var state = (State)r!;
                 state.Cts.Cancel();
                 state.Tasks.TryRemove(state.Cts, out _);
@@ -714,6 +692,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
         private async Task HandleSubscribe(
             HttpContext context,
+            MessageType type,
             ConcurrentDictionary<Guid, CancellationTokenSource> _subscriptions,
             ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels,
             ConcurrentDictionary<CancellationTokenSource, Task> _tasks,
@@ -734,8 +713,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 try
                 {
                     IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(subscribeMessage.Payload)!;
-
-                    var operationConfig = GetSettings<SubscriptionSettingsAttribute>(operationRequest)?.Settings;
 
                     var streamResult = await entrypoint.HandleSubscription(operationRequest, cts.Token);
 
@@ -782,10 +759,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                         if (!options.ThrottlingIsDisabled)
                         {
-                            var delay = operationConfig?.ThrottleDelay ?? options.MethodThrottleDelay;
-
-                            if (delay > TimeSpan.Zero)
-                                await Task.Delay(delay);
+                            await rateLimiterManager.TryAcquireAsync(type, operationRequest);
                         }
                     }
                 }
@@ -838,8 +812,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(streamInitMessage.Payload)!;
                     var streamResult = await entrypoint.HandleMethodStream(operationRequest, cts.Token);
 
-                    StreamingSettings? streamingSettings = GetSettings<StreamingSettingsAttribute>(operationRequest)?.Settings;
-
                     if (streamResult == null) { return; }
 
                     if (!streamResult.Success)
@@ -852,6 +824,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     await foreach (var item in stream.WithCancellation(cts.Token))
                     {
+                        await rateLimiterManager.TryAcquireAsync(MessageType.stream_init, streamInitMessage.Id);
+
                         if (item != null && item.GetType().IsAssignableTo(typeof(IRetryableMessage)))
                         {
                             IRetryableMessage? retryable = item as IRetryableMessage;
@@ -884,14 +858,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                                 await sender.SendAsync(response);
                             }
-                        }
-
-                        if (!options.ThrottlingIsDisabled)
-                        {
-                            var delay = streamingSettings?.ThrottleDelay ?? options.IngestThrottleDelay;
-
-                            if (delay > TimeSpan.Zero)
-                                await Task.Delay(delay);
                         }
                     }
                 }

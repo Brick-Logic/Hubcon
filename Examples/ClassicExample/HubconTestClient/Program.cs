@@ -5,6 +5,7 @@ using HubconTestDomain;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.RateLimiting;
 
 internal class Program
 {
@@ -243,6 +244,16 @@ internal class Program
 
     static async IAsyncEnumerable<string> GetMessages2()
     {
+        //var limiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions()
+        //{
+        //    TokenLimit = 500000,
+        //    TokensPerPeriod = 500000,
+        //    ReplenishmentPeriod = TimeSpan.FromMilliseconds(100),
+        //    AutoReplenishment = true,
+        //    QueueLimit = 1000,
+        //    QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        //});
+
         while(true)
         {
             var swReq = Stopwatch.StartNew();
@@ -250,7 +261,7 @@ internal class Program
             {
                 yield return "hola";
                 Interlocked.Increment(ref finishedRequestsCount);
-                //await Task.Delay(1);
+                //await limiter.AcquireAsync();
             }
             finally
             {

@@ -128,7 +128,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 }
 
                 context.Blueprint.ConfigurationAttributes.TryGetValue(typeof(SubscriptionSettingsAttribute), out Attribute? attribute);
-                var subSettings = (attribute as SubscriptionSettingsAttribute)?.Settings ?? SubscriptionSettings.Default;
+                var subSettings = (attribute as SubscriptionSettingsAttribute)?.Factory() ?? SubscriptionSettingsAttribute.Default().Factory();
 
                 var channelOptions = new BoundedChannelOptions(subSettings.ChannelCapacity)
                 {
@@ -162,9 +162,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         await foreach (var newEvent in observer.GetAsyncEnumerable(default))
                         {
                             yield return newEvent;
-
-                            if (subSettings.ThrottleDelay > TimeSpan.Zero)
-                                await Task.Delay(subSettings.ThrottleDelay);
                         }
                     }
                     finally

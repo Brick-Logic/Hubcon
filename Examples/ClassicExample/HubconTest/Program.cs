@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Diagnostics;
 using System.Text;
+using System.Threading.RateLimiting;
 
 namespace HubconTest
 {
@@ -104,13 +105,54 @@ namespace HubconTest
                         return JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
                     })
                     .SetHttpTimeout(TimeSpan.FromSeconds(15))
-                    .SetWebSocketTimeout(TimeSpan.FromSeconds(5))
+                    .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
                     .SetMaxHttpMessageSize(4 * 1024)
                     .SetMaxWebSocketMessageSize(4 * 1024)
-                    .ThrottleWebsocketReceiveLoop(TimeSpan.Zero)
-                    .ThrottleWebsocketIngest(TimeSpan.Zero)
+                    .ConfigureWebsocketRateLimiter(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 100,
+                        TokensPerPeriod = 10,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+                    .ConfigureWebsocketPingRateLimiter(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 10,
+                        TokensPerPeriod = 1,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+                    .LimitWebsocketIngest(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 100,
+                        TokensPerPeriod = 10,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+                    .LimitWebsocketStreaming(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 100,
+                        TokensPerPeriod = 10,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+                    .LimitWebsocketSubscription(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 100,
+                        TokensPerPeriod = 10,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+                    .LimitWebsocketRoundTrip(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 100,
+                        TokensPerPeriod = 10,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+
+                    .DisableAllRateLimiters()
                     .EnableRequestDetailedErrors();
-                    //.DisableAllThrottling();
                 });
 
                 serverOptions.AddController<UserContractHandler>();

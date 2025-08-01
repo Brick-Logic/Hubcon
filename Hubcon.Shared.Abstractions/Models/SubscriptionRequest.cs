@@ -17,5 +17,21 @@ namespace Hubcon.Shared.Abstractions.Models
             ContractName = contractName;
             Arguments = arguments ?? [];
         }
+
+        public override bool Equals(object? obj)
+        {
+            if (ReferenceEquals(this, obj))
+                return true;
+
+            if (obj is null || obj.GetType() != GetType())
+                return false;
+
+            var other = (SubscriptionRequest)obj;
+
+            return string.Equals(ContractName, other.ContractName, StringComparison.Ordinal) &&
+                   string.Equals(OperationName, other.OperationName, StringComparison.Ordinal);
+        }
+
+        public override int GetHashCode() => HashCode.Combine(ContractName ?? string.Empty, OperationName ?? string.Empty);
     }
 }

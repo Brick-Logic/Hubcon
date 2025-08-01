@@ -67,7 +67,7 @@ namespace BlazorTestServer
                     {
                         return JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
                     })
-                    .DisableAllThrottling()
+                    .DisableAllRateLimiters()
                     .EnableRequestDetailedErrors();
                 });
 

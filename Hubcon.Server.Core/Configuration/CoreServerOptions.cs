@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using System.ComponentModel;
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 
 namespace Hubcon.Server.Core.Configuration
 {
@@ -23,17 +24,102 @@ namespace Hubcon.Server.Core.Configuration
         private bool? detailedErrorsEnabled;
         private Action<IEndpointConventionBuilder>? endpointConventions;
         private Action<RouteHandlerBuilder>? routeHandlerBuilderConfig;
-        private TimeSpan? ingestThrottleDelay;
-        private TimeSpan? methodThrottleDelay;
-        private TimeSpan? subscriptionThrottleDelay;
-        private TimeSpan? streamingThrottleDelay;
-        private TimeSpan? websocketReceiveThrottleDelay;
         private bool? throttlingIsDisabled;
         private Func<string, IServiceProvider, ClaimsPrincipal?>? websocketTokenHandler;
         private bool? websocketRequiresAuthorization;
         private bool? websocketLoggingEnabled;
         private bool? httpLoggingEnabled;
         private TimeSpan? ingestTimeout;
+
+        private Func<TokenBucketRateLimiterOptions> websocketReaderRateLimiter = () => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 500,
+            TokensPerPeriod = 500,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        private Func<TokenBucketRateLimiterOptions> websocketPingRateLimiter = () => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 5,
+            TokensPerPeriod = 5,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(5),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        private Func<TokenBucketRateLimiterOptions> httpRoundTripMethodRateLimiter = () => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 50,
+            TokensPerPeriod = 50,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        private Func<TokenBucketRateLimiterOptions> httpFireAndForgetMethodLimiter = () => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 100,
+            TokensPerPeriod = 100,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        private Func<TokenBucketRateLimiterOptions> websocketRoundTripMethodRateLimiter = () => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 50,
+            TokensPerPeriod = 50,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        private Func<TokenBucketRateLimiterOptions> websocketFireAndForgetMethodLimiter = () => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 100,
+            TokensPerPeriod = 100,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        private Func<TokenBucketRateLimiterOptions> websocketIngestRateLimiter = () => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 200,
+            TokensPerPeriod = 200,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        private Func<TokenBucketRateLimiterOptions> websocketSubscriptionRateLimiter = () => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 20,
+            TokensPerPeriod = 20,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(2),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        private Func<TokenBucketRateLimiterOptions> websocketStreamingRateLimiter = () => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 100,
+            TokensPerPeriod = 100,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
 
         // Defaults
         public int MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
@@ -56,16 +142,6 @@ namespace Hubcon.Server.Core.Configuration
         public Action<IEndpointConventionBuilder>? EndpointConventions => endpointConventions;
         public Action<RouteHandlerBuilder>? RouteHandlerBuilderConfig => routeHandlerBuilderConfig;
 
-        public TimeSpan IngestThrottleDelay => ingestThrottleDelay ?? (ThrottlingIsDisabled ? TimeSpan.Zero : TimeSpan.FromMilliseconds(8));
-
-        public TimeSpan MethodThrottleDelay => methodThrottleDelay ?? (ThrottlingIsDisabled ? TimeSpan.Zero : TimeSpan.FromMilliseconds(8));
-
-        public TimeSpan SubscriptionThrottleDelay => subscriptionThrottleDelay ?? (ThrottlingIsDisabled ? TimeSpan.Zero : TimeSpan.FromMilliseconds(8));
-
-        public TimeSpan StreamingThrottleDelay => streamingThrottleDelay ?? (ThrottlingIsDisabled ? TimeSpan.Zero : TimeSpan.FromMilliseconds(8));
-
-        public TimeSpan WebsocketReceiveThrottleDelay => websocketReceiveThrottleDelay ?? (ThrottlingIsDisabled ? TimeSpan.Zero : TimeSpan.FromMilliseconds(1));
-
         public bool ThrottlingIsDisabled => throttlingIsDisabled ?? false;
 
         public Func<string, IServiceProvider, ClaimsPrincipal?>? WebsocketTokenHandler => websocketTokenHandler;
@@ -77,6 +153,16 @@ namespace Hubcon.Server.Core.Configuration
         public bool HttpLoggingEnabled => httpLoggingEnabled ?? false;
 
         public TimeSpan IngestTimeout => ingestTimeout ?? TimeSpan.FromSeconds(30);
+
+        public Func<TokenBucketRateLimiterOptions> WebsocketReaderRateLimiter => websocketReaderRateLimiter;
+        public Func<TokenBucketRateLimiterOptions> WebsocketPingRateLimiter => websocketPingRateLimiter;
+        public Func<TokenBucketRateLimiterOptions> HttpRoundTripMethodRateLimiter => httpRoundTripMethodRateLimiter;
+        public Func<TokenBucketRateLimiterOptions> HttpFireAndForgetMethodLimiter => httpFireAndForgetMethodLimiter;
+        public Func<TokenBucketRateLimiterOptions> WebsocketRoundTripMethodRateLimiter => websocketRoundTripMethodRateLimiter;
+        public Func<TokenBucketRateLimiterOptions> WebsocketFireAndForgetMethodLimiter => websocketFireAndForgetMethodLimiter;
+        public Func<TokenBucketRateLimiterOptions> WebsocketIngestRateLimiter => websocketIngestRateLimiter;
+        public Func<TokenBucketRateLimiterOptions> WebsocketSubscriptionRateLimiter => websocketSubscriptionRateLimiter;
+        public Func<TokenBucketRateLimiterOptions> WebsocketStreamingRateLimiter => websocketStreamingRateLimiter;
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -174,37 +260,7 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
 
-        public ICoreServerOptions ThrottleWebsocketIngest(TimeSpan delay)
-        {
-            ingestThrottleDelay ??= delay;
-            return this;
-        }
-
-        public ICoreServerOptions ThrottleWebsocketMethods(TimeSpan delay)
-        {
-            methodThrottleDelay ??= delay;
-            return this;
-        }
-
-        public ICoreServerOptions ThrottleWebsocketSubscription(TimeSpan delay)
-        {
-            subscriptionThrottleDelay ??= delay;
-            return this;
-        }
-
-        public ICoreServerOptions ThrottleWebsocketStreaming(TimeSpan delay)
-        {
-            streamingThrottleDelay ??= delay;
-            return this;
-        }
-
-        public ICoreServerOptions ThrottleWebsocketReceiveLoop(TimeSpan delay)
-        {
-            websocketReceiveThrottleDelay ??= delay;
-            return this;
-        }
-
-        public ICoreServerOptions DisableAllThrottling()
+        public ICoreServerOptions DisableAllRateLimiters()
         {
             throttlingIsDisabled ??= true;
             return this;
@@ -217,8 +273,6 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
         
-
-
         public ICoreServerOptions EnableWebsocketsLogging(bool enabled = true)
         {
             websocketLoggingEnabled ??= enabled;
@@ -234,6 +288,48 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions SetWebSocketIngestTimeout(TimeSpan timeout)
         {
             ingestTimeout ??= timeout;
+            return this;
+        }
+
+        public ICoreServerOptions LimitWebsocketIngest(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory)
+        {
+            websocketIngestRateLimiter = rateLimiterOptionsFactory;
+            return this;
+        }
+
+        public ICoreServerOptions LimitWebsocketRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory)
+        {
+            websocketRoundTripMethodRateLimiter = rateLimiterOptionsFactory;
+            return this;
+        }
+
+        public ICoreServerOptions LimitHttpRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory)
+        {
+            websocketRoundTripMethodRateLimiter = rateLimiterOptionsFactory;
+            return this;
+        }
+
+        public ICoreServerOptions LimitWebsocketSubscription(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory)
+        {
+            websocketSubscriptionRateLimiter = rateLimiterOptionsFactory;
+            return this;
+        }
+
+        public ICoreServerOptions LimitWebsocketStreaming(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory)
+        {
+            websocketStreamingRateLimiter = rateLimiterOptionsFactory;
+            return this;
+        }
+
+        public ICoreServerOptions ConfigureWebsocketRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory)
+        {
+            websocketReaderRateLimiter = rateLimiterOptionsFactory;
+            return this;
+        }
+
+        public ICoreServerOptions ConfigureWebsocketPingRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory)
+        {
+            websocketPingRateLimiter = rateLimiterOptionsFactory;
             return this;
         }
     }

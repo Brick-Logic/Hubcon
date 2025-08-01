@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Threading.Channels;
+using System.Threading.RateLimiting;
 
 namespace Hubcon.Server.Core.Configuration
 {
@@ -158,45 +159,53 @@ namespace Hubcon.Server.Core.Configuration
         /// </summary>
         /// <param name="delay"></param>
         /// <returns></returns>
-        ICoreServerOptions ThrottleWebsocketIngest(TimeSpan delay);
+        ICoreServerOptions LimitWebsocketIngest(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
         /// Sets a delay for websocket methods message reception.
         /// </summary>
         /// <param name="delay"></param>
         /// <returns></returns>
-        ICoreServerOptions ThrottleWebsocketMethods(TimeSpan delay);
+        ICoreServerOptions LimitWebsocketRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
         /// Sets a delay for sending websocket subscriptions messages.
         /// </summary>
         /// <param name="delay"></param>
         /// <returns></returns>
-        ICoreServerOptions ThrottleWebsocketSubscription(TimeSpan delay);
+        ICoreServerOptions LimitWebsocketSubscription(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
         /// Sets a delay for sending websocket streaming messages.
         /// </summary>
         /// <param name="delay"></param>
         /// <returns></returns>
-        ICoreServerOptions ThrottleWebsocketStreaming(TimeSpan delay);
+        ICoreServerOptions LimitWebsocketStreaming(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
-        /// Disables all throttling options.
+        /// Disables all rate limiter options.
         /// </summary>
         /// <param name="delay"></param>
         /// <returns></returns>
-        ICoreServerOptions DisableAllThrottling();
+        ICoreServerOptions DisableAllRateLimiters();
 
         /// <summary>
-        /// Sets a delay for receiving websocket messages from a client.
+        /// Configures a client-limited rate limiter for the server's websocket.
         /// </summary>
-        /// <param name="delay"></param>
+        /// <param name="rateLimiterOptionsFactory"></param>
         /// <returns></returns>
-        ICoreServerOptions ThrottleWebsocketReceiveLoop(TimeSpan delay);
+        ICoreServerOptions ConfigureWebsocketRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
+
+        /// <summary>
+        /// Configures a client-limited ping rate limiter for the server's websocket.
+        /// </summary>
+        /// <param name="rateLimiterOptionsFactory"></param>
+        /// <returns></returns>
+        ICoreServerOptions ConfigureWebsocketPingRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         ICoreServerOptions UseGlobalRouteHandlerBuilder(Action<RouteHandlerBuilder> configure);
         ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure);
+        ICoreServerOptions LimitHttpRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
     }
 
     public interface IInternalServerOptions
@@ -297,31 +306,6 @@ namespace Hubcon.Server.Core.Configuration
         Func<string, IServiceProvider, ClaimsPrincipal?>? WebsocketTokenHandler { get; }
 
         /// <summary>
-        /// Delay for ingest messages in the websocket channel.
-        /// </summary>
-        TimeSpan IngestThrottleDelay { get; }
-
-        /// <summary>
-        /// Delay for websocket methods in the websocket channel.
-        /// </summary>
-        TimeSpan MethodThrottleDelay { get; }
-
-        /// <summary>
-        /// Delay for websocket subscription messages.
-        /// </summary>
-        TimeSpan SubscriptionThrottleDelay { get; }
-
-        /// <summary>
-        /// Delay for websocket streaming messages.
-        /// </summary>
-        TimeSpan StreamingThrottleDelay { get; }
-
-        /// <summary>
-        /// Delay for websocket client receive loop.
-        /// </summary>
-        TimeSpan WebsocketReceiveThrottleDelay { get; }
-
-        /// <summary>
         /// Delay for websocket client receive loop.
         /// </summary>
         bool ThrottlingIsDisabled { get; }
@@ -334,6 +318,51 @@ namespace Hubcon.Server.Core.Configuration
         /// <summary>
         /// Allows configuring extra some global settings for HTTP endpoints.
         /// </summary>
-        Action<RouteHandlerBuilder>? RouteHandlerBuilderConfig { get; }
+        Action<RouteHandlerBuilder> RouteHandlerBuilderConfig { get; }
+
+        /// <summary>
+        /// Allows configuring the rate limiter options for the server websocket.
+        /// </summary>
+        Func<TokenBucketRateLimiterOptions> WebsocketReaderRateLimiter { get; }
+
+        /// <summary>
+        /// Allows configuring the ping rate limiter options for the server websocket.
+        /// </summary>
+        Func<TokenBucketRateLimiterOptions> WebsocketPingRateLimiter { get; }
+
+        /// <summary>
+        /// Rate limiter options applied to round-trip (Task<T>) WebSocket methods.
+        /// </summary>
+        Func<TokenBucketRateLimiterOptions> HttpRoundTripMethodRateLimiter { get; }
+
+        /// <summary>
+        /// Rate limiter options applied to fire-and-forget WebSocket methods (void or taks methods).
+        /// </summary>
+        Func<TokenBucketRateLimiterOptions> HttpFireAndForgetMethodLimiter { get; }
+
+        /// <summary>
+        /// Rate limiter options applied to round-trip (Task<T>) WebSocket methods.
+        /// </summary>
+        Func<TokenBucketRateLimiterOptions> WebsocketRoundTripMethodRateLimiter { get; }
+
+        /// <summary>
+        /// Rate limiter options applied to fire-and-forget WebSocket methods (void or taks methods).
+        /// </summary>
+        Func<TokenBucketRateLimiterOptions> WebsocketFireAndForgetMethodLimiter { get; }
+
+        /// <summary>
+        /// Rate limiter options for ingest messages in the websocket channel.
+        /// </summary>
+        Func<TokenBucketRateLimiterOptions> WebsocketIngestRateLimiter { get; }
+
+        /// <summary>
+        /// Rate limiter options for subscription messages in the websocket channel.
+        /// </summary>
+        Func<TokenBucketRateLimiterOptions> WebsocketSubscriptionRateLimiter { get; }
+
+        /// <summary>
+        /// Default rate limiter options for streaming messages in the websocket channel.
+        /// </summary>
+        Func<TokenBucketRateLimiterOptions> WebsocketStreamingRateLimiter { get; }
     }
 }

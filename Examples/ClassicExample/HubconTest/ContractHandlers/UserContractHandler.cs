@@ -61,7 +61,7 @@ namespace HubconTest.ContractHandlers
             return Task.CompletedTask;
         }
 
-        [IngestSettings(5000, BoundedChannelFullMode.Wait, 5)]
+        [IngestSettings(5000, 5)]
         public async Task<string> IngestMessages(
             IAsyncEnumerable<string> source,
             IAsyncEnumerable<string> source2,
@@ -205,7 +205,7 @@ namespace HubconTest.ContractHandlers
         static int maxReqs = 0;
         static Stopwatch sw;
 
-        [IngestSettings(100, BoundedChannelFullMode.Wait, 1)]
+        [IngestSettings(100, 1)]
         public async Task IngestMessages(IAsyncEnumerable<string> source, CancellationToken cancellationToken)
         {
             _monitor ??= Monitor(cancellationToken);
