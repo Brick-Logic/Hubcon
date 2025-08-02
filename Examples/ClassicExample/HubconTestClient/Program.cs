@@ -22,7 +22,7 @@ internal class Program
 
         long coreMask = 0;
 
-        int? customCores = null;
+        int? customCores = 0;
         int cores = customCores ?? Environment.ProcessorCount - 1;
 
         for (int i = 0; i <= cores; i++)
@@ -204,7 +204,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 1
+            MaxDegreeOfParallelism = 128
         };
 
         await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
@@ -215,7 +215,8 @@ internal class Program
                 var swReq = Stopwatch.StartNew();
                 try
                 {
-                    await client.IngestMessages(GetMessages2(), default);
+                    //await client.IngestMessages(GetMessages2(), default);
+                    await client.GetTemperatureFromServer();
                     Interlocked.Increment(ref finishedRequestsCount);
                 }
                 catch

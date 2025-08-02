@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading.RateLimiting;
 
 namespace Hubcon.Shared.Abstractions.Interfaces
 {
@@ -13,5 +14,9 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         TransportType TransportType { get; }
         MemberInfo MemberInfo { get; }
         MemberType MemberType { get; }
+        TokenBucketRateLimiterOptions? RateBucketOptions { get; }
+        int RequestsPerSecond { get; }
+        bool RateLimiterIsShared { get; }
+        RateLimiter? RateBucket { get; }
     }
 }

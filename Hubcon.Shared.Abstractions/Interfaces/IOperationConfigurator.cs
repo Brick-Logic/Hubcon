@@ -9,6 +9,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IOperationConfigurator
     {
-        public IOperationConfigurator UseTransport(TransportType transportType);
+        IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true);
+        IOperationConfigurator UseTransport(TransportType transportType);
     }
 }

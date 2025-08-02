@@ -87,7 +87,7 @@ namespace Hubcon.Client.Core.Subscriptions
                         var contract = interfaces.First(x => x.IsAssignableTo(baseContractType) && x != baseContractType) ?? baseContractType;
                         var request = new SubscriptionRequest(Property.Name, contract.Name, null);
 
-                        eventSource = Client.GetSubscription(request, _tokenSource.Token);
+                        eventSource = Client.GetSubscription(request, default!, _tokenSource.Token);
                         
                         _connected = SubscriptionState.Connected;
 

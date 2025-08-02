@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
+using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 
 namespace Hubcon.Client.Abstractions.Interfaces
@@ -26,5 +27,24 @@ namespace Hubcon.Client.Abstractions.Interfaces
         bool ReconnectIngests { get; }
         TimeSpan WebsocketTimeout { get; }
         TimeSpan HttpTimeout { get; }
+        RateLimiter? RateBucket { get; }
+        TokenBucketRateLimiterOptions? RateBucketOptions { get; }
+        bool LimitersDisabled { get; }
+
+        public TokenBucketRateLimiterOptions? IngestLimiterOptions { get; }
+        public TokenBucketRateLimiterOptions? SubscriptionLimiterOptions { get; }
+        public TokenBucketRateLimiterOptions? StreamingLimiterOptions { get; }
+        public TokenBucketRateLimiterOptions? WebsocketRoundTripLimiterOptions { get; }
+        public TokenBucketRateLimiterOptions? HttpRoundTripLimiterOptions { get; }
+        public TokenBucketRateLimiterOptions? WebsocketFireAndForgetLimiterOptions { get; }
+        public TokenBucketRateLimiterOptions? HttpFireAndForgetLimiterOptions { get; }
+
+        RateLimiter? IngestRateBucket { get; }
+        RateLimiter? SubscriptionRateBucket { get; }
+        RateLimiter? StreamingRateBucket { get; }
+        RateLimiter? WebsocketRoundTripRateBucket { get; }
+        RateLimiter? HttpRoundTripRateBucket { get; }
+        RateLimiter? WebsocketFireAndForgetRateBucket { get; }
+        RateLimiter? HttpFireAndForgetRateBucket { get; }
     }
 }

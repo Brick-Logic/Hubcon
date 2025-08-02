@@ -2,6 +2,7 @@
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.WebSockets;
+using System.Threading.RateLimiting;
 
 namespace Hubcon.Client.Abstractions.Interfaces
 {
@@ -24,6 +25,18 @@ namespace Hubcon.Client.Abstractions.Interfaces
         bool ReconnectIngests { get; set; }
         TimeSpan WebsocketTimeout { get; set; }
         TimeSpan HttpTimeout { get; set; }
+        public RateLimiter? RateBucket { get; }
+        TokenBucketRateLimiterOptions? RateBucketOptions { get; set; }
+        bool LimitersDisabled { get; set; }
+
+        public TokenBucketRateLimiterOptions? IngestLimiterOptions { get; set; }
+        public TokenBucketRateLimiterOptions? SubscriptionLimiterOptions { get; set; }
+        public TokenBucketRateLimiterOptions? StreamingLimiterOptions { get; set; }
+        public TokenBucketRateLimiterOptions? WebsocketRoundTripLimiterOptions { get; set; }
+        public TokenBucketRateLimiterOptions? HttpRoundTripLimiterOptions { get; set; }
+        public TokenBucketRateLimiterOptions? WebsocketFireAndForgetLimiterOptions { get; set; }
+        public TokenBucketRateLimiterOptions? HttpFireAndForgetLimiterOptions { get; set; }
+
 
         T GetOrCreateClient<T>(IServiceProvider services) where T : IControllerContract;
         object GetOrCreateClient(Type contractType, IServiceProvider services);

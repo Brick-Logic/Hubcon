@@ -2,6 +2,7 @@
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.WebSockets;
+using System.Threading.RateLimiting;
 
 namespace Hubcon.Client.Abstractions.Interfaces
 {
@@ -114,5 +115,107 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// <param name="value">True to enable reconnecting ingests; otherwise, false. Default is true.</param>
         /// <returns>The current server module configuration instance.</returns>
         IServerModuleConfiguration ResubscribeIngestOnReconnect(bool value = true);
+
+        /// <summary>
+        /// Disables all rate limiters.
+        /// </summary>
+        IServerModuleConfiguration DisableAllLimiters();
+
+        /// <summary>
+        /// Enables a rate limiter for this server.
+        /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
+        /// </summary>
+        IServerModuleConfiguration GlobalLimit(int messagesPerSecond);
+
+        /// <summary>
+        /// Sets a rate limit for ingest messages (messages sent to the server).
+        /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
+        /// </summary>
+        IServerModuleConfiguration LimitIngest(int messagesPerSecond);
+
+        /// <summary>
+        /// Sets a rate limit for subscription messages (client-side subscriptions).
+        /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
+        /// </summary>
+        IServerModuleConfiguration LimitSubscription(int messagesPerSecond);
+
+        /// <summary>
+        /// Sets a rate limit for streaming messages (data streaming from client to server).
+        /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
+        /// </summary>
+        IServerModuleConfiguration LimitStreaming(int messagesPerSecond);
+
+        /// <summary>
+        /// Sets a rate limit for round-trip messages over WebSocket (request-response).
+        /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
+        /// </summary>
+        IServerModuleConfiguration LimitWebsocketRoundTrip(int messagesPerSecond);
+
+        /// <summary>
+        /// Sets a rate limit for round-trip messages over HTTP (request-response).
+        /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
+        /// </summary>
+        IServerModuleConfiguration LimitHttpRoundTrip(int messagesPerSecond);
+
+        /// <summary>
+        /// Sets a rate limit for fire-and-forget messages over WebSocket (no response).
+        /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
+        /// </summary>
+        IServerModuleConfiguration LimitWebsocketFireAndForget(int messagesPerSecond);
+
+        /// <summary>
+        /// Sets a rate limit for fire-and-forget messages over HTTP (no response).
+        /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
+        /// </summary>
+        IServerModuleConfiguration LimitHttpFireAndForget(int messagesPerSecond);
+
+        /// <summary>
+        /// Enables a rate limiter for this server.
+        /// If <paramref name="options"/> is null, the rate limiter will be disabled.
+        /// </summary>
+        IServerModuleConfiguration GlobalLimit(TokenBucketRateLimiterOptions? options);
+
+        /// <summary>
+        /// Sets a rate limit for ingest messages (messages sent to the server).
+        /// If <paramref name="options"/> is null, the rate limiter will be disabled.
+        /// </summary>
+        IServerModuleConfiguration LimitIngest(TokenBucketRateLimiterOptions? options);
+
+        /// <summary>
+        /// Sets a rate limit for subscription messages (client-side subscriptions).
+        /// If <paramref name="options"/> is null, the rate limiter will be disabled.
+        /// </summary>
+        IServerModuleConfiguration LimitSubscription(TokenBucketRateLimiterOptions? options);
+
+        /// <summary>
+        /// Sets a rate limit for streaming messages (data streaming from client to server).
+        /// If <paramref name="options"/> is null, the rate limiter will be disabled.
+        /// </summary>
+        IServerModuleConfiguration LimitStreaming(TokenBucketRateLimiterOptions? options);
+
+        /// <summary>
+        /// Sets a rate limit for round-trip messages over WebSocket (request-response).
+        /// If <paramref name="options"/> is null, the rate limiter will be disabled.
+        /// </summary>
+        IServerModuleConfiguration LimitWebsocketRoundTrip(TokenBucketRateLimiterOptions? options);
+
+        /// <summary>
+        /// Sets a rate limit for fire-and-forget messages over WebSocket (no response).
+        /// If <paramref name="options"/> is null, the rate limiter will be disabled.
+        /// </summary>
+        IServerModuleConfiguration LimitWebsocketFireAndForget(TokenBucketRateLimiterOptions? options);
+
+        /// <summary>
+        /// Sets a rate limit for round-trip messages over HTTP (request-response).
+        /// If <paramref name="options"/> is null, the rate limiter will be disabled.
+        /// </summary>
+        IServerModuleConfiguration LimitHttpRoundTrip(TokenBucketRateLimiterOptions? options);
+
+        /// <summary>
+        /// Sets a rate limit for fire-and-forget messages over HTTP (no response).
+        /// If <paramref name="options"/> is null, the rate limiter will be disabled.
+        /// </summary>
+        IServerModuleConfiguration LimitHttpFireAndForget(TokenBucketRateLimiterOptions? options);
+
     }
 }

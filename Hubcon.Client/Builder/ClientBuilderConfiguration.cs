@@ -3,6 +3,7 @@ using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.WebSockets;
+using System.Threading.RateLimiting;
 
 namespace Hubcon.Client.Builder
 {
@@ -109,16 +110,195 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
-        public IServerModuleConfiguration SetWebsocketTimeout(TimeSpan timeSpan)
+        public IServerModuleConfiguration GlobalLimit(int requestsPerSecond)
         {
-            builder.WebsocketTimeout = timeSpan;
+            var requestsPerSec = requestsPerSecond == 0 ? 9999999 : requestsPerSecond;
+
+            builder.RateBucketOptions = new TokenBucketRateLimiterOptions()
+            {
+                AutoReplenishment = true,
+                QueueLimit = 9999999,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                TokenLimit = requestsPerSec,
+                TokensPerPeriod = requestsPerSec
+            };
+
             return this;
         }
 
-        public IServerModuleConfiguration SetHttpTimeout(TimeSpan timeSpan)
+        public IServerModuleConfiguration DisableAllLimiters()
         {
-            builder.HttpTimeout = timeSpan;
+            builder.LimitersDisabled = true;
             return this;
         }
+
+        public IServerModuleConfiguration LimitIngest(int messagesPerSecond)
+        {
+            var limit = messagesPerSecond == 0 ? 9999999 : messagesPerSecond;
+
+            builder.IngestLimiterOptions = new TokenBucketRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                QueueLimit = 1,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                TokenLimit = limit,
+                TokensPerPeriod = limit
+            };
+
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitSubscription(int messagesPerSecond)
+        {
+            var limit = messagesPerSecond == 0 ? 9999999 : messagesPerSecond;
+
+            builder.SubscriptionLimiterOptions = new TokenBucketRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                QueueLimit = 1,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                TokenLimit = limit,
+                TokensPerPeriod = limit
+            };
+
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitStreaming(int messagesPerSecond)
+        {
+            var limit = messagesPerSecond == 0 ? 9999999 : messagesPerSecond;
+
+            builder.StreamingLimiterOptions = new TokenBucketRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                QueueLimit = 1,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                TokenLimit = limit,
+                TokensPerPeriod = limit
+            };
+
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitWebsocketRoundTrip(int messagesPerSecond)
+        {
+            var limit = messagesPerSecond == 0 ? 9999999 : messagesPerSecond;
+
+            builder.WebsocketRoundTripLimiterOptions = new TokenBucketRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                QueueLimit = 1,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                TokenLimit = limit,
+                TokensPerPeriod = limit
+            };
+
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitHttpRoundTrip(int messagesPerSecond)
+        {
+            var limit = messagesPerSecond == 0 ? 9999999 : messagesPerSecond;
+
+            builder.HttpRoundTripLimiterOptions = new TokenBucketRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                QueueLimit = 1,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                TokenLimit = limit,
+                TokensPerPeriod = limit
+            };
+
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitWebsocketFireAndForget(int messagesPerSecond)
+        {
+            var limit = messagesPerSecond == 0 ? 9999999 : messagesPerSecond;
+
+            builder.WebsocketFireAndForgetLimiterOptions ??= new TokenBucketRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                QueueLimit = 1,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                TokenLimit = limit,
+                TokensPerPeriod = limit
+            };
+
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitHttpFireAndForget(int messagesPerSecond)
+        {
+            var limit = messagesPerSecond == 0 ? 9999999 : messagesPerSecond;
+
+            builder.HttpFireAndForgetLimiterOptions = new TokenBucketRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                QueueLimit = 1,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                TokenLimit = limit,
+                TokensPerPeriod = limit
+            };
+
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitIngest(TokenBucketRateLimiterOptions? options)
+        {
+            builder.IngestLimiterOptions = options;
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitSubscription(TokenBucketRateLimiterOptions? options)
+        {
+            builder.SubscriptionLimiterOptions = options;
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitStreaming(TokenBucketRateLimiterOptions? options)
+        {
+            builder.StreamingLimiterOptions = options;
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitWebsocketRoundTrip(TokenBucketRateLimiterOptions? options)
+        {
+            builder.WebsocketRoundTripLimiterOptions = options;
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitWebsocketFireAndForget(TokenBucketRateLimiterOptions? options)
+        {
+            builder.WebsocketFireAndForgetLimiterOptions = options;
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitHttpRoundTrip(TokenBucketRateLimiterOptions? options)
+        {
+            builder.HttpRoundTripLimiterOptions = options;
+            return this;
+        }
+
+        public IServerModuleConfiguration LimitHttpFireAndForget(TokenBucketRateLimiterOptions? options)
+        {
+            builder.HttpFireAndForgetLimiterOptions = options;
+            return this;
+        }
+
+        public IServerModuleConfiguration GlobalLimit(TokenBucketRateLimiterOptions? options)
+        {
+            builder.RateBucketOptions = options;
+            return this;
+        }
+
     }
 }

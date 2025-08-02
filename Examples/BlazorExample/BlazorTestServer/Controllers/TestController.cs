@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace BlazorTestServer.Controllers
 {
-    public class TestController(ILogger<TestController> logger)
+    public class TestController(ILogger<TestController> logger) : IUserContract
     {
         public ISubscription<int?>? OnUserCreated { get; }
 
@@ -15,7 +15,7 @@ namespace BlazorTestServer.Controllers
 
         public ISubscription<int?>? OnUserCreated4 { get; }
 
-        public async Task<int> GetTemperatureFromServer()
+        public async Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
             => await Task.Run(() => new Random().Next(-10, 50));
 
         public async IAsyncEnumerable<string> GetMessages(int count)
@@ -33,7 +33,7 @@ namespace BlazorTestServer.Controllers
         }
 
         //[Authorize(Roles = ["Admin"])]
-        public async Task CreateUser()
+        public async Task CreateUser(CancellationToken cancellationToken)
         {
             var number = Random.Shared.Next(-10, 50);
             OnUserCreated?.Emit(number);
@@ -112,7 +112,7 @@ namespace BlazorTestServer.Controllers
             logger.LogInformation("Ingest terminado exitosamente");
         }
 
-        public async Task IngestMessages(IAsyncEnumerable<string> source)
+        public async Task IngestMessages(IAsyncEnumerable<string> source, CancellationToken cancellationToken)
         {
             Task TaskRunner<T>(IAsyncEnumerable<T> source, string name)
             {
@@ -142,7 +142,7 @@ namespace BlazorTestServer.Controllers
             return Task.FromResult(new MyTestClass("hola", new TestClass2("propiedad")));
         }
 
-        public IAsyncEnumerable<string> GetMessages2()
+        public IAsyncEnumerable<string> GetMessages2(CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

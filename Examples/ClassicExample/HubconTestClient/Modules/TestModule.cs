@@ -14,16 +14,31 @@ namespace HubconTestClient.Modules
 
             configuration.EnableWebsocketAutoReconnect(true);
 
+            configuration.GlobalLimit(500);
+
+            configuration.LimitIngest(100);
+            configuration.LimitSubscription(100);
+            configuration.LimitStreaming(100);
+            configuration.LimitWebsocketRoundTrip(100);
+            configuration.LimitHttpRoundTrip(100);
+            configuration.LimitWebsocketFireAndForget(100);
+            configuration.LimitHttpFireAndForget(100);
+
+            configuration.DisableAllLimiters();
+
             configuration.Implements<IUserContract>(x =>
             {
                 x.UseWebsocketMethods();
 
                 x.ConfigureOperations(operationSelector =>
                 {
-                    operationSelector.Configure(contract => contract.GetTemperatureFromServer)
-                        .UseTransport(TransportType.Websockets);
+                    operationSelector
+                        .Configure(contract => contract.GetTemperatureFromServer)
+                        .UseTransport(TransportType.Http)
+                        .LimitPerSecond(100);
 
-                    operationSelector.Configure(contract => contract.CreateUser)
+                    operationSelector
+                        .Configure(contract => contract.CreateUser)
                         .UseTransport(TransportType.Http);
                 });
             });
@@ -36,8 +51,9 @@ namespace HubconTestClient.Modules
             });
 
             configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(1));
+            configuration.ScaleMessageProcessors(1);
+
             configuration.RequirePongResponse(true);
-            configuration.ScaleMessageProcessors(2);
 
             configuration.ConfigureHttpClient(x =>
             {

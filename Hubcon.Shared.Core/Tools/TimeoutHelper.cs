@@ -14,7 +14,7 @@ namespace Hubcon.Shared.Core.Tools
             using var cts = new CancellationTokenSource(timeout);
             try
             {
-                return await taskFactory(cts.Token);
+                return await taskFactory(cts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,5 +25,6 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         string Serialize<T>(T value);
         JsonElement SerializeToElement<T>(T value);
         T? DeserializeFromString<T>(string? json);
+        ReadOnlySpan<byte> SerializeToSpan<T>(T value, ArrayBufferWriter<byte> bufferWriter);
     }
 }

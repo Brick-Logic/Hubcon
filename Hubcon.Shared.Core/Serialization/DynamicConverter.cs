@@ -1,5 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
@@ -239,6 +240,15 @@ namespace Hubcon.Shared.Core.Serialization
             {
                 return default;
             }
+        }
+
+        public ReadOnlySpan<byte> SerializeToSpan<T>(T value, ArrayBufferWriter<byte> bufferWriter)
+        {
+            bufferWriter.Clear();
+            using var writer = new Utf8JsonWriter(bufferWriter);
+            JsonSerializer.Serialize(writer, value, JsonSerializerOptions);
+            writer.Flush();
+            return bufferWriter.WrittenSpan;
         }
     }
 }

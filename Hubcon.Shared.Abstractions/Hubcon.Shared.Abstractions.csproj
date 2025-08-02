@@ -21,6 +21,7 @@
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.15" />
 	  <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.6" />
+	  <PackageReference Include="System.Threading.RateLimiting" Version="9.0.7" />
 	</ItemGroup>
 
 	<!-- Development -->

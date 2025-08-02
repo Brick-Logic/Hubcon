@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Reflection;
+using System.Threading.RateLimiting;
 
 
 namespace Hubcon.Client.Builder
@@ -39,6 +40,106 @@ namespace Hubcon.Client.Builder
         public bool ReconnectStreams { get; set; } = false;
         public bool ReconnectSubscriptions { get; set; } = true;
         public bool ReconnectIngests { get; set; } = false;
+
+        private RateLimiter? _rateBucket;
+        public RateLimiter? RateBucket => _rateBucket ??= RateBucketOptions != null ? new TokenBucketRateLimiter(RateBucketOptions) : null;
+
+        public TokenBucketRateLimiterOptions? RateBucketOptions { get; set; }
+        public bool LimitersDisabled { get; set; }
+
+        public TokenBucketRateLimiterOptions? IngestLimiterOptions { get; set; } = new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 200,
+            TokensPerPeriod = 200,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        public TokenBucketRateLimiterOptions? SubscriptionLimiterOptions { get; set; } = new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 20,
+            TokensPerPeriod = 20,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(2),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        public TokenBucketRateLimiterOptions? StreamingLimiterOptions { get; set; } = new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 100,
+            TokensPerPeriod = 100,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        public TokenBucketRateLimiterOptions? WebsocketRoundTripLimiterOptions { get; set; } = new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 50,
+            TokensPerPeriod = 50,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        public TokenBucketRateLimiterOptions? HttpRoundTripLimiterOptions { get; set; } = new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 50,
+            TokensPerPeriod = 50,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        public TokenBucketRateLimiterOptions? WebsocketFireAndForgetLimiterOptions { get; set; } = new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 100,
+            TokensPerPeriod = 100,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+        public TokenBucketRateLimiterOptions? HttpFireAndForgetLimiterOptions { get; set; } = new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 100,
+            TokensPerPeriod = 100,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
+
+
+        private RateLimiter? _ingestRateBucket;
+        public RateLimiter? IngestRateBucket => _ingestRateBucket ??= IngestLimiterOptions != null ? new TokenBucketRateLimiter(IngestLimiterOptions) : null;
+
+        private RateLimiter? _subscriptionRateBucket;
+        public RateLimiter? SubscriptionRateBucket => _subscriptionRateBucket ??= SubscriptionLimiterOptions != null ? new TokenBucketRateLimiter(SubscriptionLimiterOptions) : null;
+
+        private RateLimiter? _streamingRateBucket;
+        public RateLimiter? StreamingRateBucket => _streamingRateBucket ??= StreamingLimiterOptions != null ? new TokenBucketRateLimiter(StreamingLimiterOptions) : null;
+
+        private RateLimiter? _websocketRoundTripRateBucket;
+        public RateLimiter? WebsocketRoundTripRateBucket => _websocketRoundTripRateBucket ??= WebsocketRoundTripLimiterOptions != null ? new TokenBucketRateLimiter(WebsocketRoundTripLimiterOptions) : null;
+
+        private RateLimiter? _httpRoundTripRateBucket;
+        public RateLimiter? HttpRoundTripRateBucket => _httpRoundTripRateBucket ??= HttpRoundTripLimiterOptions != null ? new TokenBucketRateLimiter(HttpRoundTripLimiterOptions) : null;
+
+        private RateLimiter? _websocketFireAndForgetRateBucket;
+        public RateLimiter? WebsocketFireAndForgetRateBucket => _websocketFireAndForgetRateBucket ??= WebsocketFireAndForgetLimiterOptions != null ? new TokenBucketRateLimiter(WebsocketFireAndForgetLimiterOptions) : null;
+
+        private RateLimiter? _httpFireAndForgetRateBucket;
+        public RateLimiter? HttpFireAndForgetRateBucket => _httpFireAndForgetRateBucket ??= HttpFireAndForgetLimiterOptions != null ? new TokenBucketRateLimiter(HttpFireAndForgetLimiterOptions) : null;
+
 
         public T GetOrCreateClient<T>(IServiceProvider services) where T : IControllerContract
         {

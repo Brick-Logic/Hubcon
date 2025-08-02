@@ -4,7 +4,6 @@ using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Cache;
-using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 
@@ -48,7 +47,7 @@ namespace Hubcon.Client.Interceptors
                     arguments
                 );
 
-                IAsyncEnumerable<JsonElement> stream = Client.GetStream(request, cts.Token);
+                IAsyncEnumerable<JsonElement> stream = Client.GetStream(request, method, cts.Token);
 
                 result = (T)streamMethod.Invoke(converter, [stream, cts.Token])!;
             }
@@ -57,7 +56,7 @@ namespace Hubcon.Client.Interceptors
                 x => method.GetParameters().Any(x => x.ParameterType.IsGenericType && x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
             {
                 var request = new OperationRequest(methodName, contractName, arguments);
-                return await Client.Ingest<T>(request);
+                return await Client.Ingest<T>(request, method).ConfigureAwait(false);
             }
             else
             {
@@ -71,7 +70,7 @@ namespace Hubcon.Client.Interceptors
                     request,
                     method,
                     cts.Token
-                );
+                ).ConfigureAwait(false);
             }
 
             return result!;
@@ -99,7 +98,7 @@ namespace Hubcon.Client.Interceptors
                 x => method.GetParameters().Any(x => x.ParameterType.IsGenericType && x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
             {
                 var request = new OperationRequest(methodName, contractName, arguments);
-                return Client.Ingest<JsonElement>(request);
+                return Client.Ingest<JsonElement>(request, method);
             }
             else
             {
