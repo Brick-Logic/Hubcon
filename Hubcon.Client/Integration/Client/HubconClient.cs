@@ -79,7 +79,7 @@ namespace Hubcon.Client.Integration.Client
                     if (authenticationManagerFactory?.Invoke() == null)
                         throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                    var result = await client.InvokeAsync<T>(request).ConfigureAwait(false)
+                    var result = await client.InvokeAsync<T>(request)
                         ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
 
                     if (!result.Success)
@@ -107,7 +107,7 @@ namespace Hubcon.Client.Integration.Client
                     if (authManager != null && authManager.IsSessionActive)
                         httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authManager.TokenType!, authManager.AccessToken);
 
-                    var response = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+                    var response = await HttpClient.SendAsync(httpRequest, cancellationToken);
 
                     var responseBytes = await response.Content.ReadAsByteArrayAsync();
                     var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
@@ -168,7 +168,7 @@ namespace Hubcon.Client.Integration.Client
                     if (authenticationManagerFactory?.Invoke() == null)
                         throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                    await client.SendAsync(request).ConfigureAwait(false);
+                    await client.SendAsync(request);
                 }
                 else
                 {
@@ -190,7 +190,7 @@ namespace Hubcon.Client.Integration.Client
                     if (authManager != null && authManager.IsSessionActive)
                         httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authManager.TokenType!, authManager.AccessToken);
 
-                    await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+                    await HttpClient.SendAsync(httpRequest, cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -232,7 +232,7 @@ namespace Hubcon.Client.Integration.Client
             try
             {
                 await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.StreamingRateBucket, operationOptions?.RateBucket);
-                observable = await client.Stream<JsonElement>(request).ConfigureAwait(false);
+                observable = await client.Stream<JsonElement>(request);
             }
             catch (Exception ex)
             {
@@ -305,13 +305,13 @@ namespace Hubcon.Client.Integration.Client
 
             await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.IngestRateBucket, operationOptions?.RateBucket);
 
-            var response = await client.IngestMultiple<T>(request, clientOptions, operationOptions).ConfigureAwait(false);
+            var response = await client.IngestMultiple<T>(request, clientOptions, operationOptions);
             return response.Data;          
         }
 
 
 
-        public async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, MethodInfo method, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, MemberInfo method, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
@@ -341,7 +341,7 @@ namespace Hubcon.Client.Integration.Client
                 if (authenticationManagerFactory?.Invoke() == null)
                     throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
 
-                observable = await client.Subscribe<JsonElement>(request).ConfigureAwait(false);
+                observable = await client.Subscribe<JsonElement>(request);
             }
             catch (Exception ex)
             {

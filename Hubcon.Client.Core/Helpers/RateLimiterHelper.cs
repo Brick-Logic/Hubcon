@@ -10,7 +10,7 @@ namespace Hubcon.Client.Core.Helpers
 {
     public static class RateLimiterHelper
     {
-        public static async ValueTask AcquireAsync(IClientOptions? options, RateLimiter? globalLimiter, RateLimiter? typeLimiter = null, RateLimiter? operationLimiter = null)
+        public static async Task AcquireAsync(IClientOptions? options, RateLimiter? globalLimiter, RateLimiter? typeLimiter = null, RateLimiter? operationLimiter = null)
         {
             if (options == null || options.LimitersDisabled)
                 return;

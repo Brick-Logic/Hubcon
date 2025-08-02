@@ -56,7 +56,7 @@ namespace Hubcon.Client.Interceptors
                 x => method.GetParameters().Any(x => x.ParameterType.IsGenericType && x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
             {
                 var request = new OperationRequest(methodName, contractName, arguments);
-                return await Client.Ingest<T>(request, method).ConfigureAwait(false);
+                return await Client.Ingest<T>(request, method);
             }
             else
             {
@@ -70,7 +70,7 @@ namespace Hubcon.Client.Interceptors
                     request,
                     method,
                     cts.Token
-                ).ConfigureAwait(false);
+                );
             }
 
             return result!;

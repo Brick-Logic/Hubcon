@@ -21,10 +21,10 @@ namespace HubconTest
 
             long coreMask = 0;
 
-            int? customCores = null;
+            int? customCores = 11;
             int cores = customCores ?? Environment.ProcessorCount - 1;
 
-            for (int i = 0; i <= cores; i++)
+            for (int i = 1; i <= cores; i++)
             {
                 coreMask |= 1L << i;
             }

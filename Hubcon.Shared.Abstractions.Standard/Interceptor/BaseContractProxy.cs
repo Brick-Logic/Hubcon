@@ -44,7 +44,7 @@ namespace Hubcon.Shared.Abstractions.Standard.Interceptor
 
         public async Task<T> InvokeAsync<T>(string method, Dictionary<string, object> arguments = null)
         {
-            return await Interceptor.InvokeAsync<T>(GetMethod(method), arguments).ConfigureAwait(false);
+            return await Interceptor.InvokeAsync<T>(GetMethod(method), arguments);
         }
 
         public Task CallAsync(string method, Dictionary<string, object> arguments = null)
