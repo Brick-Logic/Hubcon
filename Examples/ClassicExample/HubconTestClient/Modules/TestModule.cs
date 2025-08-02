@@ -51,7 +51,7 @@ namespace HubconTestClient.Modules
             });
 
             configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(1));
-            configuration.ScaleMessageProcessors(1);
+            configuration.ScaleMessageProcessors(2);
 
             configuration.RequirePongResponse(true);
 

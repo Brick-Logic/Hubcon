@@ -10,16 +10,22 @@ namespace Hubcon.Client.Core.Helpers
 {
     public static class RateLimiterHelper
     {
-        public static async Task AcquireAsync(IClientOptions? options, RateLimiter? globalLimiter, RateLimiter? typeLimiter = null, RateLimiter? operationLimiter = null)
+        public static Task AcquireAsync(IClientOptions? options, RateLimiter? globalLimiter, RateLimiter? typeLimiter = null, RateLimiter? operationLimiter = null)
         {
             if (options == null || options.LimitersDisabled)
-                return;
+                return Task.CompletedTask;
 
-            if (globalLimiter != null) await globalLimiter.AcquireAsync();
+            if (globalLimiter == null && typeLimiter == null && operationLimiter == null)
+                return Task.CompletedTask;
 
-            if (typeLimiter != null) await typeLimiter.AcquireAsync();
+            return AcquireInternalAsync(globalLimiter, typeLimiter, operationLimiter);
+        }
 
-            if (operationLimiter != null) await operationLimiter.AcquireAsync();
+        private static async Task AcquireInternalAsync(RateLimiter? globalLimiter, RateLimiter? typeLimiter, RateLimiter? operationLimiter)
+        {
+            if (globalLimiter != null) await globalLimiter.AcquireAsync().ConfigureAwait(false);
+            if (typeLimiter != null) await typeLimiter.AcquireAsync().ConfigureAwait(false);
+            if (operationLimiter != null) await operationLimiter.AcquireAsync().ConfigureAwait(false);
         }
     }
 }

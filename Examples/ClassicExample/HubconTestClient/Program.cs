@@ -118,35 +118,35 @@ internal class Program
             evento4 = true;
         }
 
-        client.OnUserCreated!.AddHandler(handler);
-        await client.OnUserCreated.Subscribe();
-        client.OnUserCreated2!.AddHandler(handler2);
-        await client.OnUserCreated2.Subscribe();
-        client.OnUserCreated3!.AddHandler(handler3);
-        await client.OnUserCreated3.Subscribe();
-        client.OnUserCreated4!.AddHandler(handler4);
-        await client.OnUserCreated4.Subscribe();
+        //client.OnUserCreated!.AddHandler(handler);
+        //await client.OnUserCreated.Subscribe();
+        //client.OnUserCreated2!.AddHandler(handler2);
+        //await client.OnUserCreated2.Subscribe();
+        //client.OnUserCreated3!.AddHandler(handler3);
+        //await client.OnUserCreated3.Subscribe();
+        //client.OnUserCreated4!.AddHandler(handler4);
+        //await client.OnUserCreated4.Subscribe();
 
-        logger.LogInformation("Eventos conectados.");
+        //logger.LogInformation("Eventos conectados.");
 
-        await Task.Delay(100);
+        //await Task.Delay(100);
 
-        logger.LogWarning("Enviando request de prueba...");
-        await client.CreateUser();
-        logger.LogInformation($"Esperando eventos...");
+        //logger.LogWarning("Enviando request de prueba...");
+        //await client.CreateUser();
+        //logger.LogInformation($"Esperando eventos...");
 
-        await Task.Delay(100);
+        //await Task.Delay(100);
 
-        if (eventosRecibidos == 4)
-        {
-            logger.LogInformation($"Eventos recibidos correctamente.");
-        }
-        else
-        {
-            throw new Exception("No se recibieron todos los eventos esperados.");
-        }
+        //if (eventosRecibidos == 4)
+        //{
+        //    logger.LogInformation($"Eventos recibidos correctamente.");
+        //}
+        //else
+        //{
+        //    throw new Exception("No se recibieron todos los eventos esperados.");
+        //}
 
-        await Task.Delay(100);
+        //await Task.Delay(100);
 
         logger.LogWarning("Probando invocación con retorno...");
         var temp = await client.GetTemperatureFromServer();
@@ -216,7 +216,7 @@ internal class Program
                 try
                 {
                     //await client.IngestMessages(GetMessages2(), default);
-                    await client.GetTemperatureFromServer();
+                    await client.CreateUser();
                     Interlocked.Increment(ref finishedRequestsCount);
                 }
                 catch

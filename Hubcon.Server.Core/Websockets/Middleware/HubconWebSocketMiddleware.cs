@@ -49,7 +49,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         ConcurrentDictionary<Guid, CancellationTokenSource> _streams = null!;
         ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingests = null!;
         ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels = null!;
-        ConcurrentDictionary<Guid, (CancellationTokenSource, Task)> _tasks = null!;
+        ConcurrentDictionary<Guid, CancellationTokenSource> _tasks = null!;
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
         {
@@ -194,19 +194,14 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             if (!options.ThrottlingIsDisabled)
                                 await rateLimiterManager.TryAcquireAsync(MessageType.subscription_init, baseMessage.Id);
 
-
-                            var subscriptionInitCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
-
                             var subInit = HandleSubscribe(
                                 context,
                                 MessageType.subscription_init,
                                 _subscriptions,
                                 _ackChannels,
                                 sender,
-                                new SubscriptionInitMessage(message.Memory),
-                                subscriptionInitCts);
+                                new SubscriptionInitMessage(message.Memory));
 
-                            HandleTask(baseMessage.Id, subscriptionInitCts, subInit, _tasks);
                             break;
 
                         case MessageType.subscription_complete:
@@ -220,7 +215,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await rateLimiterManager.TryAcquireAsync(MessageType.subscription_complete, baseMessage.Id);
 
 
-                            _ = HandleUnsubscribe(
+                            HandleUnsubscribe(
                                 _subscriptions,
                                 context,
                                 new SubscriptionCompleteMessage(message.Memory));
@@ -247,7 +242,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 new StreamInitMessage(message.Memory),
                                 streamInitCts);
 
-                            HandleTask(baseMessage.Id, streamInitCts, streamInit, _tasks);
                             break;
 
                         case MessageType.stream_complete:
@@ -260,7 +254,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             if (!options.ThrottlingIsDisabled)
                                 await rateLimiterManager.TryAcquireAsync(MessageType.stream_complete, baseMessage.Id);
 
-                            _ = HandleUnsubscribe(
+                            HandleUnsubscribe(
                                 _subscriptions,
                                 context,
                                 new SubscriptionCompleteMessage(message.Memory));
@@ -277,7 +271,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             if (!options.ThrottlingIsDisabled)
                                 await rateLimiterManager.TryAcquireAsync(MessageType.ack, baseMessage.Id);
 
-                            _ = HandleAck(_ackChannels, new AckMessage(message.Memory));
+                            HandleAck(_ackChannels, new AckMessage(message.Memory));
 
                             break;
 
@@ -290,8 +284,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             if (!options.ThrottlingIsDisabled)
                                 await rateLimiterManager.TryAcquireAsync(MessageType.operation_invoke, baseMessage.Id);
-                            
-                            _ = HandleOperationInvoke(context, sender, new OperationInvokeMessage(message.Memory));
+
+                            HandleOperationInvoke(context, sender, new OperationInvokeMessage(message.Memory));
 
                             break;
 
@@ -305,10 +299,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             if (!options.ThrottlingIsDisabled)
                                 await rateLimiterManager.TryAcquireAsync(MessageType.operation_call, baseMessage.Id);
 
-                            var operationCallCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+                            HandleOperationCall(context, new OperationCallMessage(message.Memory));
 
-                            var operationCall = HandleOperationCall(context, new OperationCallMessage(message.Memory), operationCallCts);
-                            HandleTask(baseMessage.Id, operationCallCts, operationCall, _tasks);
                             break;
 
                         case MessageType.ingest_init:
@@ -324,8 +316,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             var ingestInitCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
 
-                            var ingestInit = HandleIngestInit(_ingests, sender, new IngestInitMessage(message.Memory));
-                            HandleTask(baseMessage.Id, ingestInitCts, ingestInit, _tasks);
+                            HandleIngestInit(_ingests, sender, new IngestInitMessage(message.Memory));
                             break;
 
                         case MessageType.ingest_data:
@@ -352,7 +343,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             if (!options.ThrottlingIsDisabled)
                                 await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data_with_ack, baseMessage.Id);
 
-                            _ = HandleIngestDataWithAck(_ingests, sender, new IngestDataWithAckMessage(message.Memory));
+                            HandleIngestDataWithAck(_ingests, sender, new IngestDataWithAckMessage(message.Memory));
 
                             break;
 
@@ -366,7 +357,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             if (!options.ThrottlingIsDisabled)
                                 await rateLimiterManager.TryAcquireAsync(MessageType.ingest_complete, baseMessage.Id);
 
-                            _ = HandleIngestComplete(_ingests, new IngestCompleteMessage(message.Memory));
+                            HandleIngestComplete(_ingests, new IngestCompleteMessage(message.Memory));
 
                             break;
                         case MessageType.cancel:
@@ -379,7 +370,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             if (!options.ThrottlingIsDisabled)
                                 await rateLimiterManager.TryAcquireAsync(MessageType.cancel, baseMessage.Id);
 
-                            _ = CancelTask(baseMessage.Id, _tasks);
+                            CancelTask(baseMessage.Id, _tasks);
 
                             break;
                         default:
@@ -436,30 +427,20 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 {
                     foreach (var task in _tasks)
                     {
-                        task.Value.Item1.Cancel();
-                        try
-                        {
-                            if (!task.Value.Item2.IsCompleted && !task.Value.Item2.IsFaulted)
-                                await task.Value.Item2;
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex.Message);
-                        }
-                        task.Value.Item1.Dispose();
+                        task.Value.Cancel();                   
+                        task.Value.Dispose();
                     }
                 }
             }
         }
 
-        private async Task CancelTask(Guid id, ConcurrentDictionary<Guid, (CancellationTokenSource, Task)> tasks)
+        private void CancelTask(Guid id, ConcurrentDictionary<Guid, CancellationTokenSource> tasks)
         {
-            if(tasks.TryRemove(id, out var task))
+            if (tasks.TryRemove(id, out var task))
             {
-                task.Item1.Cancel();
-                task.Item1.Dispose();
-                task.Item2.Dispose();
-            }        
+                task.Cancel();
+                task.Dispose();
+            }
         }
 
         private async Task HandleNotAllowed(Guid id, string messageJson, object? payload, WebSocketMessageSender sender)
@@ -610,80 +591,65 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
         }
 
-        public void HandleTask(Guid id, CancellationTokenSource cts, Task task, ConcurrentDictionary<Guid, (CancellationTokenSource, Task)> tasks, Action? cleaningCallback = null)
-        {
-            tasks.TryAdd(id, (cts, task));
-
-            task.ContinueWith((t, r) =>
-            {
-                cleaningCallback?.Invoke();
-                var state = (State)r!;
-                if (state.Tasks.TryRemove(state.Id, out _))
-                {
-                    state.Cts.Cancel();
-                    state.Cts.Dispose();
-                }
-            }, new State { Cts = cts, Tasks = tasks });
-        }
-
         private class State
         {
             public Guid Id = Guid.Empty!;
             public CancellationTokenSource Cts = null!;
-            public ConcurrentDictionary<Guid, (CancellationTokenSource, Task)> Tasks = null!;
+            public ConcurrentDictionary<Guid, CancellationTokenSource> Tasks = null!;
         }
 
-        private Task HandleOperationInvoke(
+        private async Task HandleOperationInvoke(
             HttpContext context,
             WebSocketMessageSender sender,
             OperationInvokeMessage operationInvokeMessage)
         {
-            var localCts = new CancellationTokenSource();
+            using var localCts = new CancellationTokenSource();
             cts.Token.Register(localCts.Cancel);
 
-            var task = Task.Run(async () =>
+            IOperationResponse<JsonElement>? result = null;
+
+            try
             {
-                IOperationResponse<JsonElement>? result = null;
-            
-                try
-                {
-                    if (operationInvokeMessage == null) return;
+                if (operationInvokeMessage == null) return;
 
-                    IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload)!;
-                    result = await entrypoint.HandleMethodWithResult(operationRequest, localCts.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    if (localCts.IsCancellationRequested)
-                        result = new BaseOperationResponse<JsonElement>(false, default, "Request aborted.");
-                }
-                catch (Exception ex)
-                {
-                    logger?.LogError(ex.Message);
-                }
+                IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload)!;
+                result = await entrypoint.HandleMethodWithResult(operationRequest, localCts.Token);
 
+            }
+            catch (OperationCanceledException)
+            {
+                if (localCts.IsCancellationRequested)
+                    result = new BaseOperationResponse<JsonElement>(false, default, "Request aborted.");
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex.Message);
+            }
+            finally
+            {
                 var response = new OperationResponseMessage(
                     operationInvokeMessage.Id,
                     converter.SerializeToElement(result)
                 );
 
                 await sender.SendAsync(response);
-            });
-
-            HandleTask(operationInvokeMessage.Id, localCts, task, _tasks);
-            return task;
+            }
         }
 
-        private async Task HandleOperationCall(HttpContext context, OperationCallMessage operationCallMessage, CancellationTokenSource localCts)
+        private Task<IResponse> HandleOperationCall(HttpContext context, OperationCallMessage operationCallMessage)
         {
+            using var localCts = new CancellationTokenSource();
+            cts.Token.Register(localCts.Cancel);
+
             try
             {
                 IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(operationCallMessage.Payload)!;
-                await entrypoint.HandleMethodVoid(operationRequest, localCts.Token);
+                return entrypoint.HandleMethodVoid(operationRequest, localCts.Token);
             }
             catch (Exception ex)
             {
                 logger?.LogError($"{ex.Message}");
+                return default!;
             }
         }
 
@@ -718,100 +684,100 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
         }
 
-        private Task HandleSubscribe(
+        private async Task HandleSubscribe(
             HttpContext context,
             MessageType type,
             ConcurrentDictionary<Guid, CancellationTokenSource> _subscriptions,
             ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels,
             WebSocketMessageSender sender,
-            SubscriptionInitMessage subscribeMessage,
-            CancellationTokenSource localCts)
+            SubscriptionInitMessage subscribeMessage)
         {
-            if (subscribeMessage == null || subscribeMessage.Id == Guid.Empty) return Task.CompletedTask;
+            if (subscribeMessage == null || subscribeMessage.Id == Guid.Empty) return;
 
-            if (_subscriptions.ContainsKey(subscribeMessage.Id)) return Task.CompletedTask;
+            if (_subscriptions.ContainsKey(subscribeMessage.Id)) return;
+
+            var localCts = new CancellationTokenSource();
+            cts.Token.Register(() => localCts.Cancel());
 
             _subscriptions.TryAdd(subscribeMessage.Id, localCts);
 
-            return Task.Run(async () =>
+
+            try
             {
-                try
+                IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(subscribeMessage.Payload)!;
+
+                var streamResult = await entrypoint.HandleSubscription(operationRequest, localCts.Token);
+
+                if (streamResult == null) { return; }
+
+                if (!streamResult.Success)
                 {
-                    IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(subscribeMessage.Payload)!;
+                    await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, string.IsNullOrWhiteSpace(streamResult.Error) ? "Unknown error" : streamResult.Error));
+                    return;
+                }
 
-                    var streamResult = await entrypoint.HandleSubscription(operationRequest, localCts.Token);
+                var stream = streamResult.Data!;
 
-                    if (streamResult == null) { return; }
-
-                    if (!streamResult.Success)
+                await foreach (var item in stream.WithCancellation(localCts.Token))
+                {
+                    if (item != null && item.GetType().IsAssignableTo(typeof(IRetryableMessage)))
                     {
-                        await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, string.IsNullOrWhiteSpace(streamResult.Error) ? "Unknown error" : streamResult.Error));
-                        return;
+                        IRetryableMessage? retryable = item as IRetryableMessage;
+                        var ackId = Guid.NewGuid();
+                        _ackChannels.TryAdd(ackId, retryable!);
+
+                        while (await retryable!.CanRetry() && !localCts.IsCancellationRequested)
+                        {
+                            retryable.GetPayload(out object? message);
+                            var edwa = new SubscriptionDataWithAckMessage(subscribeMessage.Id, converter.SerializeToElement(message), ackId);
+                            await sender.SendAsync(converter.SerializeToElement(edwa));
+                        }
+
+                        if (_ackChannels.TryRemove(ackId, out IRetryableMessage? channel))
+                            await channel.FailedAckAsync();
+                    }
+                    else
+                    {
+                        if (!localCts.IsCancellationRequested)
+                        {
+                            var response = new SubscriptionDataMessage(
+                                subscribeMessage.Id,
+                                converter.SerializeToElement(item)
+                            );
+
+                            await sender.SendAsync(response);
+                        }
                     }
 
-                    var stream = streamResult.Data!;
-
-                    await foreach (var item in stream.WithCancellation(localCts.Token))
+                    if (!options.ThrottlingIsDisabled)
                     {
-                        if (item != null && item.GetType().IsAssignableTo(typeof(IRetryableMessage)))
-                        {
-                            IRetryableMessage? retryable = item as IRetryableMessage;
-                            var ackId = Guid.NewGuid();
-                            _ackChannels.TryAdd(ackId, retryable!);
-
-                            while (await retryable!.CanRetry() && !localCts.IsCancellationRequested)
-                            {
-                                retryable.GetPayload(out object? message);
-                                var edwa = new SubscriptionDataWithAckMessage(subscribeMessage.Id, converter.SerializeToElement(message), ackId);
-                                await sender.SendAsync(converter.SerializeToElement(edwa));
-                            }
-
-                            if (_ackChannels.TryRemove(ackId, out IRetryableMessage? channel))
-                                await channel.FailedAckAsync();
-                        }
-                        else
-                        {
-                            if (!localCts.IsCancellationRequested)
-                            {
-                                var response = new SubscriptionDataMessage(
-                                    subscribeMessage.Id,
-                                    converter.SerializeToElement(item)
-                                );
-
-                                await sender.SendAsync(response);
-                            }
-                        }
-
-                        if (!options.ThrottlingIsDisabled)
-                        {
-                            await rateLimiterManager.TryAcquireAsync(type, operationRequest);
-                        }
+                        await rateLimiterManager.TryAcquireAsync(type, operationRequest);
                     }
                 }
-                catch (OperationCanceledException)
-                {
-                    // Cancelado normalmente
-                }
-                catch (Exception ex)
-                {
-                    // TODO: Revisar
-                    await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, ex.Message));
-                }
-            }, CancellationToken.None).ContinueWith(x =>
+            }
+            catch (OperationCanceledException)
             {
-                if (x.IsFaulted)
-                {
-                    var ex = x.Exception;
-                    logger?.LogError(ex.Message);
-                }
-
+                // Cancelado normalmente
+            }
+            catch (Exception ex)
+            {
+                // TODO: Revisar
+                await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, ex.Message));
+            }
+            finally
+            {
                 _subscriptions.TryRemove(subscribeMessage.Id, out var cts);
                 if (cts?.IsCancellationRequested != null && !cts.IsCancellationRequested)
                 {
                     cts.Cancel();
                 }
-            }, CancellationToken.None);
 
+                _tasks.TryRemove(subscribeMessage.Id, out var ctsTask);
+                if (ctsTask?.IsCancellationRequested != null && !ctsTask.IsCancellationRequested)
+                {
+                    ctsTask.Cancel();
+                }
+            }
         }
 
         private Task HandleStream(

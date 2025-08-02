@@ -303,18 +303,19 @@ namespace Hubcon.Client.Core.Websockets
                 var allIngests = Task.WhenAll(sourceTasks);
                 await allIngests;
 
-                var whenany = Task.WhenAny(allIngests, generalTcs.Task);
-                await whenany.ContinueWith(async x =>
+                try
                 {
-                    if(cts.IsCancellationRequested)
+                    var whenany = Task.WhenAny(allIngests, generalTcs.Task);
+                    await whenany;
+                }
+                finally
+                {
+                    if (cts.IsCancellationRequested)
                     {
                         await SendMessageAsync(new CancelMessage(ingestRequest.Id));
                     }
-                });
+                }
 
-                await whenany;
-
-                await whenany;
 
                 await SendMessageAsync(new IngestCompleteMessage(initialAckId, sources.Keys.ToArray()));
 
@@ -365,7 +366,7 @@ namespace Hubcon.Client.Core.Websockets
             await SendMessageAsync(request);
         }
 
-        public async ValueTask<IOperationResponse<T>> InvokeAsync<T>(IOperationRequest payload, IClientOptions? clientOptions = null, IOperationOptions? operationOptions = null)
+        public async Task<IOperationResponse<T>> InvokeAsync<T>(IOperationRequest payload, IClientOptions? clientOptions = null, IOperationOptions? operationOptions = null)
         {
             var request = new OperationInvokeMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
             var tcs = new TaskCompletionSource<OperationResponseMessage>();
