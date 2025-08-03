@@ -74,7 +74,7 @@ namespace Hubcon.Client.Integration.Client
 
                 if (isWebsocketMethod)
                 {
-                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.WebsocketRoundTripRateBucket, operationOptions?.RateBucket);
+                    //await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.WebsocketRoundTripRateBucket, operationOptions?.RateBucket);
 
                     if (authenticationManagerFactory?.Invoke() == null)
                         throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
@@ -89,7 +89,7 @@ namespace Hubcon.Client.Integration.Client
                 }
                 else
                 {
-                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.HttpRoundTripRateBucket, operationOptions?.RateBucket);
+                    //await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.HttpRoundTripRateBucket, operationOptions?.RateBucket);
 
                     var bytes = converter.SerializeToElement(request.Arguments).ToString();
                     using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
