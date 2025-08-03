@@ -34,7 +34,7 @@ namespace HubconTestClient.Modules
                 {
                     operationSelector
                         .Configure(contract => contract.GetTemperatureFromServer)
-                        .UseTransport(TransportType.Http)
+                        .UseTransport(TransportType.Websockets)
                         .LimitPerSecond(100);
 
                     operationSelector
