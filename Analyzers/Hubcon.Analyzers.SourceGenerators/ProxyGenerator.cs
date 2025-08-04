@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace HubconAnalyzers.SourceGenerators
 {
@@ -163,14 +164,14 @@ namespace HubconAnalyzers.SourceGenerators
                 var stringMethodName = $"\"{method.GetMethodSymbolSignature()}\"";
                 var callMethod = "";
 
-                var AllParameters = "";
+                string AllParameters = ", null";
 
-                if (method.Parameters.Any())
+                if (method.Parameters.Any(x => x.Type.Name.ToLower().Contains("CancellationToken".ToLower()) == false))
                 {
                     AllParameters = $", new Dictionary<string, object?>() {{ ";
                     bool first = true;
 
-                    foreach (var param in method.Parameters)
+                    foreach (var param in method.Parameters.Where(x => x.GetType() != typeof(CancellationToken)))
                     {
                         if (first)
                         {
@@ -186,22 +187,29 @@ namespace HubconAnalyzers.SourceGenerators
                     AllParameters += $" }}";
                 }
 
+                string cancellationTokenName = "";
+
+                if(method.Parameters.Any(x => x.Type.Name.ToLower().Contains("CancellationToken".ToLower())))
+                {
+                    cancellationTokenName = ", " + method.Parameters.First(x => x.Type.Name.ToLower().Contains("CancellationToken".ToLower())).Name;
+                }
+
                 if (returnType == "void")
                 {
-                    callMethod = $"{nameof(BaseContractProxy.CallAsync)}({stringMethodName}{AllParameters}).Wait();";
+                    callMethod = $"{nameof(BaseContractProxy.CallAsync)}({stringMethodName}{AllParameters}{cancellationTokenName}).Wait();";
                 }
                 else if (returnType.StartsWith("System.Threading.Tasks.Task<"))
                 {
                     var generic = ExtractTaskGenericArgumentRegex(returnType);
-                    callMethod = $"return {nameof(BaseContractProxy.InvokeAsync)}<{generic}>({stringMethodName}{AllParameters});";
+                    callMethod = $"return {nameof(BaseContractProxy.InvokeAsync)}<{generic}>({stringMethodName}{AllParameters}{cancellationTokenName});";
                 }
                 else if (returnType.StartsWith("System.Threading.Tasks.Task"))
                 {
-                    callMethod = $"return {nameof(BaseContractProxy.CallAsync)}({stringMethodName}{AllParameters});";
+                    callMethod = $"return {nameof(BaseContractProxy.CallAsync)}({stringMethodName}{AllParameters}{cancellationTokenName});";
                 }
                 else
                 {
-                    callMethod = $"return {nameof(BaseContractProxy.InvokeAsync)}<{returnType}>({stringMethodName}{AllParameters}).Result;";
+                    callMethod = $"return {nameof(BaseContractProxy.InvokeAsync)}<{returnType}>({stringMethodName}{AllParameters}{cancellationTokenName}).Result;";
                 }
 
                 sb.AppendLine($"{baseIndent}        {callMethod}");

@@ -13,7 +13,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Streams
     {
         private JsonElement? _data;
 
-        public StreamDataMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public StreamDataMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

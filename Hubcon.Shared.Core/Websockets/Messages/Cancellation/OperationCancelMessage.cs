@@ -5,7 +5,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Cancellation
 {
     public sealed record class CancelMessage : BaseMessage
     {
-        public CancelMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public CancelMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

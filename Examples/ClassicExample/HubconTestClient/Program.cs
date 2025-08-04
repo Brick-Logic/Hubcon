@@ -82,41 +82,41 @@ internal class Program
 
         await Task.Delay(100);
 
-        int eventosRecibidos = 0;
+        //int eventosRecibidos = 0;
 
-        logger.LogWarning($"Comenzando prueba de suscripciones...");
+        //logger.LogWarning($"Comenzando prueba de suscripciones...");
 
-        bool evento1 = false;
-        async Task handler(int? input)
-        {
-            logger.LogInformation($"Evento recibido: {input}");
-            Interlocked.Add(ref eventosRecibidos, 1);
-            evento1 = true;
-        }
+        //bool evento1 = false;
+        //async Task handler(int? input)
+        //{
+        //    logger.LogInformation($"Evento recibido: {input}");
+        //    Interlocked.Add(ref eventosRecibidos, 1);
+        //    evento1 = true;
+        //}
 
-        bool evento2 = false;
-        async Task handler2(int? input)
-        {
-            logger.LogInformation($"Evento recibido: {input}");
-            Interlocked.Add(ref eventosRecibidos, 1);
-            evento2 = true;
-        }
+        //bool evento2 = false;
+        //async Task handler2(int? input)
+        //{
+        //    logger.LogInformation($"Evento recibido: {input}");
+        //    Interlocked.Add(ref eventosRecibidos, 1);
+        //    evento2 = true;
+        //}
 
-        bool evento3 = false;
-        async Task handler3(int? input)
-        {
-            logger.LogInformation($"Evento recibido: {input}");
-            Interlocked.Add(ref eventosRecibidos, 1);
-            evento3 = true;
-        }
+        //bool evento3 = false;
+        //async Task handler3(int? input)
+        //{
+        //    logger.LogInformation($"Evento recibido: {input}");
+        //    Interlocked.Add(ref eventosRecibidos, 1);
+        //    evento3 = true;
+        //}
 
-        bool evento4 = false;
-        async Task handler4(int? input)
-        {
-            logger.LogInformation($"Evento recibido: {input}");
-            Interlocked.Add(ref eventosRecibidos, 1);
-            evento4 = true;
-        }
+        //bool evento4 = false;
+        //async Task handler4(int? input)
+        //{
+        //    logger.LogInformation($"Evento recibido: {input}");
+        //    Interlocked.Add(ref eventosRecibidos, 1);
+        //    evento4 = true;
+        //}
 
         //client.OnUserCreated!.AddHandler(handler);
         //await client.OnUserCreated.Subscribe();
@@ -216,7 +216,7 @@ internal class Program
                 try
                 {
                     //await client.IngestMessages(GetMessages2(), default);
-                    await client.GetTemperatureFromServer();
+                    await client.GetTemperatureFromServer(ct);
                     Interlocked.Increment(ref finishedRequestsCount);
                 }
                 catch

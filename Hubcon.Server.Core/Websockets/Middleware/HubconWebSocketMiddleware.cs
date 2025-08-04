@@ -153,49 +153,49 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 while (webSocket.State == WebSocketState.Open)
                 {
-                    TrimmedMemoryOwner? message;
+                    TrimmedMemoryOwner? tmo;
 
                     try
                     {
-                        message = await receiver.ReceiveAsync();
+                        tmo = await receiver.ReceiveAsync();
                     }
                     catch
                     {
                         break;
                     }
 
-                    if (message == null || message.Memory.IsEmpty)
+                    if (tmo == null || tmo.Memory.IsEmpty)
                         continue;
 
-                    var baseMessage = new BaseMessage(message.Memory);
+                    var message = new BaseMessage(tmo.Memory);
 
-                    if (baseMessage.Id == Guid.Empty)
+                    if (message.Id == Guid.Empty)
                         continue;
 
-                    switch (baseMessage.Type)
+                    switch (message.Type)
                     {
                         case MessageType.ping:
                             if (!options.WebsocketRequiresPing)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Ping is disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Ping is disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ping, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ping, message.Id);
 
-                            _ = HandlePing(webSocket, sender, lastPingId, new PingMessage(message.Memory));
+                            _ = HandlePing(webSocket, sender, lastPingId, new PingMessage(tmo.Memory, message.Id, message.Type));
                             break;
 
                         case MessageType.subscription_init:
                             if (!options.WebSocketSubscriptionIsAllowed)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Websocket subscriptions are disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Websocket subscriptions are disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.subscription_init, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.subscription_init, message.Id);
 
                             var subInit = HandleSubscribe(
                                 context,
@@ -203,91 +203,91 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 _subscriptions,
                                 _ackChannels,
                                 sender,
-                                new SubscriptionInitMessage(message.Memory));
+                                new SubscriptionInitMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
 
                         case MessageType.subscription_complete:
                             if (!options.WebSocketSubscriptionIsAllowed)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Websocket subscriptions are disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Websocket subscriptions are disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.subscription_complete, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.subscription_complete, message.Id);
 
-                            _ = HandleUnsubscribe(_subscriptions, context, new SubscriptionCompleteMessage(message.Memory));
+                            _ = HandleUnsubscribe(_subscriptions, context, new SubscriptionCompleteMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
 
                         case MessageType.stream_init:
                             if (!options.WebSocketSubscriptionIsAllowed)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Websocket streaming is disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Websocket streaming is disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.stream_init, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.stream_init, message.Id);
 
-                            _ = HandleStream(context, _streams, _ackChannels, sender, new StreamInitMessage(message.Memory));
+                            _ = HandleStream(context, _streams, _ackChannels, sender, new StreamInitMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
 
                         case MessageType.stream_complete:
                             if (!options.WebSocketSubscriptionIsAllowed)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Websocket subscriptions are disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Websocket subscriptions are disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.stream_complete, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.stream_complete, message.Id);
 
-                            _ = HandleUnsubscribe(_subscriptions, context, new SubscriptionCompleteMessage(message.Memory));
+                            _ = HandleUnsubscribe(_subscriptions, context, new SubscriptionCompleteMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
 
                         case MessageType.ack:
                             if (!options.MessageRetryIsEnabled)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Message ack is disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Message ack is disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ack, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ack, message.Id);
 
-                            _ = HandleAck(_ackChannels, new AckMessage(message.Memory));
+                            _ = HandleAck(_ackChannels, new AckMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
 
                         case MessageType.operation_invoke:
                             if (!options.WebSocketMethodsIsAllowed)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Websocket methods are disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Websocket methods are disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.operation_invoke, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.operation_invoke, message.Id);
 
-                            _ = HandleOperationInvoke(context, sender, new OperationInvokeMessage(message.Memory));
+                            _ = HandleOperationInvoke(context, sender, new OperationInvokeMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
 
                         case MessageType.operation_call:
                             if (!options.WebSocketMethodsIsAllowed)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Websocket controller methods are disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Websocket controller methods are disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.operation_call, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.operation_call, message.Id);
 
-                            _ = HandleOperationCall(context, new OperationCallMessage(message.Memory));
+                            _ = HandleOperationCall(context, new OperationCallMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
 
@@ -295,69 +295,69 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Websocket ingest is disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Websocket ingest is disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_init, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_init, message.Id);
 
-                            _ = HandleIngestInit(sender, new IngestInitMessage(message.Memory));
+                            _ = HandleIngestInit(sender, new IngestInitMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
 
                         case MessageType.ingest_data:
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Websocket ingest is disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Websocket ingest is disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data, message.Id);
 
-                            _ = HandleIngestData(_ingestRouters, new IngestDataMessage(message.Memory));
+                            _ = HandleIngestData(_ingestRouters, new IngestDataMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
 
                         case MessageType.ingest_data_with_ack:
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Websocket ingest is disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Websocket ingest is disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data_with_ack, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data_with_ack, message.Id);
 
-                            _ = HandleIngestDataWithAck(_ingestRouters, sender, new IngestDataWithAckMessage(message.Memory));
+                            _ = HandleIngestDataWithAck(_ingestRouters, sender, new IngestDataWithAckMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
 
                         case MessageType.ingest_complete:
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Websocket ingest is disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Websocket ingest is disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_complete, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_complete, message.Id);
 
-                            _ = HandleIngestComplete(_ingestRouters, new IngestCompleteMessage(message.Memory));
+                            _ = HandleIngestComplete(_ingestRouters, new IngestCompleteMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
                         case MessageType.cancel:
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleNotAllowed(baseMessage.Id, "Websocket ingest is disabled.", "", sender);
+                                await HandleNotAllowed(message.Id, "Websocket ingest is disabled.", "", sender);
                                 break;
                             }
 
                             if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.cancel, baseMessage.Id);
+                                await rateLimiterManager.TryAcquireAsync(MessageType.cancel, message.Id);
 
-                            CancelTask(baseMessage.Id, _tasks);
+                            CancelTask(message.Id, _tasks);
 
                             break;
                         default:
@@ -628,12 +628,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 if (!_tasks.TryAdd(operationInvokeMessage.Id, localCts))
                     return;
 
-
                 if (operationInvokeMessage == null) return;
 
                 IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload)!;
                 result = await entrypoint.HandleMethodWithResult(operationRequest, localCts.Token);
-
             }
             catch (OperationCanceledException)
             {

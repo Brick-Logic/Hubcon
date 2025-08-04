@@ -13,7 +13,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
     {
         private JsonElement? _data;
 
-        public IngestResultMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public IngestResultMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

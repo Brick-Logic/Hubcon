@@ -13,7 +13,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
     {
         private JsonElement? _data;
 
-        public SubscriptionDataMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public SubscriptionDataMessage()
         {
         }
 
@@ -21,6 +21,10 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
         public SubscriptionDataMessage(Guid id, JsonElement data) : base(MessageType.subscription_data, id)
         {
             _data = data;
+        }
+
+        public SubscriptionDataMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        {
         }
 
         public JsonElement Data => _data ??= Extract<JsonElement>("data");

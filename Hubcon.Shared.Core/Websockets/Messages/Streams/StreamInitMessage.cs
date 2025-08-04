@@ -8,7 +8,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Streams
     {
         private JsonElement? _payload;
 
-        public StreamInitMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public StreamInitMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

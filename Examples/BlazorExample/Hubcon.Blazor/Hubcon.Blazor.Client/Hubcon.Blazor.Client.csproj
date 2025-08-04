@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.15" />
-	<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta3" />
+	<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta8" />
   </ItemGroup>
 
   <ItemGroup>

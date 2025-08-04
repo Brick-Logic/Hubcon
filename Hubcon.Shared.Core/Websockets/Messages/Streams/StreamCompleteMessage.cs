@@ -10,7 +10,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Streams
 {
     public record class StreamCompleteMessage : BaseMessage
     {
-        public StreamCompleteMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public StreamCompleteMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

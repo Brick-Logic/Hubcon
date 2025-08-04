@@ -11,7 +11,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ping
 {
     public record class PongMessage : BaseMessage
     {
-        public PongMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public PongMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

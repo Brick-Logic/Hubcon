@@ -15,7 +15,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
         private Guid[]? _streamIds;
         private JsonElement? _payload;
 
-        public IngestInitMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public IngestInitMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

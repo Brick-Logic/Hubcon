@@ -13,7 +13,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Operation
     {
         private JsonElement? _result;
 
-        public OperationResponseMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public OperationResponseMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

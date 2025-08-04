@@ -14,7 +14,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
     {
         private JsonElement? _data;
 
-        public IngestDataWithAckMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public IngestDataWithAckMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

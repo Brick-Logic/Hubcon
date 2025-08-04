@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Standard.Interceptor
@@ -42,14 +43,14 @@ namespace Hubcon.Shared.Abstractions.Standard.Interceptor
             return method;
         }
 
-        public async Task<T> InvokeAsync<T>(string method, Dictionary<string, object> arguments = null)
+        public async Task<T> InvokeAsync<T>(string method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
         {
-            return await Interceptor.InvokeAsync<T>(GetMethod(method), arguments);
+            return await Interceptor.InvokeAsync<T>(GetMethod(method), arguments , cancellationToken);
         }
 
-        public Task CallAsync(string method, Dictionary<string, object> arguments = null)
+        public Task CallAsync(string method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
         {
-            return Interceptor.CallAsync(GetMethod(method), arguments);
+            return Interceptor.CallAsync(GetMethod(method), arguments, cancellationToken);
         }
     }
 }

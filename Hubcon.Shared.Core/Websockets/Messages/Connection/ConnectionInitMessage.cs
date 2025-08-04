@@ -11,7 +11,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Connection
 {
     public record class ConnectionInitMessage : BaseMessage
     {
-        public ConnectionInitMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public ConnectionInitMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

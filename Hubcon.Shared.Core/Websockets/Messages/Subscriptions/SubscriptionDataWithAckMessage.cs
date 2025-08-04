@@ -15,7 +15,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
         private JsonElement? _data;
         private Guid? _ackId;
 
-        public SubscriptionDataWithAckMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public SubscriptionDataWithAckMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

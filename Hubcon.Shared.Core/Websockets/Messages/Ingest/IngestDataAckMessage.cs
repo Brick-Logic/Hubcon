@@ -10,7 +10,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
 {
     public record class IngestDataAckMessage : BaseMessage
     {
-        public IngestDataAckMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public IngestDataAckMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

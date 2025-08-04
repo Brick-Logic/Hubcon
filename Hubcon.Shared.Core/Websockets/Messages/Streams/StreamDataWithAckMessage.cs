@@ -14,7 +14,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Streams
         private JsonElement? _data;
         private Guid? _ackId;
 
-        public StreamDataWithAckMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public StreamDataWithAckMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

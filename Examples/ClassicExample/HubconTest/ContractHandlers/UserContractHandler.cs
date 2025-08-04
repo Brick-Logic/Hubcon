@@ -27,9 +27,7 @@ namespace HubconTest.ContractHandlers
             return Task.CompletedTask;
         }
 
-
-        public async Task<int> GetTemperatureFromServer(CancellationToken cancellationToken) 
-            => await Task.Run(() => new Random().Next(-10, 50));
+        public async Task<int> GetTemperatureFromServer(CancellationToken cancellationToken) => Random.Shared.Next(-10, 50);
 
         [StreamingSettings(1000)]
         public async IAsyncEnumerable<string> GetMessages(int count)

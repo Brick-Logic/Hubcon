@@ -9,7 +9,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
     {
         private JsonElement? _payload;
 
-        public SubscriptionInitMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public SubscriptionInitMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

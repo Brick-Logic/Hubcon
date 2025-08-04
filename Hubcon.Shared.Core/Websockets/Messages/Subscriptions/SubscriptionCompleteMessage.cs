@@ -10,7 +10,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
 {
     public record class SubscriptionCompleteMessage : BaseMessage
     {
-        public SubscriptionCompleteMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public SubscriptionCompleteMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

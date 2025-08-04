@@ -9,7 +9,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Operation
     {
         private JsonElement? _payload;
 
-        public OperationCallMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public OperationCallMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

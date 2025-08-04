@@ -71,7 +71,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 }
 
                 var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);
-                object? result = context.Blueprint!.InvokeDelegate?.Invoke(controller, context.Request.Arguments.Values.ToArray()!);
+                object? result = await Task.Run(() => context.Blueprint!.InvokeDelegate?.Invoke(controller, context.Request.Arguments.Values.ToArray()!));
                 context.Result = await resultHandler.Invoke(result);
                 await next();
             }

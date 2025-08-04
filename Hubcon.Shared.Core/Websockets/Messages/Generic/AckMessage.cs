@@ -9,7 +9,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
 {
     public record class AckMessage : BaseMessage
     {
-        public AckMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public AckMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

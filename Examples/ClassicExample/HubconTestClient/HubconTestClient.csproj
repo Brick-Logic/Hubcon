@@ -11,14 +11,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta3" />
-	  <ProjectReference Include="..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
-	  <ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta8" />
+		<ProjectReference Include="..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
+		<ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Content Update="runtimeconfig.template.json">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </Content>
+		<Content Update="runtimeconfig.template.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
 	</ItemGroup>
 </Project>

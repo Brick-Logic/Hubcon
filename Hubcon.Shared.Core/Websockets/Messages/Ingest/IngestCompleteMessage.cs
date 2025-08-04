@@ -14,7 +14,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
     {
         private Guid[]? _streamIds;
 
-        public IngestCompleteMessage(ReadOnlyMemory<byte> buffer) : base(buffer)
+        public IngestCompleteMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

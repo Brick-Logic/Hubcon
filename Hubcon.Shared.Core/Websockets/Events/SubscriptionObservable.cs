@@ -34,7 +34,6 @@ namespace Hubcon.Shared.Core.Websockets.Events
         private readonly object _observersLock = new();
         private readonly Type _dataType = typeof(TMessage);
         private readonly IDynamicConverter converter;
-        private readonly CancellationToken? cancellationToken;
         private readonly Action? onCancelCallback;
         private bool callbackInvoked = false;
 
@@ -46,17 +45,15 @@ namespace Hubcon.Shared.Core.Websockets.Events
             JsonElement request, 
             RequestType type, 
             IDynamicConverter converter,
-            CancellationToken? cancellationToken = null,
             Action? onCancelCallback = null,
             bool shouldReconnect = false) : base(client, new RequestData(id, request, type), shouldReconnect)
         {
             this.converter = converter;
         }
 
-        public GenericObservable(IDynamicConverter converter, CancellationToken? cancellationToken = null, Action? onCancelCallback = null) : base(null, null)
+        public GenericObservable(IDynamicConverter converter, Action? onCancelCallback = null) : base(null, null)
         {
             this.converter = converter;
-            this.cancellationToken = cancellationToken;
             this.onCancelCallback = onCancelCallback;
         }
 
@@ -109,11 +106,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
                 try { o.OnError(ex); } catch { /* Ignorar errores */ }
             }
 
-            if (cancellationToken != null && cancellationToken.Value.IsCancellationRequested)
-            {
-                if(!callbackInvoked)
-                    onCancelCallback?.Invoke();
-            }
+            onCancelCallback?.Invoke();           
         }
 
         public override void OnCompleted()
@@ -126,11 +119,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
 
             _observers.Clear();
 
-            if(cancellationToken != null && cancellationToken.Value.IsCancellationRequested)
-            {
-                if (!callbackInvoked)
-                    onCancelCallback?.Invoke();
-            }
+            onCancelCallback?.Invoke();           
         }
 
         private void UnsubscribeObserver(IObserver<TMessage> observer)

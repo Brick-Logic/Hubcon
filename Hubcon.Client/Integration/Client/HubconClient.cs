@@ -47,22 +47,13 @@ namespace Hubcon.Client.Integration.Client
 
         private IDictionary<Type, IContractOptions> ContractOptionsDict { get; set; } = null!;
 
-        public async ValueTask<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
+        public async ValueTask<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {           
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
 
             try
             {
-                var items = request.Arguments?.Count > 0 
-                    ? request.Arguments?.Where(x => x.Value?.GetType() == typeof(CancellationToken)) 
-                    : Enumerable.Empty<KeyValuePair<string, object?>>();
-
-                foreach(var item in items ?? Enumerable.Empty<KeyValuePair<string, object?>>())
-                {
-                    request.Arguments!.Remove(item.Key);
-                }
-
                 bool isWebsocketMethod = false;
                 IOperationOptions? operationOptions = null;
 
@@ -74,12 +65,12 @@ namespace Hubcon.Client.Integration.Client
 
                 if (isWebsocketMethod)
                 {
-                    //await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.WebsocketRoundTripRateBucket, operationOptions?.RateBucket);
+                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.WebsocketRoundTripRateBucket, operationOptions?.RateBucket);
 
                     if (authenticationManagerFactory?.Invoke() == null)
                         throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                    var result = await client.InvokeAsync<T>(request)
+                    var result = await client.InvokeAsync<T>(request, cancellationToken)
                         ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
 
                     if (!result.Success)
@@ -89,7 +80,7 @@ namespace Hubcon.Client.Integration.Client
                 }
                 else
                 {
-                    //await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.HttpRoundTripRateBucket, operationOptions?.RateBucket);
+                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.HttpRoundTripRateBucket, operationOptions?.RateBucket);
 
                     var bytes = converter.SerializeToElement(request.Arguments).ToString();
                     using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
@@ -107,7 +98,7 @@ namespace Hubcon.Client.Integration.Client
                     if (authManager != null && authManager.IsSessionActive)
                         httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authManager.TokenType!, authManager.AccessToken);
 
-                    var response = await HttpClient.SendAsync(httpRequest, cancellationToken);
+                    HttpResponseMessage response = await HttpClient.SendAsync(httpRequest, cancellationToken);
 
                     var responseBytes = await response.Content.ReadAsByteArrayAsync();
                     var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
@@ -136,22 +127,13 @@ namespace Hubcon.Client.Integration.Client
 
         }
 
-        public async Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken = default)
+        public async Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
 
             try
             {
-                var items = request.Arguments?.Count > 0
-                    ? request.Arguments?.Where(x => x.Value?.GetType() == typeof(CancellationToken))
-                    : Enumerable.Empty<KeyValuePair<string, object?>>();
-
-                foreach (var item in items ?? Enumerable.Empty<KeyValuePair<string, object?>>())
-                {
-                    request.Arguments!.Remove(item.Key);
-                }
-
                 bool isWebsocketOperation = false;
                 IOperationOptions? operationOptions = null;
 
@@ -168,7 +150,7 @@ namespace Hubcon.Client.Integration.Client
                     if (authenticationManagerFactory?.Invoke() == null)
                         throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
 
-                    await client.SendAsync(request);
+                    await client.SendAsync(request, cancellationToken);
                 }
                 else
                 {
@@ -189,7 +171,7 @@ namespace Hubcon.Client.Integration.Client
 
                     if (authManager != null && authManager.IsSessionActive)
                         httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authManager.TokenType!, authManager.AccessToken);
-
+                 
                     await HttpClient.SendAsync(httpRequest, cancellationToken);
                 }
             }
@@ -211,15 +193,6 @@ namespace Hubcon.Client.Integration.Client
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
 
-            var items = request.Arguments?.Count > 0
-                    ? request.Arguments?.Where(x => x.Value?.GetType() == typeof(CancellationToken))
-                    : Enumerable.Empty<KeyValuePair<string, object?>>();
-
-            foreach (var item in items ?? Enumerable.Empty<KeyValuePair<string, object?>>())
-            {
-                request.Arguments!.Remove(item.Key);
-            }
-
             IOperationOptions? operationOptions = null;
 
             if (ContractOptionsDict!.TryGetValue(method.ReflectedType!, out IContractOptions? callContractOptions))
@@ -232,7 +205,7 @@ namespace Hubcon.Client.Integration.Client
             try
             {
                 await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.StreamingRateBucket, operationOptions?.RateBucket);
-                observable = await client.Stream<JsonElement>(request);
+                observable = await client.Stream<JsonElement>(request, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -249,7 +222,7 @@ namespace Hubcon.Client.Integration.Client
 
             using (observable.Subscribe(observer))
             {
-                var enumerator = observer.GetAsyncEnumerable(cancellationToken).GetAsyncEnumerator();
+                var enumerator = observer.GetAsyncEnumerable(cancellationToken).GetAsyncEnumerator(cancellationToken);
 
                 while(true)
                 {
@@ -279,22 +252,13 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        public async Task<T> Ingest<T>(IOperationRequest request, MethodInfo method, CancellationToken cancellationToken = default)
+        public async Task<T> Ingest<T>(IOperationRequest request, MethodInfo method, CancellationToken cancellationToken)
         {
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
         
             if (authenticationManagerFactory?.Invoke() == null)
                 throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
-
-            var items = request.Arguments?.Count > 0
-                    ? request.Arguments?.Where(x => x.Value?.GetType() == typeof(CancellationToken))
-                    : Enumerable.Empty<KeyValuePair<string, object?>>();
-
-            foreach (var item in items ?? Enumerable.Empty<KeyValuePair<string, object?>>())
-            {
-                request.Arguments!.Remove(item.Key);
-            }
 
             IOperationOptions? operationOptions = null;
 
@@ -305,25 +269,14 @@ namespace Hubcon.Client.Integration.Client
 
             await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.IngestRateBucket, operationOptions?.RateBucket);
 
-            var response = await client.IngestMultiple<T>(request, clientOptions, operationOptions);
+            var response = await client.IngestMultiple<T>(request, clientOptions, operationOptions, cancellationToken);
             return response.Data;          
         }
-
-
 
         public async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, MemberInfo method, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
-
-            var items = request.Arguments?.Count > 0
-                    ? request.Arguments?.Where(x => x.Value?.GetType() == typeof(CancellationToken))
-                    : Enumerable.Empty<KeyValuePair<string, object?>>();
-
-            foreach (var item in items ?? Enumerable.Empty<KeyValuePair<string, object?>>())
-            {
-                request.Arguments!.Remove(item.Key);
-            }
 
             IOperationOptions? operationOptions = null;
 
