@@ -1,5 +1,6 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.Configurations;
+using Hubcon.Client.Core.Proxies;
 using Hubcon.Client.Core.Subscriptions;
 using Hubcon.Client.Interceptors;
 using Hubcon.Shared.Abstractions.Interfaces;
@@ -161,10 +162,9 @@ namespace Hubcon.Client.Builder
             hubconClient?.Build(this, services, _contractOptions, UseSecureConnection);
 
             var newClient = (BaseContractProxy)services.GetRequiredService(proxyType);
-            var proxyInterceptor = services.GetRequiredService<ClientProxyInterceptor>();
+            var converter = services.GetRequiredService<IDynamicConverter>();
 
-            proxyInterceptor.InjectClient(hubconClient!);
-            newClient.BuildContractProxy(proxyInterceptor);
+            newClient.BuildContractProxy(hubconClient!, converter);
 
             var props = _propTypesCache.GetOrAdd(
                 proxyType,

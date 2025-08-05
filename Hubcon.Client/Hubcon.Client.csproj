@@ -44,7 +44,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta8" />		
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta10" />		
 	</ItemGroup>
 
 	<ItemGroup>

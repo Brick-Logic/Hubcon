@@ -1,4 +1,5 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Client.Core.Proxies;
 using Hubcon.Client.Core.Registries;
 using Hubcon.Client.Core.Subscriptions;
 using Hubcon.Client.Integration.Client;
@@ -46,7 +47,6 @@ namespace Hubcon.Client.Builder
             services.AddSingleton<IClientBuilderRegistry>(ClientBuilders);
             services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
             services.AddSingleton<IDynamicConverter, DynamicConverter>();
-            services.AddTransient<ClientProxyInterceptor>();
             services.AddTransient<IHubconClient, HubconClient>();
             services.AddTransient(typeof(ClientSubscriptionHandler<>));
 

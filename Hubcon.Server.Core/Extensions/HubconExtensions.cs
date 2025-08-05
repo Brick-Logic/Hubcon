@@ -34,7 +34,7 @@ namespace Hubcon.Server.Core.Extensions
                     if (prop.GetValue(e.Instance) != null)
                         continue;
 
-                    if (prop.ReflectedType!.IsAssignableTo(typeof(BaseContractProxy)))
+                    if (prop.ReflectedType!.IsAssignableTo(typeof(BaseProxy)))
                         continue;
 
                     if (IsSub(prop))

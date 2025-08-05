@@ -6,51 +6,23 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Standard.Interceptor
 {
-    public abstract partial class BaseContractProxy
+    public abstract class BaseProxy
     {
-        private static ImmutableCache<(Type, string), MethodInfo> Methods { get; } = new ImmutableCache<(Type, string), MethodInfo>();
-        private Type _contractType;
+        public abstract Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken = default);
 
-        private IClientProxyInterceptor Interceptor { get; set; }
+        public abstract Task CallAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken = default);
 
-        public void BuildContractProxy(IClientProxyInterceptor interceptor)
-        {
-            Interceptor = interceptor;
+        public abstract Task<T> IngestAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken = default);
 
-            _contractType = GetType()
-                .GetInterfaces()
-                .First(x => typeof(IControllerContract).IsAssignableFrom(x) && x != typeof(IControllerContract));
-       
-            var methods = _contractType
-                .GetMethods()
-                .Where(x => !x.Name.Contains("get_") && !x.Name.Contains("set_"));
+        public abstract Task IngestAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken = default);
 
-            foreach (var method in methods)
-            {
-                Methods.GetOrAdd((_contractType, method.GetMethodSignature()), x => method);
-            }          
-        }
-
-        private MethodInfo GetMethod(string methodSignature)
-        {
-            Methods.TryGetValue((_contractType, methodSignature), out var method);
-            return method;
-        }
-
-        public async Task<T> InvokeAsync<T>(string method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
-        {
-            return await Interceptor.InvokeAsync<T>(GetMethod(method), arguments , cancellationToken);
-        }
-
-        public Task CallAsync(string method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
-        {
-            return Interceptor.CallAsync(GetMethod(method), arguments, cancellationToken);
-        }
+        public abstract IAsyncEnumerable<T> StreamAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken = default);
     }
 }

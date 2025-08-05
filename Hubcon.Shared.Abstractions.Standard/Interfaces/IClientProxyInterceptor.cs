@@ -9,7 +9,10 @@ namespace Hubcon.Shared.Abstractions.Standard.Interfaces
 {
     public interface IClientProxyInterceptor
     {
-        ValueTask<T> InvokeAsync<T>(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken);
-        Task CallAsync(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken);
+        Task<T> InvokeAsync<T>(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default);
+        Task CallAsync(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default);
+        Task<T> IngestAsync<T>(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default);
+        Task IngestAsync(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default);
+        IAsyncEnumerable<T> StreamAsync<T>(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default);
     }
 }
