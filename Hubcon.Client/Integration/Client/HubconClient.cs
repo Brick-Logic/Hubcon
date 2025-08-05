@@ -68,7 +68,7 @@ namespace Hubcon.Client.Integration.Client
                     await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.WebsocketRoundTripRateBucket, operationOptions?.RateBucket);
 
                     if (authenticationManagerFactory?.Invoke() == null)
-                        throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
+                        throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' method or disable websocket authentication on your server module configuration.");
 
                     var result = await client.InvokeAsync<T>(request, cancellationToken)
                         ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor.");

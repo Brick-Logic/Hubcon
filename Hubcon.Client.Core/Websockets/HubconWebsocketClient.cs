@@ -109,11 +109,11 @@ namespace Hubcon.Client.Core.Websockets
             });
         }
 
-        public async Task<IObservable<T>> Subscribe<T>(IOperationRequest payload, CancellationToken? cancellationToken = null)
+        public async Task<IObservable<T>> Subscribe<T>(IOperationRequest payload, CancellationToken cancellationToken = default)
         {
             var request = new SubscriptionInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
-            var registration = cancellationToken?.Register(async () =>
+            var registration = cancellationToken.Register(async () =>
             {
                 await SendMessageAsync(new CancelMessage(request.Id));
             });
@@ -124,7 +124,7 @@ namespace Hubcon.Client.Core.Websockets
                 converter.SerializeToElement(request),
                 RequestType.Subscription,
                 converter,
-                () => registration?.Dispose(),
+                () => registration.Dispose(),
                 options.ReconnectSubscriptions);
 
             if (!_subscriptions.TryAdd(request.Id, observable))
@@ -133,17 +133,16 @@ namespace Hubcon.Client.Core.Websockets
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
 
-
-            await SendMessageAsync(request);
+            await SendMessageAsync(request, cancellationToken);
 
             return observable;
         }
 
-        public async Task<IObservable<T>> Stream<T>(IOperationRequest payload, CancellationToken? cancellationToken = null)
+        public async Task<IObservable<T>> Stream<T>(IOperationRequest payload, CancellationToken cancellationToken = default)
         {
             var request = new StreamInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
-            var registration = cancellationToken?.Register(async () =>
+            var registration = cancellationToken.Register(async () =>
             {
                 await SendMessageAsync(new CancelMessage(request.Id));
             });
@@ -154,7 +153,7 @@ namespace Hubcon.Client.Core.Websockets
                 converter.SerializeToElement(request), 
                 RequestType.Subscription, 
                 converter,
-                () => registration?.Dispose(),
+                () => registration.Dispose(),
                 options.ReconnectStreams);
 
             var tcs = new CancellationTokenSource();
@@ -174,7 +173,7 @@ namespace Hubcon.Client.Core.Websockets
                         obs.Item2.Dispose();
                     }
                 }
-                registration?.Dispose();
+                registration.Dispose();
             });
 
             if (!_streams.TryAdd(request.Id, (observable, tcs, hw)))
@@ -188,8 +187,8 @@ namespace Hubcon.Client.Core.Websockets
         public async Task<IOperationResponse<T>> IngestMultiple<T>(
             IOperationRequest operationRequest, 
             IClientOptions? clientOptions = null, 
-            IOperationOptions? operationOptions = null, 
-            CancellationToken? cancellationToken = null)
+            IOperationOptions? operationOptions = null,
+            CancellationToken cancellationToken = default)
         {
             using var cts = new CancellationTokenSource();
 
@@ -201,16 +200,13 @@ namespace Hubcon.Client.Core.Websockets
             _ingestAck.TryAdd(initialAckId, initAckTcs);
             _ingests.TryAdd(initialAckId, (generalTcs, cts));
 
-            CancellationTokenRegistration? registration = null;
 
-            if (cancellationToken.HasValue)
+            using var registration = cancellationToken.Register(async () =>
             {
-                registration = cancellationToken.Value.Register(async () =>
-                {
-                    cts.Cancel();
-                    await SendMessageAsync(new CancelMessage(initialAckId));
-                });
-            }
+                cts.Cancel();
+                await SendMessageAsync(new CancelMessage(initialAckId));
+            });
+            
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
@@ -251,9 +247,7 @@ namespace Hubcon.Client.Core.Websockets
                     {
                         try
                         {
-                            var initAckResult = await TimeoutHelper
-                                                    .WaitWithTimeoutAsync(initAckTcs.Task.WaitAsync, TimeSpan.FromSeconds(15))
-                                                    ;
+                            var initAckResult = await TimeoutHelper.WaitWithTimeoutAsync(initAckTcs.Task.WaitAsync, options.WebsocketTimeout) ;
 
                             if (initAckResult == null || initAckResult.Id != initialAckId)
                                 throw new TimeoutException("Timeout o ID incorrecto en IngestInitAck");
@@ -322,13 +316,13 @@ namespace Hubcon.Client.Core.Websockets
                 }
                 finally
                 {
-                    registration?.Dispose();
+                    registration.Dispose();
                 }
 
 
                 await SendMessageAsync(new IngestCompleteMessage(initialAckId, sources.Keys.ToArray()));
 
-                var result = await TimeoutHelper.WaitWithTimeoutAsync(generalTcs.Task.WaitAsync, TimeSpan.FromSeconds(15));
+                var result = await TimeoutHelper.WaitWithTimeoutAsync(generalTcs.Task.WaitAsync, options.WebsocketTimeout);
 
                 if (result == null) throw new HubconRemoteException("Received an empty response.");
 
@@ -365,22 +359,19 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        public async Task SendAsync(IOperationRequest payload, CancellationToken? cancellationToken = null)
+        public async Task SendAsync(IOperationRequest payload, CancellationToken cancellationToken = default)
         {
             var request = new OperationCallMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
 
-            if (cancellationToken.HasValue)
-            {
-                cancellationToken.Value.Register(async () => await SendMessageAsync(new CancelMessage(request.Id)));
-            }
+            using var registration = cancellationToken.Register(async () => await SendMessageAsync(new CancelMessage(request.Id)));     
 
-            await SendMessageAsync(request);
+            await SendMessageAsync(request, cancellationToken);
         }
 
-        public async Task<IOperationResponse<T>> InvokeAsync<T>(IOperationRequest payload, CancellationToken? cancellationToken = null)
+        public async Task<IOperationResponse<T>> InvokeAsync<T>(IOperationRequest payload, CancellationToken cancellationToken = default)
         {
             var request = new OperationInvokeMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
             var tcs = new TaskCompletionSource<OperationResponseMessage>();
@@ -390,13 +381,13 @@ namespace Hubcon.Client.Core.Websockets
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
 
-            using var registration = cancellationToken?.Register(async () => await SendMessageAsync(new CancelMessage(request.Id)));      
+            using var registration = cancellationToken.Register(async () => await SendMessageAsync(new CancelMessage(request.Id)));      
 
             try
             {
-                await SendMessageAsync(request);
+                await SendMessageAsync(request, cancellationToken);
 
-                response = await TimeoutHelper.WaitWithTimeoutAsync(tcs.Task.WaitAsync, TimeSpan.FromSeconds(500));
+                response = await TimeoutHelper.WaitWithTimeoutAsync(tcs.Task.WaitAsync, options.WebsocketTimeout);
             }
             catch (Exception ex)
             {
@@ -650,7 +641,7 @@ namespace Hubcon.Client.Core.Websockets
 
                         var receiveTask = _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
 
-                        var connectionResult = await TimeoutHelper.WaitWithTimeoutAsync(receiveTask.WaitAsync, TimeSpan.FromSeconds(5));
+                        var connectionResult = await TimeoutHelper.WaitWithTimeoutAsync(receiveTask.WaitAsync, options.WebsocketTimeout);
 
                         if (connectionResult == null || connectionResult.GetType() != typeof(WebSocketReceiveResult))
                             throw new TimeoutException("Connection failed.");

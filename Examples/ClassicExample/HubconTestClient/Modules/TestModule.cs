@@ -39,7 +39,7 @@ namespace HubconTestClient.Modules
 
                     operationSelector
                         .Configure(contract => contract.CreateUser)
-                        .UseTransport(TransportType.Http);
+                        .UseTransport(TransportType.Websockets);
                 });
             });
 
