@@ -65,7 +65,7 @@ namespace Hubcon.Server
                     .RegisterWithInjector(x => x.RegisterInstance(OperationRegistry).As<IOperationRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterInstance(Proxies).As<IProxyRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterInstance(SubscriptionRegistry).As<ILiveSubscriptionRegistry>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<OperationConfigRegistry>().As<IOperationConfigRegistry>().AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterType<OperationConfigRegistry>().As<IOperationConfigRegistry>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().As<IDynamicConverter>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<StreamNotificationHandler>().As<IStreamNotificationHandler>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<ClientRegistry>().As<IClientRegistry>().AsSingleton())

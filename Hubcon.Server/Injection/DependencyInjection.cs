@@ -74,7 +74,7 @@ namespace Hubcon.Server.Injection
 
             ServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
             {
-                container.RegisterWithInjector(x => x.RegisterType<DefaultEntrypoint>());
+                container.RegisterWithInjector(x => x.RegisterType<DefaultEntrypoint>().AsScoped());
 
                 container.RegisterWithInjector(x => x
                     .RegisterGeneric(typeof(ServerSubscriptionHandler<>))

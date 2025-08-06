@@ -16,15 +16,15 @@ namespace HubconTestClient.Modules
 
             configuration.GlobalLimit(500);
 
-            configuration.LimitIngest(100);
-            configuration.LimitSubscription(100);
-            configuration.LimitStreaming(100);
-            configuration.LimitWebsocketRoundTrip(100);
-            configuration.LimitHttpRoundTrip(100);
-            configuration.LimitWebsocketFireAndForget(100);
-            configuration.LimitHttpFireAndForget(100);
+            //configuration.LimitIngest(100);
+            //configuration.LimitSubscription(100);
+            //configuration.LimitStreaming(100);
+            //configuration.LimitWebsocketRoundTrip(100);
+            //configuration.LimitHttpRoundTrip(100);
+            //configuration.LimitWebsocketFireAndForget(100);
+            //configuration.LimitHttpFireAndForget(100);
 
-            configuration.DisableAllLimiters();
+            //configuration.DisableAllLimiters();
 
             configuration.Implements<IUserContract>(x =>
             {
@@ -35,11 +35,12 @@ namespace HubconTestClient.Modules
                     operationSelector
                         .Configure(contract => contract.GetTemperatureFromServer)
                         .UseTransport(TransportType.Websockets)
-                        .LimitPerSecond(100);
+                        .LimitPerSecond(10);
 
                     operationSelector
                         .Configure(contract => contract.CreateUser)
-                        .UseTransport(TransportType.Websockets);
+                        .UseTransport(TransportType.Websockets)
+                        .LimitPerSecond(10);
                 });
             });
 

@@ -12,7 +12,7 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
         private CancellationTokenSource _cts = new();
         private Task _loop;
 
-        private DateTime _lastHeartbeat = DateTime.UtcNow;
+        public DateTime _lastHeartbeat = DateTime.UtcNow;
 
         public HeartbeatWatcher(TimeSpan timeoutSeconds, Func<Task> onTimeout)
         {
@@ -41,6 +41,7 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
 
                 var elapsed = (DateTime.UtcNow - _lastHeartbeat).TotalSeconds;
                 if (TimeSpan.FromSeconds(elapsed) > _timeoutSeconds)
+                
                 {
                     if (!timeoutExecuted)
                     {
