@@ -36,7 +36,7 @@ A high-performance, contract-based RPC micro-framework for .NET that provides se
 | Invoke with multiple parameters  | Supports serializable parameters + optional CancellationToken                  | ✅ Complete |
 | TaskCompletionSource coordination | Auto-cleanup when Task is cancelled                                           | ✅ Complete |
 | Remote exception propagation     | Server exceptions are thrown as `HubconRemoteException` on client             | ✅ Complete |
-| Stress test (50k to 450k RPS)    | Stable under high concurrency via `Channel`-based routing                     | ✅ Complete |
+| Stress test (round-trip up to 66k RPS, 1 client)  | Stable under high concurrency                     | ✅ Complete |
 | Fire and Forget (FaF)            | One-way call with no response or wait                                         | ✅ Complete |
 | Exception handling in FaF        | Exceptions on server do not propagate to client                               | ✅ Complete |
 | Throttling support               | Rate limiting to prevent overload                                             | ✅ Complete |
@@ -60,26 +60,25 @@ A high-performance, contract-based RPC micro-framework for .NET that provides se
 
 ### 🧩 Shared – Cross Transport Features
 
-| Feature                                 | Description                                                                                      | Status       |
-|-----------------------------------------|--------------------------------------------------------------------------------------------------|--------------|
-| Source Generator (SG)                   | Auto-generates strongly-typed client proxies based on interfaces                                | ✅ Complete  |
-| Ignores external CancellationToken      | Prevents serialization of external `CancellationToken` in contract methods                      | ✅ Complete  |
-| Propagation of CancellationToken        | Unified cancellation behavior across all operations (stream, ingest, invoke, etc.)              | ⚠️ In progress |
-| Auto-reconnect (client)                 | Optional reconnect for stream & ingest (manual retry logic currently)                           | ⚠️ In progress   |
-| WebSocket auto-reconnect                | Optional automatic reconnection when WebSocket connection drops                                 | ⚠️ In progress   |
-| Enable/disable ping/pong                | Configurable ping/pong heartbeat behavior (server & client)                                     | 🟡 Planned   |
-| Precise throttling mechanism            | New internal throttling system with per-operation granularity                                   | ⚠️ In progress |
-| Throttling configuration                | Throttling limits can be configured globally, per contract, or per method                       | ✅ Complete  |
-| Optional certificate support            | Supports using client/server TLS certificates for HTTP and WebSocket                            | ✅ Complete  |
-| Dependency injection for RemoteModule   | `RemoteServerModule` now supports `Transient` registration to allow injected logic/configs      | ⚠️ In progress  |
-| Configuration via DI                    | Global, per-contract, per-handler, or per-method configuration                                  | ✅ Complete  |
-| ASP.NET & custom middlewares            | Fully integrates with existing ASP.NET pipeline                                                 | ✅ Complete  |
-| Analyzers                               | Detects sync methods, invalid return types, or bad patterns                                     | ✅ Complete  |
-| Config attributes on contract controllers | ❗ Planned: `[UseWebSocket]`, `[MyCustomMiddleware]`, etc.                                     | 🟡 Planned   |
-| Observability                           | Supports logging via `ILogger`; extensible to tracing / metrics (e.g., OpenTelemetry)           | ✅ Partial   |
-| Semantic Versioning                     | Uses beta versions (`1.0.0-betaX`) with clear release goals                                     | ✅ Partial   |
-| RC1 milestone                           | First stable RC will include improved cancellation and token coordination                       | 🔜 Coming    |
-| Operation multiplexing                  | All operations internally routed using `operationId` to enable full concurrency                 | ✅ Complete  |
+| Feature                                 | Description                                                                                      | Status           |
+|-----------------------------------------|--------------------------------------------------------------------------------------------------|------------------|
+| Source Generator (SG)                   | Auto-generates strongly-typed client proxies based on interfaces                                | ✅ Complete      |
+| Ignores external CancellationToken      | Prevents serialization of external `CancellationToken` in contract methods                      | ✅ Complete      |
+| Unified cancellation behavior            | Unified cancellation handling across all operations (stream, ingest, invoke, etc.) <br> *Experimental - needs testing* | 🟡 Experimental  |
+| WebSocket auto-reconnect (optional)    | Optional automatic reconnection when WebSocket connection drops                                 | ✅ Complete      |
+| Configurable ping/pong                  | Ping/pong heartbeat configurable on client and server                                          | ✅ Complete      |
+| Precise throttling mechanism            | New internal throttling system with per-operation granularity                                   | ✅ Complete      |
+| Throttling configuration                | Throttling limits configurable globally, per contract, or per method                            | ✅ Complete      |
+| Optional certificate support            | Supports client/server TLS certificates for HTTP and WebSocket                                 | ✅ Complete      |
+| Dependency injection for RemoteModule   | `RemoteServerModule` supports transient registration for injected logic/configurations         | ✅ Complete      |
+| Configuration via DI                    | Global, per-contract, per-handler, or per-method configuration                                  | ✅ Complete      |
+| ASP.NET & custom middlewares            | Fully integrates with existing ASP.NET pipeline                                                 | ✅ Complete      |
+| Analyzers                               | Detects sync methods, invalid return types, or bad patterns                                     | ✅ Complete      |
+| Observability                           | Supports logging via `ILogger`; extensible to tracing/metrics (e.g., OpenTelemetry)            | ✅ Partial       |
+| Semantic Versioning                     | Uses beta versions (`1.0.0-betaX`) with clear release goals                                     | ✅ Partial       |
+| RC1 milestone                           | First stable RC will include improved cancellation and token coordination                       | 🔜 Coming        |
+| Operation multiplexing                  | All operations internally routed using `operationId` to enable full concurrency                 | ✅ Complete      |
+| MCP Protocol                           | In progress: Protocol to connect AIs, supporting both WebSocket and HTTP transport               | ⚠️ In progress      |
 
 
 
