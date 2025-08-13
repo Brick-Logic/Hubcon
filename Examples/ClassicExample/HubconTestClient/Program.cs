@@ -33,11 +33,10 @@ internal class Program
         process.ProcessorAffinity = (IntPtr)coreMask;
         process.PriorityClass = ProcessPriorityClass.RealTime;
 
-
         var builder = WebApplication.CreateBuilder();
 
         builder.Services.AddHubconClient();
-        builder.Services.AddRemoteServerModule<TestModule>();
+        builder.Services.AddRemoteServerModule<TestModule>(() => new TestModule(new object()));
         builder.Logging.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
         builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
 

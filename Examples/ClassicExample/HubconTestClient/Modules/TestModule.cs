@@ -6,7 +6,7 @@ using HubconTestDomain;
 
 namespace HubconTestClient.Modules
 {
-    internal class TestModule : RemoteServerModule
+    internal class TestModule(object item) : RemoteServerModule
     {
         public override void Configure(IServerModuleConfiguration configuration)
         {
@@ -14,7 +14,7 @@ namespace HubconTestClient.Modules
 
             configuration.EnableWebsocketAutoReconnect(true);
 
-            configuration.GlobalLimit(500);
+            configuration.GlobalLimit(20000);
 
             //configuration.LimitIngest(100);
             //configuration.LimitSubscription(100);
@@ -35,12 +35,12 @@ namespace HubconTestClient.Modules
                     operationSelector
                         .Configure(contract => contract.GetTemperatureFromServer)
                         .UseTransport(TransportType.Websockets)
-                        .LimitPerSecond(10);
+                        .LimitPerSecond(1000000);
 
                     operationSelector
                         .Configure(contract => contract.CreateUser)
                         .UseTransport(TransportType.Websockets)
-                        .LimitPerSecond(10);
+                        .LimitPerSecond(1000000);
                 });
             });
 

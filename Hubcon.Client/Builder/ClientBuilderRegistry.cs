@@ -15,10 +15,10 @@ namespace Hubcon.Client.Builder
             _proxyRegistry = proxyRegistry ?? throw new ArgumentNullException(nameof(proxyRegistry));
         }
 
-        public void RegisterModule<TRemoteServerModule>(IServiceCollection services)
-            where TRemoteServerModule : IRemoteServerModule, new()
+        public void RegisterModule<TRemoteServerModule>(IServiceCollection services, Func<TRemoteServerModule>? remoteServerFactory = null)
+            where TRemoteServerModule : class, IRemoteServerModule
         {
-            var module = new TRemoteServerModule();
+            var module = remoteServerFactory == null ? Activator.CreateInstance<TRemoteServerModule>() : remoteServerFactory.Invoke();
 
             var clientBuilder = new ClientBuilder(_proxyRegistry);
             var builderConfig = new ServerModuleConfiguration(clientBuilder, services);

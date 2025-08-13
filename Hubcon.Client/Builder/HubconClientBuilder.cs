@@ -53,10 +53,10 @@ namespace Hubcon.Client.Builder
             return services;
         }
 
-        public IServiceCollection AddRemoteServerModule<TRemoteServerModule>(IServiceCollection services)
-             where TRemoteServerModule : IRemoteServerModule, new()
+        public IServiceCollection AddRemoteServerModule<TRemoteServerModule>(IServiceCollection services, Func<TRemoteServerModule>? remoteServerFactory = null)
+             where TRemoteServerModule : class, IRemoteServerModule
         {
-            ClientBuilders.RegisterModule<TRemoteServerModule>(services);
+            ClientBuilders.RegisterModule<TRemoteServerModule>(services, remoteServerFactory);
 
             return services;
         }
