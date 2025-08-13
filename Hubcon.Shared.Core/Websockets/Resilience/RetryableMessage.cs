@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Resilience
 {
-    public class RetryableMessage : IRetryableMessage, IAwaitableAckMessage
+    internal sealed class RetryableMessage : IRetryableMessage, IAwaitableAckMessage
     {
         private readonly object _message;
         private readonly TimeSpan timeout;

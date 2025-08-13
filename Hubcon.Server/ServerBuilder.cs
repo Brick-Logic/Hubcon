@@ -4,18 +4,19 @@ using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.Registries;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
+using Hubcon.Server.Core.Entrypoint;
 using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Injectors;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Server.Core.Pipelines;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
+using Hubcon.Server.Core.RateLimiting;
 using Hubcon.Server.Core.Routing.MethodHandling;
 using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Serialization;
-using Hubcon.Shared.Entrypoint;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
@@ -64,12 +65,15 @@ namespace Hubcon.Server
                     .RegisterWithInjector(x => x.RegisterInstance(OperationRegistry).As<IOperationRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterInstance(Proxies).As<IProxyRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterInstance(SubscriptionRegistry).As<ILiveSubscriptionRegistry>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<InternalRoutingMiddleware>().As<IInternalRoutingMiddleware>().AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterType<OperationConfigRegistry>().As<IOperationConfigRegistry>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().As<IDynamicConverter>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<StreamNotificationHandler>().As<IStreamNotificationHandler>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<ClientRegistry>().As<IClientRegistry>().AsSingleton())
+                    .RegisterWithInjector(x => x.RegisterType<SettingsManager>().As<ISettingsManager>().AsScoped())
+                    .RegisterWithInjector(x => x.RegisterType<RateLimiterManager>().As<IRateLimiterManager>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<HubconServiceProvider>().As<IHubconServiceProvider>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped());
+                    .RegisterWithInjector(x => x.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped())
+                    .RegisterWithInjector(x => x.RegisterType<InternalRoutingMiddleware>().As<IInternalRoutingMiddleware>().AsTransient());
 
                 foreach (var services in additionalServices)
                     services?.Invoke(container);

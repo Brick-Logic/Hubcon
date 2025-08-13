@@ -1,8 +1,24 @@
 ﻿using Hubcon.Shared.Core.Websockets;
 using Hubcon.Shared.Core.Websockets.Messages.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
 {
-    public record class SubscriptionInitMessage(string Id, JsonElement Payload) : BaseMessage(MessageType.subscription_init, Id);
+    public record class SubscriptionInitMessage : BaseMessage
+    {
+        private JsonElement? _payload;
+
+        public SubscriptionInitMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        {
+        }
+
+        [JsonConstructor]
+        public SubscriptionInitMessage(Guid id, JsonElement payload) : base(MessageType.subscription_init, id)
+        {
+            _payload = payload;
+        }
+
+        public JsonElement Payload => _payload ??= Extract<JsonElement>("payload");
+    }
 }

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
-    public class AuthenticationMiddleware(
+    internal sealed class AuthenticationMiddleware(
         IAuthorizationService _authorizationService,
         ILogger<AuthenticationMiddleware> logger) : IAuthenticationMiddleware
     {

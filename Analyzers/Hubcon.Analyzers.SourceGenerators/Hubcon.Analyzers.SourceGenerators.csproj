@@ -11,7 +11,7 @@
 		<PackageOutputPath>../../nupkgs</PackageOutputPath>
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Version>$(Version)</Version>
+		<Version>1.0.0-beta10</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<Description>Source code generators for Hubcon.</Description>

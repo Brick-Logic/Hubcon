@@ -11,16 +11,19 @@
 		<PackageOutputPath>../nupkgs</PackageOutputPath>
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Description></Description>
+		<Description>Core client-side implementations for Hubcon.</Description>
 		<PackageTags>http;websockets;rpc</PackageTags>
-		<Version>1.0.0-beta4</Version>
+		<Version>1.0.0-beta5</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <PackageReference Include="K4os.Compression.LZ4" Version="1.3.8" />
+	  <PackageReference Include="K4os.Compression.LZ4.Streams" Version="1.3.8" />
 	  <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.6" />
 	  <PackageReference Include="System.Reactive" Version="6.0.0" />
+	  <PackageReference Include="System.Threading.RateLimiting" Version="9.0.7" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(UsePackages)' != 'true'">

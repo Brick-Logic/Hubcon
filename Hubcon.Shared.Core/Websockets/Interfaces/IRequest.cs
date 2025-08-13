@@ -16,7 +16,7 @@ namespace Hubcon.Shared.Core.Websockets.Interfaces
 
     public interface IRequest
     {
-        public string Id { get; }
+        public Guid Id { get; }
         public RequestType Type { get; }
         public JsonElement Request { get; }
     }

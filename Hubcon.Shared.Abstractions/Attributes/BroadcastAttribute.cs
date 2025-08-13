@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Server.Core.CustomAttributes
+namespace Hubcon.Shared.Abstractions.Attributes
 {
-    internal class UseWebsocketsAttribute : Attribute
+    public sealed class BroadcastAttribute : Attribute
     {
     }
 }

@@ -10,5 +10,9 @@ namespace Hubcon.Shared.Abstractions.Interfaces
     {
         public bool WebsocketMethodsEnabled { get; }
         public Type ContractType { get; }
+        Dictionary<string, IOperationOptions> OperationOptions { get; }
+
+        IOperationOptions? GetOperationOptions(string operationName);
+        bool IsWebsocketOperation(string operationName);
     }
 }

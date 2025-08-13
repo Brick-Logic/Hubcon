@@ -14,9 +14,16 @@ namespace Hubcon.Client
         }
 
         public static IServiceCollection AddRemoteServerModule<TRemoteServerModule>(this IServiceCollection services)
-             where TRemoteServerModule : IRemoteServerModule, new()
+             where TRemoteServerModule : class, IRemoteServerModule, new()
         {
-            HubconClientBuilder.Current.AddRemoteServerModule<TRemoteServerModule>(services);
+            HubconClientBuilder.Current.AddRemoteServerModule<TRemoteServerModule>(services, null);
+            return services;
+        }
+
+        public static IServiceCollection AddRemoteServerModule<TRemoteServerModule>(this IServiceCollection services, Func<TRemoteServerModule> remoteServerFactory)
+             where TRemoteServerModule : class, IRemoteServerModule
+        {
+            HubconClientBuilder.Current.AddRemoteServerModule<TRemoteServerModule>(services, remoteServerFactory);
             return services;
         }
 

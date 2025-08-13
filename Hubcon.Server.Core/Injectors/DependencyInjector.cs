@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace Hubcon.Server.Core.Injectors
 {
-    public class DependencyInjector<T, TProp> : IDependencyInjector<T, TProp>
+    internal sealed class DependencyInjector<T, TProp> : IDependencyInjector<T, TProp>
     {
         IServiceProvider _serviceProvider;
         private readonly object _instance;

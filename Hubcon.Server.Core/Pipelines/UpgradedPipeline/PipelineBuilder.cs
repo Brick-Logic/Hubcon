@@ -2,11 +2,13 @@
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
 using System.Linq;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 {
-    public class PipelineBuilder : IPipelineBuilder
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class PipelineBuilder : IPipelineBuilder
     {
         private static bool GlobalMiddlewaresFirst { get; set; } = false;
 

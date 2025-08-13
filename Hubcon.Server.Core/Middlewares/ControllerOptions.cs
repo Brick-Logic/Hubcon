@@ -5,7 +5,7 @@ using Hubcon.Shared.Core.Extensions;
 
 namespace Hubcon.Server.Core.Middlewares
 {
-    public class ControllerOptions : IControllerOptions
+    internal sealed class ControllerOptions : IControllerOptions
     {
         IPipelineBuilder _builder;
         public List<Action<ContainerBuilder>> ServicesToInject;

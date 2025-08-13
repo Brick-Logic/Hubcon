@@ -1,15 +1,12 @@
 ﻿using Autofac;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.EndpointDocumentation;
+using Hubcon.Server.Core.Entrypoint;
 using Hubcon.Server.Core.Extensions;
-using Hubcon.Server.Core.Routing;
 using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Server.Core.Websockets.Middleware;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Entrypoint;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Any;
@@ -20,7 +17,7 @@ using System.Text.Json.Serialization;
 
 namespace Hubcon.Server.Injection
 {
-    public class RemoveNullableSchemaFilter : ISchemaFilter
+    internal sealed class RemoveNullableSchemaFilter : ISchemaFilter
     {
         public void Apply(OpenApiSchema schema, SchemaFilterContext context)
         {
@@ -77,7 +74,7 @@ namespace Hubcon.Server.Injection
 
             ServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
             {
-                container.RegisterWithInjector(x => x.RegisterType<DefaultEntrypoint>());
+                container.RegisterWithInjector(x => x.RegisterType<DefaultEntrypoint>().AsScoped());
 
                 container.RegisterWithInjector(x => x
                     .RegisterGeneric(typeof(ServerSubscriptionHandler<>))

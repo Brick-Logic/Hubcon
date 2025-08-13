@@ -2,10 +2,8 @@
 
 namespace Hubcon.Shared.Abstractions.Interfaces
 {
-    public interface IOperationRequest
+    public interface IOperationRequest : IOperationEndpoint
     {
-        Dictionary<string, object?>? Arguments { get; }
-        string ContractName { get; }
-        string OperationName { get; }
+        Dictionary<string, object> Arguments { get; }
     }
 }

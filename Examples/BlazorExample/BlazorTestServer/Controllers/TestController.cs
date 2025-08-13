@@ -1,15 +1,21 @@
 ﻿using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestDomain;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BlazorTestServer.Controllers
 {
     public class TestController(ILogger<TestController> logger) : IUserContract
     {
-        [AllowAnonymous]
-        public ISubscription<int>? OnUserCreated { get; }
+        public ISubscription<int?>? OnUserCreated { get; }
 
-        public async Task<int> GetTemperatureFromServer() 
+        public ISubscription<int?>? OnUserCreated2 { get; }
+
+        public ISubscription<int?>? OnUserCreated3 { get; }
+
+        public ISubscription<int?>? OnUserCreated4 { get; }
+
+        public async Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
             => await Task.Run(() => new Random().Next(-10, 50));
 
         public async IAsyncEnumerable<string> GetMessages(int count)
@@ -27,7 +33,7 @@ namespace BlazorTestServer.Controllers
         }
 
         //[Authorize(Roles = ["Admin"])]
-        public async Task CreateUser()
+        public async Task CreateUser(CancellationToken cancellationToken)
         {
             var number = Random.Shared.Next(-10, 50);
             OnUserCreated?.Emit(number);
@@ -40,7 +46,41 @@ namespace BlazorTestServer.Controllers
             return Task.CompletedTask;
         }
 
-        public async Task IngestMessages(
+        public async Task<string> IngestMessages(
+            IAsyncEnumerable<string> source,
+            IAsyncEnumerable<string> source2,
+            IAsyncEnumerable<string> source3,
+            IAsyncEnumerable<string> source4,
+            IAsyncEnumerable<string> source5)
+        {
+            Task TaskRunner<T>(IAsyncEnumerable<T> source, string name)
+            {
+                return Task.Run(async () =>
+                {
+                    await foreach (var item in source)
+                    {
+                        logger.LogInformation($"source1: {item}");
+                    }
+                    logger.LogInformation($"[{name}] Stream terminado.");
+                });
+            }
+
+            List<Task> sources =
+            [
+                TaskRunner(source, nameof(source)),
+                TaskRunner(source2, nameof(source2)),
+                TaskRunner(source3, nameof(source3)),
+                TaskRunner(source4, nameof(source4)),
+                TaskRunner(source5, nameof(source5)),
+            ];
+
+            await Task.WhenAll(sources);
+            logger.LogInformation("Ingest terminado exitosamente");
+
+            return "Ok";
+        }
+
+        public async Task IngestMessages2(
             IAsyncEnumerable<string> source,
             IAsyncEnumerable<string> source2,
             IAsyncEnumerable<string> source3,
@@ -72,6 +112,26 @@ namespace BlazorTestServer.Controllers
             logger.LogInformation("Ingest terminado exitosamente");
         }
 
+        public async Task IngestMessages(IAsyncEnumerable<string> source, CancellationToken cancellationToken)
+        {
+            Task TaskRunner<T>(IAsyncEnumerable<T> source, string name)
+            {
+                return Task.Run(async () =>
+                {
+                    await foreach (var item in source)
+                    {
+                        logger.LogInformation($"source1: {item}");
+                    }
+                    logger.LogInformation($"[{name}] Stream terminado.");
+                });
+            }
+
+            List<Task> sources = [TaskRunner(source, nameof(source))];
+
+            await Task.WhenAll(sources);
+            logger.LogInformation("Ingest terminado exitosamente");
+        }
+
         public Task<IEnumerable<bool>> GetBooleans()
         {
             return Task.FromResult(Enumerable.Range(0, 6).Select(x => true));
@@ -80,6 +140,11 @@ namespace BlazorTestServer.Controllers
         public Task<MyTestClass> GetObject()
         {
             return Task.FromResult(new MyTestClass("hola", new TestClass2("propiedad")));
+        }
+
+        public IAsyncEnumerable<string> GetMessages2(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
         }
     }
 }

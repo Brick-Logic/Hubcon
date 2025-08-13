@@ -1,98 +1,166 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
+using Hubcon.Shared.Core.Cache;
+using Hubcon.Shared.Core.Tools;
+using Hubcon.Shared.Core.Websockets.Interfaces;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace Hubcon.Client.Interceptors
 {
-    public class ClientProxyInterceptor(
-        IHubconClient client,
-        IDynamicConverter converter,
-        ILogger<ClientProxyInterceptor> logger) : IClientProxyInterceptor
-    {
-        public IHubconClient Client => client;
+    //internal sealed class ClientProxyInterceptor(IDynamicConverter converter) : IClientProxyInterceptor
+    //{
+    //    private readonly static ImmutableCache<Type, MethodInfo> _methodInfoCache = new();
+    //    private readonly static ImmutableCache<MethodInfo, bool> _hasAsyncEnumerablesCache = new();
+    //    private readonly static ImmutableCache<Type, bool> _isAsyncEnumerablesCache = new();
 
-        private static ConcurrentDictionary<Type, MethodInfo> _methodInfoCache = new();
-        private static ConcurrentDictionary<MethodInfo, bool> _hasAsyncEnumerablesCache = new();
+    //    IHubconClient Client = null!;
 
-        public async Task<T> InvokeAsync<T>(MethodInfo method, Dictionary<string, object?>? arguments = null)
-        {
-            T result;
+    //    public void InjectClient(IHubconClient client)
+    //    {
+    //        Client ??= client;
+    //    }
 
-            var methodName = method.GetMethodSignature();
-            var contractName = method.ReflectedType!.Name;
-            var resultType = typeof(T);
-            logger.LogInformation(resultType.FullName);
-            using var cts = new CancellationTokenSource();
+    //    public async ValueTask<IAsyncEnumerable<T>> HandleStream<T>(MethodInfo method, Dictionary<string, string?> arguments, CancellationToken cancellationToken)
+    //    {
+    //        var methodName = method.GetMethodSignature();
+    //        var contractName = method.ReflectedType!.Name;
+    //        var resultType = typeof(T);
 
-            if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
-            {
-                var streamMethod = _methodInfoCache.GetOrAdd(
-                    resultType.GetGenericArguments()[0],
-                    x => typeof(IDynamicConverter).GetMethod(nameof(converter.ConvertStream))!.MakeGenericMethod(x));
+    //        var streamMethod = _methodInfoCache.GetOrAdd(
+    //                resultType.GetGenericArguments()[0],
+    //                x => typeof(IDynamicConverter).GetMethod(nameof(converter.ConvertStream))!.MakeGenericMethod(x));
 
+    //        OperationRequest request = new(
+    //            methodName,
+    //            contractName,
+    //            arguments
+    //        );
 
-                OperationRequest request = new(
-                    methodName,
-                    contractName,
-                    arguments
-                );
+    //        using var cts = new CancellationTokenSource();
+    //        using var registration = cancellationToken.Register(cts.Cancel);
 
-                IAsyncEnumerable<JsonElement> stream = Client.GetStream(request, cts.Token);
+    //        IAsyncEnumerable<JsonElement> stream = Client.GetStream(request, method, cts.Token);
+    //        return (IAsyncEnumerable<T>)streamMethod.Invoke(converter, [stream, cts.Token])!;
+    //    }
 
-                result = (T)streamMethod.Invoke(converter, new object[]
-                {
-                    stream,
-                    cts.Token
-                })!;
-            }
-            else
-            {
-                OperationRequest request = new(
-                    methodName,
-                    contractName,
-                    arguments
-                );
+    //    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //    public async ValueTask<T> InvokeAsync<T>(MethodInfo method, Dictionary<string, string?> arguments, CancellationToken cancellationToken)
+    //    {
+    //        T result;
 
-                result = await Client.SendAsync<T>(
-                    request,
-                    method,
-                    cts.Token
-                );
+    //        var methodName = method.GetMethodSignature();
+    //        var contractName = method.ReflectedType!.Name;
+    //        var resultType = typeof(T);
 
-            }
+    //        if (_isAsyncEnumerablesCache.GetOrAdd(resultType, x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>)))
+    //        {
+    //            var streamMethod = _methodInfoCache.GetOrAdd(
+    //                resultType.GetGenericArguments()[0],
+    //                x => typeof(IDynamicConverter).GetMethod(nameof(converter.ConvertStream))!.MakeGenericMethod(x));
 
-            return result!;
-        }
+    //            OperationRequest request = new(
+    //                methodName,
+    //                contractName,
+    //                arguments
+    //            );
 
-        public Task CallAsync(MethodInfo method, Dictionary<string, object?>? arguments = null)
-        {
-            var methodName = method.GetMethodSignature();
-            var contractName = method.ReflectedType!.Name;
-            using var cts = new CancellationTokenSource();
+    //            using var cts = new CancellationTokenSource();
+    //            using var registration = cancellationToken.Register(cts.Cancel);
 
+    //            IAsyncEnumerable<JsonElement> stream = Client.GetStream(request, method, cts.Token);
+    //            result = (T)streamMethod.Invoke(converter, [stream, cts.Token])!;
+    //        }
+    //        else if (_hasAsyncEnumerablesCache.GetOrAdd(
+    //            method,
+    //            x => method.GetParameters().Any(x => x.ParameterType.IsGenericType && x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
+    //        {
+    //            var request = new OperationRequest(methodName, contractName, arguments);
+    //            return await Client!.Ingest<T>(request, method, cancellationToken);
+    //        }
+    //        else
+    //        {
+    //            OperationRequest request = new(
+    //                methodName,
+    //                contractName,
+    //                arguments
+    //            );
 
-            if (_hasAsyncEnumerablesCache.GetOrAdd(
-                method, 
-                x => method.GetParameters().Any(x => x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
-            {
-                var request = new OperationRequest(methodName, contractName, null);
-                return Client.Ingest(request, arguments);
-            }
-            else
-            {
-                OperationRequest request = new(
-                    methodName,
-                    contractName,
-                    arguments
-                );
+    //            result = await Client!.SendAsync<T>(
+    //                request,
+    //                method,
+    //                cancellationToken
+    //            );
+    //        }
 
-                return Client.CallAsync(request, method, cts.Token);
-            }
-        }
-    }
+    //        return result!;
+    //    }
+
+    //    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //    public Task CallAsync(MethodInfo method, Dictionary<string, string?> arguments, CancellationToken cancellationToken)
+    //    {
+    //        var methodName = method.GetMethodSignature();
+    //        var contractName = method.ReflectedType!.Name;
+
+    //        if (_hasAsyncEnumerablesCache.GetOrAdd(
+    //            method,
+    //            x => method.GetParameters().Any(x => x.ParameterType.IsGenericType && x.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))))
+    //        {
+    //            using var cts = new CancellationTokenSource();
+    //            using var register = cancellationToken.Register(cts.Cancel);
+
+    //            var request = new OperationRequest(methodName, contractName, arguments);
+    //            return Client!.Ingest<JsonElement>(request, method, cts.Token);
+    //        }
+    //        else
+    //        {
+    //            OperationRequest request = new(
+    //                methodName,
+    //                contractName,
+    //                arguments
+    //            );
+
+    //            return Client!.CallAsync(request, method, cancellationToken);
+    //        }
+    //    }
+
+    //    public Task<T> InvokeAsync<T>(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+
+    //    public Task CallAsync(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+
+    //    public Task<T> IngestAsync<T>(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+
+    //    public Task IngestAsync(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+
+    //    public IAsyncEnumerable<T> StreamAsync<T>(MethodInfo method, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
+    //    {
+    //        OperationRequest request = new(
+    //            methodName,
+    //            contractName,
+    //            arguments
+    //        );
+
+    //        using var cts = new CancellationTokenSource();
+    //        using var registration = cancellationToken.Register(cts.Cancel);
+
+    //        IAsyncEnumerable<JsonElement> stream = Client.GetStream(request, method, cts.Token);
+    //        return converter.ConvertStream<T>(stream, cts.Token);
+    //    }
+    //}
 }

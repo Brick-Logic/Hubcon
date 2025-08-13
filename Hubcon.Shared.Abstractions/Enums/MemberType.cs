@@ -4,9 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Shared.Abstractions.Attributes
+namespace Hubcon.Shared.Abstractions.Enums
 {
-    public class AllowAnonymousAttribute : Attribute
+    public enum MemberType
     {
+        Property,
+        Method
     }
 }

@@ -1,11 +1,13 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using System.ComponentModel;
 using System.Threading.Channels;
 
 namespace Hubcon.Server.Core.Routing.MethodHandling
 {
-    public class StreamNotificationHandler : IStreamNotificationHandler
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class StreamNotificationHandler : IStreamNotificationHandler
     {
         private IDynamicConverter _converter;
         private Dictionary<string, IOnStreamReceived> StreamWaitList = new();

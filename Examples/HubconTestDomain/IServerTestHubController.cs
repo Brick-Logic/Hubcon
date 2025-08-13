@@ -14,19 +14,20 @@ namespace HubconTestDomain
     public interface IUserContract : IControllerContract
     {
         ISubscription<int?>? OnUserCreated { get; }
-        Task<int> GetTemperatureFromServer();
+        ISubscription<int?>? OnUserCreated2 { get; }
+        ISubscription<int?>? OnUserCreated3 { get; }
+        ISubscription<int?>? OnUserCreated4 { get; }
+
+        Task<int> GetTemperatureFromServer(CancellationToken cancellationToken = default);
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();
         Task<IEnumerable<bool>> GetBooleans();
-        Task IngestMessages(
-            IAsyncEnumerable<string> source, 
-            IAsyncEnumerable<string> source2, 
-            IAsyncEnumerable<string> source3, 
-            IAsyncEnumerable<string> source4, 
-            IAsyncEnumerable<string> source5);
         Task<MyTestClass> GetObject();
-
-        Task<CreateUserCommandResponse> CreateUser(CreateUserCommand command);
+        Task CreateUser(CancellationToken cancellationToken = default);
+        IAsyncEnumerable<string> GetMessages2(CancellationToken cancellationToken = default);
+        Task IngestMessages(IAsyncEnumerable<string> source, CancellationToken cancellationToken = default);
+        Task<string> IngestMessages(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2, IAsyncEnumerable<string> source3, IAsyncEnumerable<string> source4, IAsyncEnumerable<string> source5);
+        Task IngestMessages2(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2, IAsyncEnumerable<string> source3, IAsyncEnumerable<string> source4, IAsyncEnumerable<string> source5);
     }
 
     public class CreateUserCommandResponse

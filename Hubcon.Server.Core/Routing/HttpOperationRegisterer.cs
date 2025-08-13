@@ -40,17 +40,15 @@ namespace Hubcon.Server.Core.Routing
             var controllerMethod = blueprint.ControllerType.GetMethod(
                 method.Name, 
                 BindingFlags.Public | BindingFlags.Instance,
-                method.GetParameters()
-                .Select(x => x.ParameterType)
-                .ToArray());
+                method.GetParameters().Select(x => x.ParameterType).ToArray());
 
             var returnType = typeof(IOperationResponse<>).MakeGenericType(blueprint.ReturnType);
 
             if (blueprint.HasReturnType)
             {
-                if(blueprint.ParameterTypes.Count > 0)
+                if(blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0)
                 {
-                    builder = app.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter) =>
+                    builder = app.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter, CancellationToken cancellationToken) =>
                     {
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
@@ -85,20 +83,12 @@ namespace Hubcon.Server.Core.Routing
                             converter.DeserializeData<Dictionary<string, object?>>(request.JsonElement)
                         );
 
-                        var res = await requestHandler.HandleWithResultAsync(operationRequest);
+                        var res = await requestHandler.HandleWithResultAsync(operationRequest, cancellationToken);
 
                         if (!res.Success)
                         {
-                            if (options.DetailedErrorsEnabled)
-                            {
-                                await InternalServerError(context, new BaseOperationResponse(false, request.ErrorMessage ?? "Internal server error."));
-                                return;
-                            }
-                            else
-                            {
-                                await InternalServerError(context, new BaseOperationResponse(false, "Internal server error."));
-                                return;
-                            }
+                            await InternalServerError(context, res);
+                            return;
                         }
 
                         await Ok(context, res);
@@ -110,7 +100,7 @@ namespace Hubcon.Server.Core.Routing
                 }
                 else
                 {
-                    builder = app.MapGet(route, async (IRequestHandler requestHandler, HttpContext context) =>
+                    builder = app.MapGet(route, async (IRequestHandler requestHandler, HttpContext context, CancellationToken cancellationToken) =>
                     {
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
@@ -124,20 +114,12 @@ namespace Hubcon.Server.Core.Routing
                         }
 
                         var operationRequest = new OperationRequest(operationName, contractName);
-                        var res = await requestHandler.HandleWithResultAsync(operationRequest);
+                        var res = await requestHandler.HandleWithResultAsync(operationRequest, cancellationToken);
 
                         if (!res.Success)
                         {
-                            if (options.DetailedErrorsEnabled)
-                            {
-                                await InternalServerError(context, new BaseOperationResponse(false, res.Error ?? "Internal error"));
-                                return;
-                            }
-                            else
-                            {
-                                await InternalServerError(context, new BaseOperationResponse(false, "Internal error"));
-                                return;
-                            }
+                            await InternalServerError(context, res);
+                            return;
                         }
 
                         await Ok(context, res);
@@ -149,9 +131,9 @@ namespace Hubcon.Server.Core.Routing
             }
             else
             {
-                if(blueprint.ParameterTypes.Count > 0)
+                if(blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0)
                 {
-                    builder = app.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter) =>
+                    builder = app.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter, CancellationToken cancellationToken) =>
                     {
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
@@ -186,7 +168,7 @@ namespace Hubcon.Server.Core.Routing
                             converter.DeserializeData<Dictionary<string, object?>>(request.JsonElement)
                         );
 
-                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest);
+                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest, cancellationToken);
 
                         if (!res.Success)
                         {
@@ -211,7 +193,7 @@ namespace Hubcon.Server.Core.Routing
                 }
                 else
                 {
-                    builder = app.MapGet(route, async (IRequestHandler requestHandler, HttpContext context) =>
+                    builder = app.MapGet(route, async (IRequestHandler requestHandler, HttpContext context, CancellationToken cancellationToken) =>
                     {
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
@@ -225,7 +207,7 @@ namespace Hubcon.Server.Core.Routing
                         }
 
                         var operationRequest = new OperationRequest(operationName, contractName);
-                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest);
+                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest, cancellationToken);
 
                         if (!res.Success)
                         {

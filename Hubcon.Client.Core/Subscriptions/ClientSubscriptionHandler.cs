@@ -1,17 +1,19 @@
-﻿using Hubcon.Shared.Abstractions.Enums;
+﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json;
 
 namespace Hubcon.Client.Core.Subscriptions
 {
-    public class ClientSubscriptionHandler<T> : ISubscription<T>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class ClientSubscriptionHandler<T> : ISubscription<T>
     {
         public event HubconEventHandler<object>? OnEventReceived;
-        private readonly IHubconClient _client;
         private readonly IDynamicConverter _converter;
         private readonly ILogger<ClientSubscriptionHandler<T>> logger;
         private CancellationTokenSource _tokenSource;
@@ -21,12 +23,12 @@ namespace Hubcon.Client.Core.Subscriptions
         public SubscriptionState Connected { get => _connected; }
 
         public PropertyInfo Property { get; } = null!;
+        public IHubconClient Client { get; }
 
         public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
 
-        public ClientSubscriptionHandler(IHubconClient client, IDynamicConverter converter, ILogger<ClientSubscriptionHandler<T>> logger)
+        public ClientSubscriptionHandler(IDynamicConverter converter, ILogger<ClientSubscriptionHandler<T>> logger)
         {
-            _client = client;
             _converter = converter;
             this.logger = logger;
             _tokenSource = new CancellationTokenSource();
@@ -85,25 +87,27 @@ namespace Hubcon.Client.Core.Subscriptions
                         var contract = interfaces.First(x => x.IsAssignableTo(baseContractType) && x != baseContractType) ?? baseContractType;
                         var request = new SubscriptionRequest(Property.Name, contract.Name, null);
 
-                        eventSource = _client.GetSubscription(request, _tokenSource.Token);
-                        await using var enumerator = eventSource.GetAsyncEnumerator(_tokenSource.Token);
+                        eventSource = Client.GetSubscription(request, Property, _tokenSource.Token);
+                        
                         _connected = SubscriptionState.Connected;
 
-                        _ = Task.Run(() => tcs.SetResult());
+                        tcs.SetResult();
 
-                        while (await enumerator.MoveNextAsync())
+                        await foreach(var item in eventSource)
                         {
                             if (retry > 0) retry = 0;
-                            var result = _converter.DeserializeJsonElement<T>(enumerator.Current);
-                            OnEventReceived?.Invoke(result);
+
+                            var result = _converter.DeserializeData<T>(item);
+
+                            if(OnEventReceived != null)
+                                await OnEventReceived.Invoke(result);
                         };
                     }
                     catch (Exception ex)
                     {
                         retry += 1;
                         _connected = SubscriptionState.Reconnecting;
-                        logger.LogInformation("Reconnecting...");
-                        logger.LogInformation(ex.ToString());
+                        logger.LogError(ex.Message, ex);
 
                         int baseReconnectionDelay = 1000;
                         int maxReconnectionDelay = 3000;

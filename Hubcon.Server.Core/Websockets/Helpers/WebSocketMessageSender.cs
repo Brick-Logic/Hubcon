@@ -1,23 +1,34 @@
-﻿using System.Net.WebSockets;
-using System.Text.Json;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Core.Serialization;
+using System.Buffers;
+using System.IO.Pipelines;
+using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
+using System.Threading;
 
 namespace Hubcon.Server.Core.Websockets.Helpers
 {
-    public class WebSocketMessageSender
+    internal sealed class WebSocketMessageSender(WebSocket _webSocket, IDynamicConverter converter)
     {
-        private readonly WebSocket _socket;
-
-        public WebSocketMessageSender(WebSocket socket)
-        {
-            _socket = socket;
-        }
+        public WebSocketState State => _webSocket.State;
 
         public async Task SendAsync<T>(T message)
         {
-            var json = JsonSerializer.Serialize(message);
-            var bytes = Encoding.UTF8.GetBytes(json);
-            await _socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
+            var pipe = new Pipe();
+            var writer = new Utf8JsonWriter(pipe.Writer);
+
+            JsonSerializer.Serialize(writer, message, DynamicConverter.JsonSerializerOptions);
+            await writer.FlushAsync();
+            await pipe.Writer.CompleteAsync();
+
+            var result = await pipe.Reader.ReadAsync();
+            var buffer = result.Buffer;
+
+            byte[] bytes = buffer.ToArray();
+            await pipe.Reader.CompleteAsync();
+
+            await _webSocket.SendAsync(bytes, WebSocketMessageType.Binary, true, CancellationToken.None);
         }
     }
 }

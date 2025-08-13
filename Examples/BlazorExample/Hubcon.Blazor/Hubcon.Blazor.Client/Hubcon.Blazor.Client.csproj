@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -10,10 +10,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.15" />
-	<PackageReference Include="Hubcon.Client" Version="1.0.0-beta*" />
+	<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta8" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
     <ProjectReference Include="..\..\..\HubconTestDomain\HubconTestDomain.csproj" />
   </ItemGroup>
 </Project>

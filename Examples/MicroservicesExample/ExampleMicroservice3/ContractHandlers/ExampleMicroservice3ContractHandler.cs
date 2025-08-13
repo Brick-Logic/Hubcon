@@ -9,7 +9,7 @@ namespace ExampleMicroservice3.ContractHandlers
         public async Task ProcessMessage(string message)
         {
             logger.LogInformation($"[Microservice 3] Got message: '{message}'. Sending to microservice 1...");
-            //await Task.Delay(1000);
+            await Task.Delay(1000);
             await microservice1.FinishMessage(message);
         }
     }

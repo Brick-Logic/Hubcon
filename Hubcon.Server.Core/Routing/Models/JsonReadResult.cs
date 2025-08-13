@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -7,7 +8,8 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Server.Core.Routing.Models
 {
-    public class JsonReadResult
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class JsonReadResult
     {
         public JsonElement? JsonElement { get; }
         public bool IsSuccess { get; }

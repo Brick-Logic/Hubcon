@@ -1,36 +1,45 @@
-﻿using Hubcon.Server.Abstractions.Delegates;
+﻿using Hubcon.Server.Abstractions.CustomAttributes;
+using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Core.Subscriptions;
 using Hubcon.Shared.Core.Tools;
+using Hubcon.Shared.Core.Websockets.Events;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 using System.Text.Json;
+using System.Threading.Channels;
 using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
-    public class InternalRoutingMiddleware(
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class InternalRoutingMiddleware(
         IServiceProvider serviceProvider,
         IDynamicConverter dynamicConverter,
+        IInternalServerOptions options,
+        ILogger<InternalRoutingMiddleware> logger,
         ILiveSubscriptionRegistry liveSubscriptionRegistry) : IInternalRoutingMiddleware
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, PipelineDelegate next)
         {
-            if (context.Blueprint.Kind == OperationKind.Method || context.Blueprint.Kind == OperationKind.Stream)
+            if (context.Blueprint.Kind == OperationKind.Method 
+                || context.Blueprint.Kind == OperationKind.Stream 
+                || context.Blueprint.Kind == OperationKind.Ingest)
             {
-                if(context.Request.Arguments?.Count != context.Blueprint!.ParameterTypes.Count)
-                {
-                    context.Result = new BaseOperationResponse<object>(false);
-                    return;
-                }
-
-                foreach(var kvp in context.Request.Arguments)
+                foreach(var kvp in context.Blueprint!.ParameterTypes)
                 {
                     var type = context.Blueprint!.ParameterTypes[kvp.Key];
 
-                    if (context.Request.Arguments[kvp.Key] is JsonElement element)
+                    if (type == typeof(CancellationToken))
+                    {
+                        context.Request.Arguments[kvp.Key] = context.RequestAborted;
+                    }
+                    else if (context.Request.Arguments[kvp.Key] is JsonElement element)
                     {
                         context.Request.Arguments[kvp.Key] = dynamicConverter.DeserializeJsonElement(element, type);
                     }
@@ -39,7 +48,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     {
                         context.Request.Arguments[kvp.Key] = EnumerableTools.ConvertAsyncEnumerableDynamic(
                             type,
-                            (IAsyncEnumerable<JsonElement>)context.Request.Arguments[kvp.Key]!,
+                            ((IAsyncEnumerable<JsonElement>)context.Request.Arguments[kvp.Key]!),
                             dynamicConverter);
 
                         continue;
@@ -55,8 +64,14 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     }
                 }
 
+                if(context.Blueprint!.ParameterTypes.Count != context.Request.Arguments!.Count)
+                {
+                    context.Result = new BaseOperationResponse<JsonElement>(false, default, "Argument count mismatch.");
+                    return;
+                }
+
                 var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);
-                object? result = context.Blueprint!.InvokeDelegate?.Invoke(controller, context.Request.Arguments.Values.ToArray()!);
+                object? result = await Task.Run(() => context.Blueprint!.InvokeDelegate?.Invoke(controller, context.Request.Arguments.Values.ToArray()!));
                 context.Result = await resultHandler.Invoke(result);
                 await next();
             }
@@ -64,7 +79,11 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 string clientId = "";
 
-                if (context.Blueprint.OperationInfo == null) throw new KeyNotFoundException($"Suscripcion no encontrada.");
+                if (context.Blueprint.OperationInfo == null)
+                {
+                    context.Result = new BaseOperationResponse<object>(false, null!, "Suscripcion no encontrada");
+                    return;
+                }
 
                 ISubscriptionDescriptor? subDescriptor = null;
 
@@ -81,15 +100,17 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 }
                 else
                 {
-                    string? jwtToken = JwtHelper.ExtractTokenFromHeader(context.HttpContext);
-                    string? userId = JwtHelper.GetUserId(jwtToken);
+                    string websocketToken = context.HttpContext?.Request.Headers.Authorization.ToString()!;
 
-                    if (userId == null)
-                        throw new UnauthorizedAccessException();
+                    if (options.WebsocketRequiresAuthorization && context.HttpContext?.User == null)
+                    {
+                        context.Result = new BaseOperationResponse<object>(false, null!, "Unauthorized");
+                        return;
+                    }
 
-                    clientId = userId;
+                    clientId = websocketToken;
 
-                    subDescriptor = liveSubscriptionRegistry.GetHandler(userId, request.ContractName, request.OperationName);
+                    subDescriptor = liveSubscriptionRegistry.GetHandler(websocketToken, request.ContractName, request.OperationName);
 
 
                     if (subDescriptor == null)
@@ -97,27 +118,39 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         var subscription = (ISubscription)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
 
                         if (subscription is null)
-                            throw new InvalidOperationException($"No se encontró un servicio que implemente la interfaz {nameof(ISubscription)}.");
+                        {
+                            context.Result = new BaseOperationResponse<object>(false, "No se encontró un servicio que implemente la interfaz ISubscription.");
+                            return;
+                        }
 
-
-                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(userId, request.ContractName, request.OperationName, subscription);
+                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(websocketToken, request.ContractName, request.OperationName, subscription);
                     }
                 }
 
-                var observer = new AsyncObserver<object>();
+                context.Blueprint.ConfigurationAttributes.TryGetValue(typeof(SubscriptionSettingsAttribute), out Attribute? attribute);
+                var subSettings = (attribute as SubscriptionSettingsAttribute)?.Factory() ?? SubscriptionSettingsAttribute.Default().Factory();
 
-                Task hubconEventHandler(object? eventValue)
+                var channelOptions = new BoundedChannelOptions(subSettings.ChannelCapacity)
+                {
+                    Capacity = subSettings.ChannelCapacity,
+                    FullMode = subSettings.ChannelFullMode,
+                    SingleReader = false,
+                    SingleWriter = false,
+                    AllowSynchronousContinuations = true
+                };
+
+                IAsyncObserver<object>? observer = AsyncObserver.Create<object>(dynamicConverter, channelOptions);
+
+                async Task hubconEventHandler(object? eventValue)
                 {
                     try
                     {
-                        observer.WriteToChannelAsync(eventValue!);
+                        await observer.WriteToChannelAsync(eventValue!);
                     }
                     catch (Exception ex)
                     {
-                        Console.Error.WriteLine($"Error al escribir al canal de observación: {ex}");
+                        logger.LogError(ex.Message);
                     }
-
-                    return Task.CompletedTask;
                 }
 
                 subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
@@ -126,13 +159,14 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 {
                     try
                     {
-                        await foreach (var newEvent in observer.GetAsyncEnumerable(new()))
+                        await foreach (var newEvent in observer.GetAsyncEnumerable(default))
                         {
                             yield return newEvent;
                         }
                     }
                     finally
                     {
+                        observer.OnCompleted();
                         liveSubscriptionRegistry.RemoveHandler(clientId, request.ContractName, request.OperationName);
                         subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
                     };

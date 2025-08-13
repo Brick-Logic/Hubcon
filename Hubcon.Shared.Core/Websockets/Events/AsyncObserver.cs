@@ -1,16 +1,63 @@
-﻿using System.Runtime.CompilerServices;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading.Channels;
 
 namespace Hubcon.Shared.Core.Websockets.Events
 {
-    public class AsyncObserver<T> : IObserver<T>
+    public static class AsyncObserver
     {
-        private readonly Channel<T?> _channel = Channel.CreateUnbounded<T?>();
+        public static IAsyncObserver<T> Create<T>(IDynamicConverter converter, BoundedChannelOptions? options = null)
+        {
+            return new ChannelAsyncObserver<T>(converter, options);
+        }
+    }
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class ChannelAsyncObserver<T>(IDynamicConverter converter, BoundedChannelOptions? options = null) : IAsyncObserver<T>, IObserver<T>
+    {
+        private readonly Channel<T?> _channel = Channel.CreateBounded<T?>(options ?? new BoundedChannelOptions(5000)
+        {
+            SingleReader = true,
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.Wait,
+        });
+
         private TaskCompletionSource<bool> _completed = new TaskCompletionSource<bool>();
 
-        public void WriteToChannelAsync(T? item)
+        public async Task<bool> WriteToChannelAsync(T? item)
         {
-            _ = _channel.Writer.TryWrite(item);
+            try
+            {
+                var toWrite = item is JsonElement element
+                    ? GetTType(element)
+                    : item;
+
+                await _channel.Writer.WriteAsync(toWrite!);
+                return true;
+            }
+            catch (ChannelClosedException ex)
+            {
+                // El canal ya fue completado/cerrado
+                return false;
+            }
+            catch(Exception ex)
+            {
+                OnError(ex);
+                return false;
+            }
+        }
+
+        private T GetTType(JsonElement item)
+        {
+            // Si T es JsonElement, devolver directamente sin Clone()
+            if (typeof(T) == typeof(JsonElement))
+                return (T)(object)item;
+
+            // Para otros tipos, deserializar desde JSON string
+            return converter.DeserializeData<T>(item)!;
         }
 
         public IAsyncEnumerable<T?> GetAsyncEnumerable(CancellationToken cancellationToken)
@@ -22,7 +69,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
             catch (Exception ex)
             {
                 OnError(ex);
-                throw;
+                return default!;
             }
         }
 
@@ -37,7 +84,19 @@ namespace Hubcon.Shared.Core.Websockets.Events
             }
             finally
             {
+            }
+        }
 
+        public async Task<T?> ReadItemAsync(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var result = await _channel.Reader.ReadAsync(cancellationToken);
+                return result;
+            }
+            catch (ChannelClosedException)
+            {
+                return default;
             }
         }
 
@@ -53,10 +112,9 @@ namespace Hubcon.Shared.Core.Websockets.Events
             _completed.SetException(error);
         }
 
-        public void OnNext(T value)
+        public async void OnNext(T value)
         {
-            // Enviar el valor al canal
-            WriteToChannelAsync(value);
+            await WriteToChannelAsync(value);
         }
 
         public Task WaitUntilCompleted()

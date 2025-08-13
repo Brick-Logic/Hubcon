@@ -11,10 +11,10 @@
 	  <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
 	  <PackageReference Include="Microsoft.ServiceFabric" Version="10.1.2493" />
 	  <PackageReference Include="Scalar.AspNetCore" Version="2.0.34" />
-	  <PackageReference Include="Hubcon.Server" Version="1.0.0-beta*" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Hubcon.Server\Hubcon.Server.csproj" />
     <ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
   </ItemGroup>
 </Project>

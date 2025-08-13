@@ -1,18 +1,24 @@
-﻿using Hubcon.Shared.Core.Websockets.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Core.Websockets.Interfaces;
 using Hubcon.Shared.Core.Websockets.Models;
+using System.ComponentModel;
 using System.Text.Json;
 
 namespace Hubcon.Shared.Core.Websockets.Events
 {
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public abstract class BaseObservable
     {
         protected readonly IUnsubscriber? _client;
+
+        public bool ShouldReconnect { get; private set; } = false;
         public IRequest? RequestData { get; }
 
-        protected BaseObservable(IUnsubscriber? client, IRequest? request)
+        protected BaseObservable(IUnsubscriber? client, IRequest? request, bool shouldReconnect = false)
         {
             _client = client;
             RequestData = request;
+            ShouldReconnect = shouldReconnect;
         }
 
         public abstract void OnNextElement(JsonElement value);
@@ -21,28 +27,34 @@ namespace Hubcon.Shared.Core.Websockets.Events
         public abstract void OnCompleted();
     }
 
-    public class GenericObservable<TMessage> : BaseObservable, IObservable<TMessage>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class GenericObservable<TMessage> : BaseObservable, IObservable<TMessage>
     {
         private readonly List<IObserver<TMessage>> _observers = new();
         private readonly object _observersLock = new();
         private readonly Type _dataType = typeof(TMessage);
-        private readonly JsonSerializerOptions jsonSerializerOptions;
+        private readonly IDynamicConverter converter;
+        private readonly Action? onCancelCallback;
+        private bool callbackInvoked = false;
 
         public Type DataType => _dataType;
 
         public GenericObservable(
-            IUnsubscriber client, 
-            string id, 
+            IUnsubscriber client,
+            Guid id, 
             JsonElement request, 
             RequestType type, 
-            JsonSerializerOptions jsonSerializerOptions) : base(client, new RequestData(id, request, type))
+            IDynamicConverter converter,
+            Action? onCancelCallback = null,
+            bool shouldReconnect = false) : base(client, new RequestData(id, request, type), shouldReconnect)
         {
-            this.jsonSerializerOptions = jsonSerializerOptions;
+            this.converter = converter;
         }
 
-        public GenericObservable(JsonSerializerOptions jsonSerializerOptions) : base(null, null)
+        public GenericObservable(IDynamicConverter converter, Action? onCancelCallback = null) : base(null, null)
         {
-            this.jsonSerializerOptions = jsonSerializerOptions;
+            this.converter = converter;
+            this.onCancelCallback = onCancelCallback;
         }
 
         public IDisposable Subscribe(IObserver<TMessage> observer)
@@ -57,7 +69,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
 
         public override void OnNextElement(JsonElement value)
         {
-            var data = value.Deserialize<TMessage>(jsonSerializerOptions);
+            var data = converter.DeserializeJsonElement<TMessage>(value);
             OnNext(data!);
         }
 
@@ -93,6 +105,8 @@ namespace Hubcon.Shared.Core.Websockets.Events
             {
                 try { o.OnError(ex); } catch { /* Ignorar errores */ }
             }
+
+            onCancelCallback?.Invoke();           
         }
 
         public override void OnCompleted()
@@ -104,6 +118,8 @@ namespace Hubcon.Shared.Core.Websockets.Events
             }
 
             _observers.Clear();
+
+            onCancelCallback?.Invoke();           
         }
 
         private void UnsubscribeObserver(IObserver<TMessage> observer)

@@ -3,6 +3,7 @@ using ExampleMicroservice2.ServerModules;
 using ExampleMicroservicesDomain.Middlewares;
 using Hubcon.Server.Injection;
 using Hubcon.Client;
+using Scalar.AspNetCore;
 
 namespace ExampleMicroservice2
 {
@@ -11,6 +12,8 @@ namespace ExampleMicroservice2
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            builder.Services.AddOpenApi();
 
             builder.Services.AddHubconClient();
             builder.Services.AddRemoteServerModule<Microservice3ServerModule>();
@@ -31,8 +34,10 @@ namespace ExampleMicroservice2
 
             var app = builder.Build();
 
+            app.MapOpenApi();
+            app.MapScalarApiReference();
+
             app.MapHubconControllers();
-            app.UseHubconWebsockets();
 
             app.Run();
         }

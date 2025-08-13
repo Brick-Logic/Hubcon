@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace HubconAnalyzers.SourceGenerators
 {
@@ -113,8 +114,10 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine($"using Hubcon.Shared.Abstractions.Standard.Interceptor;");
             sb.AppendLine($"using Hubcon.Shared.Abstractions.Standard.Interfaces;");
             sb.AppendLine($"using Hubcon.Shared.Core.Attributes;");
+            sb.AppendLine($"using Hubcon.Client.Core.Proxies;");
             sb.AppendLine($"using System.Diagnostics.CodeAnalysis;");
             sb.AppendLine($"using System.Reflection;");
+            sb.AppendLine($"using System.ComponentModel;");
             sb.AppendLine($"using System.Runtime.CompilerServices;");
             sb.AppendLine($"");
 
@@ -130,7 +133,8 @@ namespace HubconAnalyzers.SourceGenerators
             }
 
             sb.AppendLine($"{baseIndent}[HubconProxy]");
-            sb.AppendLine($"{baseIndent}public class {proxyName} : {nameof(BaseContractProxy)}, {iface.ToDisplayString()}");
+            sb.AppendLine($"{baseIndent}[EditorBrowsable(EditorBrowsableState.Never)]");
+            sb.AppendLine($"{baseIndent}public class {proxyName} : {"BaseContractProxy"}, {iface.ToDisplayString()}");
             sb.AppendLine($"{baseIndent}{{");
 
             foreach (var property in iface.GetMembers().OfType<IPropertySymbol>())
@@ -143,10 +147,7 @@ namespace HubconAnalyzers.SourceGenerators
                 var type = $"{baseIndent}    public {property.Type.ToString()} {property.Name} {{ {accessors} }}";
 
                 sb.AppendLine(type);
-            }
-
-            sb.AppendLine($"{baseIndent}    public {proxyName}({nameof(IClientProxyInterceptor)} interceptor) : base(interceptor) {{ }}");
-            sb.AppendLine($"");
+            }       
 
             foreach (var method in iface
                 .GetMembers()
@@ -164,14 +165,14 @@ namespace HubconAnalyzers.SourceGenerators
                 var stringMethodName = $"\"{method.GetMethodSymbolSignature()}\"";
                 var callMethod = "";
 
-                var AllParameters = "";
+                string AllParameters = ", null";
 
-                if (method.Parameters.Any())
+                if (method.Parameters.Any(x => x.Type.Name.ToLower().Contains("CancellationToken".ToLower()) == false))
                 {
                     AllParameters = $", new Dictionary<string, object?>() {{ ";
                     bool first = true;
 
-                    foreach (var param in method.Parameters)
+                    foreach (var param in method.Parameters.Where(x => x.GetType() != typeof(CancellationToken)))
                     {
                         if (first)
                         {
@@ -187,22 +188,57 @@ namespace HubconAnalyzers.SourceGenerators
                     AllParameters += $" }}";
                 }
 
+                string cancellationTokenName = "";
+
+                if(method.Parameters.Any(x => x.Type.Name.ToLower().Contains("CancellationToken".ToLower())))
+                {
+                    cancellationTokenName = ", " + method.Parameters.First(x => x.Type.Name.ToLower().Contains("CancellationToken".ToLower())).Name;
+                }
+
                 if (returnType == "void")
                 {
-                    callMethod = $"{nameof(BaseContractProxy.CallAsync)}({stringMethodName}{AllParameters}).Wait();";
+                    // CallAsync que devuelve Task, bloquea con Wait() para void
+                    callMethod = $"{nameof(BaseProxy.CallAsync)}({stringMethodName}{AllParameters}{cancellationTokenName}).Wait();";
+                }
+                else if (returnType.StartsWith("System.Collections.Generic.IAsyncEnumerable<"))
+                {
+                    // Streaming
+                    var generic = ExtractGenericArgument(returnType, "System.Collections.Generic.IAsyncEnumerable");
+                    callMethod = $"return {nameof(BaseProxy.StreamAsync)}<{generic}>({stringMethodName}{AllParameters}{cancellationTokenName});";
+                }
+                else if (method.Parameters.Any(p => IsIAsyncEnumerable(p.Type)))
+                {
+                    // Si tiene argumento IAsyncEnumerable, usar IngestAsync
+                    if (returnType.StartsWith("System.Threading.Tasks.Task<"))
+                    {
+                        var generic = ExtractGenericArgument(returnType, "System.Threading.Tasks.Task");
+                        callMethod = $"return {nameof(BaseProxy.IngestAsync)}<{generic}>({stringMethodName}{AllParameters}{cancellationTokenName});";
+                    }
+                    else if (returnType == "System.Threading.Tasks.Task")
+                    {
+                        callMethod = $"return {nameof(BaseProxy.IngestAsync)}({stringMethodName}{AllParameters}{cancellationTokenName});";
+                    }
+                    else
+                    {
+                        // En source generator .NET Standard 2.0 no se usa excepción, puede fallar en runtime si llega acá.
+                        callMethod = $"return {nameof(BaseProxy.IngestAsync)}<{returnType}>({stringMethodName}{AllParameters}{cancellationTokenName});";
+                    }
                 }
                 else if (returnType.StartsWith("System.Threading.Tasks.Task<"))
                 {
-                    var generic = ExtractTaskGenericArgumentRegex(returnType);
-                    callMethod = $"return {nameof(BaseContractProxy.InvokeAsync)}<{generic}>({stringMethodName}{AllParameters});";
+                    // InvokeAsync para Task<T>
+                    var generic = ExtractGenericArgument(returnType, "System.Threading.Tasks.Task");
+                    callMethod = $"return {nameof(BaseProxy.InvokeAsync)}<{generic}>({stringMethodName}{AllParameters}{cancellationTokenName});";
                 }
-                else if (returnType.StartsWith("System.Threading.Tasks.Task"))
+                else if (returnType == "System.Threading.Tasks.Task")
                 {
-                    callMethod = $"return {nameof(BaseContractProxy.CallAsync)}({stringMethodName}{AllParameters});";
+                    // CallAsync para Task
+                    callMethod = $"return {nameof(BaseProxy.CallAsync)}({stringMethodName}{AllParameters}{cancellationTokenName});";
                 }
                 else
                 {
-                    callMethod = $"return {nameof(BaseContractProxy.InvokeAsync)}<{returnType}>({stringMethodName}{AllParameters}).Result;";
+                    // InvokeAsync para cualquier otro tipo sincrónico (bloquea con .Result)
+                    callMethod = $"return {nameof(BaseProxy.InvokeAsync)}<{returnType}>({stringMethodName}{AllParameters}{cancellationTokenName}).Result;";
                 }
 
                 sb.AppendLine($"{baseIndent}        {callMethod}");
@@ -223,6 +259,27 @@ namespace HubconAnalyzers.SourceGenerators
 
             return sb.ToString();
         }
+
+        private static bool IsIAsyncEnumerable(ITypeSymbol type)
+        {
+            return type is INamedTypeSymbol namedType &&
+                   namedType.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.IAsyncEnumerable<T>";
+        }
+
+        private static string ExtractGenericArgument(string fullTypeName, string genericTypeName)
+        {
+            // Ej: fullTypeName = "System.Threading.Tasks.Task<System.Int32>"
+            //     genericTypeName = "System.Threading.Tasks.Task"
+            // Resultado esperado: "System.Int32"
+
+            int start = genericTypeName.Length + 1; // salto el '<'
+            int end = fullTypeName.LastIndexOf('>');
+            if (start >= end || start < 0 || end < 0)
+                return "System.Object"; // fallback seguro
+
+            return fullTypeName.Substring(start, end - start);
+        }
+
 
         private static string ExtractTaskGenericArgumentRegex(string taskType)
         {
@@ -247,6 +304,7 @@ namespace HubconAnalyzers.SourceGenerators
             var baseIndent = hasNamespace ? "    " : "";
 
             // El PreserverModule también va en el mismo namespace con la indentación correcta
+            sb.AppendLine($"{baseIndent}[EditorBrowsable(EditorBrowsableState.Never)]");
             sb.AppendLine($"{baseIndent}public static class {proxyName}PreserverModule");
             sb.AppendLine($"{baseIndent}{{");
             sb.AppendLine($"{baseIndent}    [ModuleInitializer]");

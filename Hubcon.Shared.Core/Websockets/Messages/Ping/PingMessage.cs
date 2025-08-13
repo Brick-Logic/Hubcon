@@ -4,9 +4,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Ping
 {
-    public record class PingMessage(string Id = "") : BaseMessage(MessageType.ping, Id);
+    public record class PingMessage : BaseMessage
+    {
+        public PingMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        {
+        }
+
+        [JsonConstructor]
+        public PingMessage(Guid id) : base(MessageType.ping, id)
+        {
+        }
+    }
 }

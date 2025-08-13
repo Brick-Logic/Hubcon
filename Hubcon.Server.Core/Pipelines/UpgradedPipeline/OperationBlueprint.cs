@@ -1,16 +1,17 @@
-﻿using Hubcon.Server.Abstractions.Enums;
+﻿using Hubcon.Server.Abstractions.CustomAttributes;
+using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
-using Hubcon.Shared.Abstractions.Standard.Extensions;
+using Hubcon.Shared.Abstractions.Attributes;
+using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 {
-    public class OperationBlueprint : IOperationBlueprint
+    internal sealed class OperationBlueprint : IOperationBlueprint
     {
         public string OperationName { get; }
         public OperationKind Kind { get; }
@@ -30,6 +31,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         public bool RequiresAuthorization { get; }
         public IEnumerable<AuthorizeAttribute> AuthorizationAttributes { get; }
+        public IEnumerable<Attribute> Attributes { get; }
+        public ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         public Func<object?, object[], object?>? InvokeDelegate { get; }
         public IPipelineBuilder PipelineBuilder { get; }
         public string Route { get; }
@@ -78,6 +81,18 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 if(options.HttpPathPrefix != null)
 
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
+
+                Attributes = ControllerType.GetMethod(
+                    memberInfo.Name, 
+                    methodInfo.GetParameters().Select(x => x.ParameterType).ToArray())!
+                    .GetCustomAttributes();
+
+                RequiresAuthorization =
+                    memberInfo.HasCustomAttribute<AuthorizeAttribute>() ? true
+                    : memberInfo.HasCustomAttribute<AllowAnonymousAttribute>() ? false
+                    : true;
+
+                AuthorizationAttributes = memberInfo.GetCustomAttributes<AuthorizeAttribute>();
             }
             else if (memberInfo is PropertyInfo propertyInfo)
             {
@@ -86,17 +101,59 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 HasReturnType = true;
 
                 Kind = OperationKind.Subscription;
+
+                Attributes = ControllerType.GetMethod(propertyInfo.Name)?.GetCustomAttributes() ?? new List<Attribute>();
+
+                RequiresAuthorization =
+                    memberInfo.HasCustomAttribute<AuthorizeAttribute>() ? true
+                    : memberInfo.HasCustomAttribute<BroadcastAttribute>() ? false
+                    : true;
+
+                AuthorizationAttributes = memberInfo.GetCustomAttributes<AuthorizeAttribute>();
             }
             else
             {
                 throw new NotSupportedException($"The type {memberInfo.GetType()} is not supported as an operation type. Use PropertyInfo o MethodInfo instead.");
             }
 
-            RequiresAuthorization = memberInfo.HasCustomAttribute<AuthorizeAttribute>();
+            ConfigurationAttributes = new();
 
-            AuthorizationAttributes = RequiresAuthorization == true
-                ? memberInfo.GetCustomAttributes<AuthorizeAttribute>()
-                : Array.Empty<AuthorizeAttribute>();
+            Attributes.Where(x =>
+            {
+                if (Kind == OperationKind.Subscription)
+                {
+                    return x is SubscriptionSettingsAttribute;
+                }
+                else if (Kind == OperationKind.Stream)
+                {
+                    return x is StreamingSettingsAttribute;
+                }
+                else if (Kind == OperationKind.Ingest)
+                {
+                    return x is IngestSettingsAttribute;
+                }
+                else if (Kind == OperationKind.Method)
+                {
+                    return x is MethodSettingsAttribute;
+                }
+                else
+                    return false;
+            })
+            .ToList()
+            .ForEach(x =>
+            {
+                if (Kind == OperationKind.Subscription && x is SubscriptionSettingsAttribute subSettings)
+                    ConfigurationAttributes.TryAdd(typeof(SubscriptionSettingsAttribute), subSettings);
+
+                else if (Kind == OperationKind.Stream && x is StreamingSettingsAttribute streamSettings)
+                    ConfigurationAttributes.TryAdd(typeof(StreamingSettingsAttribute), streamSettings);
+
+                else if (Kind == OperationKind.Ingest && x is IngestSettingsAttribute ingestSettings)
+                    ConfigurationAttributes.TryAdd(typeof(IngestSettingsAttribute), ingestSettings);
+
+                else if (Kind == OperationKind.Method && x is MethodSettingsAttribute methodSettings)
+                    ConfigurationAttributes.TryAdd(typeof(MethodSettingsAttribute), methodSettings);
+            });
 
             PipelineBuilder = pipelineBuilder;
             InvokeDelegate = invokeDelegate;

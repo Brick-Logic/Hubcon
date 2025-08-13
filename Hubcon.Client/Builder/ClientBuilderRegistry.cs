@@ -1,32 +1,44 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
 
 namespace Hubcon.Client.Builder
 {
-    public class ClientBuilderRegistry(IProxyRegistry proxyRegistry) : IClientBuilderRegistry
+    internal sealed class ClientBuilderRegistry : IClientBuilderRegistry
     {
-        private Dictionary<Type, IClientBuilder> ClientBuilders { get; } = new();
+        private readonly IProxyRegistry _proxyRegistry;
 
-        public void RegisterModule<TRemoteServerModule>(IServiceCollection services) 
-            where TRemoteServerModule : IRemoteServerModule, new()
+        private readonly ConcurrentDictionary<Type, IClientBuilder> _clientBuilders = new();
+
+        public ClientBuilderRegistry(IProxyRegistry proxyRegistry)
         {
-            var module = new TRemoteServerModule();
+            _proxyRegistry = proxyRegistry ?? throw new ArgumentNullException(nameof(proxyRegistry));
+        }
 
-            var clientBuilder = new ClientBuilder(proxyRegistry);
+        public void RegisterModule<TRemoteServerModule>(IServiceCollection services, Func<TRemoteServerModule>? remoteServerFactory = null)
+            where TRemoteServerModule : class, IRemoteServerModule
+        {
+            var module = remoteServerFactory == null ? Activator.CreateInstance<TRemoteServerModule>() : remoteServerFactory.Invoke();
+
+            var clientBuilder = new ClientBuilder(_proxyRegistry);
             var builderConfig = new ServerModuleConfiguration(clientBuilder, services);
             module.Configure(builderConfig);
 
-            foreach(var contractType in clientBuilder.Contracts)
+            foreach (var contractType in clientBuilder.Contracts)
             {
-                ClientBuilders.Add(contractType, clientBuilder);
+                // TryAdd para evitar excepciones en caso de contratos repetidos
+                _clientBuilders.TryAdd(contractType, clientBuilder);
 
-                services.AddSingleton(contractType, (serviceProvider) => {
+                // Capturar localmente contractType para el closure
+                var localContractType = contractType;
 
+                services.AddSingleton(localContractType, serviceProvider =>
+                {
                     var registry = serviceProvider.GetRequiredService<IClientBuilderRegistry>();
 
-                    if (registry.GetClientBuilder(contractType, out IClientBuilder? value))
+                    if (registry.GetClientBuilder(localContractType, out var builder))
                     {
-                        return value!.GetOrCreateClient(contractType, serviceProvider);
+                        return builder!.GetOrCreateClient(localContractType, serviceProvider);
                     }
 
                     return default!;
@@ -36,7 +48,7 @@ namespace Hubcon.Client.Builder
 
         public bool GetClientBuilder(Type contractType, out IClientBuilder? value)
         {
-            if (ClientBuilders.TryGetValue(contractType, out IClientBuilder? builder))
+            if (_clientBuilders.TryGetValue(contractType, out var builder))
             {
                 value = builder;
                 return true;
@@ -46,4 +58,5 @@ namespace Hubcon.Client.Builder
             return false;
         }
     }
+
 }

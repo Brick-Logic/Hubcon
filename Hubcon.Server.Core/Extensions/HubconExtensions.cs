@@ -8,12 +8,17 @@ using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Http;
+using System.Collections.Concurrent;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Extensions
 {
     public static class HubconExtensions
     {
+        private static readonly ConcurrentDictionary<Type, List<PropertyInfo>> _propertyCache = new();
+        private static readonly ConcurrentDictionary<Type, Type> _contractCache = new();
+        private static readonly ConcurrentDictionary<PropertyInfo, bool> _isSubCache = new();
+
         public static ContainerBuilder RegisterWithInjector<TType, TActivatorData, TSingleRegistrationStyle>(
             this ContainerBuilder container,
             Func<ContainerBuilder, IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle>>? options = null)
@@ -22,36 +27,23 @@ namespace Hubcon.Server.Core.Extensions
 
             registered?.OnActivated(e =>
             {
-                List<PropertyInfo> props = new();
-
-                props.AddRange(e.Instance!.GetType()
-                    .GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
-                    .Where(prop => Attribute.IsDefined(prop, typeof(HubconInjectAttribute)) || prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
-                    .ToList());
-
-                props.AddRange(e.Instance!.GetType().BaseType!
-                    .GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy)
-                    .Where(prop => prop.IsDefined(typeof(HubconInjectAttribute), false) || prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
-                    .ToList());
+                List<PropertyInfo> props = GetProps(e.Instance!.GetType());
 
                 foreach (PropertyInfo prop in props!)
                 {
                     if (prop.GetValue(e.Instance) != null)
                         continue;
 
-                    if (prop.ReflectedType!.IsAssignableTo(typeof(BaseContractProxy)))
+                    if (prop.ReflectedType!.IsAssignableTo(typeof(BaseProxy)))
                         continue;
 
-                    if (prop.PropertyType.IsAssignableTo(typeof(ISubscription)) && prop.ReflectedType!.IsAssignableTo(typeof(IControllerContract)))
+                    if (IsSub(prop))
                     {
                         var accessor = e.Context.ResolveOptional<IHttpContextAccessor>();
 
                         if (accessor != null)
                         {
-                            var contract = prop.ReflectedType?
-                                .GetInterfaces()?
-                                .ToList()?
-                                .Find(x => x.IsAssignableTo(typeof(IControllerContract)))?.Name;
+                            var contract = GetContractType(prop.ReflectedType).Name;
 
                             var operationRegistry = e.Context.Resolve<IOperationRegistry>();
 
@@ -64,16 +56,16 @@ namespace Hubcon.Server.Core.Extensions
                             var sub = e.Context.Resolve<ILiveSubscriptionRegistry>();
 
                             if (blueprint.RequiresAuthorization)
-                            {
-                                var token = JwtHelper.ExtractTokenFromHeader(accessor.HttpContext);
-                                var userId = JwtHelper.GetUserId(token);
+                            {             
+                                var token = JwtHelper.ExtractTokenFromHeader(accessor.HttpContext) 
+                                                    ?? accessor.HttpContext?.Request.Headers.Authorization.ToString();
 
-                                var descriptor = sub.GetHandler(userId!, contract!, prop.Name);
-                                PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);
+                                var descriptor = sub.GetHandler(token!, contract!, prop.Name);
+                                PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);                     
                             }
                             else
                             {
-                                var descriptor = sub.GetHandler("", contract!, prop.Name);
+                                var descriptor = sub.GetHandler("anonymous", contract!, prop.Name);
                                 PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);
                             }
                         }
@@ -96,11 +88,59 @@ namespace Hubcon.Server.Core.Extensions
                     {
                         var resolved = e.Context.ResolveOptional(prop.PropertyType);
                         PropertyTools.AssignProperty(e.Instance, prop, resolved);
-                    }           
+                    }
                 }
             });
 
             return container;
+        }
+
+        private static bool IsSub(PropertyInfo prop)
+        {
+            return _isSubCache.GetOrAdd(prop, t =>
+            {
+                return prop.PropertyType.IsAssignableTo(typeof(ISubscription))
+                        && prop.ReflectedType!.IsAssignableTo(typeof(IControllerContract));
+            });
+        }
+
+        private static List<PropertyInfo> GetProps(Type type)
+        {
+            return _propertyCache.GetOrAdd(type, t =>
+            {
+                var allProps = new List<PropertyInfo>();
+
+                // Propiedades del propio tipo
+                allProps.AddRange(t
+                    .GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
+                    .Where(prop =>
+                        Attribute.IsDefined(prop, typeof(HubconInjectAttribute)) ||
+                        prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
+                );
+
+                // Propiedades explícitas de la base (si existe)
+                if (t.BaseType != null)
+                {
+                    allProps.AddRange(t.BaseType
+                        .GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy)
+                        .Where(prop =>
+                            Attribute.IsDefined(prop, typeof(HubconInjectAttribute)) ||
+                            prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
+                    );
+                }
+
+                return allProps;
+            });
+        }
+
+        private static Type GetContractType(Type type)
+        {
+            return _contractCache.GetOrAdd(type, t =>
+            {
+                return t.GetInterfaces()?
+                        .ToList()?
+                        .Find(x => x.IsAssignableTo(typeof(IControllerContract)))!;
+            });
         }
 
         public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsScoped<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)

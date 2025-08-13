@@ -9,6 +9,7 @@
         DateTime? AccessTokenExpiresAt { get; }
         bool IsSessionActive { get; }
         string? RefreshToken { get; }
+        string? TokenType { get; }
 
         Task<IHubconResult> LoadSessionAsync();
         Task<IHubconResult> LoginAsync(string username, string password);

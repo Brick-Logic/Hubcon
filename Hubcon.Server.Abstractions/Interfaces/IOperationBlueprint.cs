@@ -1,5 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Enums;
 using Microsoft.AspNetCore.Authorization;
+using System.Collections.Concurrent;
 using System.Reflection;
 
 namespace Hubcon.Server.Abstractions.Interfaces
@@ -22,5 +23,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         Func<object?, object[], object?>? InvokeDelegate { get; }
         IPipelineBuilder PipelineBuilder { get; }
         string Route { get; }
+        ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
+        IEnumerable<Attribute> Attributes { get; }
     }
 }

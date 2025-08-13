@@ -1,246 +1,289 @@
 ﻿using Hubcon.Client;
-using Hubcon.Shared.Core.Websockets.Interfaces;
 using HubconTestClient.Auth;
 using HubconTestClient.Modules;
 using HubconTestDomain;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Reflection;
+using System.Linq;
+using System.Threading.RateLimiting;
 
-namespace HubconTestClient
+internal class Program
 {
-    internal class Program
+    static int finishedRequestsCount = 0;
+    static int errors = 0;
+    static int lastRequests = 0;
+    static int maxReqs = 0;
+    static Stopwatch sw;
+    static ConcurrentBag<double> latencies = new();
+
+    static async Task Main()
     {
-        private const string Url = "http://localhost:5000/clienthub";
+        var process = Process.GetCurrentProcess();
 
-        static async Task Main()
+        long coreMask = 0;
+
+        int? customCores = 0;
+        int cores = customCores ?? Environment.ProcessorCount - 1;
+
+        for (int i = 0; i <= cores; i++)
         {
-            var process = Process.GetCurrentProcess();
+            coreMask |= 1L << i;
+        }
 
-            long coreMask = 0;
-            for (int i = 0; i <= 0; i++)
+        process.ProcessorAffinity = (IntPtr)coreMask;
+        process.PriorityClass = ProcessPriorityClass.RealTime;
+
+        var builder = WebApplication.CreateBuilder();
+
+        builder.Services.AddHubconClient();
+        builder.Services.AddRemoteServerModule<TestModule>(() => new TestModule(new object()));
+        builder.Logging.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
+        builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
+
+        var app = builder.Build();
+        var scope = app.Services.CreateScope();
+
+        var client = scope.ServiceProvider.GetRequiredService<IUserContract>();
+        var authManager = scope.ServiceProvider.GetRequiredService<AuthenticationManager>();
+        var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserContract>>();
+
+
+        logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
+
+        Console.ReadKey();
+
+        logger.LogWarning($"Probando login...");
+        var result = await authManager.LoginAsync("miusuario", "");
+        logger.LogInformation($"Login result: {result.IsSuccess}");
+        logger.LogInformation($"Login OK.");
+
+        await Task.Delay(100);
+
+        logger.LogWarning($"Probando ingest...");
+        IAsyncEnumerable<string> source1 = GetMessages(2);
+        IAsyncEnumerable<string> source2 = GetMessages(2);
+        IAsyncEnumerable<string> source3 = GetMessages(2);
+        IAsyncEnumerable<string> source4 = GetMessages(2);
+        IAsyncEnumerable<string> source5 = GetMessages(2);
+        await client.IngestMessages2(source1, source2, source3, source4, source5);
+        logger.LogInformation($"Ingest OK.");
+
+        await Task.Delay(100);
+
+        logger.LogWarning($"Probando invocación sin parametros...");
+        var text = await client2.TestReturn();
+
+        if (text != null)
+            logger.LogInformation($"Invocación sin parametros OK.");
+        else
+            throw new Exception("Invocación sin parametros fallida.");
+
+        await Task.Delay(100);
+
+        //int eventosRecibidos = 0;
+
+        //logger.LogWarning($"Comenzando prueba de suscripciones...");
+
+        //bool evento1 = false;
+        //async Task handler(int? input)
+        //{
+        //    logger.LogInformation($"Evento recibido: {input}");
+        //    Interlocked.Add(ref eventosRecibidos, 1);
+        //    evento1 = true;
+        //}
+
+        //bool evento2 = false;
+        //async Task handler2(int? input)
+        //{
+        //    logger.LogInformation($"Evento recibido: {input}");
+        //    Interlocked.Add(ref eventosRecibidos, 1);
+        //    evento2 = true;
+        //}
+
+        //bool evento3 = false;
+        //async Task handler3(int? input)
+        //{
+        //    logger.LogInformation($"Evento recibido: {input}");
+        //    Interlocked.Add(ref eventosRecibidos, 1);
+        //    evento3 = true;
+        //}
+
+        //bool evento4 = false;
+        //async Task handler4(int? input)
+        //{
+        //    logger.LogInformation($"Evento recibido: {input}");
+        //    Interlocked.Add(ref eventosRecibidos, 1);
+        //    evento4 = true;
+        //}
+
+        //client.OnUserCreated!.AddHandler(handler);
+        //await client.OnUserCreated.Subscribe();
+        //client.OnUserCreated2!.AddHandler(handler2);
+        //await client.OnUserCreated2.Subscribe();
+        //client.OnUserCreated3!.AddHandler(handler3);
+        //await client.OnUserCreated3.Subscribe();
+        //client.OnUserCreated4!.AddHandler(handler4);
+        //await client.OnUserCreated4.Subscribe();
+
+        //logger.LogInformation("Eventos conectados.");
+
+        //await Task.Delay(100);
+
+        //logger.LogWarning("Enviando request de prueba...");
+        //await client.CreateUser();
+        //logger.LogInformation($"Esperando eventos...");
+
+        //await Task.Delay(100);
+
+        //if (eventosRecibidos == 4)
+        //{
+        //    logger.LogInformation($"Eventos recibidos correctamente.");
+        //}
+        //else
+        //{
+        //    throw new Exception("No se recibieron todos los eventos esperados.");
+        //}
+
+        //await Task.Delay(100);
+
+        logger.LogWarning("Probando invocación con retorno...");
+        var temp = await client.GetTemperatureFromServer();
+        logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
+
+        await Task.Delay(100);
+
+        logger.LogWarning("Probando streaming de 10 mensajes...");
+
+        await foreach (var item in client.GetMessages(10))
+        {
+            logger.LogInformation($"Respuesta recibida: {item}");
+        }
+
+        logger.LogInformation("Streaming OK.");
+
+        await Task.Delay(100);
+
+        sw = Stopwatch.StartNew();
+
+        var worker = new System.Timers.Timer();
+        worker.Interval = 1000;
+        worker.Elapsed += (sender, eventArgs) =>
+        {
+            var avgRequestsPerSec = finishedRequestsCount - lastRequests;
+
+            double avgLatency = 0;
+            double p50 = 0, p95 = 0, p99 = 0;
+
+            var latenciesSnapshot = latencies.ToArray();
+            latencies.Clear();
+
+            if (latenciesSnapshot.Length > 0)
             {
-                coreMask |= 1L << i;
+                Array.Sort(latenciesSnapshot);
+                avgLatency = latenciesSnapshot.Average();
+
+                p50 = Percentile(latenciesSnapshot, 50);
+                p95 = Percentile(latenciesSnapshot, 95);
+                p99 = Percentile(latenciesSnapshot, 99);
             }
 
-            process.ProcessorAffinity = (IntPtr)coreMask;
-            process.PriorityClass = ProcessPriorityClass.RealTime;
+            maxReqs = Math.Max(maxReqs, avgRequestsPerSec);
 
+            logger.LogInformation($"Requests: {finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {maxReqs} | " +
+                                  $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
 
-            var builder = WebApplication.CreateBuilder();
+            var allocated = GC.GetTotalMemory(forceFullCollection: false);
+            logger.LogInformation($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {sw.Elapsed}");
 
-            builder.Services.AddHubconClient();
-            builder.Services.AddRemoteServerModule<TestModule>();
-            builder.Logging.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
-            builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
+            lastRequests = finishedRequestsCount;
+            sw.Restart();
+        };
+        worker.Start();
 
-            var app = builder.Build();
-            var scope = app.Services.CreateScope();
+        var options = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = 256
+        };
 
-            var client = scope.ServiceProvider.GetRequiredService<IUserContract>();
-            var authManager = scope.ServiceProvider.GetRequiredService<AuthenticationManager>();
-            var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserContract>>();
-
-
-            logger.LogInformation("Esperando interacción antes de continuar...");
-
-            Console.ReadKey();
-
-            //Console.WriteLine($"Iniciando ingest...");
-            //IAsyncEnumerable<string> source1 = GetMessages(3);
-            //IAsyncEnumerable<string> source2 = GetMessages(5);
-            //IAsyncEnumerable<string> source3 = GetMessages(5);
-            //IAsyncEnumerable<string> source4 = GetMessages(5);
-            //IAsyncEnumerable<string> source5 = GetMessages(5);
-            //await client.IngestMessages(source1, source2, source3, source4, source5);
-            //Console.WriteLine($"Ingest terminado.");
-
-            //Console.ReadKey();
-
-            var result = await authManager.LoginAsync("miusuario", "");
-            logger.LogInformation($"Login result: {result.IsSuccess}");
-
-            Console.ReadKey();
-
-            var text = await client2.TestReturn();
-
-
-            logger.LogInformation($"TestVoid llamado. Texto recibido: {text}");
-            Console.ReadKey();
-
-            //logger.LogDebug("Conectando evento...");
-
-            int eventosRecibidos = 0;
-
-            async Task handler(int? input)
+        await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
+        {
+            //await foreach(var item in client.GetMessages2())
+            while (!ct.IsCancellationRequested)
             {
-                logger.LogInformation($"Evento recibido: {input}");
-                Interlocked.Add(ref eventosRecibidos, 1);
-            }
-
-            client.OnUserCreated!.AddHandler(handler);
-            await client.OnUserCreated.Subscribe();
-            logger.LogInformation("Evento conectado.");
-
-            Console.ReadKey();
-
-            logger.LogInformation("Enviando request...");
-            await client.CreateUser(new CreateUserCommand());
-            logger.LogInformation($"Request terminado.");
-
-            Console.ReadKey();
-
-            logger.LogInformation("Enviando request GetTemperatureFromServer...");
-            var temp = await client.GetTemperatureFromServer();
-            logger.LogInformation($"Datos recibidos: {temp}");
-
-            Console.ReadKey();
-
-            logger.LogInformation("Enviando request...");
-
-            await foreach (var item in client.GetMessages(10))
-            {
-                logger.LogInformation($"Respuesta recibida: {item}");
-            }
-
-            Console.ReadKey();
-
-            //int finishedRequestsCount = 0;
-            //int errors = 0;
-            //int lastRequests = 0;
-            //int maxReqs = 0;
-            //var sw = new Stopwatch();
-            //var worker = new System.Timers.Timer();
-            //worker.Interval = 1000;
-            //worker.Elapsed += (sender, eventArgs) =>
-            //{
-            //    var avgRequestsPerSec = finishedRequestsCount - lastRequests;
-            //    var nanosecs = (double)sw.ElapsedTicks / Stopwatch.Frequency * 1_000;
-            //    maxReqs = maxReqs < avgRequestsPerSec ? avgRequestsPerSec : maxReqs;
-            //    logger.LogInformation($"Requests: {finishedRequestsCount} | Avg requests/s:{avgRequestsPerSec} | Max req/s: {maxReqs}| Received events: {eventosRecibidos} | Avg request time: {nanosecs / avgRequestsPerSec}");
-            //    lastRequests = finishedRequestsCount;
-            //    sw.Restart();
-            //    ThreadPool.GetAvailableThreads(out var workerThreads, out _);
-            //    logger.LogInformation($"Threads disponibles: {workerThreads}");
-            //};
-            //worker.Start();
-
-            //List<Task> tasks = Enumerable.Range(6, 6).Select(_ => Task.Run(async () =>
-            //{
-            //    while (true)
-            //    {
-            //        await client.CreateUser();
-            //        Interlocked.Add(ref finishedRequestsCount, 1);
-            //    }
-            //})).ToList();
-
-            //tasks.AddRange(Enumerable.Range(5, 5).Select(_ => Task.Run(async () =>
-            //{
-            //    while (true)
-            //    {
-            //        await client.CreateUser().ConfigureAwait(false);
-            //        Interlocked.Add(ref finishedRequestsCount, 1);
-            //    }
-            //})).ToList());
-
-            int finishedRequestsCount = 0;
-            int errors = 0;
-            int lastRequests = 0;
-            int maxReqs = 0;
-            var sw = Stopwatch.StartNew();
-
-            // Thread-safe para almacenar latencias de requests en ms
-            ConcurrentBag<double> latencies = new();
-
-            var worker = new System.Timers.Timer();
-            worker.Interval = 1000;
-            worker.Elapsed += (sender, eventArgs) =>
-            {
-                var avgRequestsPerSec = finishedRequestsCount - lastRequests;
-
-                double avgLatency = 0;
-                double p50 = 0, p95 = 0, p99 = 0;
-
-                var latenciesSnapshot = latencies.ToArray();
-                latencies.Clear();
-
-                if (latenciesSnapshot.Length > 0)
+                var swReq = Stopwatch.StartNew();
+                try
                 {
-                    Array.Sort(latenciesSnapshot);
-                    avgLatency = latenciesSnapshot.Average();
-
-                    p50 = Percentile(latenciesSnapshot, 50);
-                    p95 = Percentile(latenciesSnapshot, 95);
-                    p99 = Percentile(latenciesSnapshot, 99);
+                    //await client.IngestMessages(GetMessages2(), default);
+                    await client.GetTemperatureFromServer(ct);
+                    Interlocked.Increment(ref finishedRequestsCount);
                 }
-
-                maxReqs = Math.Max(maxReqs, avgRequestsPerSec);
-
-                logger.LogInformation($"Requests: {finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {maxReqs} | " +
-                                      $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
-
-                lastRequests = finishedRequestsCount;
-                sw.Restart();
-
-                ThreadPool.GetAvailableThreads(out var workerThreads, out _);
-                logger.LogInformation($"Threads disponibles: {workerThreads}");
-            };
-            worker.Start();
-
-            List<Task> tasks = Enumerable.Range(0, 6).Select(a => Task.Run(async () =>
-            {
-                while (true)
+                catch
                 {
-                    var swReq = Stopwatch.StartNew();
-                    try
-                    {
-                        await client.CreateUser(new CreateUserCommand());
-                        Interlocked.Increment(ref finishedRequestsCount);
-                    }
-                    catch
-                    {
-                        Interlocked.Increment(ref errors);
-                    }
-                    finally
-                    {
-                        swReq.Stop();
-                        latencies.Add(swReq.Elapsed.TotalMilliseconds);
-                    }
+                    Interlocked.Increment(ref errors);
                 }
-            })).ToList();
+                finally
+                {
+                    swReq.Stop();
+                    latencies.Add(swReq.Elapsed.TotalMilliseconds);
+                }
+            }
+        });
+    }
 
-            await Task.WhenAll(tasks);
-        }
-
-        static async IAsyncEnumerable<string> GetMessages(int count)
+    static async IAsyncEnumerable<string> GetMessages(int count)
+    {
+        for (int i = 0; i < count; i++)
         {
-            for(int i = 0; i < count; i++)
+            var message = $"string:{i}";
+            Console.WriteLine($"Enviando mensaje... [{message}]");
+            yield return message;
+            await Task.Delay(1000);
+        }
+    }
+
+    static async IAsyncEnumerable<string> GetMessages2()
+    {
+        //var limiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions()
+        //{
+        //    TokenLimit = 500000,
+        //    TokensPerPeriod = 500000,
+        //    ReplenishmentPeriod = TimeSpan.FromMilliseconds(100),
+        //    AutoReplenishment = true,
+        //    QueueLimit = 1000,
+        //    QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        //});
+
+        while(true)
+        {
+            var swReq = Stopwatch.StartNew();
+            try
             {
-                var message = $"string:{i}";
-                Console.WriteLine($"Enviando mensaje... [{message}]");
-                yield return message;
-                await Task.Delay(1000);
+                yield return "hola";
+                Interlocked.Increment(ref finishedRequestsCount);
+                //await limiter.AcquireAsync();
+            }
+            finally
+            {
+                swReq.Stop();
+                latencies.Add(swReq.Elapsed.TotalMilliseconds);
             }
         }
+    }
 
-        // Método auxiliar para calcular percentiles
-        static double Percentile(double[] sortedData, double percentile)
-        {
-            if (sortedData == null || sortedData.Length == 0)
-                return 0;
+    // Método auxiliar para calcular percentiles
+    static double Percentile(double[] sortedData, double percentile)
+    {
+        if (sortedData == null || sortedData.Length == 0)
+            return 0;
 
-            double position = (percentile / 100.0) * (sortedData.Length + 1);
-            int index = (int)position;
+        double position = (percentile / 100.0) * (sortedData.Length + 1);
+        int index = (int)position;
 
-            if (index < 1) return sortedData[0];
-            if (index >= sortedData.Length) return sortedData[^1];
+        if (index < 1) return sortedData[0];
+        if (index >= sortedData.Length) return sortedData[^1];
 
-            double fraction = position - index;
-            return sortedData[index - 1] + fraction * (sortedData[index] - sortedData[index - 1]);
-        }
+        double fraction = position - index;
+        return sortedData[index - 1] + fraction * (sortedData[index] - sortedData[index - 1]);
     }
 }

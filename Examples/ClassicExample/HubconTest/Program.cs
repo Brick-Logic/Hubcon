@@ -1,4 +1,5 @@
 using Hubcon.Server.Injection;
+using Hubcon.Shared.Core.Tools;
 using HubconTest.ContractHandlers;
 using HubconTest.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -6,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Diagnostics;
 using System.Text;
+using System.Threading.RateLimiting;
 
 namespace HubconTest
 {
@@ -18,7 +20,11 @@ namespace HubconTest
             var process = Process.GetCurrentProcess();
 
             long coreMask = 0;
-            for (int i = 1; i <= Environment.ProcessorCount-1; i++)
+
+            int? customCores = null;
+            int cores = customCores ?? Environment.ProcessorCount - 1;
+
+            for (int i = 0; i <= cores; i++)
             {
                 coreMask |= 1L << i;
             }
@@ -26,14 +32,25 @@ namespace HubconTest
             process.ProcessorAffinity = (IntPtr)coreMask;
             process.PriorityClass = ProcessPriorityClass.RealTime;
 
-            worker = new System.Timers.Timer();
-            worker.Interval = 1000;
-            worker.Elapsed += (sender, eventArgs) =>
+            //worker = new System.Timers.Timer();
+            //worker.Interval = 1000;
+            //worker.Elapsed += (sender, eventArgs) =>
+            //{
+            //    ThreadPool.GetAvailableThreads(out var workerThreads, out _);
+            //    logger.LogInformation("Threads disponibles: " + workerThreads);
+            //};
+            //worker.Start();
+
+            var heap = Task.Run(async () =>
             {
-                ThreadPool.GetAvailableThreads(out var workerThreads, out _);
-                logger.LogInformation("Threads disponibles: " + workerThreads);
-            };
-            worker.Start();
+                var sw = Stopwatch.StartNew();
+                while (true)
+                {
+                    var allocated = GC.GetTotalMemory(forceFullCollection: false);
+                    Console.WriteLine($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {sw.Elapsed}");
+                    await Task.Delay(1000);
+                }
+            });
         }
     }
 
@@ -58,35 +75,89 @@ namespace HubconTest
 
             builder.Services.AddOpenApi();
 
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = "clave",
+                ValidAudience = "clave",
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
+            };
+
+            builder.Services.AddSingleton(tokenValidationParameters);
+
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+               .AddJwtBearer(options =>
+               {
+                   options.TokenValidationParameters = tokenValidationParameters;
+               });
+
             builder.AddHubconServer();
             builder.ConfigureHubconServer(serverOptions =>
             {
                 serverOptions.ConfigureCore(config => 
                 {
                     config
+                    .UseWebsocketTokenHandler((token, serviceProvider) =>
+                    {
+                        return JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
+                    })
+                    .SetHttpTimeout(TimeSpan.FromSeconds(15))
+                    .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
+                    .SetMaxHttpMessageSize(4 * 1024)
+                    .SetMaxWebSocketMessageSize(4 * 1024)
+                    .ConfigureWebsocketRateLimiter(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 100,
+                        TokensPerPeriod = 10,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+                    .ConfigureWebsocketPingRateLimiter(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 10,
+                        TokensPerPeriod = 1,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+                    .LimitWebsocketIngest(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 100,
+                        TokensPerPeriod = 10,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+                    .LimitWebsocketStreaming(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 100,
+                        TokensPerPeriod = 10,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+                    .LimitWebsocketSubscription(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 100,
+                        TokensPerPeriod = 10,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+                    .LimitWebsocketRoundTrip(() => new TokenBucketRateLimiterOptions()
+                    {
+                        TokenLimit = 100,
+                        TokensPerPeriod = 10,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                    })
+
+                    .DisableAllRateLimiters()
                     .EnableRequestDetailedErrors();
-                    //.SetHttpPathPrefix("prefix1")
-                    //.SetWebSocketPathPrefix("wsprefix");                   
                 });
 
                 serverOptions.AddController<UserContractHandler>();
                 serverOptions.AddController<SecondTestController>();
-            });
-
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-                {
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        ValidIssuer = "clave",
-                        ValidAudience = "clave",
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
-                    };
-                });
+            });     
 
             builder.Services.AddAuthorization();
 

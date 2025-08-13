@@ -1,4 +1,5 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Client.Core.Proxies;
 using Hubcon.Client.Core.Registries;
 using Hubcon.Client.Core.Subscriptions;
 using Hubcon.Client.Integration.Client;
@@ -9,10 +10,12 @@ using Hubcon.Shared.Core.Attributes;
 using Hubcon.Shared.Core.Injection;
 using Hubcon.Shared.Core.Serialization;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
 
 namespace Hubcon.Client.Builder
 {
-    public class HubconClientBuilder
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public sealed class HubconClientBuilder
     {
         private ProxyRegistry Proxies { get; }
         private ClientBuilderRegistry ClientBuilders { get; }
@@ -21,17 +24,6 @@ namespace Hubcon.Client.Builder
         {
             Proxies = new();
             ClientBuilders = new ClientBuilderRegistry(Proxies);
-
-            //var worker2 = new System.Timers.Timer();
-            //worker2.Interval = 10000;
-            //worker2.Elapsed += (sender, eventArgs) =>
-            //{
-            //    GC.Collect();
-            //    GC.WaitForPendingFinalizers();
-            //    GC.Collect();
-            //};
-            //worker2.AutoReset = true;
-            //worker2.Start();
         }
 
         private static HubconClientBuilder _current = null!;
@@ -55,17 +47,16 @@ namespace Hubcon.Client.Builder
             services.AddSingleton<IClientBuilderRegistry>(ClientBuilders);
             services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
             services.AddSingleton<IDynamicConverter, DynamicConverter>();
-            services.AddSingleton<IClientProxyInterceptor, ClientProxyInterceptor>();
-            services.AddSingleton<IHubconClient, HubconClient>();
+            services.AddTransient<IHubconClient, HubconClient>();
             services.AddTransient(typeof(ClientSubscriptionHandler<>));
 
             return services;
         }
 
-        public IServiceCollection AddRemoteServerModule<TRemoteServerModule>(IServiceCollection services)
-             where TRemoteServerModule : IRemoteServerModule, new()
+        public IServiceCollection AddRemoteServerModule<TRemoteServerModule>(IServiceCollection services, Func<TRemoteServerModule>? remoteServerFactory = null)
+             where TRemoteServerModule : class, IRemoteServerModule
         {
-            ClientBuilders.RegisterModule<TRemoteServerModule>(services);
+            ClientBuilders.RegisterModule<TRemoteServerModule>(services, remoteServerFactory);
 
             return services;
         }
@@ -77,8 +68,11 @@ namespace Hubcon.Client.Builder
 
             var proxy = GetProxyType(contractType);
 
+            if( proxy == null)
+                throw new InvalidOperationException($"No proxy found for contract type {contractType.FullName}. Ensure the proxy is defined and follows the naming convention.");
+            
             Proxies.RegisterProxy(contractType, proxy);
-            services.AddTransient(proxy);
+            services.AddSingleton(proxy);
         }
 
         private static Type? GetProxyType(Type interfaceType)

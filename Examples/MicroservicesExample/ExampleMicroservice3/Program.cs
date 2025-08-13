@@ -4,6 +4,7 @@ using ExampleMicroservicesDomain.Middlewares;
 using Hubcon.Server.Injection;
 using Hubcon.Client;
 using ExampleMicroservicesDomain;
+using Scalar.AspNetCore;
 
 namespace ExampleMicroservice3
 {
@@ -12,6 +13,8 @@ namespace ExampleMicroservice3
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            builder.Services.AddOpenApi();
 
             builder.Services.AddHubconClient();
             builder.Services.AddRemoteServerModule<Microservice1ServerModule>();
@@ -24,13 +27,17 @@ namespace ExampleMicroservice3
                 controllerOptions.AddController<ExampleMicroservice3ContractHandler>(controllerMiddlewares =>
                 {
                     controllerMiddlewares.UseGlobalMiddlewaresFirst(true);
-                    //controllerMiddlewares.AddMiddleware<LocalLoggingMiddleware>();
                 });
             });
 
             builder.Services.AddLogging();
 
             var app = builder.Build();
+
+            app.MapOpenApi();
+            app.MapScalarApiReference();
+
+            app.MapHubconControllers();
 
             var initialScope = app.Services.CreateScope();
             var microservice1 = initialScope.ServiceProvider.GetRequiredService<IExampleMicroservice1Contract>();
@@ -39,10 +46,8 @@ namespace ExampleMicroservice3
             logger.LogInformation("Waiting to start...");
             Console.ReadKey();
 
-            microservice1.ProcessMessage("My custom message");
+            Task.Run(async () => await microservice1.ProcessMessage("My custom message"));
 
-            app.MapHubconControllers();
-            app.UseHubconWebsockets();
 
             app.Run();
         }

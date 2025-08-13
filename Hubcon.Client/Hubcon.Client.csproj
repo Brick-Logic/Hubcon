@@ -20,7 +20,7 @@
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryBranch>main</RepositoryBranch>
-		<Version>1.0.0-beta4</Version>
+		<Version>1.0.0-beta5</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 	</PropertyGroup>
@@ -32,23 +32,20 @@
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta*" />
 	</ItemGroup>
 
 	<!-- Nuget -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-beta*" />
-		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-beta*" />
-		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-beta*" />
-		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-beta*" />
-		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-beta*" />
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-beta*" PrivateAssets="True" />
+		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-beta*" PrivateAssets="True"/>
+		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-beta*" PrivateAssets="True" />
+		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-beta*" PrivateAssets="True" />
+		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-beta*" PrivateAssets="True" />
 	</ItemGroup>
 
-	<!-- Usar nuspec customizado -->
-	<!--<PropertyGroup>
-		<NuspecFile>Hubcon.Client.nuspec</NuspecFile>
-	</PropertyGroup>-->
+	<ItemGroup>
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta10" />		
+	</ItemGroup>
 
 	<ItemGroup>
 		<None Update="README.md">

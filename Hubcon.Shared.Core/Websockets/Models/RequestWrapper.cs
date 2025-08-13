@@ -8,15 +8,15 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Models
 {
-    public class RequestData : IRequest
+    internal sealed class RequestData : IRequest
     {
-        public string Id { get; }
+        public Guid Id { get; }
 
         public RequestType Type { get; }
 
         public JsonElement Request { get; }
 
-        public RequestData(string id, JsonElement request, RequestType type)
+        public RequestData(Guid id, JsonElement request, RequestType type)
         {
             Id = id;
             Request = request;

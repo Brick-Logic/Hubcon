@@ -4,9 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Server.Core.CustomAttributes
+namespace Hubcon.Shared.Abstractions.Enums
 {
-    internal class UseSSEAttribute : Attribute
+    public enum TransportType
     {
+        Default,
+        Http,
+        Websockets
     }
 }

@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Hubcon.Server.Core.Subscriptions
 {
-    public class SubscriptionDescriptor : ISubscriptionDescriptor
+    internal sealed class SubscriptionDescriptor : ISubscriptionDescriptor
     {
         public PropertyInfo SourceProperty { get; }
         public ISubscription Subscription { get; }
