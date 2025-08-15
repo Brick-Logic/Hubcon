@@ -399,7 +399,8 @@ FodyWeavers.xsd
 *.dmp
 *.nettrace
 *.save
-
+/.idea/.idea.Hubcon/.idea
+/.idea/
 # Default ignored files
 */shelf/
 */workspace.xml
