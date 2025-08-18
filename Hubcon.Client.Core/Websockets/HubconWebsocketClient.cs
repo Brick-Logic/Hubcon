@@ -27,7 +27,6 @@ using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
 
@@ -38,12 +37,13 @@ namespace Hubcon.Client.Core.Websockets
         private readonly Uri _uri;
         private readonly IDynamicConverter converter;
         private readonly IClientOptions options;
+        private readonly IServiceProvider serviceProvider;
         private readonly ILogger<HubconWebSocketClient>? logger;
         private ClientWebSocket? _webSocket;
 
         public bool LoggingEnabled { get; set; } = true;
 
-        public Action<ClientWebSocketOptions>? WebSocketOptions { get; set; }
+        public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; set; }
         public Func<string?>? AuthorizationTokenProvider { get; set; }
 
         private readonly ConcurrentDictionary<Guid, BaseObservable> _subscriptions = new();
@@ -85,13 +85,14 @@ namespace Hubcon.Client.Core.Websockets
         private readonly Channel<TrimmedMemoryOwner> _messageChannel;
         private readonly Channel<byte[]> _sendChannel;
 
-        public HubconWebSocketClient(Uri uri, IDynamicConverter converter, IClientOptions options, ILogger<HubconWebSocketClient>? logger = null)
+        public HubconWebSocketClient(Uri uri, IDynamicConverter converter, IClientOptions options, IServiceProvider serviceProvider, ILogger<HubconWebSocketClient>? logger = null)
         {
             _pongStream = new GenericObservable<PongMessage>(converter);
             _errorStream = new GenericObservable<Exception>(converter);
             _uri = uri;
             this.converter = converter;
             this.options = options;
+            this.serviceProvider = serviceProvider;
             this.logger = logger;
 
             _messageChannel = Channel.CreateBounded<TrimmedMemoryOwner>(new BoundedChannelOptions(20000 * options.MessageProcessorsCount)
@@ -621,7 +622,7 @@ namespace Hubcon.Client.Core.Websockets
                         if (LoggingEnabled)
                             logger?.LogInformation("Intentando conectar...");
 
-                        WebSocketOptions?.Invoke(_webSocket.Options);
+                        WebSocketOptions?.Invoke(_webSocket.Options, serviceProvider);
 
                         var uriBuilder = new UriBuilder(_uri);
 
@@ -668,20 +669,16 @@ namespace Hubcon.Client.Core.Websockets
                         if (options.AutoReconnect)
                         {
                             _timeoutTask ??= ReconnectLoop();
-                            //await _timeoutTask;
                         }
 
                         _processingTask ??= Parallel.ForEachAsync(Enumerable.Range(0, options.MessageProcessorsCount), async (x, y) =>
                         {
                             await HandleIncomingMessage();
                         });
-                        //await _processingTask;
 
                         _pingTask = PingMessageLoop(_pingLoopCts.Token);
-                        //await _pingTask;
 
                         _receiveTask = ReceiveLoopAsync(_receiveLoopCts.Token);
-                        //await _receiveTask;
 
                         if (options.WebsocketRequiresPong)
                         {

@@ -35,13 +35,15 @@ namespace Hubcon.Client.Integration.Client
                     return _httpClient;
 
                 _httpClient ??= clientFactory.CreateClient();
-                clientOptions?.HttpClientOptions?.Invoke(_httpClient);
+                clientOptions?.HttpClientOptions?.Invoke(_httpClient, ServiceProvider);
 
                 return _httpClient;
             }
         }
 
-        private IClientOptions clientOptions { get; set; }
+        private IServiceProvider ServiceProvider { get; set; } = null!;
+
+        private IClientOptions clientOptions { get; set; } = null!;
 
         private bool IsBuilt { get; set; }
 
@@ -346,7 +348,7 @@ namespace Hubcon.Client.Integration.Client
 
         public void Build(
             IClientOptions options,
-            IServiceProvider services,
+            IServiceProvider serviceProvider,
             IDictionary<Type, IContractOptions> contractOptions,
             bool useSecureConnection = true)
         {
@@ -368,15 +370,17 @@ namespace Hubcon.Client.Integration.Client
             if (authenticationManagerType is not null)
             {
                 var lazyAuthType = typeof(Lazy<>).MakeGenericType(authenticationManagerType);
-                authenticationManagerFactory = () => (IAuthenticationManager)((dynamic)services.GetRequiredService(lazyAuthType)).Value;
+                authenticationManagerFactory = () => (IAuthenticationManager)((dynamic)serviceProvider.GetRequiredService(lazyAuthType)).Value;
             }
 
 
-            client = new HubconWebSocketClient(new Uri(_websocketUrl), converter, options, services.GetRequiredService<ILogger<HubconWebSocketClient>>());
+            client = new HubconWebSocketClient(new Uri(_websocketUrl), converter, options, serviceProvider, serviceProvider.GetService<ILogger<HubconWebSocketClient>>());
 
             client.AuthorizationTokenProvider = () => authenticationManagerFactory?.Invoke()?.AccessToken;
 
             client.WebSocketOptions = options.WebSocketOptions;
+
+            this.ServiceProvider = serviceProvider;
 
             clientOptions = options;
 

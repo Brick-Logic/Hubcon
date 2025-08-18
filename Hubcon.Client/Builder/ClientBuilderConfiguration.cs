@@ -44,13 +44,13 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
-        public IServerModuleConfiguration ConfigureWebsocketClient(Action<ClientWebSocketOptions> options)
+        public IServerModuleConfiguration ConfigureWebsocketClient(Action<ClientWebSocketOptions, IServiceProvider> options)
         {
             builder.WebSocketOptions ??= options;
             return this;
         }
 
-        public IServerModuleConfiguration ConfigureHttpClient(Action<HttpClient> configure)
+        public IServerModuleConfiguration ConfigureHttpClient(Action<HttpClient, IServiceProvider> configure)
         {
             builder.HttpClientOptions ??= configure;
             return this;

@@ -23,8 +23,8 @@ namespace Hubcon.Client.Builder
         public Type? AuthenticationManagerType { get; set; }
         public string? HttpPrefix { get; set; }
         public string? WebsocketPrefix { get; set; }
-        public Action<ClientWebSocketOptions>? WebSocketOptions { get; set; }
-        public Action<HttpClient>? HttpClientOptions { get; set; }
+        public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; set; }
+        public Action<HttpClient, IServiceProvider>? HttpClientOptions { get; set; }
         public bool UseSecureConnection { get; set; } = true;
         public TimeSpan WebsocketPingInterval { get; set; } = TimeSpan.FromSeconds(5);
         public bool WebsocketRequiresPong { get; set; } = true;

@@ -46,7 +46,7 @@ namespace HubconTestClient.Modules
 
             configuration.Implements<ISecondTestContract>();
 
-            configuration.ConfigureWebsocketClient(x =>
+            configuration.ConfigureWebsocketClient((x, services) =>
             {
                 x.SetBuffer(4 * 1024, 4 * 1024);
             });
@@ -56,7 +56,7 @@ namespace HubconTestClient.Modules
 
             configuration.RequirePongResponse(true);
 
-            configuration.ConfigureHttpClient(x =>
+            configuration.ConfigureHttpClient((x, services) =>
             {
                 x.Timeout = TimeSpan.FromSeconds(15);
                 x.DefaultRequestHeaders.Add("User-Agent", "HubconTestClient");

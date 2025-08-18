@@ -15,8 +15,8 @@ namespace Hubcon.Client.Abstractions.Interfaces
         public Type? AuthenticationManagerType { get; }
         public string? HttpPrefix { get; }
         public string? WebsocketPrefix { get; }
-        public Action<ClientWebSocketOptions>? WebSocketOptions { get; }
-        public Action<HttpClient>? HttpClientOptions { get; }
+        public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; }
+        public Action<HttpClient, IServiceProvider>? HttpClientOptions { get; }
         public bool UseSecureConnection { get; }
         TimeSpan WebsocketPingInterval { get; }
         bool WebsocketRequiresPong { get; }

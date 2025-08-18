@@ -55,14 +55,14 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// </summary>
         /// <param name="options">An action to configure <see cref="ClientWebSocketOptions"/>.</param>
         /// <returns>The current server module configuration instance.</returns>
-        IServerModuleConfiguration ConfigureWebsocketClient(Action<ClientWebSocketOptions> options);
+        IServerModuleConfiguration ConfigureWebsocketClient(Action<ClientWebSocketOptions, IServiceProvider> options);
 
         /// <summary>
         /// Configures the HTTP client options.
         /// </summary>
         /// <param name="options">An action to configure <see cref="HttpClient"/>.</param>
         /// <returns>The current server module configuration instance.</returns>
-        IServerModuleConfiguration ConfigureHttpClient(Action<HttpClient> options);
+        IServerModuleConfiguration ConfigureHttpClient(Action<HttpClient, IServiceProvider> options);
 
         /// <summary>
         /// Sets the interval for sending WebSocket ping messages.
@@ -72,7 +72,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         IServerModuleConfiguration SetWebsocketPingInterval(TimeSpan timeSpan);
 
         /// <summary>
-        /// Specifies whether a pong response is required for WebSocket pings.
+        /// Specifies whether a pong response is required for WebSocket pings. True by default.
         /// </summary>
         /// <param name="value">True to require pong response; otherwise, false.</param>
         /// <returns>The current server module configuration instance.</returns>
@@ -89,28 +89,29 @@ namespace Hubcon.Client.Abstractions.Interfaces
         IServerModuleConfiguration ScaleMessageProcessors(int count);
 
         /// <summary>
-        /// Enables or disables automatic websocket reconnection for the server module.
+        /// Enables or disables automatic websocket reconnection for the server module. Note that any operation that makes use of Websockets will trigger a reconnection.
         /// </summary>
         /// <param name="value">True to enable auto reconnect; otherwise, false. Default is true.</param>
         /// <returns>The current server module configuration instance.</returns>
         IServerModuleConfiguration EnableWebsocketAutoReconnect(bool value = true);
 
         /// <summary>
-        /// Enables or disables automatic reconnection for stream connections.
+        /// Enables or disables automatic reconnection for stream connections. Note: This feature is not implemented.
         /// </summary>
         /// <param name="value">True to enable reconnecting streams; otherwise, false. Default is true.</param>
         /// <returns>The current server module configuration instance.</returns>
         IServerModuleConfiguration ResubcribeStreamingOnReconnect(bool value = true);
 
         /// <summary>
-        /// Enables or disables automatic reconnection for subscriptions.
+        /// Enables or disables automatic reconnection for subscriptions. Note: This feature is not implemented, 
+        /// but subscriptions based on ISubscription<T> will automatically be reconnected via request resend, 1 per subscription.
         /// </summary>
         /// <param name="value">True to enable reconnecting subscriptions; otherwise, false. Default is true.</param>
         /// <returns>The current server module configuration instance.</returns>
         IServerModuleConfiguration ResubscribeOnReconnect(bool value = true);
 
         /// <summary>
-        /// Enables or disables automatic reconnection for ingest connections.
+        /// Enables or disables automatic reconnection for ingest connections. Note: This feature is not implemented.
         /// </summary>
         /// <param name="value">True to enable reconnecting ingests; otherwise, false. Default is true.</param>
         /// <returns>The current server module configuration instance.</returns>
@@ -216,6 +217,5 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// If <paramref name="options"/> is null, the rate limiter will be disabled.
         /// </summary>
         IServerModuleConfiguration LimitHttpFireAndForget(TokenBucketRateLimiterOptions? options);
-
     }
 }

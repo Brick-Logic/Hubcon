@@ -14,8 +14,8 @@ namespace Hubcon.Client.Abstractions.Interfaces
         string? HttpPrefix { get; set; }
         bool UseSecureConnection { get; set; }
         string? WebsocketPrefix { get; set; }
-        Action<ClientWebSocketOptions>? WebSocketOptions { get; set; }
-        Action<HttpClient>? HttpClientOptions { get; set; }
+        Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; set; }
+        Action<HttpClient, IServiceProvider>? HttpClientOptions { get; set; }
         TimeSpan WebsocketPingInterval { get; set; }
         bool WebsocketRequiresPong { get; set; }
         int MessageProcessorsCount { get; set; }
