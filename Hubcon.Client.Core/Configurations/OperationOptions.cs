@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading.RateLimiting;
+using Hubcon.Shared.Abstractions.Models;
+using System.Collections.Concurrent;
 
 namespace Hubcon.Client.Core.Configurations
 {
@@ -25,6 +27,9 @@ namespace Hubcon.Client.Core.Configurations
         public TokenBucketRateLimiterOptions? RateBucketOptions { get; private set; }
         public bool RateLimiterIsShared { get; private set; }
         public int RequestsPerSecond { get; private set; }
+
+        ConcurrentDictionary<HookType, Func<HookContext, Task>> _hooks = new();
+        public IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks => _hooks;
 
         private RateLimiter? _rateBucket;
         public RateLimiter? RateBucket => _rateBucket ??= RateBucketOptions != null ? new TokenBucketRateLimiter(RateBucketOptions) : null;
@@ -52,6 +57,32 @@ namespace Hubcon.Client.Core.Configurations
         {
             TransportType = transportType;
             return this;
+        }
+
+        public IOperationConfigurator AddHook(HookType hookType, Func<HookContext, Task> hookDelegate)
+        {
+            _hooks.TryAdd(hookType, hookDelegate);
+            return this;
+        }
+
+        public Task CallHook(HookContext context)
+        {
+            if (_hooks.TryGetValue(context.Type, out var hookDelegate))
+            {
+                return hookDelegate(context);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task CallHook(HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null)
+        {
+            if (_hooks.TryGetValue(type, out var hookDelegate))
+            {
+                return hookDelegate(new HookContext(type, services, request, cancellationToken, result, exception));
+            }
+
+            return Task.CompletedTask;
         }
     }
 }

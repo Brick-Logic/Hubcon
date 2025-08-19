@@ -1,8 +1,10 @@
 ﻿using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Websockets.Interfaces;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -22,10 +24,32 @@ namespace Hubcon.Client.Core.Configurations
         private bool? websocketMethodsEnabled;
         public bool WebsocketMethodsEnabled => websocketMethodsEnabled ?? false;
 
+        ConcurrentDictionary<HookType, Func<HookContext, Task>> _hooks = new();
+        public IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks => _hooks;
+
         public IContractConfigurator<T> UseWebsocketMethods(bool value = true)
         {
             websocketMethodsEnabled ??= value;
             return this;
+        }
+
+        public Task CallHook(HookType hookType, HookContext context)
+        {
+            if (_hooks.TryGetValue(hookType, out var hookDelegate))
+            {
+                return hookDelegate(context);
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task CallHook(HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null)
+        {
+            if (_hooks.TryGetValue(type, out var hookDelegate))
+            {
+                return hookDelegate(new HookContext(type, services, request, cancellationToken, result, exception));
+            }
+
+            return Task.CompletedTask;
         }
 
         public IOperationOptions? GetOperationOptions(string operationName)
@@ -58,6 +82,12 @@ namespace Hubcon.Client.Core.Configurations
         {
             var options = new GlobalOperationConfigurator<T>(OperationOptions);
             configure?.Invoke(options);
+            return this;
+        }
+
+        public IContractConfigurator<T> AddHook(HookType hookType, Func<HookContext, Task> hookDelegate)
+        {
+            _hooks.TryAdd(hookType, hookDelegate);
             return this;
         }
     }

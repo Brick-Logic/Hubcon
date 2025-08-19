@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading.RateLimiting;
+using Hubcon.Shared.Abstractions.Models;
 
 namespace Hubcon.Shared.Abstractions.Interfaces
 {
@@ -18,5 +19,14 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         int RequestsPerSecond { get; }
         bool RateLimiterIsShared { get; }
         RateLimiter? RateBucket { get; }
+        IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks { get; }
+        Task CallHook(HookContext context);
+        Task CallHook(
+            HookType Type,
+            IServiceProvider Services,
+            IOperationRequest Request,
+            CancellationToken cancellationToken,
+            object? Result = null,
+            Exception? Exception = null);
     }
 }

@@ -14,7 +14,7 @@ namespace HubconTestClient.Modules
 
             configuration.EnableWebsocketAutoReconnect(true);
 
-            configuration.GlobalLimit(20000);
+            configuration.GlobalLimit(2000000);
 
             //configuration.LimitIngest(100);
             //configuration.LimitSubscription(100);
@@ -26,15 +26,25 @@ namespace HubconTestClient.Modules
 
             //configuration.DisableAllLimiters();
 
-            configuration.Implements<IUserContract>(x =>
+            configuration.Implements<IUserContract>(contractConfigurator =>
             {
-                x.UseWebsocketMethods();
+                contractConfigurator.UseWebsocketMethods();
 
-                x.ConfigureOperations(operationSelector =>
+                contractConfigurator
+                    .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                    .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
+                    .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
+                    .AddHook(HookType.OnError, async ctx => { /*some error handling*/ });
+
+                contractConfigurator.ConfigureOperations(operationSelector =>
                 {
                     operationSelector
                         .Configure(contract => contract.GetTemperatureFromServer)
                         .UseTransport(TransportType.Websockets)
+                        .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                        .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
+                        .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
+                        .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
                         .LimitPerSecond(1000000);
 
                     operationSelector

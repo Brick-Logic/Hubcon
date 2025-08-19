@@ -1,4 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Enums;
+using Hubcon.Shared.Abstractions.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IOperationConfigurator
     {
+        IOperationConfigurator AddHook(HookType onSend, Func<HookContext, Task> hookDelegate);
         IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true);
         IOperationConfigurator UseTransport(TransportType transportType);
     }
