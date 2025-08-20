@@ -11,6 +11,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
     public interface IOperationConfigurator
     {
         IOperationConfigurator AddHook(HookType onSend, Func<HookContext, Task> hookDelegate);
+        IOperationConfigurator AddValidationHook(Func<RequestValidationContext, Task> value);
         IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true);
         IOperationConfigurator UseTransport(TransportType transportType);
     }

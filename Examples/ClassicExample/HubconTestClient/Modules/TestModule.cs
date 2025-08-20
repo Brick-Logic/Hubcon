@@ -1,8 +1,11 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Builder;
 using Hubcon.Shared.Abstractions.Enums;
+using Hubcon.Shared.Abstractions.Models;
 using HubconTestClient.Auth;
 using HubconTestDomain;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 
 namespace HubconTestClient.Modules
 {
@@ -45,6 +48,10 @@ namespace HubconTestClient.Modules
                         .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
                         .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
                         .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
+                        .AddValidationHook(async ctx => 
+                        { 
+                            if (ctx.CancellationToken == CancellationToken.None) { int i = 0; }                             
+                        })
                         .LimitPerSecond(1000000);
 
                     operationSelector

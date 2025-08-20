@@ -1,14 +1,15 @@
-﻿using Hubcon.Shared.Abstractions.Enums;
+﻿using Hubcon.Client.Core.Authentication;
+using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
 using System.Threading.RateLimiting;
-using Hubcon.Shared.Abstractions.Models;
-using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Configurations
 {
@@ -33,6 +34,8 @@ namespace Hubcon.Client.Core.Configurations
 
         private RateLimiter? _rateBucket;
         public RateLimiter? RateBucket => _rateBucket ??= RateBucketOptions != null ? new TokenBucketRateLimiter(RateBucketOptions) : null;
+        
+        private Func<RequestValidationContext, Task>? _validationHook;
 
         public IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true)
         {
@@ -80,6 +83,22 @@ namespace Hubcon.Client.Core.Configurations
             if (_hooks.TryGetValue(type, out var hookDelegate))
             {
                 return hookDelegate(new HookContext(type, services, request, cancellationToken, result, exception));
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public IOperationConfigurator AddValidationHook(Func<RequestValidationContext, Task> value)
+        {
+            _validationHook ??= value;
+            return this;
+        }
+
+        public Task CallValidationHook(IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken)
+        {
+            if (_validationHook != null)
+            {
+                return _validationHook(new RequestValidationContext(services, request, cancellationToken));
             }
 
             return Task.CompletedTask;

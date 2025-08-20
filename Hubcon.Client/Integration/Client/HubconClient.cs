@@ -10,6 +10,7 @@ using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
 using System.Reactive.Linq;
 using System.Reflection;
@@ -59,15 +60,18 @@ namespace Hubcon.Client.Integration.Client
             IOperationOptions? operationOptions = null;
             ContractOptionsDict!.TryGetValue(methodInfo.ReflectedType!, out IContractOptions? contractOptions);
 
+            bool isWebsocketMethod = false;
+
+            if (contractOptions != null)
+            {
+                isWebsocketMethod = contractOptions.IsWebsocketOperation(request.OperationName);
+                operationOptions = contractOptions.GetOperationOptions(request.OperationName);
+            }
+
+            await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
+
             try
             {
-                bool isWebsocketMethod = false;
-
-                if (contractOptions != null)
-                {
-                    isWebsocketMethod = contractOptions.IsWebsocketOperation(request.OperationName);
-                    operationOptions = contractOptions.GetOperationOptions(request.OperationName);
-                }
 
                 if (isWebsocketMethod)
                 {
@@ -162,16 +166,18 @@ namespace Hubcon.Client.Integration.Client
             IOperationOptions? operationOptions = null;
             IContractOptions? contractOptions = null;
 
+            bool isWebsocketOperation = false;
+
+            if (ContractOptionsDict!.TryGetValue(methodInfo.ReflectedType!, out contractOptions))
+            {
+                isWebsocketOperation = contractOptions.IsWebsocketOperation(request.OperationName);
+                operationOptions = contractOptions.GetOperationOptions(request.OperationName);
+            }
+
+            await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
+
             try
             {
-                bool isWebsocketOperation = false;
-
-                if (ContractOptionsDict!.TryGetValue(methodInfo.ReflectedType!, out contractOptions))
-                {
-                    isWebsocketOperation = contractOptions.IsWebsocketOperation(request.OperationName);
-                    operationOptions = contractOptions.GetOperationOptions(request.OperationName);
-                }
-
                 if (isWebsocketOperation)
                 {
                     await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.WebsocketFireAndForgetRateBucket, operationOptions?.RateBucket);
@@ -244,6 +250,8 @@ namespace Hubcon.Client.Integration.Client
 
             IObservable<JsonElement> observable;
 
+            await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
+
             try
             {
                 await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.StreamingRateBucket, operationOptions?.RateBucket);
@@ -306,7 +314,6 @@ namespace Hubcon.Client.Integration.Client
 
                     yield return result;
                 }
-
             }
 
             await CallHook(operationOptions, HookType.OnUnsubscribed, ServiceProvider, request, cancellationToken);
@@ -315,22 +322,25 @@ namespace Hubcon.Client.Integration.Client
 
         public async Task<T> Ingest<T>(IOperationRequest request, MethodInfo method, CancellationToken cancellationToken)
         {
+            if (!IsBuilt)
+                throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
+        
+            if (authenticationManagerFactory?.Invoke() == null)
+                throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
+
             IOperationOptions? operationOptions = null;
             IContractOptions? contractOptions = null;
 
+            if (ContractOptionsDict!.TryGetValue(method.ReflectedType!, out contractOptions))
+            {
+                operationOptions = contractOptions.GetOperationOptions(request.OperationName);
+            }
+
+            await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
+
             try 
             {          
-                if (!IsBuilt)
-                    throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
-        
-                if (authenticationManagerFactory?.Invoke() == null)
-                    throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
 
-
-                if (ContractOptionsDict!.TryGetValue(method.ReflectedType!, out contractOptions))
-                {
-                    operationOptions = contractOptions.GetOperationOptions(request.OperationName);
-                }
 
                 await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.IngestRateBucket, operationOptions?.RateBucket);
 
@@ -357,7 +367,7 @@ namespace Hubcon.Client.Integration.Client
                 else if (ex is HubconGenericException)
                     throw;
                 else
-                    throw new HubconGenericException(ex.Message, ex);
+                    throw;
             }
         }
 
@@ -366,13 +376,15 @@ namespace Hubcon.Client.Integration.Client
             IOperationOptions? operationOptions = null;
             IContractOptions? contractOptions = null;
 
+            if (ContractOptionsDict!.TryGetValue(method.ReflectedType!, out contractOptions))
+            {
+                operationOptions = contractOptions.GetOperationOptions(request.OperationName);
+            }
+
+            await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
+
             try
             {
-                if (ContractOptionsDict!.TryGetValue(method.ReflectedType!, out contractOptions))
-                {
-                    operationOptions = contractOptions.GetOperationOptions(request.OperationName);
-                }
-
                 return HandleSubscription(request, method, contractOptions, operationOptions, cancellationToken);
             }
             catch (Exception ex)
@@ -390,7 +402,7 @@ namespace Hubcon.Client.Integration.Client
 
         }
 
-        public async IAsyncEnumerable<JsonElement> HandleSubscription(IOperationRequest request, MemberInfo method, IContractOptions? contractOptions, IOperationOptions? operationOptions, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        private async IAsyncEnumerable<JsonElement> HandleSubscription(IOperationRequest request, MemberInfo method, IContractOptions? contractOptions, IOperationOptions? operationOptions, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
@@ -489,6 +501,14 @@ namespace Hubcon.Client.Integration.Client
                 return Task.CompletedTask;
 
             return options.CallHook(type, services, request, cancellationToken, result, exception);
+        }
+
+        private Task CallValidationHook(IOperationOptions? options, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken)
+        {
+            if (options == null)
+                return Task.CompletedTask;
+
+            return options.CallValidationHook(services, request, cancellationToken);
         }
 
         public void Build(

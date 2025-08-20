@@ -3,6 +3,7 @@ using HubconTestClient.Auth;
 using HubconTestClient.Modules;
 using HubconTestDomain;
 using System.Collections.Concurrent;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.RateLimiting;

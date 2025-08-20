@@ -20,7 +20,9 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         bool RateLimiterIsShared { get; }
         RateLimiter? RateBucket { get; }
         IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks { get; }
+
         Task CallHook(HookContext context);
+
         Task CallHook(
             HookType Type,
             IServiceProvider Services,
@@ -28,5 +30,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
             CancellationToken cancellationToken,
             object? Result = null,
             Exception? Exception = null);
+
+        Task CallValidationHook(IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken);
     }
 }
