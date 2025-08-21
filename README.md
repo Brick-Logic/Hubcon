@@ -947,20 +947,43 @@ Hubcon is designed for high-performance scenarios:
 - Websocket Round-Trip: Up to 80k RPS.
 - Websocket One-Way Call: Up to 140k RPS.
 - Websocket Ingest: 140k event/s.
-- Event Streaming and Subscriptions: Up to 450k events/s per receiver on client (scalable) .
+- Event Streaming and Subscriptions: Up to 450k events/s per receiver on client (scalable).
 
-Tested on a Ryzen 5 5600X CPU.
-Single-threaded client (max 10% CPU).
-12 threads assigned to server.
-256 concurrent requests (TPL library). 
-HTTP consumes around 50% of the CPU, while WebSockets consume around 33% of the CPU.
-Observed stable ~45mb of RAM in all cases, both on client and server.
+Some notes:
+- Tested on a Ryzen 5 5600X CPU.
+- Single-threaded client (max 10% CPU).
+- 12 threads assigned to server.
+- 256 concurrent requests (TPL library). 
+- HTTP consumes around 50% of the CPU, while WebSockets consume around 33% of the CPU.
+- Observed stable ~45mb of RAM in all cases, both on client and server.
 
 The tests include hooks, remote cancellation coordination, validation hooks, and all features 
-configured in the ClassicExample project.
+configured in the `ClassicExample` project.
 
 Note that `the underlying transport format is JSON`. This is **not ideal** for binary data as the payload is 33% bigger by design, 
 but it is more than enough for most use cases. Binary transport is planned for the future, but not yet implemented.
+
+## Self preservation architecture
+Hubcon is designed with self-preservation in mind, meaning that it will not allow itself to be overloaded or 
+abused by websocket clients.
+
+How does Hubcon protect itself? In websockets, there's a single message processor per client connection. If a client tries
+to flood the server with messages, the reader will get stuck by one of the rate limiters, causing the client a natural backpressure due to TCP.
+
+If the server only allows 20 messages per second and the client sends 40, the reader will get stuck waiting for tokens to be available, therefore
+not reading any messages in the process, including ping messages, reaching a timeout. 
+
+Also, if there's too many messages in the TCP buffer, the OS will apply backpressure to the client, causing it to slow down.
+
+If the messages keep accumulating, the server will eventually disconnect the client due to timeout or TCP pressure.
+
+However, if the client is well behaved and respects the rate limits, everything will work as expected. 
+That's why clients also have rate limiters, to ensure this.
+
+Note that this doesn't apply to HTTP, as HTTP is stateless and each request is independent.
+
+You must use ASP.NET Core's built-in rate limiters to protect your HTTP endpoints. Hubcon middlewares can also help implementing that, but 
+using the built-in ones is recommended.
 
 ## 🔌 Architecture
 
