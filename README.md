@@ -13,10 +13,26 @@ A high-performance, contract-based RPC framework for .NET that provides seamless
 - **Dependency Injection**: Full DI support for contracts on both client and server
 - **Middleware Pipeline**: Compatible with ASP.NET Core middleware + custom middleware with DI, featuring an extended operation context.
 - **Plug & Play**: Minimalistic configuration setup, extensive customization options.
-- **High Performance**: Invoke with return: 55k RPS, Fire and forget: 120k RPS, Ingest: 140k event/s, Streaming: up to 450k events/s (single receiver), tested on a Ryzen 5 5600X CPU,
+- **High Performance**:                     
+    - HTTP round-trip: Up to 66k RPS.
+    - HTTP one-way call: Up to 70k RPS.
+    - Websocket Round-Trip: Up to 80k RPS.
+    - Websocket One-Way Call: Up to 140k RPS.
+    - Websocket Ingest: 140k event/s.
+    - Event Streaming and Subscriptions: Up to 450k events/s per receiver on client (scalable) .
+
+    Tested on a Ryzen 5 5600X CPU.
+    Single-threaded client (max 10% CPU).
+    12 threads assigned to server.
+    256 concurrent requests (TPL library). 
+    HTTP consumes around 50% of the CPU, while WebSockets consume around 33% of the CPU.
+    Observed stable ~45mb of RAM in all cases, both on client and server.
+
+- **Rate Limiting**: Built-in throttling to prevent overload and ensure fair resource usage.
+- **Optional remote cancellation**: Client-side tokens can optionally cancel local and remote operations using simple cancellation tokens.
 - **Memory Optimized**: Made to sustain a very high throughput with minimal memory footprint. Leak-free, minimal alloc architecture.
 - **OpenAPI Compatible**: Partial compatibility with OpenAPI specifications and partial automatic documentation.
-- **Working examples**: This project includes a classic Client-Server example, a BlazorWasm-Server example and a triple microservice loop example.
+- **Working examples**: This project includes a classic Client-Server example used as testbench and benchmark, a BlazorWasm-Server example and a triple microservice loop example.
 
 ## Features implementation state
 
@@ -64,7 +80,7 @@ A high-performance, contract-based RPC framework for .NET that provides seamless
 |-----------------------------------------|--------------------------------------------------------------------------------------------------|------------------|
 | Source Generator (SG)                   | Auto-generates strongly-typed client proxies based on interfaces                                | ✅ Complete      |
 | Ignores external CancellationToken      | Prevents serialization of external `CancellationToken` in contract methods                      | ✅ Complete      |
-| Unified cancellation behavior            | Unified cancellation handling across all operations (stream, ingest, invoke, etc.) <br> *Experimental - needs testing* | 🟡 Experimental  |
+| Unified cancellation behavior            | Unified cancellation handling across all operations (stream, ingest, invoke, etc.)  | ✅ Complete  |
 | WebSocket auto-reconnect (optional)    | Optional automatic reconnection when WebSocket connection drops                                 | ✅ Complete      |
 | Configurable ping/pong                  | Ping/pong heartbeat configurable on client and server                                          | ✅ Complete      |
 | Precise throttling mechanism            | New internal throttling system with per-operation granularity                                   | ✅ Complete      |
@@ -76,7 +92,7 @@ A high-performance, contract-based RPC framework for .NET that provides seamless
 | Analyzers                               | Detects sync methods, invalid return types, or bad patterns                                     | ✅ Complete      |
 | Observability                           | Supports logging via `ILogger`; extensible to tracing/metrics (e.g., OpenTelemetry)            | ✅ Partial       |
 | Semantic Versioning                     | Uses beta versions (`1.0.0-betaX`) with clear release goals                                     | ✅ Partial       |
-| RC1 milestone                           | First stable RC will include improved cancellation and token coordination                       | 🔜 Coming        |
+| RC1 milestone                           | First stable RC will include improved cancellation and token coordination                       | ✅ Complete        |
 | Operation multiplexing                  | All operations internally routed using `operationId` to enable full concurrency                 | ✅ Complete      |
 | MCP Protocol                           | In progress: Protocol to connect AIs, supporting both WebSocket and HTTP transport               | ⚠️ In progress      |
 
@@ -88,43 +104,25 @@ A high-performance, contract-based RPC framework for .NET that provides seamless
 On client: dotnet add package Hubcon.Client
 On server: dotnet add package Hubcon.Server
 On your shared project: dotnet add package Hubcon.Shared
-
-You can also install both at the same time, for example, to develop multiple
-microservices and ensuring a statically typed integration.
 ```
 
 ## 🏗️ Quick Start
 
+For this, you need 3 projects:
+1. A client project that will use the server, a console app is enough.
+2. A server project ASP.NET Core Web API is recommended.
+3. A shared project to define your contracts.
+
+All projects must target .NET 8.0 or higher.
+
 ### 1. Define Your Contract
-Your contract will be an interface which implements IControllerContract, a marking interface.
-We will use this contract later to implement a contract handler in a Controller-like style.
-This contract MUST be shared with the client for this to work, and Hubcon will do the rest.
+A contract is simply an interface that inherits from `IControllerContract`.
+Put this in your shared project, which will be used by both client and server.
 
 ```csharp
-
 public interface IUserContract : IControllerContract
 {
-    // Standard RPC methods
-    // These methods use HTTP by default, but can be switched to websockets on a contract level.
     Task<User> GetUserAsync(int id);
-    Task<User> CreateUserAsync(object request);
-    
-    // Real-time subscriptions
-    // They work like normal C# events. You can subscribe or unsubscribe from it.
-    // Use UserNotifications.Emit(userNotification) on server-side to send a notification to the client.
-    // They are automatically injected when a controller is called, so you can notify the client when executing ANY method.
-    // The client has to subscribe to this event, otherwise it will be null on the server.
-    ISubscription<int>? UserNotifications { get; }
-    
-    // Data streaming
-    // This can be used to stream any type of serializable object to the client.
-    // They work similarly to subscriptions, but they can receive parameters. Perfect for pub/sub.
-    IAsyncEnumerable<bool> StreamBooleansAsync(int count);
-
-    // Ingest methods
-    // Methods can receive an IAsyncEnumerable<T> directly from the client.
-    // Works similarly to subscriptions.
-    Task IngestSomethingAsync(IAsyncEnumerable<string> myIngestStream);
 }
 ```
 
@@ -132,97 +130,55 @@ public interface IUserContract : IControllerContract
 
 #### ⚪ Controller/ContractHandler implementation
 
-Here you will implement your contract/interface, as a normal interface.
+Here you will implement your contract/interface, such as any normal class.
+They behave similarly to ASP.NET Core traditional controllers.
+
 ```csharp
 public class UserController: IUserContract
 {
-    public async Task<bool> GetUserAsync(int id)
+    public async Task<string> GetUserNameAsync(int id)
     {
-        // Your implementation
-
-        await Task.Delay(10); // Some work done
-        return true;
-    }
-
-    // Methods can be async or not.
-    public Task<bool> CreateUserAsync(object request)
-    {
-        // Your implementation
-
-        UserNotifications?.Emit(1); // Some notification to the client
-        return Task.FromResult(true);
-    }
-
-    // This can be null if the client isn't subscribed to this, so mark it as nullable.
-    public ISubscription<int>? UserNotifications { get; }
-    
-    public async IAsyncEnumerable<bool> StreamBooleansAsync(int count)
-    {
-        // Returns a list of booleans one by one.
-        // Can be infinite or you can finish it, and it will finish in the client too.
-        await foreach (var myNumber in Enumerable.Range(0, count).Select(x => true))
-            yield return myNumber;
-    }
-
-    public async Task IngestSomethingAsync(IAsyncEnumerable<string> myIngestStream)
-    {
-        await foreach(var item in myIngestStream)
-            Console.WriteLine(item);
-
-        // Finishes when client finishes, or a websocket silence timeout is reached.
+        await Task.Delay(100); // Simulate some work
+        Console.WriteLine($"User {id} requested.");
+        return "HubconUser";
     }
 }
 ```
 
-NOTE: Sync methods are also supported and will work normally on server side, but
-they WILL block the main thread on the client, specially on Blazor and
-any single-threaded application. The framework will show a warning explaining this.
-Task or Task<T> usage is strongly recommended, except on methods that return IAsyncEnumerable<T>,
-which already handle this. 
+Task or Task<T> usage is strongly recommended.
 
 #### ⚪ Server-side program.cs
 
-```csharp
-// Before 'var app = builder.Build();'
+Before 'var app = builder.Build();'
 
+```csharp
 builder.AddHubconServer();
 builder.ConfigureHubconServer(serverOptions =>
 {
-    serverOptions.ConfigureCore(config => 
-    {
-        config.EnableRequestDetailedErrors();
-        // Here you can configure core features, like:
-        // Disabling specific operations, timeouts, message sizes, etc
-    });
-
-    // Here you add your Controller/ContractHandler
-    serverOptions.AddController<UserController>(configure =>
-    {
-        // Here you can add custom hubcon middlewares
-        // Hubcon middlewares support dependency injection
-        // and include an extended operation context.
-    });
+    serverOptions.AddController<UserController>();
 });
 ```
 
-```csharp
-// After 'builder.Build();'
+After 'builder.Build();'
 
-// Maps and documents normal HTTP endpoints, can be omitted if you only use websockets.
-// They are also mapped to OpenAPI, so you can test on Swagger, Scalar or any OpenAPI-compatible tool.
+```csharp
+
+// Maps all hubcon controllers to HTTP endpoints.
 app.MapHubconControllers();
 
-// This enables the hubcon websocket middleware. Can also be omitted if you only want HTTP support.
-app.UseHubconWebsockets();
+// This enables the hubcon websocket middleware. Not needed for now.
+// app.UseHubconWebsockets();
+
 ```
 
-These options can be used in any order.
+These options can be used in any order and are fully independent.
 
 ### 3. Client Usage
 
 #### ⚪ Creating a RemoteServerModule
-A RemoteServerModule represents a server as an entity. It is used to describe a remote server, and implements
-contracts automatically based on it.
+
+A RemoteServerModule represents a server. It is used to describe a remote server, and implements
+one or more contracts automatically based on it.
 
 ```csharp
 internal class MyUserServerModule : RemoteServerModule
@@ -232,18 +188,8 @@ internal class MyUserServerModule : RemoteServerModule
         // Base url
         server.WithBaseUrl("localhost:5000");
 
-        // Here you add your shared contracts. 
-        // Any contracts added here will use this server module's configuration.
-        server.Implements<IUserContract>(contractConfig =>
-        {
-            // Here you can change contract-specific settings.
-            // For now, you can only switch a contract from HTTP to websockets.
-            contractConfig.UseWebsocketMethods(); 
-        });
-
-        // Here, you can use an authentication manager which Hubcon will automatically use.
-        // Authentication managers can also inject any contracts.
-        server.UseAuthenticationManager<AuthenticationManager>();
+        // Here you add your defined contracts. They will share the same configuration and websocket connection.
+        server.Implements<IUserContract>();
 
         // You can switch to insecure connections. This includes 'https -> http' and 'wss to ws' protocols.
         server.UseInsecureConnection();
@@ -251,23 +197,56 @@ internal class MyUserServerModule : RemoteServerModule
 }
 ```
 
-## 🔐 Authentication manager
-The authentication manager allows Hubcon to inject an authorization tokens on HTTP requests and
+Note: The 'Implements<T>' method will automatically generate a client proxy for the specified contract and proceed to register it in the DI container.
+All contracts will point to the same server. If you need different servers, you can create multiple RemoteServerModules.
+
+The only limitation is that you **cannot use the same contract on multiple RemoteServerModules**. If you do, hubcon will not allow it.
+
+### ⚪ Register your RemoteServerModule
+
+On your client-side program.cs...
+
+```csharp
+var builder = WebApplication.CreateBuilder();
+
+builder.Services.AddHubconClient();
+builder.Services.AddRemoteServerModule<MyUserServerModule>();
+
+var app = builder.Build();
+var scope = app.Services.CreateScope();
+
+var client = scope.ServiceProvider.GetRequiredService<IUserContract>();
+
+var result = await client.GetUserAsync(1);
+
+Console.WriteLine($"User: {result}"); // Should print "User: HubconUser"
+Console.ReadKey();
+```
+
+Congratulations! You made hubcon your first client-server call with hubcon.
+
+Hubcon provides a lot of features and configurations, that will be explained in the next sections.
+
+## Authentication and Authorization
+
+### 🔐 Authentication manager
+The authentication manager allows Hubcon to inject an authorization token on HTTP requests and
 to authenticate the initial websocket connection.
 
 ```csharp
-public class AuthenticationManager(IUserContract users) : BaseAuthenticationManager
+public class AuthenticationManager(ISecondTestContract secondTestContract) : BaseAuthenticationManager
 {
+    public override string? TokenType { get; protected set; } = "";
     public override string? AccessToken { get; protected set; } = "";
     public override string? RefreshToken { get; protected set; } = "";
     public override DateTime? AccessTokenExpiresAt { get; protected set; } = DateTime.UtcNow.AddYears(1);
 
     protected async override Task<IAuthResult> AuthenticateAsync(string username, string password)
     {
-        // Your login logic
-        // users.MyLoginMethod()
+        var token = await secondTestContract.LoginAsync(username, password);
 
-        AccessToken = "someToken";
+        TokenType = "Bearer";
+        AccessToken = token;
         RefreshToken = "";
         AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
 
@@ -276,6 +255,7 @@ public class AuthenticationManager(IUserContract users) : BaseAuthenticationMana
 
     protected override Task ClearSessionAsync()
     {
+        TokenType = "";
         AccessToken = "";
         RefreshToken = "";
         AccessTokenExpiresAt = null;
@@ -285,11 +265,13 @@ public class AuthenticationManager(IUserContract users) : BaseAuthenticationMana
 
     protected async override Task<PersistedSession?> LoadPersistedSessionAsync()
     {
-        // Your session retrieving logic
+        var token = await secondTestContract.LoginAsync("aaa", "bbb");
 
-        AccessToken = "some token";
+        TokenType = "Bearer";
+        AccessToken = token;
         RefreshToken = "";
         AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
+
 
         return new PersistedSession()
         {
@@ -300,9 +282,10 @@ public class AuthenticationManager(IUserContract users) : BaseAuthenticationMana
 
     protected async override Task<IAuthResult> RefreshSessionAsync(string refreshToken)
     {
-        // Your token refresh logic
+        var token = await secondTestContract.LoginAsync(Username, Password);
 
-        AccessToken = "some token";
+        TokenType = "Bearer";
+        AccessToken = token;
         RefreshToken = "";
         AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
 
@@ -311,22 +294,12 @@ public class AuthenticationManager(IUserContract users) : BaseAuthenticationMana
 
     protected async override Task SaveSessionAsync()
     {
-        // You save session logic
+            
     }
 }
 ```
 All methods and subscriptions (including ISubscription<T> properties) allow the usage of the
 [Authorize] attribute, including it's variants, and the [AllowAnonymous] attribute, for public access.
-
-### ⚪ Register your RemoteServerModule
-```csharp
-// On program.cs, before builder.Build()...
-builder.Services.AddHubconClient();
-builder.Services.AddRemoteServerModule<MyUserServerModule>();
-```
-And that's it, hubcon will internally implement the server module, and therefore all the specified contracts.
-
-NOTE: There will be exactly 1 client which includes a pooled HTTP client and a custom websocket client per contract.
 
 ## 🔧 Advanced Features
 
