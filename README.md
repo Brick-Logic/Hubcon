@@ -913,8 +913,6 @@ The RemoteServerModule can be configured to change the client-side behavior of t
 |--------|-----------|----------------|-------------------|------------|-------|
 | `WebsocketReaderRateLimiter` | 500 | 500 | 1 s | 1 | WS read operations |
 | `WebsocketPingRateLimiter` | 5 | 5 | 5 s | 1 | WS ping messages |
-| `HttpRoundTripMethodRateLimiter` | 50 | 50 | 1 s | 1 | HTTP request-response |
-| `HttpFireAndForgetMethodLimiter` | 100 | 100 | 1 s | 1 | HTTP fire-and-forget |
 | `WebsocketRoundTripMethodRateLimiter` | 50 | 50 | 1 s | 1 | WS request-response |
 | `WebsocketFireAndForgetMethodLimiter` | 100 | 100 | 1 s | 1 | WS fire-and-forget |
 | `WebsocketIngestRateLimiter` | 200 | 200 | 1 s | 1 | WS ingest messages |
@@ -960,26 +958,29 @@ Methods will always wait for the connection to be established before sending the
 
 Hubcon is designed for high-performance scenarios:
                     
-- HTTP round-trip: Up to 66k RPS.
-- HTTP one-way call: Up to 70k RPS.
-- Websocket Round-Trip: Up to 80k RPS.
-- Websocket One-Way Call: Up to 140k RPS.
-- Websocket Ingest: 140k event/s.
-- Event Streaming and Subscriptions: Up to 450k events/s per receiver on client (scalable).
+- HTTP round-trip: Up to ~66k RPS.
+- HTTP one-way call: Up to ~90k RPS.
+- Websocket Round-Trip: Up to ~80k RPS.
+- Websocket One-Way Call: Up to ~140k RPS.
+- Websocket Ingest: ~140k event/s.
+- Event Streaming and Subscriptions: Up to ~450k events/s per receiver on client (scalable).
 
 Some notes:
 - Tested on a Ryzen 5 5600X CPU.
 - Single-threaded client (max 10% CPU).
 - 12 threads assigned to server.
-- 256 concurrent requests (TPL library). 
+- 256 concurrent requests (TPL library). Keeps working even with 65k parallelism level at the cost of latency over websockets.
 - HTTP consumes around 50% of the CPU, while WebSockets consume around 33% of the CPU.
-- Observed stable ~45mb of RAM in all cases, both on client and server.
+- Observed stable ~45mb of RAM in all cases under testing load, both on client and server.
 
 The tests include hooks, remote cancellation coordination, validation hooks, and all features 
 configured in the `ClassicExample` project.
 
 Note that `the underlying transport format is JSON`. This is **not ideal** for binary data as the payload is 33% bigger by design, 
 but it is more than enough for most use cases. Binary transport is planned for the future, but not yet implemented.
+
+Allocations are kept to a minimum, with most operations being zero-allocation, and the rest being very low allocation.
+They will be further optimized to reduce GC pressure and improve performance.
 
 ## Self preservation architecture
 Hubcon is designed with self-preservation in mind, meaning that it will not allow itself to be overloaded or 
