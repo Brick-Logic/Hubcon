@@ -20,7 +20,7 @@
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryBranch>main</RepositoryBranch>
-		<Version>1.0.0-beta5</Version>
+		<Version>1.0.0-rc1</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 	</PropertyGroup>
@@ -36,15 +36,15 @@
 
 	<!-- Nuget -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-beta*" PrivateAssets="True" />
-		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-beta*" PrivateAssets="True"/>
-		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-beta*" PrivateAssets="True" />
-		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-beta*" PrivateAssets="True" />
-		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-beta*" PrivateAssets="True" />
+		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-rc*" PrivateAssets="True" />
+		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-rc*" PrivateAssets="True"/>
+		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-rc*" PrivateAssets="True" />
+		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-rc*" PrivateAssets="True" />
+		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-rc*" PrivateAssets="True" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-beta10" />		
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-rc*" />		
 	</ItemGroup>
 
 	<ItemGroup>

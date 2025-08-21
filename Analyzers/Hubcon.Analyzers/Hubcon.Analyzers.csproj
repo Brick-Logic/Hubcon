@@ -13,7 +13,7 @@
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageOutputPath>../../nupkgs</PackageOutputPath>
-		<Version>$(Version)</Version>
+		<Version>1.0.0-rc1</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<Description>Code analyzers for Hubcon.</Description>

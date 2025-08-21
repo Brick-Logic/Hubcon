@@ -22,6 +22,7 @@ using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
@@ -32,7 +33,7 @@ using System.Threading.RateLimiting;
 
 namespace Hubcon.Client.Core.Websockets
 {
-    public class HubconWebSocketClient : IAsyncDisposable, IUnsubscriber
+    public sealed class HubconWebSocketClient : IAsyncDisposable, IUnsubscriber
     {
         private readonly Uri _uri;
         private readonly IDynamicConverter converter;
@@ -48,20 +49,15 @@ namespace Hubcon.Client.Core.Websockets
 
         private readonly ConcurrentDictionary<Guid, BaseObservable> _subscriptions = new();
 
-        private readonly ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)>
-            _streams = new();
+        private readonly ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, CancellationTokenRegistration)>  _streams = new();
 
-        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<IngestDataAckMessage>> _streamDataAck = new();
         private readonly ConcurrentDictionary<Guid, TaskCompletionSource<IngestInitAckMessage>> _ingestAck = new();
 
-        private readonly
-            ConcurrentDictionary<Guid, (TaskCompletionSource<IngestResultMessage>, CancellationTokenSource)> _ingests =
-                new();
+        private readonly ConcurrentDictionary<Guid, (TaskCompletionSource<IngestResultMessage>, CancellationTokenSource, CancellationTokenRegistration)> _ingests =  new();
 
         private readonly ConcurrentDictionary<Guid, TaskCompletionSource<IngestDataAckMessage>> _ingestDataAck = new();
 
-        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<OperationResponseMessage>> _operationTcs =
-            new();
+        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<OperationResponseMessage>> _operationTcs = new();
 
         private readonly SemaphoreSlim _reconnectLock = new(1, 1);
 
@@ -126,7 +122,7 @@ namespace Hubcon.Client.Core.Websockets
         {
             var request = new SubscriptionInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
-            using var registration = cancellationToken.Register(async () =>
+            var registration = cancellationToken.Register(async () =>
             {
                 if (remoteCancelEnabled)
                     await SendMessageAsync(new CancelMessage(request.Id));
@@ -156,42 +152,47 @@ namespace Hubcon.Client.Core.Websockets
         {
             var request = new StreamInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
             
+
+            var tcs = new CancellationTokenSource();
+            
+
+            if (_webSocket?.State != WebSocketState.Open)
+                await EnsureConnectedAsync();
+
+            HeartbeatWatcher hw = null!;
+
+            CancellationTokenRegistration registration = cancellationToken.Register(async () =>
+            {
+                if(remoteCancelEnabled)
+                    await SendMessageAsync(new CancelMessage(request.Id));
+                _ = hw.DisposeAsync();
+                _ = tcs.CancelAsync();
+            });
+
+            hw = new HeartbeatWatcher(TimeSpan.FromSeconds(15000), async () =>
+            {
+                if (_streams.TryRemove(request.Id, out var obs))
+                {
+                    obs.Item1.OnCompleted();
+                    if (!obs.Item2.IsCancellationRequested)
+                    {
+                        obs.Item2.Cancel();
+                        obs.Item2.Dispose();
+                    }
+                    obs.Item4.Dispose();
+                }
+            });
+
             var observable = new GenericObservable<T>(
                 this,
                 request.Id,
                 converter.SerializeToElement(request),
                 RequestType.Subscription,
                 converter,
-                null,
+                async () => await hw.DisposeAsync(),
                 options.ReconnectStreams);
 
-            var tcs = new CancellationTokenSource();
-            
-            using var registration = cancellationToken.Register(async () =>
-            {
-                if(remoteCancelEnabled)
-                    await SendMessageAsync(new CancelMessage(request.Id));
-                
-                _ = tcs.CancelAsync();
-            });
-
-            if (_webSocket?.State != WebSocketState.Open)
-                await EnsureConnectedAsync();
-
-            var hw = new HeartbeatWatcher(TimeSpan.FromSeconds(15000), async () =>
-            {
-                if (_streams.TryRemove(request.Id, out var obs))
-                {
-                    obs.Item1.OnCompleted();
-                    if (obs.Item2.IsCancellationRequested)
-                    {
-                        obs.Item2.Cancel();
-                        obs.Item2.Dispose();
-                    }
-                }
-            });
-
-            if (!_streams.TryAdd(request.Id, (observable, tcs, hw)))
+            if (!_streams.TryAdd(request.Id, (observable, tcs, hw, registration)))
                 throw new InvalidOperationException($"Ya existe un stream con Id {request.Id}");
 
             await SendMessageAsync(request);
@@ -213,9 +214,6 @@ namespace Hubcon.Client.Core.Websockets
             var generalTcs = new TaskCompletionSource<IngestResultMessage>();
             var sources = new Dictionary<Guid, IAsyncEnumerable<JsonElement>>();
             var initialAckId = Guid.NewGuid();
-            _ingestAck.TryAdd(initialAckId, initAckTcs);
-            _ingests.TryAdd(initialAckId, (generalTcs, cts));
-
 
             using var registration = cancellationToken.Register(async () =>
             {
@@ -223,7 +221,11 @@ namespace Hubcon.Client.Core.Websockets
                     await SendMessageAsync(new CancelMessage(initialAckId));
                 
                 _ = cts?.CancelAsync();
+                generalTcs.TrySetException(new OperationCanceledException());
             });
+
+            _ingestAck.TryAdd(initialAckId, initAckTcs);
+            _ingests.TryAdd(initialAckId, (generalTcs, cts, registration));
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
@@ -347,6 +349,9 @@ namespace Hubcon.Client.Core.Websockets
                 var result =
                     await TimeoutHelper.WaitWithTimeoutAsync(generalTcs.Task.WaitAsync, options.WebsocketTimeout);
 
+                if (generalTcs.Task.Exception?.InnerException is OperationCanceledException)
+                    throw generalTcs.Task.Exception.InnerException;
+
                 if (result == null) throw new HubconRemoteException("Received an empty response.");
 
                 var response = converter.DeserializeJsonElement<BaseOperationResponse<T>>(result.Data)
@@ -414,6 +419,8 @@ namespace Hubcon.Client.Core.Websockets
                 {
                     if(remoteCancelEnabled)
                         await SendMessageAsync(new CancelMessage(request.Id));
+
+                    tcs.TrySetException(new OperationCanceledException());
                 });
                 
                 await SendMessageAsync(request, CancellationToken.None);
@@ -431,6 +438,9 @@ namespace Hubcon.Client.Core.Websockets
             {
                 _operationTcs.TryRemove(request.Id, out _);
             }
+
+            if(tcs.Task.Exception?.InnerException is OperationCanceledException)
+                throw tcs.Task.Exception.InnerException;
 
             if (response == null)
                 throw new HubconGenericException("There was an unknown error or the request timed out.");

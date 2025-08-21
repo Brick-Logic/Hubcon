@@ -1,6 +1,6 @@
 ﻿# Hubcon
 
-A high-performance, contract-based RPC micro-framework for .NET that provides seamless communication over HTTP/WebSocket with interface-based usage, GraphQL-style subscriptions and real-time data streaming capabilities.
+A high-performance, contract-based RPC framework for .NET that provides seamless communication over HTTP/WebSocket with interface-based usage, GraphQL-style subscriptions and real-time data streaming capabilities.
 
 ## 🚀 Key Features
 

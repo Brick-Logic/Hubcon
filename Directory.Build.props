@@ -10,7 +10,7 @@
 	<RepositoryType>git</RepositoryType>
 	<RepositoryBranch>main</RepositoryBranch> 
 	<PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
-	<!--<Version>1.0.0-beta3</Version>-->
+	<Stage>rc</Stage>
 	<UsePackages>false</UsePackages>
   </PropertyGroup>
 

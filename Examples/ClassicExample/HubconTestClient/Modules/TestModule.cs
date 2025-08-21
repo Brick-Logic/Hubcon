@@ -62,7 +62,7 @@ namespace HubconTestClient.Modules
                             { 
                                 if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }                             
                             })
-                            .AllowRemoteCancellation(false)
+                            .AllowRemoteCancellation(true)
                             .LimitPerSecond(1000000);
 
                         operationSelector

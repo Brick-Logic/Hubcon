@@ -11,7 +11,7 @@
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageOutputPath>../nupkgs</PackageOutputPath>
-		<Version>1.0.0-beta2</Version>
+		<Version>1.0.0-rc1</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<Description>Shared core implementations for Hubcon.</Description>
@@ -38,7 +38,7 @@
 
 	<!-- Nuget -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-beta*" />
-		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-beta*" />
+		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-rc*" />
+		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-rc*" />
 	</ItemGroup>
 </Project>

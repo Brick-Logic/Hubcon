@@ -11,7 +11,7 @@
 		<IsPackable>true</IsPackable>
 		<Description>Diagnostic suppressors for Hubcon.</Description>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Version>$(Version)</Version>
+		<Version>1.0.0-rc1</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<PackageTags>analyzer</PackageTags>

@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Core.Configurations;
+﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.Helpers;
 using Hubcon.Client.Core.Websockets;
@@ -11,7 +9,6 @@ using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
 using System.Reactive.Linq;
 using System.Reflection;
@@ -19,7 +16,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
-using Hubcon.Shared.Core.Cache;
 
 namespace Hubcon.Client.Integration.Client
 {
@@ -60,10 +56,6 @@ namespace Hubcon.Client.Integration.Client
 
         private IDictionary<Type, IContractOptions> ContractOptionsDict { get; set; } = null!;
 
-        private readonly ImmutableCache<(IOperationOptions?, IContractOptions?), bool> _remoteCancelCache = new();
-        private readonly ImmutableCache<Type, IContractOptions?> _contractOptionsCache = new();
-        private readonly ImmutableCache<Type, IOperationOptions?> _operationOptionsCache = new();
-
         public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {           
             IOperationOptions? operationOptions = null;
@@ -76,6 +68,7 @@ namespace Hubcon.Client.Integration.Client
                 isWebsocketMethod = contractOptions.IsWebsocketOperation(request.OperationName);
                 operationOptions = contractOptions.GetOperationOptions(request.OperationName);
             }
+
             bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
                                       ?? contractOptions?.RemoteCancellationIsAllowed 
                                       ?? false;
@@ -153,6 +146,8 @@ namespace Hubcon.Client.Integration.Client
                 await CallHook(operationOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
                 await CallHook(contractOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
 
+                if (ex is OperationCanceledException)
+                    throw;
                 if (ex is HubconRemoteException)
                     throw;
                 else if (ex is HubconGenericException)
@@ -231,7 +226,9 @@ namespace Hubcon.Client.Integration.Client
                 await CallHook(operationOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
                 await CallHook(contractOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
 
-                if (ex is HubconRemoteException)
+                if (ex is OperationCanceledException)
+                    throw;
+                else if (ex is HubconRemoteException)
                     throw;
                 else if (ex is HubconGenericException)
                     throw;
@@ -242,9 +239,6 @@ namespace Hubcon.Client.Integration.Client
 
         public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, MethodInfo method, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            if (!IsBuilt)
-                throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
-
             IOperationOptions? operationOptions = null;
 
             if (ContractOptionsDict!.TryGetValue(method.ReflectedType!, out IContractOptions? contractOptions))
@@ -330,9 +324,6 @@ namespace Hubcon.Client.Integration.Client
 
         public async Task<T> Ingest<T>(IOperationRequest request, MethodInfo method, CancellationToken cancellationToken)
         {
-            if (!IsBuilt)
-                throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
-            
             IOperationOptions? operationOptions = null;
             IContractOptions? contractOptions = null;
 
@@ -421,9 +412,6 @@ namespace Hubcon.Client.Integration.Client
             IOperationOptions? operationOptions, 
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            if (!IsBuilt)
-                throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
-           
             await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.SubscriptionRateBucket, operationOptions?.RateBucket);
 
             IObservable<JsonElement> observable;

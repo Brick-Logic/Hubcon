@@ -79,75 +79,77 @@ internal class Program
 
         await Task.Delay(100);
 
-        //int eventosRecibidos = 0;
+        int eventosRecibidos = 0;
 
-        //logger.LogWarning($"Comenzando prueba de suscripciones...");
+        logger.LogWarning($"Comenzando prueba de suscripciones...");
 
-        //bool evento1 = false;
-        //async Task handler(int? input)
-        //{
-        //    logger.LogInformation($"Evento recibido: {input}");
-        //    Interlocked.Add(ref eventosRecibidos, 1);
-        //    evento1 = true;
-        //}
+        bool evento1 = false;
+        async Task handler(int? input)
+        {
+            logger.LogInformation($"Evento recibido: {input}");
+            Interlocked.Add(ref eventosRecibidos, 1);
+            evento1 = true;
+        }
 
-        //bool evento2 = false;
-        //async Task handler2(int? input)
-        //{
-        //    logger.LogInformation($"Evento recibido: {input}");
-        //    Interlocked.Add(ref eventosRecibidos, 1);
-        //    evento2 = true;
-        //}
+        bool evento2 = false;
+        async Task handler2(int? input)
+        {
+            logger.LogInformation($"Evento recibido: {input}");
+            Interlocked.Add(ref eventosRecibidos, 1);
+            evento2 = true;
+        }
 
-        //bool evento3 = false;
-        //async Task handler3(int? input)
-        //{
-        //    logger.LogInformation($"Evento recibido: {input}");
-        //    Interlocked.Add(ref eventosRecibidos, 1);
-        //    evento3 = true;
-        //}
+        bool evento3 = false;
+        async Task handler3(int? input)
+        {
+            logger.LogInformation($"Evento recibido: {input}");
+            Interlocked.Add(ref eventosRecibidos, 1);
+            evento3 = true;
+        }
 
-        //bool evento4 = false;
-        //async Task handler4(int? input)
-        //{
-        //    logger.LogInformation($"Evento recibido: {input}");
-        //    Interlocked.Add(ref eventosRecibidos, 1);
-        //    evento4 = true;
-        //}
+        bool evento4 = false;
+        async Task handler4(int? input)
+        {
+            logger.LogInformation($"Evento recibido: {input}");
+            Interlocked.Add(ref eventosRecibidos, 1);
+            evento4 = true;
+        }
 
-        //client.OnUserCreated!.AddHandler(handler);
-        //await client.OnUserCreated.Subscribe();
-        //client.OnUserCreated2!.AddHandler(handler2);
-        //await client.OnUserCreated2.Subscribe();
-        //client.OnUserCreated3!.AddHandler(handler3);
-        //await client.OnUserCreated3.Subscribe();
-        //client.OnUserCreated4!.AddHandler(handler4);
-        //await client.OnUserCreated4.Subscribe();
+        client.OnUserCreated!.AddHandler(handler);
+        await client.OnUserCreated.Subscribe();
+        client.OnUserCreated2!.AddHandler(handler2);
+        await client.OnUserCreated2.Subscribe();
+        client.OnUserCreated3!.AddHandler(handler3);
+        await client.OnUserCreated3.Subscribe();
+        client.OnUserCreated4!.AddHandler(handler4);
+        await client.OnUserCreated4.Subscribe();
 
-        //logger.LogInformation("Eventos conectados.");
+        logger.LogInformation("Eventos conectados.");
 
-        //await Task.Delay(100);
+        await Task.Delay(100);
 
-        //logger.LogWarning("Enviando request de prueba...");
-        //await client.CreateUser();
-        //logger.LogInformation($"Esperando eventos...");
+        logger.LogWarning("Enviando request de prueba...");
+        await client.CreateUser();
+        logger.LogInformation($"Esperando eventos...");
 
-        //await Task.Delay(100);
+        await Task.Delay(100);
 
-        //if (eventosRecibidos == 4)
-        //{
-        //    logger.LogInformation($"Eventos recibidos correctamente.");
-        //}
-        //else
-        //{
-        //    throw new Exception("No se recibieron todos los eventos esperados.");
-        //}
+        if (eventosRecibidos == 4)
+        {
+            logger.LogInformation($"Eventos recibidos correctamente.");
+        }
+        else
+        {
+            throw new Exception("No se recibieron todos los eventos esperados.");
+        }
 
-        //await Task.Delay(100);
+        await Task.Delay(100);
 
         logger.LogWarning("Probando invocación con retorno...");
         var temp = await client.GetTemperatureFromServer();
         logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
+
+        await Task.Delay(100);
 
         logger.LogWarning("Probando cancelacion remota...");
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -161,7 +163,7 @@ internal class Program
             logger.LogInformation(e.ToString());
         }
         
-        logger.LogInformation($"Invocación OK. Datos recibidos: {temp2}");
+        logger.LogInformation($"Cancelacion OK. Datos recibidos: {temp2}");
         
         await Task.Delay(100);
 
