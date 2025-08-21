@@ -38,7 +38,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
             });
         }
 
-        public static Func<WebsocketCallSettings> Factory { get; } = () => new();
+        public static Func<WebsocketInvokeSettings> Factory { get; } = () => new();
     }
 
     [AttributeUsage(AttributeTargets.Method)]

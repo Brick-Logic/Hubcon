@@ -19,19 +19,20 @@ namespace HubconTestClient.Modules
 
             configuration.GlobalLimit(2000000);
 
-            //configuration.LimitIngest(100);
-            //configuration.LimitSubscription(100);
-            //configuration.LimitStreaming(100);
-            //configuration.LimitWebsocketRoundTrip(100);
-            //configuration.LimitHttpRoundTrip(100);
-            //configuration.LimitWebsocketFireAndForget(100);
-            //configuration.LimitHttpFireAndForget(100);
+            configuration.LimitIngest(100);
+            configuration.LimitSubscription(100);
+            configuration.LimitStreaming(100);
+            configuration.LimitWebsocketRoundTrip(100);
+            configuration.LimitHttpRoundTrip(100);
+            configuration.LimitWebsocketFireAndForget(100);
+            configuration.LimitHttpFireAndForget(100);
 
-            //configuration.DisableAllLimiters();
+            configuration.DisableAllLimiters();
 
             configuration.Implements<IUserContract>(contractConfigurator =>
             {
                 contractConfigurator
+                    .UseWebsocketMethods()
                     .UseWebsocketMethods()
                     .AllowRemoteCancellation(false)
                     .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })

@@ -84,6 +84,7 @@ internal class Program
         logger.LogWarning($"Comenzando prueba de suscripciones...");
 
         bool evento1 = false;
+
         async Task handler(int? input)
         {
             logger.LogInformation($"Evento recibido: {input}");

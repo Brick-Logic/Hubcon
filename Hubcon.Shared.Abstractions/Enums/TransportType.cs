@@ -8,7 +8,7 @@ namespace Hubcon.Shared.Abstractions.Enums
 {
     public enum TransportType
     {
-        Default,
+        Default, // Will decide based on contract configuration, or http by default
         Http,
         Websockets
     }

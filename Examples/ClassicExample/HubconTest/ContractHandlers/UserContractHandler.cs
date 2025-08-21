@@ -12,6 +12,7 @@ namespace HubconTest.ContractHandlers
 {
     public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserContract
     {
+        [Broadcast]
         public ISubscription<int?>? OnUserCreated { get; }
         public ISubscription<int?>? OnUserCreated2 { get; }
         public ISubscription<int?>? OnUserCreated3 { get; }
@@ -51,7 +52,7 @@ namespace HubconTest.ContractHandlers
         {
             for (int i = 0; i < count; i++)
             {
-                yield return await Task.Run(() => "hola2");
+                yield return "hola2";
             }
         }
 
