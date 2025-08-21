@@ -16,7 +16,7 @@ using System.Threading.RateLimiting;
 
 namespace Hubcon.Client.Builder
 {
-    internal sealed class ClientBuilder(IProxyRegistry proxyRegistry) : IClientBuilder, IClientOptions
+    internal sealed class ClientBuilder(IProxyRegistry proxyRegistry, string name) : IClientBuilder, IClientOptions
     {
         public Uri? BaseUri { get; set; }
         public List<Type> Contracts { get; set; } = new();
@@ -32,6 +32,7 @@ namespace Hubcon.Client.Builder
         public TimeSpan WebsocketTimeout { get; set; } = TimeSpan.FromSeconds(30);
         public TimeSpan HttpTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
+        public string ServerModuleName { get; } = name;
 
         private ConcurrentDictionary<Type, Type> _subTypesCache { get; } = new();
         private ConcurrentDictionary<Type, IEnumerable<PropertyInfo>> _propTypesCache { get; } = new();

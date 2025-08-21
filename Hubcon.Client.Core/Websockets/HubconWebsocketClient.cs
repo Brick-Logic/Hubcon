@@ -47,12 +47,22 @@ namespace Hubcon.Client.Core.Websockets
         public Func<string?>? AuthorizationTokenProvider { get; set; }
 
         private readonly ConcurrentDictionary<Guid, BaseObservable> _subscriptions = new();
-        private readonly ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)> _streams = new();
+
+        private readonly ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher)>
+            _streams = new();
+
         private readonly ConcurrentDictionary<Guid, TaskCompletionSource<IngestDataAckMessage>> _streamDataAck = new();
         private readonly ConcurrentDictionary<Guid, TaskCompletionSource<IngestInitAckMessage>> _ingestAck = new();
-        private readonly ConcurrentDictionary<Guid, (TaskCompletionSource<IngestResultMessage>, CancellationTokenSource)> _ingests = new();
+
+        private readonly
+            ConcurrentDictionary<Guid, (TaskCompletionSource<IngestResultMessage>, CancellationTokenSource)> _ingests =
+                new();
+
         private readonly ConcurrentDictionary<Guid, TaskCompletionSource<IngestDataAckMessage>> _ingestDataAck = new();
-        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<OperationResponseMessage>> _operationTcs = new();
+
+        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<OperationResponseMessage>> _operationTcs =
+            new();
+
         private readonly SemaphoreSlim _reconnectLock = new(1, 1);
 
         private readonly CancellationTokenSource _cts = new();
@@ -85,7 +95,8 @@ namespace Hubcon.Client.Core.Websockets
         private readonly Channel<TrimmedMemoryOwner> _messageChannel;
         private readonly Channel<byte[]> _sendChannel;
 
-        public HubconWebSocketClient(Uri uri, IDynamicConverter converter, IClientOptions options, IServiceProvider serviceProvider, ILogger<HubconWebSocketClient>? logger = null)
+        public HubconWebSocketClient(Uri uri, IDynamicConverter converter, IClientOptions options,
+            IServiceProvider serviceProvider, ILogger<HubconWebSocketClient>? logger = null)
         {
             _pongStream = new GenericObservable<PongMessage>(converter);
             _errorStream = new GenericObservable<Exception>(converter);
@@ -95,12 +106,13 @@ namespace Hubcon.Client.Core.Websockets
             this.serviceProvider = serviceProvider;
             this.logger = logger;
 
-            _messageChannel = Channel.CreateBounded<TrimmedMemoryOwner>(new BoundedChannelOptions(20000 * options.MessageProcessorsCount)
-            {
-                FullMode = BoundedChannelFullMode.Wait,
-                SingleWriter = true,
-                SingleReader = false
-            });
+            _messageChannel = Channel.CreateBounded<TrimmedMemoryOwner>(
+                new BoundedChannelOptions(20000 * options.MessageProcessorsCount)
+                {
+                    FullMode = BoundedChannelFullMode.Wait,
+                    SingleWriter = true,
+                    SingleReader = false
+                });
 
             _sendChannel = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(20000)
             {
@@ -110,13 +122,14 @@ namespace Hubcon.Client.Core.Websockets
             });
         }
 
-        public async Task<IObservable<T>> Subscribe<T>(IOperationRequest payload, CancellationToken cancellationToken = default)
+        public async Task<IObservable<T>> Subscribe<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             var request = new SubscriptionInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
-            var registration = cancellationToken.Register(async () =>
+            using var registration = cancellationToken.Register(() =>
             {
-                await SendMessageAsync(new CancelMessage(request.Id));
+                if(remoteCancelEnabled)
+                    _ = SendMessageAsync(new CancelMessage(request.Id));
             });
 
             var observable = new GenericObservable<T>(
@@ -139,33 +152,35 @@ namespace Hubcon.Client.Core.Websockets
             return observable;
         }
 
-        public async Task<IObservable<T>> Stream<T>(IOperationRequest payload, CancellationToken cancellationToken = default)
+        public async Task<IObservable<T>> Stream<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             var request = new StreamInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
-
-            var registration = cancellationToken.Register(async () =>
-            {
-                await SendMessageAsync(new CancelMessage(request.Id));
-            });
-
+            
             var observable = new GenericObservable<T>(
-                this, 
-                request.Id, 
-                converter.SerializeToElement(request), 
-                RequestType.Subscription, 
+                this,
+                request.Id,
+                converter.SerializeToElement(request),
+                RequestType.Subscription,
                 converter,
-                () => registration.Dispose(),
+                null,
                 options.ReconnectStreams);
 
             var tcs = new CancellationTokenSource();
+            
+            using var registration = cancellationToken.Register(() =>
+            {
+                if(remoteCancelEnabled)
+                    _ = SendMessageAsync(new CancelMessage(request.Id));
+                
+                _ = tcs.CancelAsync();
+            });
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
 
-
             var hw = new HeartbeatWatcher(TimeSpan.FromSeconds(15000), async () =>
             {
-                if(_streams.TryRemove(request.Id, out var obs))
+                if (_streams.TryRemove(request.Id, out var obs))
                 {
                     obs.Item1.OnCompleted();
                     if (obs.Item2.IsCancellationRequested)
@@ -174,7 +189,6 @@ namespace Hubcon.Client.Core.Websockets
                         obs.Item2.Dispose();
                     }
                 }
-                registration.Dispose();
             });
 
             if (!_streams.TryAdd(request.Id, (observable, tcs, hw)))
@@ -186,8 +200,9 @@ namespace Hubcon.Client.Core.Websockets
 
 
         public async Task<IOperationResponse<T>> IngestMultiple<T>(
-            IOperationRequest operationRequest, 
-            IClientOptions? clientOptions = null, 
+            IOperationRequest operationRequest,
+            bool remoteCancelEnabled,
+            IClientOptions? clientOptions = null,
             IOperationOptions? operationOptions = null,
             CancellationToken cancellationToken = default)
         {
@@ -202,12 +217,13 @@ namespace Hubcon.Client.Core.Websockets
             _ingests.TryAdd(initialAckId, (generalTcs, cts));
 
 
-            using var registration = cancellationToken.Register(async () =>
+            using var registration = cancellationToken.Register(() =>
             {
-                cts.Cancel();
-                await SendMessageAsync(new CancelMessage(initialAckId));
+                if(remoteCancelEnabled)
+                    _ = SendMessageAsync(new CancelMessage(initialAckId));
+                
+                _ = cts?.CancelAsync();
             });
-            
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
@@ -229,7 +245,7 @@ namespace Hubcon.Client.Core.Websockets
                 RateLimiter? sharedLimiter = null;
                 bool? useShared = null;
 
-                if(operationOptions != null && operationOptions.RateBucketOptions != null)
+                if (operationOptions != null && operationOptions.RateBucketOptions != null)
                 {
                     if (operationOptions.RateLimiterIsShared)
                     {
@@ -248,15 +264,18 @@ namespace Hubcon.Client.Core.Websockets
                     {
                         try
                         {
-                            var initAckResult = await TimeoutHelper.WaitWithTimeoutAsync(initAckTcs.Task.WaitAsync, options.WebsocketTimeout) ;
+                            var initAckResult = await TimeoutHelper.WaitWithTimeoutAsync(initAckTcs.Task.WaitAsync,
+                                options.WebsocketTimeout);
 
                             if (initAckResult == null || initAckResult.Id != initialAckId)
                                 throw new TimeoutException("Timeout o ID incorrecto en IngestInitAck");
 
-                            RateLimiter? limiter = sharedLimiter ?? (useShared == false ? new TokenBucketRateLimiter(operationOptions!.RateBucketOptions!) : null);
+                            RateLimiter? limiter = sharedLimiter ?? (useShared == false
+                                ? new TokenBucketRateLimiter(operationOptions!.RateBucketOptions!)
+                                : null);
 
                             await foreach (var item in source.Value.WithCancellation(cts.Token))
-                            {                               
+                            {
                                 if (generalTcs.Task.IsCompleted || cts.IsCancellationRequested)
                                     break;
 
@@ -265,7 +284,8 @@ namespace Hubcon.Client.Core.Websockets
 
                                 try
                                 {
-                                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.IngestRateBucket, limiter);
+                                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket,
+                                        clientOptions?.IngestRateBucket, limiter);
 
                                     await SendMessageAsync(message, cts.Token);
                                 }
@@ -292,7 +312,8 @@ namespace Hubcon.Client.Core.Websockets
                     sourceTasks.Add(sourceTask);
                 }
 
-                var ingestRequest = new IngestInitMessage(initialAckId, sources.Keys.ToArray(), converter.SerializeToElement(operationRequest));
+                var ingestRequest = new IngestInitMessage(initialAckId, sources.Keys.ToArray(),
+                    converter.SerializeToElement(operationRequest));
 
                 try
                 {
@@ -323,12 +344,13 @@ namespace Hubcon.Client.Core.Websockets
 
                 await SendMessageAsync(new IngestCompleteMessage(initialAckId, sources.Keys.ToArray()));
 
-                var result = await TimeoutHelper.WaitWithTimeoutAsync(generalTcs.Task.WaitAsync, options.WebsocketTimeout);
+                var result =
+                    await TimeoutHelper.WaitWithTimeoutAsync(generalTcs.Task.WaitAsync, options.WebsocketTimeout);
 
                 if (result == null) throw new HubconRemoteException("Received an empty response.");
 
                 var response = converter.DeserializeJsonElement<BaseOperationResponse<T>>(result.Data)
-                    ?? throw new HubconRemoteException("Received an empty response.");
+                               ?? throw new HubconRemoteException("Received an empty response.");
 
                 if (!response.Success)
                     throw new HubconRemoteException(response.Error);
@@ -360,19 +382,23 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        public async Task SendAsync(IOperationRequest payload, CancellationToken cancellationToken = default)
+        public async Task SendAsync(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             var request = new OperationCallMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
 
-            using var registration = cancellationToken.Register(async () => await SendMessageAsync(new CancelMessage(request.Id)));     
+            using var registration = cancellationToken.Register(() =>
+            {
+                if(remoteCancelEnabled)
+                    _ = SendMessageAsync(new CancelMessage(request.Id));
+            });
 
             await SendMessageAsync(request, cancellationToken);
         }
 
-        public async Task<IOperationResponse<T>> InvokeAsync<T>(IOperationRequest payload, CancellationToken cancellationToken = default)
+        public async Task<IOperationResponse<T>> InvokeAsync<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             var request = new OperationInvokeMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
             var tcs = new TaskCompletionSource<OperationResponseMessage>();
@@ -381,12 +407,16 @@ namespace Hubcon.Client.Core.Websockets
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
-
-            using var registration = cancellationToken.Register(async () => await SendMessageAsync(new CancelMessage(request.Id)));      
-
+            
             try
             {
-                await SendMessageAsync(request, cancellationToken);
+                using var registration = cancellationToken.Register(() =>
+                {
+                    if(remoteCancelEnabled)
+                        _ = SendMessageAsync(new CancelMessage(request.Id));
+                });
+                
+                await SendMessageAsync(request);
 
                 response = await TimeoutHelper.WaitWithTimeoutAsync(tcs.Task.WaitAsync, options.WebsocketTimeout);
             }
@@ -439,7 +469,8 @@ namespace Hubcon.Client.Core.Websockets
 
                             if (_lastPongId == pongMessage.Id)
                             {
-                                await _webSocket!.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "Pong error", default);
+                                await _webSocket!.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "Pong error",
+                                    default);
                                 return;
                             }
 
@@ -451,10 +482,12 @@ namespace Hubcon.Client.Core.Websockets
 
                         case MessageType.subscription_data:
                             var eventData = new SubscriptionDataMessage(tmo.Memory, message.Id, message.Type);
-                            if (eventData?.Id != null && _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
+                            if (eventData?.Id != null &&
+                                _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
                             {
                                 sub.OnNextElement(eventData.Data);
                             }
+
                             break;
 
                         case MessageType.stream_data:
@@ -471,7 +504,8 @@ namespace Hubcon.Client.Core.Websockets
                         case MessageType.stream_complete:
                             var streamComplete = new StreamCompleteMessage(tmo.Memory, message.Id, message.Type);
 
-                            if (streamComplete?.Id != null && _streams.TryGetValue(streamComplete.Id, out var streamCompleteInfo))
+                            if (streamComplete?.Id != null &&
+                                _streams.TryGetValue(streamComplete.Id, out var streamCompleteInfo))
                             {
                                 streamCompleteInfo.Item1.OnCompleted();
                             }
@@ -484,6 +518,7 @@ namespace Hubcon.Client.Core.Websockets
                             {
                                 subToError.OnError(new Exception(errorData.Error));
                             }
+
                             break;
 
                         case MessageType.ingest_init_ack:
@@ -523,7 +558,8 @@ namespace Hubcon.Client.Core.Websockets
                             break;
 
                         case MessageType.operation_response:
-                            var operationResponseMessage = new OperationResponseMessage(tmo.Memory, message.Id, message.Type);
+                            var operationResponseMessage =
+                                new OperationResponseMessage(tmo.Memory, message.Id, message.Type);
 
                             if (operationResponseMessage == null) break;
 
@@ -571,7 +607,8 @@ namespace Hubcon.Client.Core.Websockets
                 {
                     try
                     {
-                        await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Reconnect", CancellationToken.None);
+                        await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Reconnect",
+                            CancellationToken.None);
                     }
                     catch (Exception ex)
                     {
@@ -642,14 +679,16 @@ namespace Hubcon.Client.Core.Websockets
 
                         var receiveTask = _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
 
-                        var connectionResult = await TimeoutHelper.WaitWithTimeoutAsync(receiveTask.WaitAsync, options.WebsocketTimeout);
+                        var connectionResult =
+                            await TimeoutHelper.WaitWithTimeoutAsync(receiveTask.WaitAsync, options.WebsocketTimeout);
 
                         if (connectionResult == null || connectionResult.GetType() != typeof(WebSocketReceiveResult))
                             throw new TimeoutException("Connection failed.");
 
                         if (connectionResult.MessageType == WebSocketMessageType.Close)
                         {
-                            await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server closed", CancellationToken.None);
+                            await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server closed",
+                                CancellationToken.None);
                             return;
                         }
 
@@ -671,10 +710,8 @@ namespace Hubcon.Client.Core.Websockets
                             _timeoutTask ??= ReconnectLoop();
                         }
 
-                        _processingTask ??= Parallel.ForEachAsync(Enumerable.Range(0, options.MessageProcessorsCount), async (x, y) =>
-                        {
-                            await HandleIncomingMessage();
-                        });
+                        _processingTask ??= Parallel.ForEachAsync(Enumerable.Range(0, options.MessageProcessorsCount),
+                            async (x, y) => { await HandleIncomingMessage(); });
 
                         _pingTask = PingMessageLoop(_pingLoopCts.Token);
 
@@ -697,12 +734,14 @@ namespace Hubcon.Client.Core.Websockets
                         {
                             if (kvp.ShouldReconnect)
                             {
-                                var request = converter.DeserializeJsonElement<SubscriptionRequest>(kvp.RequestData!.Request);
+                                var request =
+                                    converter.DeserializeJsonElement<SubscriptionRequest>(kvp.RequestData!.Request);
                                 await SendMessageAsync(request!);
                             }
                             else
                             {
-                                kvp.OnError(new HubconRemoteException("Websocket connection lost. The subscription was not configured for reconnection."));
+                                kvp.OnError(new HubconRemoteException(
+                                    "Websocket connection lost. The subscription was not configured for reconnection."));
                             }
                         }
 
@@ -710,12 +749,15 @@ namespace Hubcon.Client.Core.Websockets
                         {
                             if (kvp.Item1.ShouldReconnect)
                             {
-                                var request = converter.DeserializeJsonElement<SubscriptionRequest>(kvp.Item1.RequestData!.Request);
+                                var request =
+                                    converter.DeserializeJsonElement<SubscriptionRequest>(
+                                        kvp.Item1.RequestData!.Request);
                                 await SendMessageAsync(request!);
                             }
                             else
                             {
-                                kvp.Item1.OnError(new HubconRemoteException("Websocket connection lost. The subscription was not configured for reconnection."));
+                                kvp.Item1.OnError(new HubconRemoteException(
+                                    "Websocket connection lost. The subscription was not configured for reconnection."));
                             }
                         }
 
@@ -781,10 +823,11 @@ namespace Hubcon.Client.Core.Websockets
 
         private async Task PingMessageLoop(CancellationToken cancellationToken)
         {
-            if(options.WebsocketPingInterval <= TimeSpan.Zero)
+            if (options.WebsocketPingInterval <= TimeSpan.Zero)
             {
                 if (LoggingEnabled)
-                    logger?.LogInformation("PingMessageLoop no iniciado porque WebsocketPingInterval es menor o igual a cero.");
+                    logger?.LogInformation(
+                        "PingMessageLoop no iniciado porque WebsocketPingInterval es menor o igual a cero.");
 
                 return;
             }
@@ -809,6 +852,7 @@ namespace Hubcon.Client.Core.Websockets
         }
 
         int cantidad = 0;
+
         private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
         {
             if (LoggingEnabled)
@@ -840,7 +884,8 @@ namespace Hubcon.Client.Core.Websockets
 
                             if (result.MessageType == WebSocketMessageType.Close)
                             {
-                                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server closed", CancellationToken.None);
+                                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server closed",
+                                    CancellationToken.None);
                                 throw new OperationCanceledException();
                             }
 
@@ -849,8 +894,7 @@ namespace Hubcon.Client.Core.Websockets
 
                             totalBytes += result.Count;
                             parts.Add(part);
-                        }
-                        while (!result.EndOfMessage);
+                        } while (!result.EndOfMessage);
 
                         // Concatenamos todos los fragmentos a un solo buffer
                         var finalOwner = MemoryPool<byte>.Shared.Rent(totalBytes);
@@ -864,7 +908,8 @@ namespace Hubcon.Client.Core.Websockets
                             part.Dispose(); // Liberamos cada fragmento individual
                         }
 
-                        await _messageChannel.Writer.WriteAsync(new TrimmedMemoryOwner(finalOwner, totalBytes), cancellationToken);
+                        await _messageChannel.Writer.WriteAsync(new TrimmedMemoryOwner(finalOwner, totalBytes),
+                            cancellationToken);
                     }
                     catch (Exception ex)
                     {
@@ -875,7 +920,9 @@ namespace Hubcon.Client.Core.Websockets
                     }
                 }
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException)
+            {
+            }
             catch (Exception ex)
             {
                 if (LoggingEnabled)
@@ -925,7 +972,6 @@ namespace Hubcon.Client.Core.Websockets
             }
             catch (Exception ex)
             {
-
             }
         }
 
@@ -989,7 +1035,10 @@ namespace Hubcon.Client.Core.Websockets
 
                 await Task.WhenAll(_pingTask ?? Task.CompletedTask, _timeoutTask ?? Task.CompletedTask);
             }
-            finally { /*Ignore*/ }
+            finally
+            {
+                /*Ignore*/
+            }
         }
     }
 }

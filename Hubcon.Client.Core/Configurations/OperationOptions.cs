@@ -36,6 +36,8 @@ namespace Hubcon.Client.Core.Configurations
         public RateLimiter? RateBucket => _rateBucket ??= RateBucketOptions != null ? new TokenBucketRateLimiter(RateBucketOptions) : null;
         
         private Func<RequestValidationContext, Task>? _validationHook;
+        
+        public bool RemoteCancellationIsAllowed { get; private set; }
 
         public IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true)
         {
@@ -59,6 +61,12 @@ namespace Hubcon.Client.Core.Configurations
         public IOperationConfigurator UseTransport(TransportType transportType)
         {
             TransportType = transportType;
+            return this;
+        }
+
+        public IOperationConfigurator AllowRemoteCancellation(bool value = true)
+        {
+            RemoteCancellationIsAllowed = value;
             return this;
         }
 

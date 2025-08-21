@@ -206,6 +206,7 @@ namespace Hubcon.Server.Core.Configuration
         ICoreServerOptions UseGlobalRouteHandlerBuilder(Action<RouteHandlerBuilder> configure);
         ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure);
         ICoreServerOptions LimitHttpRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
+        ICoreServerOptions AllowRemoteTokenCancellation();
     }
 
     public interface IInternalServerOptions
@@ -306,7 +307,7 @@ namespace Hubcon.Server.Core.Configuration
         Func<string, IServiceProvider, ClaimsPrincipal?>? WebsocketTokenHandler { get; }
 
         /// <summary>
-        /// Delay for websocket client receive loop.
+        /// Delay for a websocket client receive loop.
         /// </summary>
         bool ThrottlingIsDisabled { get; }
 
@@ -364,5 +365,10 @@ namespace Hubcon.Server.Core.Configuration
         /// Default rate limiter options for streaming messages in the websocket channel.
         /// </summary>
         Func<TokenBucketRateLimiterOptions> WebsocketStreamingRateLimiter { get; }
+        
+        /// <summary>
+        /// Determines if remote task cancellation is allowed.
+        /// </summary>
+        bool RemoteCancellationIsAllowed { get; }
     }
 }

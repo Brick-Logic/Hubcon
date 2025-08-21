@@ -20,7 +20,7 @@ namespace Hubcon.Client.Builder
         {
             var module = remoteServerFactory == null ? Activator.CreateInstance<TRemoteServerModule>() : remoteServerFactory.Invoke();
 
-            var clientBuilder = new ClientBuilder(_proxyRegistry);
+            var clientBuilder = new ClientBuilder(_proxyRegistry, module.GetType().Name);
             var builderConfig = new ServerModuleConfiguration(clientBuilder, services);
             module.Configure(builderConfig);
 

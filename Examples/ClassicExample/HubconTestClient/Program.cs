@@ -3,19 +3,16 @@ using HubconTestClient.Auth;
 using HubconTestClient.Modules;
 using HubconTestDomain;
 using System.Collections.Concurrent;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.RateLimiting;
 
 internal class Program
 {
-    static int finishedRequestsCount = 0;
-    static int errors = 0;
-    static int lastRequests = 0;
-    static int maxReqs = 0;
-    static Stopwatch sw;
-    static ConcurrentBag<double> latencies = new();
+    private static int _finishedRequestsCount = 0;
+    private static int _errors = 0;
+    private static int _lastRequests = 0;
+    private static int _maxReqs = 0;
+    private static Stopwatch _sw;
+    private static readonly ConcurrentBag<double> Latencies = new();
 
     static async Task Main()
     {
@@ -56,17 +53,17 @@ internal class Program
 
         logger.LogWarning($"Probando login...");
         var result = await authManager.LoginAsync("miusuario", "");
-        logger.LogInformation($"Login result: {result.IsSuccess}");
+        logger.LogInformation("{0}", $"Login result: {result.IsSuccess}");
         logger.LogInformation($"Login OK.");
 
         await Task.Delay(100);
 
         logger.LogWarning($"Probando ingest...");
-        IAsyncEnumerable<string> source1 = GetMessages(2);
-        IAsyncEnumerable<string> source2 = GetMessages(2);
-        IAsyncEnumerable<string> source3 = GetMessages(2);
-        IAsyncEnumerable<string> source4 = GetMessages(2);
-        IAsyncEnumerable<string> source5 = GetMessages(2);
+        var source1 = GetMessages(2);
+        var source2 = GetMessages(2);
+        var source3 = GetMessages(2);
+        var source4 = GetMessages(2);
+        var source5 = GetMessages(2);
         await client.IngestMessages2(source1, source2, source3, source4, source5);
         logger.LogInformation($"Ingest OK.");
 
@@ -152,9 +149,23 @@ internal class Program
         var temp = await client.GetTemperatureFromServer();
         logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
 
+        logger.LogWarning("Probando cancelacion remota...");
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        bool temp2 = false;
+        try
+        { 
+            temp2 = await client.GetTemperatureFromServerBlocking(cts.Token);
+        }
+        catch (Exception e)
+        {
+            logger.LogInformation(e.ToString());
+        }
+        
+        logger.LogInformation($"Invocación OK. Datos recibidos: {temp2}");
+        
         await Task.Delay(100);
 
-        logger.LogWarning("Probando streaming de 10 mensajes...");
+        logger.LogWarning("Probando streaming de 10 mensajes..."); 
 
         await foreach (var item in client.GetMessages(10))
         {
@@ -165,19 +176,19 @@ internal class Program
 
         await Task.Delay(100);
 
-        sw = Stopwatch.StartNew();
+        _sw = Stopwatch.StartNew();
 
         var worker = new System.Timers.Timer();
         worker.Interval = 1000;
         worker.Elapsed += (sender, eventArgs) =>
         {
-            var avgRequestsPerSec = finishedRequestsCount - lastRequests;
+            var avgRequestsPerSec = _finishedRequestsCount - _lastRequests;
 
             double avgLatency = 0;
             double p50 = 0, p95 = 0, p99 = 0;
 
-            var latenciesSnapshot = latencies.ToArray();
-            latencies.Clear();
+            var latenciesSnapshot = Latencies.ToArray();
+            Latencies.Clear();
 
             if (latenciesSnapshot.Length > 0)
             {
@@ -189,16 +200,16 @@ internal class Program
                 p99 = Percentile(latenciesSnapshot, 99);
             }
 
-            maxReqs = Math.Max(maxReqs, avgRequestsPerSec);
+            _maxReqs = Math.Max(_maxReqs, avgRequestsPerSec);
 
-            logger.LogInformation($"Requests: {finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {maxReqs} | " +
+            logger.LogInformation($"Requests: {_finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {_maxReqs} | " +
                                   $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
 
             var allocated = GC.GetTotalMemory(forceFullCollection: false);
-            logger.LogInformation($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {sw.Elapsed}");
+            logger.LogInformation($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {_sw.Elapsed}");
 
-            lastRequests = finishedRequestsCount;
-            sw.Restart();
+            _lastRequests = _finishedRequestsCount;
+            _sw.Restart();
         };
         worker.Start();
 
@@ -217,16 +228,16 @@ internal class Program
                 {
                     //await client.IngestMessages(GetMessages2(), default);
                     await client.GetTemperatureFromServer(ct);
-                    Interlocked.Increment(ref finishedRequestsCount);
+                    Interlocked.Increment(ref _finishedRequestsCount);
                 }
                 catch
                 {
-                    Interlocked.Increment(ref errors);
+                    Interlocked.Increment(ref _errors);
                 }
                 finally
                 {
                     swReq.Stop();
-                    latencies.Add(swReq.Elapsed.TotalMilliseconds);
+                    Latencies.Add(swReq.Elapsed.TotalMilliseconds);
                 }
             }
         });
@@ -261,13 +272,13 @@ internal class Program
             try
             {
                 yield return "hola";
-                Interlocked.Increment(ref finishedRequestsCount);
+                Interlocked.Increment(ref _finishedRequestsCount);
                 //await limiter.AcquireAsync();
             }
             finally
             {
                 swReq.Stop();
-                latencies.Add(swReq.Elapsed.TotalMilliseconds);
+                Latencies.Add(swReq.Elapsed.TotalMilliseconds);
             }
         }
     }

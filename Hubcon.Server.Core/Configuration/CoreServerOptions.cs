@@ -30,6 +30,7 @@ namespace Hubcon.Server.Core.Configuration
         private bool? websocketLoggingEnabled;
         private bool? httpLoggingEnabled;
         private TimeSpan? ingestTimeout;
+        private bool? remoteCancellationIsAllowed;
 
         private Func<TokenBucketRateLimiterOptions> websocketReaderRateLimiter = () => new TokenBucketRateLimiterOptions
         {
@@ -163,6 +164,8 @@ namespace Hubcon.Server.Core.Configuration
         public Func<TokenBucketRateLimiterOptions> WebsocketIngestRateLimiter => websocketIngestRateLimiter;
         public Func<TokenBucketRateLimiterOptions> WebsocketSubscriptionRateLimiter => websocketSubscriptionRateLimiter;
         public Func<TokenBucketRateLimiterOptions> WebsocketStreamingRateLimiter => websocketStreamingRateLimiter;
+
+        public bool RemoteCancellationIsAllowed => remoteCancellationIsAllowed ?? false;
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -306,6 +309,12 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions LimitHttpRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory)
         {
             websocketRoundTripMethodRateLimiter = rateLimiterOptionsFactory;
+            return this;
+        }
+
+        public ICoreServerOptions AllowRemoteTokenCancellation()
+        {
+            remoteCancellationIsAllowed = true;
             return this;
         }
 

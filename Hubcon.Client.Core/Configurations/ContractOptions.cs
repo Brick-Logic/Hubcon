@@ -27,6 +27,8 @@ namespace Hubcon.Client.Core.Configurations
         ConcurrentDictionary<HookType, Func<HookContext, Task>> _hooks = new();
         public IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks => _hooks;
 
+        public bool RemoteCancellationIsAllowed { get; private set; }
+        
         public IContractConfigurator<T> UseWebsocketMethods(bool value = true)
         {
             websocketMethodsEnabled ??= value;
@@ -88,6 +90,12 @@ namespace Hubcon.Client.Core.Configurations
         public IContractConfigurator<T> AddHook(HookType hookType, Func<HookContext, Task> hookDelegate)
         {
             _hooks.TryAdd(hookType, hookDelegate);
+            return this;
+        }
+
+        public IContractConfigurator<T> AllowRemoteCancellation(bool value = true)
+        {
+            RemoteCancellationIsAllowed = value;
             return this;
         }
     }

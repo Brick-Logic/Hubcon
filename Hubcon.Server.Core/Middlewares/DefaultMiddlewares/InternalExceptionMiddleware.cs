@@ -20,6 +20,14 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 await next();
             }
+            catch(TaskCanceledException)
+            {
+                exception = new OperationCanceledException();
+            }
+            catch(OperationCanceledException)
+            {
+                exception = new OperationCanceledException();
+            }
             catch(Exception ex)
             {
                 exception = ex;

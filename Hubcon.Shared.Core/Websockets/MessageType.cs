@@ -27,6 +27,7 @@
         stream_data,
         stream_data_with_ack,
         ingest_result,
-        cancel
+        cancel,
+        none
     }
 }

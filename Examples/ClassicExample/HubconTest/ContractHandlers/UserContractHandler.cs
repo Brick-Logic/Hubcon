@@ -28,6 +28,23 @@ namespace HubconTest.ContractHandlers
         }
 
         public async Task<int> GetTemperatureFromServer(CancellationToken cancellationToken) => Random.Shared.Next(-10, 50);
+        public async Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default)
+        {
+            int i = 0;
+            while (cancellationToken.IsCancellationRequested == false)
+            {
+                await Task.Delay(100, cancellationToken);
+
+                if (i > 30)
+                {
+                    break;
+                }
+
+                i++;
+            }
+            
+            return true;
+        }
 
         [StreamingSettings(1000)]
         public async IAsyncEnumerable<string> GetMessages(int count)

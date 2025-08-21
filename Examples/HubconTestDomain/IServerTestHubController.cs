@@ -19,6 +19,7 @@ namespace HubconTestDomain
         ISubscription<int?>? OnUserCreated4 { get; }
 
         Task<int> GetTemperatureFromServer(CancellationToken cancellationToken = default);
+        Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default);
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();
         Task<IEnumerable<bool>> GetBooleans();

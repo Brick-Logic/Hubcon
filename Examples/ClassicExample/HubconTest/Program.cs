@@ -21,10 +21,10 @@ namespace HubconTest
 
             long coreMask = 0;
 
-            int? customCores = 5;
+            int? customCores = null;
             int cores = customCores ?? Environment.ProcessorCount - 1;
 
-            for (int i = 4; i <= cores; i++)
+            for (int i = 0; i <= cores; i++)
             {
                 coreMask |= 1L << i;
             }
@@ -108,6 +108,7 @@ namespace HubconTest
                     .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
                     .SetMaxHttpMessageSize(4 * 1024)
                     .SetMaxWebSocketMessageSize(4 * 1024)
+                    // .AllowRemoteTokenCancellation()
                     .ConfigureWebsocketRateLimiter(() => new TokenBucketRateLimiterOptions()
                     {
                         TokenLimit = 100,

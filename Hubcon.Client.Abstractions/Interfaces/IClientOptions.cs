@@ -30,6 +30,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         RateLimiter? RateBucket { get; }
         TokenBucketRateLimiterOptions? RateBucketOptions { get; }
         bool LimitersDisabled { get; }
+        public string ServerModuleName  { get; }
 
         public TokenBucketRateLimiterOptions? IngestLimiterOptions { get; }
         public TokenBucketRateLimiterOptions? SubscriptionLimiterOptions { get; }

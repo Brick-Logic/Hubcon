@@ -20,6 +20,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         bool RateLimiterIsShared { get; }
         RateLimiter? RateBucket { get; }
         IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks { get; }
+        bool RemoteCancellationIsAllowed { get; }
 
         Task CallHook(HookContext context);
 

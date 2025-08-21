@@ -14,5 +14,6 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         IOperationConfigurator AddValidationHook(Func<RequestValidationContext, Task> value);
         IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true);
         IOperationConfigurator UseTransport(TransportType transportType);
+        IOperationConfigurator AllowRemoteCancellation(bool value = true);
     }
 }

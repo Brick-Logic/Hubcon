@@ -18,6 +18,11 @@ namespace BlazorTestServer.Controllers
         public async Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
             => await Task.Run(() => new Random().Next(-10, 50));
 
+        public Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
         public async IAsyncEnumerable<string> GetMessages(int count)
         {
             for (int i = 0; i < count; i++)

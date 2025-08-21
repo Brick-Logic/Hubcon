@@ -14,7 +14,8 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         public bool WebsocketMethodsEnabled { get; }
         public Type ContractType { get; }
         Dictionary<string, IOperationOptions> OperationOptions { get; }
-        IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks { get; }
+        IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks { get; } 
+        bool RemoteCancellationIsAllowed { get; }
 
         Task CallHook(HookType hookType, HookContext context);
         Task CallHook(HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null);

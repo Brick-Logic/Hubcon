@@ -1,4 +1,5 @@
-﻿using Hubcon.Client.Abstractions.Interfaces;
+﻿using System.Collections.Concurrent;
+using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.Configurations;
 using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.Helpers;
@@ -18,6 +19,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
+using Hubcon.Shared.Core.Cache;
 
 namespace Hubcon.Client.Integration.Client
 {
@@ -27,6 +29,12 @@ namespace Hubcon.Client.Integration.Client
         private string _websocketUrl = "";
 
         Func<IAuthenticationManager?>? authenticationManagerFactory;
+        
+        IAuthenticationManager? _authenticationManager;
+        IAuthenticationManager AuthenticationManager => _authenticationManager 
+            ??= authenticationManagerFactory?.Invoke() 
+            ?? throw new InvalidOperationException($"Authentication Manager not defined for server module '{clientOptions.ServerModuleName}'.");
+        
         HubconWebSocketClient client = null!;
 
         HttpClient? _httpClient;
@@ -52,39 +60,42 @@ namespace Hubcon.Client.Integration.Client
 
         private IDictionary<Type, IContractOptions> ContractOptionsDict { get; set; } = null!;
 
+        private readonly ImmutableCache<(IOperationOptions?, IContractOptions?), bool> _remoteCancelCache = new();
+        private readonly ImmutableCache<Type, IContractOptions?> _contractOptionsCache = new();
+        private readonly ImmutableCache<Type, IOperationOptions?> _operationOptionsCache = new();
+
         public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {           
-            if (!IsBuilt)
-                throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
-
             IOperationOptions? operationOptions = null;
             ContractOptionsDict!.TryGetValue(methodInfo.ReflectedType!, out IContractOptions? contractOptions);
 
             bool isWebsocketMethod = false;
-
+            
             if (contractOptions != null)
             {
                 isWebsocketMethod = contractOptions.IsWebsocketOperation(request.OperationName);
                 operationOptions = contractOptions.GetOperationOptions(request.OperationName);
             }
 
+            static bool ValueFactory((IOperationOptions?, IContractOptions?) x) 
+                => x.Item1?.RemoteCancellationIsAllowed ?? x.Item2?.RemoteCancellationIsAllowed ?? false;
+
+            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
+                                      ?? contractOptions?.RemoteCancellationIsAllowed 
+                                      ?? false;
+            
             await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
 
             try
             {
-
                 if (isWebsocketMethod)
                 {
                     await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.WebsocketRoundTripRateBucket, operationOptions?.RateBucket);
-
-                    if (authenticationManagerFactory?.Invoke() == null)
-                        throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' method or disable websocket authentication on your server module configuration.");
-
+                    
                     await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
                     await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
 
-                    var result = await client.InvokeAsync<T>(request, cancellationToken)
-                        ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
+                    var result = await client.InvokeAsync<T>(request, remoteCancellation, cancellationToken);
 
                     await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
                     await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
@@ -111,11 +122,9 @@ namespace Hubcon.Client.Integration.Client
                     {
                         Content = content
                     };
-
-                    var authManager = authenticationManagerFactory?.Invoke();
-
-                    if (authManager != null && authManager.IsSessionActive)
-                        httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authManager.TokenType!, authManager.AccessToken);
+                    
+                    if (AuthenticationManager.IsSessionActive)
+                        httpRequest.Headers.Authorization = new AuthenticationHeaderValue(AuthenticationManager.TokenType!, AuthenticationManager.AccessToken);
 
                     await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
                     await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
@@ -173,6 +182,10 @@ namespace Hubcon.Client.Integration.Client
                 isWebsocketOperation = contractOptions.IsWebsocketOperation(request.OperationName);
                 operationOptions = contractOptions.GetOperationOptions(request.OperationName);
             }
+            
+            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
+                                      ?? contractOptions?.RemoteCancellationIsAllowed 
+                                      ?? false;
 
             await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
 
@@ -181,14 +194,11 @@ namespace Hubcon.Client.Integration.Client
                 if (isWebsocketOperation)
                 {
                     await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.WebsocketFireAndForgetRateBucket, operationOptions?.RateBucket);
-
-                    if (authenticationManagerFactory?.Invoke() == null)
-                        throw new UnauthorizedAccessException("Websockets require authentication by default. Use 'UseAuthorizationManager()' extension method or disable websocket authentication on your server module configuration.");
-
+                    
                     await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
                     await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
 
-                    await client.SendAsync(request, cancellationToken);
+                    await client.SendAsync(request, remoteCancellation, cancellationToken);
 
                     await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
                     await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
@@ -207,11 +217,9 @@ namespace Hubcon.Client.Integration.Client
                     {
                         Content = content
                     };
-
-                    var authManager = authenticationManagerFactory?.Invoke();
-
-                    if (authManager != null && authManager.IsSessionActive)
-                        httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authManager.TokenType!, authManager.AccessToken);
+                    
+                    if (AuthenticationManager.IsSessionActive)
+                        httpRequest.Headers.Authorization = new AuthenticationHeaderValue(AuthenticationManager.TokenType!, AuthenticationManager.AccessToken);
 
                     await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
                     await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
@@ -247,6 +255,10 @@ namespace Hubcon.Client.Integration.Client
             {
                 operationOptions = contractOptions.GetOperationOptions(request.OperationName);
             }
+            
+            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
+                                      ?? contractOptions?.RemoteCancellationIsAllowed 
+                                      ?? false;
 
             IObservable<JsonElement> observable;
 
@@ -259,7 +271,7 @@ namespace Hubcon.Client.Integration.Client
                 await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
                 await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
 
-                observable = await client.Stream<JsonElement>(request, cancellationToken);
+                observable = await client.Stream<JsonElement>(request, remoteCancellation, cancellationToken);
 
                 await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
                 await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
@@ -324,10 +336,7 @@ namespace Hubcon.Client.Integration.Client
         {
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
-        
-            if (authenticationManagerFactory?.Invoke() == null)
-                throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
-
+            
             IOperationOptions? operationOptions = null;
             IContractOptions? contractOptions = null;
 
@@ -336,18 +345,20 @@ namespace Hubcon.Client.Integration.Client
                 operationOptions = contractOptions.GetOperationOptions(request.OperationName);
             }
 
+            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
+                                      ?? contractOptions?.RemoteCancellationIsAllowed 
+                                      ?? false;
+            
             await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
 
             try 
-            {          
-
-
+            {
                 await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.IngestRateBucket, operationOptions?.RateBucket);
 
                 await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
                 await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
 
-                var response = await client.IngestMultiple<T>(request, clientOptions, operationOptions, cancellationToken);
+                var response = await client.IngestMultiple<T>(request, remoteCancellation, clientOptions, operationOptions, cancellationToken);
 
                 await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
                 await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
@@ -380,12 +391,16 @@ namespace Hubcon.Client.Integration.Client
             {
                 operationOptions = contractOptions.GetOperationOptions(request.OperationName);
             }
+            
+            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
+                                      ?? contractOptions?.RemoteCancellationIsAllowed 
+                                      ?? false;
 
             await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
 
             try
             {
-                return HandleSubscription(request, method, contractOptions, operationOptions, cancellationToken);
+                return HandleSubscription(request, remoteCancellation, method, contractOptions, operationOptions, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -402,7 +417,13 @@ namespace Hubcon.Client.Integration.Client
 
         }
 
-        private async IAsyncEnumerable<JsonElement> HandleSubscription(IOperationRequest request, MemberInfo method, IContractOptions? contractOptions, IOperationOptions? operationOptions, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        private async IAsyncEnumerable<JsonElement> HandleSubscription(
+            IOperationRequest request,
+            bool remoteCancellation, 
+            MemberInfo method, 
+            IContractOptions? contractOptions,
+            IOperationOptions? operationOptions, 
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
@@ -413,13 +434,10 @@ namespace Hubcon.Client.Integration.Client
 
             try
             {
-                if (authenticationManagerFactory?.Invoke() == null)
-                    throw new UnauthorizedAccessException("Subscriptions are required to be authenticated. Use 'UseAuthorizationManager()' extension method.");
-
                 await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
                 await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
 
-                observable = await client.Subscribe<JsonElement>(request);
+                observable = await client.Subscribe<JsonElement>(request, remoteCancellation);
 
                 await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
                 await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
@@ -487,28 +505,19 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        private Task CallHook(IContractOptions? options, HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null)
+        private static Task CallHook(IContractOptions? options, HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null)
         {
-            if (options == null)
-                return Task.CompletedTask;
-
-            return options.CallHook(type, services, request, cancellationToken, result, exception);
+            return options == null ? Task.CompletedTask : options.CallHook(type, services, request, cancellationToken, result, exception);
         }
 
-        private Task CallHook(IOperationOptions? options, HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null)
+        private static Task CallHook(IOperationOptions? options, HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null)
         {
-            if(options == null)
-                return Task.CompletedTask;
-
-            return options.CallHook(type, services, request, cancellationToken, result, exception);
+            return options != null ? options.CallHook(type, services, request, cancellationToken, result, exception) : Task.CompletedTask;
         }
 
-        private Task CallValidationHook(IOperationOptions? options, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken)
+        private static Task CallValidationHook(IOperationOptions? options, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken)
         {
-            if (options == null)
-                return Task.CompletedTask;
-
-            return options.CallValidationHook(services, request, cancellationToken);
+            return options == null ? Task.CompletedTask : options.CallValidationHook(services, request, cancellationToken);
         }
 
         public void Build(
@@ -531,7 +540,7 @@ namespace Hubcon.Client.Integration.Client
 
             _restHttpUrl = useSecureConnection ? $"https://{baseRestHttpUrl}" : $"http://{baseRestHttpUrl}";
             _websocketUrl = useSecureConnection ? $"wss://{baseRestWebsocketUrl}" : $"ws://{baseRestWebsocketUrl}";
-
+            
             if (authenticationManagerType is not null)
             {
                 var lazyAuthType = typeof(Lazy<>).MakeGenericType(authenticationManagerType);
@@ -540,7 +549,7 @@ namespace Hubcon.Client.Integration.Client
 
             client = new HubconWebSocketClient(new Uri(_websocketUrl), converter, options, serviceProvider, serviceProvider.GetService<ILogger<HubconWebSocketClient>>());
 
-            client.AuthorizationTokenProvider = () => authenticationManagerFactory?.Invoke()?.AccessToken;
+            client.AuthorizationTokenProvider = () => AuthenticationManager.AccessToken;
 
             client.WebSocketOptions = options.WebSocketOptions;
 
