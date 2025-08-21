@@ -885,18 +885,19 @@ The RemoteServerModule can be configured to change the client-side behavior of t
     });
 ```
 
-## IServerModuleConfiguration Cheat Sheet
+## Server Settings Cheat Sheet
 
+### Server Configuration
 | Method | Description | Default |
 |--------|-------------|---------|
 | `Implements<T>(Action<IContractConfigurator<T>>?)` | Register a contract interface | none |
 | `UseAuthenticationManager<T>()` | Set auth manager for this module | none |
 | `WithBaseUrl(string url)` | Base server URL | none |
 | `UseInsecureConnection()` | Use HTTP/WS instead of HTTPS/WSS | false |
-| `WithHttpPrefix(string prefix)` | HTTP route prefix | "/" |
-| `WithWebsocketEndpoint(string endpoint)` | WebSocket endpoint | "/" |
-| `ConfigureHttpClient(Action<HttpClient, IServiceProvider>)` | Customize HTTP client | default |
-| `ConfigureWebsocketClient(Action<ClientWebSocketOptions, IServiceProvider>)` | Customize WS client | default |
+| `WithHttpPrefix(string prefix)` | HTTP route prefix | `""` |
+| `WithWebsocketEndpoint(string endpoint)` | WebSocket endpoint | `"/ws"` |
+| `ConfigureHttpClient(Action<HttpClient, IServiceProvider>)` | Customize HTTP client | timeout: 15s |
+| `ConfigureWebsocketClient(Action<ClientWebSocketOptions, IServiceProvider>)` | Customize WS client | timeout: 30s, ping interval: 5s |
 | `SetWebsocketPingInterval(TimeSpan)` | Interval for WS ping | 5 s |
 | `RequirePongResponse(bool)` | Require pong for WS ping | true |
 | `EnableWebsocketAutoReconnect(bool)` | Auto reconnect WS | true |
@@ -904,23 +905,40 @@ The RemoteServerModule can be configured to change the client-side behavior of t
 | `ResubcribeStreamingOnReconnect(bool)` | Auto reconnect streams | true |
 | `ResubscribeIngestOnReconnect(bool)` | Auto reconnect ingest | true |
 | `ScaleMessageProcessors(int)` | Number of message processors | 1 |
-| `DisableAllLimiters()` | Disable all rate limiters | none |
-| `GlobalLimit(int)` | Global rate limit (msg/sec) | none |
-| `LimitIngest(int)` | Limit ingest messages | none |
-| `LimitSubscription(int)` | Limit subscription messages | none |
-| `LimitStreaming(int)` | Limit streaming messages | none |
-| `LimitWebsocketRoundTrip(int)` | Limit WS request-response | none |
-| `LimitHttpRoundTrip(int)` | Limit HTTP request-response | none |
-| `LimitWebsocketFireAndForget(int)` | Limit WS fire-and-forget | none |
-| `LimitHttpFireAndForget(int)` | Limit HTTP fire-and-forget | none |
-| `GlobalLimit(TokenBucketRateLimiterOptions?)` | Configure custom rate limiter | none |
-| `LimitIngest(TokenBucketRateLimiterOptions?)` | Configure ingest rate limiter | none |
-| `LimitSubscription(TokenBucketRateLimiterOptions?)` | Configure subscription rate limiter | none |
-| `LimitStreaming(TokenBucketRateLimiterOptions?)` | Configure streaming rate limiter | none |
-| `LimitWebsocketRoundTrip(TokenBucketRateLimiterOptions?)` | Configure WS round-trip limiter | none |
-| `LimitWebsocketFireAndForget(TokenBucketRateLimiterOptions?)` | Configure WS fire-and-forget limiter | none |
-| `LimitHttpRoundTrip(TokenBucketRateLimiterOptions?)` | Configure HTTP round-trip limiter | none |
-| `LimitHttpFireAndForget(TokenBucketRateLimiterOptions?)` | Configure HTTP fire-and-forget limiter | none |
+| `DisableAllLimiters()` | Disable all rate limiters | false |
+| `GlobalLimit(int)` | Global rate limit (msg/sec) | none (default unlimited) |
+
+### Rate Limiters (TokenBucketRateLimiterOptions)
+| Method | TokenLimit | TokensPerPeriod | ReplenishmentPeriod | QueueLimit | Notes |
+|--------|-----------|----------------|-------------------|------------|-------|
+| `WebsocketReaderRateLimiter` | 500 | 500 | 1 s | 1 | WS read operations |
+| `WebsocketPingRateLimiter` | 5 | 5 | 5 s | 1 | WS ping messages |
+| `HttpRoundTripMethodRateLimiter` | 50 | 50 | 1 s | 1 | HTTP request-response |
+| `HttpFireAndForgetMethodLimiter` | 100 | 100 | 1 s | 1 | HTTP fire-and-forget |
+| `WebsocketRoundTripMethodRateLimiter` | 50 | 50 | 1 s | 1 | WS request-response |
+| `WebsocketFireAndForgetMethodLimiter` | 100 | 100 | 1 s | 1 | WS fire-and-forget |
+| `WebsocketIngestRateLimiter` | 200 | 200 | 1 s | 1 | WS ingest messages |
+| `WebsocketSubscriptionRateLimiter` | 20 | 20 | 2 s | 1 | WS subscriptions |
+| `WebsocketStreamingRateLimiter` | 100 | 100 | 1 s | 1 | WS streaming |
+
+### Other Defaults
+| Property | Default |
+|----------|---------|
+| `MaxWebSocketMessageSize` | 64 KB |
+| `MaxHttpMessageSize` | 128 KB |
+| `WebSocketIngestIsAllowed` | true |
+| `WebSocketSubscriptionIsAllowed` | true |
+| `WebSocketStreamIsAllowed` | true |
+| `WebSocketMethodsIsAllowed` | true |
+| `WebsocketRequiresPing` | true |
+| `WebSocketPongEnabled` | true |
+| `MessageRetryIsEnabled` | false |
+| `DetailedErrorsEnabled` | false |
+| `WebsocketRequiresAuthorization` | false |
+| `WebsocketLoggingEnabled` | false |
+| `HttpLoggingEnabled` | false |
+| `RemoteCancellationIsAllowed` | false |
+| `IngestTimeout` | 30 s |
 
 
 ### ⚪ WebSocket Reconnection
