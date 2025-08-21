@@ -126,10 +126,10 @@ namespace Hubcon.Client.Core.Websockets
         {
             var request = new SubscriptionInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
-            using var registration = cancellationToken.Register(() =>
+            using var registration = cancellationToken.Register(async () =>
             {
-                if(remoteCancelEnabled)
-                    _ = SendMessageAsync(new CancelMessage(request.Id));
+                if (remoteCancelEnabled)
+                    await SendMessageAsync(new CancelMessage(request.Id));
             });
 
             var observable = new GenericObservable<T>(
@@ -167,10 +167,10 @@ namespace Hubcon.Client.Core.Websockets
 
             var tcs = new CancellationTokenSource();
             
-            using var registration = cancellationToken.Register(() =>
+            using var registration = cancellationToken.Register(async () =>
             {
                 if(remoteCancelEnabled)
-                    _ = SendMessageAsync(new CancelMessage(request.Id));
+                    await SendMessageAsync(new CancelMessage(request.Id));
                 
                 _ = tcs.CancelAsync();
             });
@@ -217,10 +217,10 @@ namespace Hubcon.Client.Core.Websockets
             _ingests.TryAdd(initialAckId, (generalTcs, cts));
 
 
-            using var registration = cancellationToken.Register(() =>
+            using var registration = cancellationToken.Register(async () =>
             {
                 if(remoteCancelEnabled)
-                    _ = SendMessageAsync(new CancelMessage(initialAckId));
+                    await SendMessageAsync(new CancelMessage(initialAckId));
                 
                 _ = cts?.CancelAsync();
             });
@@ -389,10 +389,10 @@ namespace Hubcon.Client.Core.Websockets
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
 
-            using var registration = cancellationToken.Register(() =>
+            using var registration = cancellationToken.Register(async () =>
             {
-                if(remoteCancelEnabled)
-                    _ = SendMessageAsync(new CancelMessage(request.Id));
+                if (remoteCancelEnabled)
+                    await SendMessageAsync(new CancelMessage(request.Id));
             });
 
             await SendMessageAsync(request, cancellationToken);
@@ -410,13 +410,13 @@ namespace Hubcon.Client.Core.Websockets
             
             try
             {
-                using var registration = cancellationToken.Register(() =>
+                using var registration = cancellationToken.Register(async () =>
                 {
                     if(remoteCancelEnabled)
-                        _ = SendMessageAsync(new CancelMessage(request.Id));
+                        await SendMessageAsync(new CancelMessage(request.Id));
                 });
                 
-                await SendMessageAsync(request);
+                await SendMessageAsync(request, CancellationToken.None);
 
                 response = await TimeoutHelper.WaitWithTimeoutAsync(tcs.Task.WaitAsync, options.WebsocketTimeout);
             }

@@ -76,10 +76,6 @@ namespace Hubcon.Client.Integration.Client
                 isWebsocketMethod = contractOptions.IsWebsocketOperation(request.OperationName);
                 operationOptions = contractOptions.GetOperationOptions(request.OperationName);
             }
-
-            static bool ValueFactory((IOperationOptions?, IContractOptions?) x) 
-                => x.Item1?.RemoteCancellationIsAllowed ?? x.Item2?.RemoteCancellationIsAllowed ?? false;
-
             bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
                                       ?? contractOptions?.RemoteCancellationIsAllowed 
                                       ?? false;
