@@ -77,16 +77,10 @@ namespace Hubcon.Analyzers
             return false;
         }
 
-
         private bool IsTaskType(ITypeSymbol type)
         {
-            return type.Name == "Task" &&
+            return (type.Name == "Task" || type.Name == "ValueTask") &&
                    type.ContainingNamespace.ToDisplayString().StartsWith("System.Threading.Tasks");
-        }
-
-        private bool ImplementsInterface(INamedTypeSymbol type, string interfaceName)
-        {
-            return type.AllInterfaces.Any(i => i.Name == interfaceName);
         }
     }
 }

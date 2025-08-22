@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using System.Linq;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.Analyzers
 {
@@ -16,7 +17,7 @@ namespace Hubcon.Analyzers
             // Caso 1: si es una INTERFAZ, solo entra si hereda (indirectamente) de IControllerContract
             if (type.TypeKind == TypeKind.Interface)
             {
-                return type.AllInterfaces.Any(i => i.Name == "IControllerContract");
+                return type.AllInterfaces.Any(i => i.Name == nameof(IControllerContract));
             }
 
             // Caso 2: si es una CLASE, verificamos que implemente una interfaz que a su vez
@@ -25,16 +26,15 @@ namespace Hubcon.Analyzers
             {
                 foreach (var iface in type.AllInterfaces)
                 {
-                    if (iface.Name == "IControllerContract")
+                    if (iface.Name == nameof(IControllerContract))
                         continue; // descartar implementación directa
 
-                    if (iface.AllInterfaces.Any(i => i.Name == "IControllerContract"))
+                    if (iface.AllInterfaces.Any(i => i.Name == nameof(IControllerContract)))
                         return true; // acepta solo si es por interfaz derivada
                 }
             }
 
             return false;
         }
-
     }
 }

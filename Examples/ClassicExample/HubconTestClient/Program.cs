@@ -180,7 +180,7 @@ internal class Program
         await Task.Delay(100);
 
         _sw = Stopwatch.StartNew();
-
+        var ts = TimeSpan.FromSeconds(1);
         var worker = new System.Timers.Timer();
         worker.Interval = 1000;
         worker.Elapsed += (sender, eventArgs) =>
