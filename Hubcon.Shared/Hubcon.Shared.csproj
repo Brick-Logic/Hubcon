@@ -20,6 +20,9 @@
 
 	<!-- Development -->
 	<ItemGroup Condition="'$(UsePackages)' != 'true'">
+		<PackageReference Include="Hubcon.Analyzers" Version="1.0.0-rc*" />
+		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="1.0.0-rc*" />
+		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="1.0.0-rc*" />
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
@@ -27,6 +30,9 @@
 
 	<!-- Nuget -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
+		<PackageReference Include="Hubcon.Analyzers" Version="1.0.0-rc*" />
+		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="1.0.0-rc*" />
+		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="1.0.0-rc*" />
 		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-rc*" />
 		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-rc*" />
 		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-rc*" />

@@ -43,10 +43,3 @@ namespace HubconTestDomain
     public record class TestClass2(string Propiedad);
     public record class MyTestClass(string Propiedad, TestClass2 Myclass);
 }
-
-
-
-
-
-
-
