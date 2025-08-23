@@ -1,4 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Enums;
+using System.Collections.Concurrent;
 using System.Reflection;
 
 namespace Hubcon.Shared.Abstractions.Interfaces
@@ -29,15 +30,24 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         }
     }
 
+    public interface IServerSubscription<T> : ISubscription<T>
+    {
+        public int HandlerCount { get; }
+    }
+
+    public interface IClientSubscription<T> : ISubscription<T>
+    {
+        IHubconClient Client { get; }
+    }
+
     public interface ISubscription<T> : ISubscription
     {
-        public event HubconEventHandler<object>? OnEventReceived;
         public SubscriptionState Connected { get; }
 
         Task Subscribe();
         Task Unsubscribe();
 
-        public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
+        public ConcurrentDictionary<object, HubconEventHandler<object>> Handlers { get; }
 
         public void AddHandler(HubconEventHandler<T> handler);
         public void RemoveHandler(HubconEventHandler<T> handler);

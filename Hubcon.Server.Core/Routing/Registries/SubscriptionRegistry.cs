@@ -106,5 +106,4 @@ namespace Hubcon.Server.Core.Routing.Registries
             return false;
         }
     }
-
 }

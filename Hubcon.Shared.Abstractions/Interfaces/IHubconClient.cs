@@ -1,9 +1,8 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Text.Json;
 
-namespace Hubcon.Client.Abstractions.Interfaces
+namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IHubconClient
     {

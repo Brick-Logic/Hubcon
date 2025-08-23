@@ -1,5 +1,4 @@
-﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Cache;
 using Hubcon.Shared.Abstractions.Standard.Extensions;

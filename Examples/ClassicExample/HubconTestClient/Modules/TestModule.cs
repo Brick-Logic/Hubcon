@@ -19,50 +19,50 @@ namespace HubconTestClient.Modules
 
             configuration.GlobalLimit(2000000);
 
-            configuration.LimitIngest(100);
-            configuration.LimitSubscription(100);
-            configuration.LimitStreaming(100);
-            configuration.LimitWebsocketRoundTrip(100);
-            configuration.LimitHttpRoundTrip(100);
-            configuration.LimitWebsocketFireAndForget(100);
-            configuration.LimitHttpFireAndForget(100);
+            //configuration.LimitIngest(100);
+            //configuration.LimitSubscription(100);
+            //configuration.LimitStreaming(100);
+            //configuration.LimitWebsocketRoundTrip(100);
+            //configuration.LimitHttpRoundTrip(100);
+            //configuration.LimitWebsocketFireAndForget(100);
+            //configuration.LimitHttpFireAndForget(100);
 
-            configuration.DisableAllLimiters();
+            //configuration.DisableAllLimiters();
 
             configuration.Implements<IUserContract>(contractConfigurator =>
             {
                 contractConfigurator
                     .UseWebsocketMethods()
                     .AllowRemoteCancellation(false)
-                    .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
-                    .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
-                    .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
-                    .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
+                    //.AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                    //.AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
+                    //.AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
+                    //.AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
                     .ConfigureOperations(operationSelector =>
                     {
                         operationSelector.Configure(contract => contract.GetTemperatureFromServer)
                             .UseTransport(TransportType.Websockets)
-                            .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
-                            .AddValidationHook(async ctx =>
-                            {
-                                if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }
-                            })
+                            //.AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
+                            //.AddValidationHook(async ctx =>
+                            //{
+                            //    if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }
+                            //})
                             .LimitPerSecond(1000000);
                         
                         operationSelector.Configure(contract => contract.GetTemperatureFromServerBlocking)
                             .UseTransport(TransportType.Websockets)
-                            .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
-                            .AddValidationHook(async ctx => 
-                            { 
-                                if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }                             
-                            })
-                            .AllowRemoteCancellation(true)
+                            //.AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
+                            //.AddValidationHook(async ctx => 
+                            //{ 
+                            //    if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }                             
+                            //})
+                            //.AllowRemoteCancellation(true)
                             .LimitPerSecond(1000000);
 
                         operationSelector

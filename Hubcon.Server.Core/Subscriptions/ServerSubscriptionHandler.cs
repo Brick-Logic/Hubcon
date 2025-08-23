@@ -1,12 +1,13 @@
 ﻿using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Subscriptions
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class ServerSubscriptionHandler<T> : ISubscription<T>
+    public sealed class ServerSubscriptionHandler<T> : IServerSubscription<T>
     {
         public PropertyInfo Property { get; } = null!;
 
@@ -14,7 +15,9 @@ namespace Hubcon.Server.Core.Subscriptions
         private SubscriptionState _connected = SubscriptionState.Emitter;
         public SubscriptionState Connected => _connected;
 
-        public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
+        public ConcurrentDictionary<object, HubconEventHandler<object>> Handlers { get; }
+
+        public int HandlerCount => Handlers.Count;
 
         public event HubconEventHandler<object>? OnEventReceived;
 
@@ -27,28 +30,26 @@ namespace Hubcon.Server.Core.Subscriptions
         {
             Task internalHandler(object? value) => handler.Invoke((T?)value!);
             Handlers[handler] = internalHandler;
-            OnEventReceived += internalHandler;
         }
 
         public void AddGenericHandler(HubconEventHandler<object> handler)
         {
             Task internalHandler(object? value) => handler.Invoke((T?)value!);
             Handlers[handler] = internalHandler;
-            OnEventReceived += internalHandler;
         }
 
         public void RemoveHandler(HubconEventHandler<T> handler)
         {
             var internalHandler = Handlers[handler];
             OnEventReceived -= internalHandler;
-            Handlers.Remove(handler);
+            Handlers.TryRemove(handler, out _);
         }
 
         public void RemoveGenericHandler(HubconEventHandler<object> handler)
         {
             var internalHandler = Handlers[handler];
             OnEventReceived -= internalHandler;
-            Handlers.Remove(handler);
+            Handlers.TryRemove(handler, out _);
         }
 
         public Task Subscribe()
@@ -67,12 +68,27 @@ namespace Hubcon.Server.Core.Subscriptions
 
         public void Emit(T? eventValue)
         {
-            OnEventReceived?.Invoke(eventValue);
+            // Capturamos los handlers actuales
+            var handlersSnapshot = Handlers.Values.ToArray();
+            foreach (var handler in handlersSnapshot)
+            {
+                handler.Invoke(eventValue);
+            }
         }
 
         public void EmitGeneric(object? eventValue)
         {
-            OnEventReceived?.Invoke((T?)eventValue);
+            // Capturamos los handlers actuales
+            var handlersSnapshot = Handlers.Values.ToArray();
+            foreach (var handler in handlersSnapshot)
+            {
+                handler.Invoke((T?)eventValue);
+            }
+        }
+
+        public void Dispose()
+        {
+            Handlers.Clear();
         }
     }
 }

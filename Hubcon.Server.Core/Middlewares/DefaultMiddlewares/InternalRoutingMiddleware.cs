@@ -3,10 +3,13 @@ using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
+using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Core.Serialization;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets.Events;
+using Hubcon.Shared.Core.Websockets.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -27,11 +30,11 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, PipelineDelegate next)
         {
-            if (context.Blueprint.Kind == OperationKind.Method 
-                || context.Blueprint.Kind == OperationKind.Stream 
+            if (context.Blueprint.Kind == OperationKind.Method
+                || context.Blueprint.Kind == OperationKind.Stream
                 || context.Blueprint.Kind == OperationKind.Ingest)
             {
-                foreach(var kvp in context.Blueprint!.ParameterTypes)
+                foreach (var kvp in context.Blueprint!.ParameterTypes)
                 {
                     var type = context.Blueprint!.ParameterTypes[kvp.Key];
 
@@ -64,7 +67,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     }
                 }
 
-                if(context.Blueprint!.ParameterTypes.Count != context.Request.Arguments!.Count)
+                if (context.Blueprint!.ParameterTypes.Count != context.Request.Arguments!.Count)
                 {
                     context.Result = new BaseOperationResponse<JsonElement>(false, default, "Argument count mismatch.");
                     return;
@@ -93,7 +96,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                     if (subDescriptor == null)
                     {
-                        var subscription = (ISubscription?)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
+                        var subscription = (ISubscription)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
 
                         subDescriptor = liveSubscriptionRegistry.RegisterHandler("", request.ContractName, request.OperationName, subscription);
                     }
@@ -141,19 +144,9 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 IAsyncObserver<object>? observer = AsyncObserver.Create<object>(dynamicConverter, channelOptions);
 
-                async Task hubconEventHandler(object? eventValue)
-                {
-                    try
-                    {
-                        await observer.WriteToChannelAsync(eventValue!);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex.Message);
-                    }
-                }
+                HubconEventHandler<object> hubconEventHandler = observer.WriteToChannelAsync;
 
-                subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
+                subDescriptor.Subscription.AddGenericHandler(observer.WriteToChannelAsync);
 
                 async IAsyncEnumerable<object?> SubDelegate()
                 {
@@ -169,8 +162,10 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         observer.OnCompleted();
                         liveSubscriptionRegistry.RemoveHandler(clientId, request.ContractName, request.OperationName);
                         subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
-                    };
-                };
+                    }
+                    ;
+                }
+;
 
                 context.Result = new BaseOperationResponse<object>(true, SubDelegate());
                 await next();

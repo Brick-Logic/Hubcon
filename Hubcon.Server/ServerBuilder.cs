@@ -13,6 +13,7 @@ using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Server.Core.RateLimiting;
 using Hubcon.Server.Core.Routing.MethodHandling;
 using Hubcon.Server.Core.Routing.Registries;
+using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
@@ -73,7 +74,9 @@ namespace Hubcon.Server
                     .RegisterWithInjector(x => x.RegisterType<RateLimiterManager>().As<IRateLimiterManager>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<HubconServiceProvider>().As<IHubconServiceProvider>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterType<InternalRoutingMiddleware>().As<IInternalRoutingMiddleware>().AsTransient());
+                    .RegisterWithInjector(x => x.RegisterType<InternalRoutingMiddleware>().As<IInternalRoutingMiddleware>().AsTransient())
+                    .RegisterWithInjector(x => x.RegisterType<DefaultEntrypoint>().AsScoped())
+                    .RegisterWithInjector(x => x.RegisterGeneric(typeof(ServerSubscriptionHandler<>)).As(typeof(ISubscription<>)).AsTransient());
 
                 foreach (var services in additionalServices)
                     services?.Invoke(container);

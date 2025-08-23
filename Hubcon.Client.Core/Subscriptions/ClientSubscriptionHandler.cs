@@ -1,9 +1,9 @@
-﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Enums;
+﻿using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json;
@@ -11,9 +11,8 @@ using System.Text.Json;
 namespace Hubcon.Client.Core.Subscriptions
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class ClientSubscriptionHandler<T> : ISubscription<T>
+    public sealed class ClientSubscriptionHandler<T> : IClientSubscription<T>
     {
-        public event HubconEventHandler<object>? OnEventReceived;
         private readonly IDynamicConverter _converter;
         private readonly ILogger<ClientSubscriptionHandler<T>> logger;
         private CancellationTokenSource _tokenSource;
@@ -25,7 +24,7 @@ namespace Hubcon.Client.Core.Subscriptions
         public PropertyInfo Property { get; } = null!;
         public IHubconClient Client { get; }
 
-        public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
+        public ConcurrentDictionary<object, HubconEventHandler<object>> Handlers { get; }
 
         public ClientSubscriptionHandler(IDynamicConverter converter, ILogger<ClientSubscriptionHandler<T>> logger)
         {
@@ -37,30 +36,26 @@ namespace Hubcon.Client.Core.Subscriptions
 
         public void AddHandler(HubconEventHandler<T> handler)
         {
-            HubconEventHandler<object> internalHandler = async (value) => await handler.Invoke((T?)value!);
+            async Task internalHandler(object? value) => await handler.Invoke((T?)value!);
             Handlers[handler] = internalHandler;
-            OnEventReceived += internalHandler;
         }
 
         public void AddGenericHandler(HubconEventHandler<object> handler)
         {
-            HubconEventHandler<object> internalHandler = async (value) => await handler.Invoke((T?)value!);
+            async Task internalHandler(object? value) => await handler.Invoke((T?)value!);
             Handlers[handler] = internalHandler;
-            OnEventReceived += internalHandler;
         }
 
         public void RemoveHandler(HubconEventHandler<T> handler)
         {
             var internalHandler = Handlers[handler];
-            OnEventReceived -= internalHandler;
-            Handlers.Remove(handler);
+            Handlers.TryRemove(handler, out _);
         }
 
         public void RemoveGenericHandler(HubconEventHandler<object> handler)
         {
             var internalHandler = Handlers[handler];
-            OnEventReceived -= internalHandler;
-            Handlers.Remove(handler);
+            Handlers.TryRemove(handler, out _);
         }
 
         public async Task Subscribe()
@@ -99,8 +94,8 @@ namespace Hubcon.Client.Core.Subscriptions
 
                             var result = _converter.DeserializeData<T>(item);
 
-                            if(OnEventReceived != null)
-                                await OnEventReceived.Invoke(result);
+                            if(!Handlers.IsEmpty)
+                                Emit(result);
                         };
                     }
                     catch (Exception ex)
@@ -139,12 +134,22 @@ namespace Hubcon.Client.Core.Subscriptions
 
         public void Emit(T? eventValue)
         {
-            OnEventReceived?.Invoke(eventValue);
+            // Capturamos los handlers actuales
+            var handlersSnapshot = Handlers.Values.ToArray();
+            foreach (var handler in handlersSnapshot)
+            {
+                handler.Invoke(eventValue);
+            }
         }
 
         public void EmitGeneric(object? eventValue)
         {
-            OnEventReceived?.Invoke((T?)eventValue);
+            // Capturamos los handlers actuales
+            var handlersSnapshot = Handlers.Values.ToArray();
+            foreach (var handler in handlersSnapshot)
+            {
+                handler.Invoke((T?)eventValue);
+            }
         }
     }
 }

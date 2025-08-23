@@ -178,12 +178,12 @@ namespace Hubcon.Client.Builder
                 {
                     var genericType = _subTypesCache.GetOrAdd(
                         subscriptionProp.PropertyType.GenericTypeArguments[0], 
-                        x => typeof(ClientSubscriptionHandler<>).MakeGenericType(x));
+                        x => typeof(IClientSubscription<>).MakeGenericType(x));
 
                     var subscriptionInstance = (ISubscription)services.GetRequiredService(genericType);
                     PropertyTools.AssignProperty(newClient, subscriptionProp, subscriptionInstance);
-                    PropertyTools.AssignProperty(subscriptionInstance, nameof(ClientSubscriptionHandler<object>.Property), subscriptionProp);
-                    PropertyTools.AssignProperty(subscriptionInstance, nameof(ClientSubscriptionHandler<object>.Client), hubconClient);
+                    PropertyTools.AssignProperty(subscriptionInstance, nameof(IClientSubscription<object>.Property), subscriptionProp);
+                    PropertyTools.AssignProperty(subscriptionInstance, nameof(IClientSubscription<object>.Client), hubconClient);
                     subscriptionInstance.Build();
                 }
             }

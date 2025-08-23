@@ -71,8 +71,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
                 RawReturnType = methodInfo.ReturnType;
 
-                ReturnType = methodInfo.ReturnType.IsGenericType &&
-                       methodInfo.ReturnType.GetGenericTypeDefinition() == typeof(Task<>)
+                ReturnType = methodInfo.ReturnType.IsGenericType && methodInfo.ReturnType.GetGenericTypeDefinition() == typeof(Task<>)
                        ? methodInfo.ReturnType.GetGenericArguments()[0]
                        : methodInfo.ReturnType;
 

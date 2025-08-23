@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 
-namespace Hubcon.Client.Abstractions.Interfaces
+namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IClientOptions
     {

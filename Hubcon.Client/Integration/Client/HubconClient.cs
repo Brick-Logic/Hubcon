@@ -1,5 +1,4 @@
-﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Core.Exceptions;
+﻿using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.Helpers;
 using Hubcon.Client.Core.Websockets;
 using Hubcon.Shared.Abstractions.Enums;

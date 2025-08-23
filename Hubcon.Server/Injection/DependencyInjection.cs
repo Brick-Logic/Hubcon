@@ -72,15 +72,7 @@ namespace Hubcon.Server.Injection
                 });
             });
 
-            ServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
-            {
-                container.RegisterWithInjector(x => x.RegisterType<DefaultEntrypoint>().AsScoped());
-
-                container.RegisterWithInjector(x => x
-                    .RegisterGeneric(typeof(ServerSubscriptionHandler<>))
-                    .As(typeof(ISubscription<>))
-                    .AsTransient());
-            });
+            ServerBuilder.Current.AddHubconServer(builder, additionalServices);
 
             return builder;
         }
