@@ -10,9 +10,13 @@ namespace Hubcon.Client.Builder
 
         private readonly ConcurrentDictionary<Type, IClientBuilder> _clientBuilders = new();
 
+        private readonly bool useCached;
+
         public ClientBuilderRegistry(IProxyRegistry proxyRegistry)
         {
             _proxyRegistry = proxyRegistry ?? throw new ArgumentNullException(nameof(proxyRegistry));
+            var envResult = Environment.GetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED");
+            useCached = !bool.TryParse(envResult, out bool result) || result;
         }
 
         public void RegisterModule<TRemoteServerModule>(IServiceCollection services, Func<TRemoteServerModule>? remoteServerFactory = null)
@@ -32,17 +36,34 @@ namespace Hubcon.Client.Builder
                 // Capturar localmente contractType para el closure
                 var localContractType = contractType;
 
-                services.AddSingleton(localContractType, serviceProvider =>
+                if (useCached)
                 {
-                    var registry = serviceProvider.GetRequiredService<IClientBuilderRegistry>();
-
-                    if (registry.GetClientBuilder(localContractType, out var builder))
+                    services.AddSingleton(localContractType, serviceProvider =>
                     {
-                        return builder!.GetOrCreateClient(localContractType, serviceProvider);
-                    }
+                        var registry = serviceProvider.GetRequiredService<IClientBuilderRegistry>();
 
-                    return default!;
-                });
+                        if (registry.GetClientBuilder(localContractType, out var builder))
+                        {
+                            return builder!.GetOrCreateClient(localContractType, serviceProvider);
+                        }
+
+                        return default!;
+                    });
+                }
+                else
+                {
+                    services.AddTransient(localContractType, serviceProvider =>
+                    {
+                        var registry = serviceProvider.GetRequiredService<IClientBuilderRegistry>();
+
+                        if (registry.GetClientBuilder(localContractType, out var builder))
+                        {
+                            return builder!.GetOrCreateClient(localContractType, serviceProvider);
+                        }
+
+                        return default!;
+                    });
+                }
             }
         }
 

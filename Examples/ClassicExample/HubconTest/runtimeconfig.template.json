@@ -2,7 +2,8 @@
   "runtimeOptions": {
     "configProperties": {
       "System.GC.Server": true,
-      "System.GC.LatencyLevel": 1
+      "System.GC.Concurrent": true,
+      "System.GC.RetainVM": false
     }
   }
 }

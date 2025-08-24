@@ -142,15 +142,16 @@ namespace Hubcon.Client.Builder
         private RateLimiter? _httpFireAndForgetRateBucket;
         public RateLimiter? HttpFireAndForgetRateBucket => _httpFireAndForgetRateBucket ??= HttpFireAndForgetLimiterOptions != null ? new TokenBucketRateLimiter(HttpFireAndForgetLimiterOptions) : null;
 
+        public bool LoggingEnabled {  get; set; }
 
-        public T GetOrCreateClient<T>(IServiceProvider services) where T : IControllerContract
+        public T GetOrCreateClient<T>(IServiceProvider services, bool useCached = true) where T : IControllerContract
         {
             return (T)GetOrCreateClient(typeof(T), services);
         }
 
-        public object GetOrCreateClient(Type contractType, IServiceProvider services)
+        public object GetOrCreateClient(Type contractType, IServiceProvider services, bool useCached = true)
         {
-            if (_clients.ContainsKey(contractType) && _clients.TryGetValue(contractType, out object? client))
+            if (useCached && _clients.ContainsKey(contractType) && _clients.TryGetValue(contractType, out object? client))
                 return client!;
 
             if (!Contracts.Any(x => x == contractType))
@@ -188,7 +189,7 @@ namespace Hubcon.Client.Builder
                 }
             }
 
-            _clients.Add(contractType, newClient!);
+            if(useCached) _clients.Add(contractType, newClient!);
 
             return newClient!;
         }

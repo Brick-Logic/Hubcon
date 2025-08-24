@@ -29,16 +29,45 @@ using System.Threading.Channels;
 namespace Hubcon.Server.Core.Websockets.Middleware
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class HubconWebSocketMiddleware(
-        RequestDelegate next,
-        IDynamicConverter converter,
-        IOperationRegistry operationRegistry,
-        ILogger<HubconWebSocketMiddleware> logger,
-        IInternalServerOptions options)
+    public sealed class HubconWebSocketMiddleware
     {
+        private readonly RequestDelegate next;
+        private readonly IDynamicConverter converter;
+        private readonly IOperationRegistry operationRegistry;
+        private readonly ILogger<HubconWebSocketMiddleware> logger;
+        private readonly IInternalServerOptions options;
+
+        System.Timers.Timer worker;
+        int clientCount = 0;
+
+        public HubconWebSocketMiddleware(
+            RequestDelegate next,
+            IDynamicConverter converter,
+            IOperationRegistry operationRegistry,
+            ILogger<HubconWebSocketMiddleware> logger,
+            IInternalServerOptions options)
+        {
+            this.next = next;
+            this.converter = converter;
+            this.operationRegistry = operationRegistry;
+            this.logger = logger;
+            this.options = options;
+
+
+            //if (options.WebsocketLoggingEnabled)
+            //{
+            //    worker = new System.Timers.Timer();
+            //    worker.Interval = 1000;
+            //    worker.Elapsed += (sender, eventArgs) =>
+            //    {
+            //        logger.LogInformation("Connected clients: {0}", clientCount);
+            //    };
+            //    worker.Start();
+            //}
+        }
+
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
         {
-
             if (!context.WebSockets.IsWebSocketRequest || !(context.Request.Path == options.WebSocketPathPrefix))
             {
                 await next(context);
@@ -66,14 +95,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
             try
             {
-                var worker = new System.Timers.Timer();
-                worker.Interval = 1000;
-                worker.Elapsed += (sender, eventArgs) =>
-                {
-                    logger.LogInformation("Middleware timeout: " + _heartbeatWatcher?._lastHeartbeat.ToLongTimeString());
-                };
-                worker.Start();
-
                 var receiver = new WebSocketMessageReceiver(webSocket, options);
                 var sender = new WebSocketMessageSender(webSocket, converter);
 
@@ -157,6 +178,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 _ingestHandlers = new();
                 _ackChannels = new();
                 _tasks = new();
+
+                Interlocked.Increment(ref clientCount);
 
                 while (webSocket.State == WebSocketState.Open)
                 {
@@ -493,6 +516,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 await rateLimiterManager.DisposeAsync();
 
                 webSocket.Dispose();
+
+                Interlocked.Decrement(ref clientCount);
             }
         }
 

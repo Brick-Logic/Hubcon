@@ -300,5 +300,10 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
+        public IServerModuleConfiguration EnableLogging()
+        {
+            builder.LoggingEnabled = true;
+            return this;
+        }
     }
 }

@@ -537,6 +537,8 @@ namespace Hubcon.Client.Integration.Client
 
             client.WebSocketOptions = options.WebSocketOptions;
 
+            client.LoggingEnabled = options.LoggingEnabled;
+
             this.ServiceProvider = serviceProvider;
 
             clientOptions = options;

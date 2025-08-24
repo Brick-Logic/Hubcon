@@ -4,6 +4,7 @@ using HubconTestClient.Modules;
 using HubconTestDomain;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading.RateLimiting;
 
 internal class Program
 {
@@ -182,6 +183,7 @@ internal class Program
         _sw = Stopwatch.StartNew();
         var ts = TimeSpan.FromSeconds(1);
         var worker = new System.Timers.Timer();
+        int clientCount = 0;
         worker.Interval = 1000;
         worker.Elapsed += (sender, eventArgs) =>
         {
@@ -205,7 +207,7 @@ internal class Program
 
             _maxReqs = Math.Max(_maxReqs, avgRequestsPerSec);
 
-            logger.LogInformation($"Requests: {_finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {_maxReqs} | " +
+            logger.LogInformation($" Client count: {clientCount} | Requests: {_finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {_maxReqs} | " +
                                   $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
 
             var allocated = GC.GetTotalMemory(forceFullCollection: false);
@@ -221,27 +223,48 @@ internal class Program
             MaxDegreeOfParallelism = 256
         };
 
+        int rps = 9999999;
+
         await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
         {
-            //await foreach(var item in client.GetMessages2())
-            while (!ct.IsCancellationRequested)
+            TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions() 
+            { 
+                QueueLimit = 1,
+                AutoReplenishment = true,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                TokenLimit = rps,
+                TokensPerPeriod = rps,
+            });
+
+            try
             {
-                var swReq = Stopwatch.StartNew();
-                try
+                var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+                Interlocked.Increment(ref clientCount);
+                //await foreach(var item in client.GetMessages2())
+                while (true)
                 {
-                    //await client.IngestMessages(GetMessages2(), default);
-                    await client.GetTemperatureFromServer(ct);
-                    Interlocked.Increment(ref _finishedRequestsCount);
+                    // var swReq = Stopwatch.StartNew();
+                    try
+                    {
+                        await tokenBucketRateLimiter.AcquireAsync();
+                        //await client.IngestMessages(GetMessages2(), default);
+                        await paralellClient.GetTemperatureFromServer(ct);
+                        Interlocked.Increment(ref _finishedRequestsCount);
+                    }
+                    catch
+                    {
+                        Interlocked.Increment(ref _errors);
+                    }
+                    finally
+                    {
+                        // swReq.Stop();
+                        // Latencies.Add(swReq.Elapsed.TotalMilliseconds);
+                    }
                 }
-                catch
-                {
-                    Interlocked.Increment(ref _errors);
-                }
-                finally
-                {
-                    swReq.Stop();
-                    Latencies.Add(swReq.Elapsed.TotalMilliseconds);
-                }
+            }
+            finally
+            {
+                Interlocked.Decrement(ref clientCount);
             }
         });
     }

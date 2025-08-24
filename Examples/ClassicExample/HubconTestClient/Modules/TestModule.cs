@@ -17,7 +17,7 @@ namespace HubconTestClient.Modules
 
             configuration.EnableWebsocketAutoReconnect(true);
 
-            configuration.GlobalLimit(2000000);
+            configuration.GlobalLimit(20000000);
 
             configuration.LimitIngest(100);
             configuration.LimitSubscription(100);
@@ -33,37 +33,37 @@ namespace HubconTestClient.Modules
             {
                 contractConfigurator
                     .UseWebsocketMethods()
-                    .AllowRemoteCancellation(false)
-                    .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
-                    .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
-                    .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
-                    .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
+                    //.AllowRemoteCancellation(false)
+                    //.AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                    //.AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
+                    //.AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
+                    //.AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
                     .ConfigureOperations(operationSelector =>
                     {
                         operationSelector.Configure(contract => contract.GetTemperatureFromServer)
                             .UseTransport(TransportType.Websockets)
-                            .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
-                            .AddValidationHook(async ctx =>
-                            {
-                                if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }
-                            })
-                            .LimitPerSecond(1000000);
+                            //.AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
+                            //.AddValidationHook(async ctx =>
+                            //{
+                            //    if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }
+                            //})
+                            .LimitPerSecond(10000000);
                         
                         operationSelector.Configure(contract => contract.GetTemperatureFromServerBlocking)
                             .UseTransport(TransportType.Websockets)
-                            .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
-                            .AddValidationHook(async ctx => 
-                            { 
-                                if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }                             
-                            })
-                            .AllowRemoteCancellation(true)
-                            .LimitPerSecond(1000000);
+                            //.AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
+                            //.AddValidationHook(async ctx => 
+                            //{ 
+                            //    if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }                             
+                            //})
+                            //.AllowRemoteCancellation(true)
+                            .LimitPerSecond(10000000);
 
                         operationSelector
                             .Configure(contract => contract.CreateUser)
@@ -79,10 +79,8 @@ namespace HubconTestClient.Modules
                 x.SetBuffer(4 * 1024, 4 * 1024);
             });
 
-            configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(1));
-            configuration.ScaleMessageProcessors(2);
-
-            configuration.RequirePongResponse(true);
+            configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(5));
+            configuration.ScaleMessageProcessors(1);
 
             configuration.ConfigureHttpClient((x, services) =>
             {

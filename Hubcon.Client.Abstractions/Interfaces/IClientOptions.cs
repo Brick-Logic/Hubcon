@@ -47,5 +47,6 @@ namespace Hubcon.Client.Abstractions.Interfaces
         RateLimiter? HttpRoundTripRateBucket { get; }
         RateLimiter? WebsocketFireAndForgetRateBucket { get; }
         RateLimiter? HttpFireAndForgetRateBucket { get; }
+        bool LoggingEnabled { get; }
     }
 }

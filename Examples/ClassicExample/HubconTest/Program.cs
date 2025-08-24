@@ -51,6 +51,16 @@ namespace HubconTest
                     await Task.Delay(1000);
                 }
             });
+            
+            var gc = Task.Run(async () =>
+            {
+                while (true)
+                {
+                    GC.Collect(2, GCCollectionMode.Forced, blocking: false);
+                    GC.WaitForPendingFinalizers();
+                    await Task.Delay(60000);
+                }
+            });
         }
     }
 

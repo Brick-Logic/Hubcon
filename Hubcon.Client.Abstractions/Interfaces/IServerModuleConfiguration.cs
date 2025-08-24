@@ -217,5 +217,6 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// If <paramref name="options"/> is null, the rate limiter will be disabled.
         /// </summary>
         IServerModuleConfiguration LimitHttpFireAndForget(TokenBucketRateLimiterOptions? options);
+        IServerModuleConfiguration EnableLogging();
     }
 }

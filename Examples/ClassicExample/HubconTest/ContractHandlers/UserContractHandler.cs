@@ -12,7 +12,6 @@ namespace HubconTest.ContractHandlers
 {
     public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserContract
     {
-        [Broadcast]
         public ISubscription<int?>? OnUserCreated { get; }
         public ISubscription<int?>? OnUserCreated2 { get; }
         public ISubscription<int?>? OnUserCreated3 { get; }
@@ -28,7 +27,10 @@ namespace HubconTest.ContractHandlers
             return Task.CompletedTask;
         }
 
-        public async Task<int> GetTemperatureFromServer(CancellationToken cancellationToken) => await Task.Run(() => Random.Shared.Next(-10, 50));
+        public Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(Random.Shared.Next(-10, 50));
+        }
         public async Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default)
         {
             int i = 0;
