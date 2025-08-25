@@ -1,6 +1,8 @@
 ﻿# Hubcon
 
-A high-performance, contract-based RPC framework for .NET that provides seamless communication over HTTP/WebSocket with interface-based usage, GraphQL-style subscriptions and real-time data streaming capabilities.
+A high-performance, contract-based RPC framework for .NET that provides seamless communication over HTTP/WebSocket with interfaces, GraphQL-style subscriptions and real-time bidirectional data streaming capabilities.
+
+Hubcon enables you, as a developer, to very easily implement strongly-typed and fast communications between clients and servers through HTTP and/or Websockets by just injecting your own interfaces anywhere you need.
 
 ## 🚀 Key Features
 
@@ -81,8 +83,6 @@ A high-performance, contract-based RPC framework for .NET that provides seamless
 | RC1 milestone                           | First stable RC will include improved cancellation and token coordination                       | ✅ Complete        |
 | Operation multiplexing                  | All operations internally routed using `operationId` to enable full concurrency                 | ✅ Complete      |
 | MCP Protocol                           | In progress: Protocol to connect AIs, supporting both WebSocket and HTTP transport               | ⚠️ In progress      |
-
-
 
 ## 📦 Installation
 
@@ -1093,5 +1093,6 @@ This will change in the future when the first stable version is out.
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📞 Support
+
 
 For questions and support, please open an issue on GitHub.
