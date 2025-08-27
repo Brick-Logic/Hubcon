@@ -1,8 +1,11 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Client.Core.Proxies;
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
+using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.AspNetCore.Builder;
+using System.Reflection;
 
 namespace Hubcon.Server.Injection
 {
@@ -45,6 +48,17 @@ namespace Hubcon.Server.Injection
         public void AddAuthentication()
         {
             HubconServerBuilder.AddGlobalMiddleware<AuthenticationMiddleware>();
+        }
+
+        public void AutoRegisterControllers()
+        {
+            var assembly = Assembly.GetCallingAssembly();
+            var foundControllers = ControllerContractHelper.FindImplementations(assembly, [typeof(BaseContractProxy)]);
+
+            foreach(var controller in  foundControllers)
+            {
+                HubconServerBuilder.AddHubconController(Builder, controller);
+            }
         }
     }
 }

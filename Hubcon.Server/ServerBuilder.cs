@@ -132,6 +132,9 @@ namespace Hubcon.Server
             if (implementationTypes.Count == 0)
                 throw new InvalidOperationException($"Class {controllerType.Name} does not implement interface {nameof(IControllerContract)}.");
 
+            if (OperationRegistry.ControllerExists(controllerType))
+                return builder;       
+
             foreach (var type in implementationTypes)
             {
                 foreach (var property in type.GetProperties().Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription))))

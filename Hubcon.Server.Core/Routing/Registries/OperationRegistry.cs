@@ -24,6 +24,7 @@ namespace Hubcon.Server.Core.Routing.Registries
         public event Action<IOperationBlueprint>? OnOperationRegistered;
 
         private ConcurrentDictionary<string, ConcurrentDictionary<string, IOperationBlueprint>> AvailableOperations = new();
+        private ConcurrentDictionary<Type, bool> RegisteredControllers = new();
 
         public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<ContainerBuilder>> servicesToInject)
         {
@@ -133,7 +134,8 @@ namespace Hubcon.Server.Core.Routing.Registries
                     pipelineBuilder,
                     serverOptions,
                     action!
-                );
+                    );
+
 
                     // Usa TryAdd para evitar sobreescritura accidental
                     contractMethods.TryAdd(descriptor.OperationName, descriptor);
@@ -167,6 +169,8 @@ namespace Hubcon.Server.Core.Routing.Registries
                     contractMethods.TryAdd(descriptor.OperationName, descriptor);
                     OnOperationRegistered?.Invoke(descriptor);
                 }
+
+                RegisteredControllers.TryAdd(controllerType, true);
             }
         }
 
@@ -301,6 +305,11 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                 return Expression.Lambda<Func<object?, object[], object?>>(castCallExp, targetExp, argsExp).Compile();
             }
+        }
+
+        public bool ControllerExists(Type controllerType)
+        {
+            return RegisteredControllers.ContainsKey(controllerType);
         }
     }
 }

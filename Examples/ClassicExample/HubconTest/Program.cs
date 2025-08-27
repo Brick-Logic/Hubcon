@@ -51,7 +51,7 @@ namespace HubconTest
                     await Task.Delay(1000);
                 }
             });
-            
+
             var gc = Task.Run(async () =>
             {
                 while (true)
@@ -108,70 +108,68 @@ namespace HubconTest
             builder.ConfigureHubconServer(serverOptions =>
             {
 
-                serverOptions.AddAuthentication();
+                //serverOptions.AddAuthentication();
 
-                serverOptions.ConfigureCore(config => 
+                serverOptions.ConfigureCore(config =>
                 {
                     config
-                    .UseWebsocketTokenHandler((token, serviceProvider) =>
-                    {
-                        return JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
-                    })
-                    .SetHttpTimeout(TimeSpan.FromSeconds(15))
-                    .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
-                    .SetMaxHttpMessageSize(4 * 1024)
-                    .SetMaxWebSocketMessageSize(4 * 1024)
-                    // .AllowRemoteTokenCancellation()
-                    .ConfigureWebsocketRateLimiter(() => new TokenBucketRateLimiterOptions()
-                    {
-                        TokenLimit = 100,
-                        TokensPerPeriod = 10,
-                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
-                    })
-                    .ConfigureWebsocketPingRateLimiter(() => new TokenBucketRateLimiterOptions()
-                    {
-                        TokenLimit = 10,
-                        TokensPerPeriod = 1,
-                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
-                    })
-                    .LimitWebsocketIngest(() => new TokenBucketRateLimiterOptions()
-                    {
-                        TokenLimit = 100,
-                        TokensPerPeriod = 10,
-                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
-                    })
-                    .LimitWebsocketStreaming(() => new TokenBucketRateLimiterOptions()
-                    {
-                        TokenLimit = 100,
-                        TokensPerPeriod = 10,
-                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
-                    })
-                    .LimitWebsocketSubscription(() => new TokenBucketRateLimiterOptions()
-                    {
-                        TokenLimit = 100,
-                        TokensPerPeriod = 10,
-                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
-                    })
-                    .LimitWebsocketRoundTrip(() => new TokenBucketRateLimiterOptions()
-                    {
-                        TokenLimit = 100,
-                        TokensPerPeriod = 10,
-                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                        ReplenishmentPeriod = TimeSpan.FromSeconds(1)
-                    })
-
-                    .DisableAllRateLimiters()
-                    .EnableRequestDetailedErrors();
+                        .UseWebsocketTokenHandler((token, serviceProvider) =>
+                        {
+                            return JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
+                        })
+                        .SetHttpTimeout(TimeSpan.FromSeconds(15))
+                        .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
+                        .SetMaxHttpMessageSize(4 * 1024)
+                        .SetMaxWebSocketMessageSize(4 * 1024)
+                        // .AllowRemoteTokenCancellation()
+                        .ConfigureWebsocketRateLimiter(() => new TokenBucketRateLimiterOptions()
+                        {
+                            TokenLimit = 100,
+                            TokensPerPeriod = 10,
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                        })
+                        .ConfigureWebsocketPingRateLimiter(() => new TokenBucketRateLimiterOptions()
+                        {
+                            TokenLimit = 10,
+                            TokensPerPeriod = 1,
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                        })
+                        .LimitWebsocketIngest(() => new TokenBucketRateLimiterOptions()
+                        {
+                            TokenLimit = 100,
+                            TokensPerPeriod = 10,
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                        })
+                        .LimitWebsocketStreaming(() => new TokenBucketRateLimiterOptions()
+                        {
+                            TokenLimit = 100,
+                            TokensPerPeriod = 10,
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                        })
+                        .LimitWebsocketSubscription(() => new TokenBucketRateLimiterOptions()
+                        {
+                            TokenLimit = 100,
+                            TokensPerPeriod = 10,
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                        })
+                        .LimitWebsocketRoundTrip(() => new TokenBucketRateLimiterOptions()
+                        {
+                            TokenLimit = 100,
+                            TokensPerPeriod = 10,
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            ReplenishmentPeriod = TimeSpan.FromSeconds(1)
+                        })
+                        .DisableAllRateLimiters()
+                        .EnableRequestDetailedErrors();
                 });
 
-                serverOptions.AddController<UserContractHandler>();
-                serverOptions.AddController<SecondTestController>();
-            });     
+                serverOptions.AutoRegisterControllers();
+            });
 
             builder.Services.AddAuthorization();
 

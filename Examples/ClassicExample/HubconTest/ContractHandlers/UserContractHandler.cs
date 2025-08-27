@@ -13,7 +13,7 @@ namespace HubconTest.ContractHandlers
 {
     //[UseHttpEndpointFilter(typeof(ClassLoggingEndpointFilter))]
     //[UseMiddleware(typeof(ClassLoggingMiddleware))]
-    [Authorize("Manager")]
+    [Authorize(Roles = "Manager")]
     [UseMiddleware(typeof(AuthenticationMiddleware))]
     public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserContract
     {
@@ -23,7 +23,7 @@ namespace HubconTest.ContractHandlers
         public ISubscription<int?>? OnUserCreated3 { get; }
         public ISubscription<int?>? OnUserCreated4 { get; }
 
-        [UseHttpEndpointFilterAttribute(typeof(LoggingEndpointFilter))]
+        [UseHttpEndpointFilter(typeof(LoggingEndpointFilter))]
         [UseMiddleware(typeof(LocalLoggingMiddleware))]
         public Task CreateUser(CancellationToken cancellationToken)
         {
@@ -35,7 +35,7 @@ namespace HubconTest.ContractHandlers
             return Task.CompletedTask;
         }
 
-        [Authorize("Admin")]
+        [Authorize(Roles = "Admin")]
         public Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
         {
             return Task.FromResult(Random.Shared.Next(-10, 50));
@@ -154,7 +154,6 @@ namespace HubconTest.ContractHandlers
             await Task.WhenAll(sources);
             logger.LogInformation("Ingest terminado exitosamente");
         }
-
 
         public Task<MyTestClass> GetObject()
         {

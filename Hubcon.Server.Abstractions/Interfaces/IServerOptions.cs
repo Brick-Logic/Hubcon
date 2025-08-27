@@ -11,5 +11,6 @@ namespace Hubcon.Server.Abstractions.Interfaces
         public void AddController(Type controllerType, Action<IControllerOptions>? options = null);
         public void ConfigureCore(Action<ICoreServerOptions> coreServerOptions);
         public void AddAuthentication();
+        public void AutoRegisterControllers();
     }
 }
