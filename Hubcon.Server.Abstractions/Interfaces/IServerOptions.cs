@@ -10,5 +10,6 @@ namespace Hubcon.Server.Abstractions.Interfaces
         public void AddController<T>(Action<IControllerOptions>? options = null) where T : class, IControllerContract;
         public void AddController(Type controllerType, Action<IControllerOptions>? options = null);
         public void ConfigureCore(Action<ICoreServerOptions> coreServerOptions);
+        public void AddAuthentication();
     }
 }

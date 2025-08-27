@@ -2,6 +2,7 @@
 using Hubcon.Shared.Abstractions.Standard.Attributes;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using HubconTestDomain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -46,6 +47,7 @@ namespace HubconTest.ContractHandlers
         //[ProducesResponseType(500)]
         //[ProducesResponseType<IOperationResponse<string>>(200)]
         //[Consumes("application/json")]
+        [AllowAnonymous]
         public async Task<string> LoginAsync(string username, string password)
         {
             try

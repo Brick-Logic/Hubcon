@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
-    internal sealed class AuthenticationMiddleware(
+    public sealed class AuthenticationMiddleware(
         IAuthorizationService _authorizationService,
         ILogger<AuthenticationMiddleware> logger) : IAuthenticationMiddleware
     {
@@ -36,7 +36,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 if (user?.Identity == null || !user.Identity.IsAuthenticated)
                 {
-                    context.Result = new BaseOperationResponse<object>(false, "Access denied");
+                    context.Result = new BaseOperationResponse<object>(false, error: "Access denied");
                     return;
                 }
 
@@ -47,7 +47,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         var result = await _authorizationService.AuthorizeAsync(user, null, attr.Policy);
                         if (!result.Succeeded)
                         {
-                            context.Result = new BaseOperationResponse<object>(false, "Access denied");
+                            context.Result = new BaseOperationResponse<object>(false, error: "Access denied");
                             return;
                         }
                     }
@@ -57,7 +57,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         var roles = attr.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                         if (!roles.Any(user.IsInRole))
                         {
-                            context.Result = new BaseOperationResponse<object>(false, "Access denied");
+                            context.Result = new BaseOperationResponse<object>(false, error: "Access denied");
                             return;
                         }
                     }

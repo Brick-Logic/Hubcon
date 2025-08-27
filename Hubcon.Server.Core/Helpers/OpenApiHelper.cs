@@ -21,6 +21,15 @@ namespace Hubcon.Server.Core.Helpers
             public static bool AddCommonErrorResponses { get; set; } = true;
             public static string DefaultGroupName { get; set; } = "API";
             public static bool EnableAutoFallbacks { get; set; } = true;
+
+            public static List<Type> ExcludedTypes = [
+            
+                typeof(HttpContext),
+                typeof(HttpRequest),
+                typeof(HttpResponse),
+                typeof(CancellationToken),
+                typeof(IServiceProvider)
+            ];
         }
 
         public static RouteHandlerBuilder ApplyOpenApiFromMethod(
@@ -222,7 +231,6 @@ namespace Hubcon.Server.Core.Helpers
                 content.Example = CreateExampleResponse(dataType);
             }
 
-            var test = operation.Parameters.Any(x => x.Example.AnyType is OpenApiNull);
             return operation;
         }
 
@@ -253,6 +261,7 @@ namespace Hubcon.Server.Core.Helpers
                 _ when type.IsEnum => new OpenApiString(Enum.GetNames(type).FirstOrDefault() ?? "0"),
                 _ when type.IsClass && type != typeof(string) => new OpenApiObject(),
                 _ when type.IsArray => new OpenApiArray(),
+                _ when type == typeof(CancellationToken) => new OpenApiNull(),
                 _ when type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>) => new OpenApiArray(),
                 _ => new OpenApiNull()
             };
@@ -262,26 +271,30 @@ namespace Hubcon.Server.Core.Helpers
         {
             // Consumes from ConsumesAttribute (lógica original)
             var consumes = methodInfo.GetCustomAttribute<ConsumesAttribute>();
+            var parameters = methodInfo.GetParameters().Where(x => !Defaults.ExcludedTypes.Any(t => t.IsAssignableFrom(x.ParameterType)));
+
             if (consumes != null && consumes.ContentTypes.Count > 0)
             {
                 // Buscar el primer parámetro complejo para Accepts
-                var complexParam = methodInfo.GetParameters()
+                var complexParam = parameters
                     .FirstOrDefault(p => !p.ParameterType.IsPrimitive &&
                                    p.ParameterType != typeof(string) &&
                                    !typeof(HttpContext).IsAssignableFrom(p.ParameterType));
+
                 if (complexParam != null)
                 {
                     builder.Accepts(complexParam.ParameterType, consumes.ContentTypes[0]);
                 }
             }
-            else if (methodInfo.GetParameters().Length > 0)
+            else if (parameters.Any())
             {
                 // Lógica original con TypeHelper
                 var name = methodInfo.ReflectedType!.Name
                     + methodInfo.Name
-                    + string.Join("", methodInfo.GetParameters().Select(x => StringHelper.ToPascalCase(x.Name!)))
+                    + string.Join("", parameters.Select(x => StringHelper.ToPascalCase(x.Name!)))
                     + "Input";
-                builder.Accepts(TypeHelper.CreateTypeFromParameters(methodInfo.GetParameters(), name), "application/json");
+
+                builder.Accepts(TypeHelper.CreateTypeFromParameters(parameters.ToArray(), name), "application/json");
             }
             else if (Defaults.EnableAutoFallbacks)
             {
@@ -297,24 +310,16 @@ namespace Hubcon.Server.Core.Helpers
 
         private static ParameterInfo? FindRequestBodyParameter(MethodInfo methodInfo)
         {
-            var parameters = methodInfo.GetParameters();
+            var parameters = methodInfo.GetParameters().Where(x => x.ParameterType != typeof(CancellationToken));
 
             // Excluir tipos que no son request body
-            var excludedTypes = new[]
-            {
-            typeof(HttpContext),
-            typeof(HttpRequest),
-            typeof(HttpResponse),
-            typeof(CancellationToken),
-            typeof(IServiceProvider)
-        };
 
             return parameters.FirstOrDefault(p =>
                 !p.ParameterType.IsPrimitive &&
                 p.ParameterType != typeof(string) &&
                 p.ParameterType != typeof(Guid) &&
                 p.ParameterType != typeof(DateTime) &&
-                !excludedTypes.Any(t => t.IsAssignableFrom(p.ParameterType)) &&
+                !Defaults.ExcludedTypes.Any(t => t.IsAssignableFrom(p.ParameterType)) &&
                 !p.ParameterType.IsEnum &&
                 // Buscar atributo FromBody o asumir si es tipo complejo
                 (p.GetCustomAttribute<FromBodyAttribute>() != null ||

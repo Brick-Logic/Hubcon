@@ -10,6 +10,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Linq.Expressions;
@@ -48,8 +49,14 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                 var contractMethods = AvailableOperations.GetOrAdd(interfaceType.Name, _ => new ConcurrentDictionary<string, IOperationBlueprint>());
 
-                // Ya no hacemos "if (contractMethods.Count > 0) continue;" porque puede llevar a race conditions
-                // Si querés evitar sobreescribir, chequealo aquí con TryAdd abajo
+                var classFilters = controllerType.GetCustomAttributes()
+                        .Where(x => x is UseMiddlewareAttribute)
+                        .Select(x => (UseMiddlewareAttribute)x);
+
+                var middlewareOrder = controllerType
+                    .GetCustomAttributes()
+                    .Where(x => x is UseContractMiddlewaresFirst || x is UseOperationMiddlewaresFirst)
+                    .FirstOrDefault();
 
                 foreach (var method in methods)
                 {
@@ -87,16 +94,46 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                     options?.Invoke(middlewareOptions);
 
+                    var parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
+                    var controllerMethod = controllerType.GetMethod(method.Name, parameterTypes);
+
+                    var methodAttributes = controllerMethod!.GetCustomAttributes()
+                        .Where(x => x is UseMiddlewareAttribute)
+                        .Select(x => (UseMiddlewareAttribute)x);
+
+                    var middlewareOrderMethod = controllerMethod!.GetCustomAttributes()
+                        .Where(x => x is UseContractMiddlewaresFirst || x is UseOperationMiddlewaresFirst)
+                        .FirstOrDefault();
+
+                    var orderToUse = middlewareOrderMethod ?? middlewareOrder ?? new UseOperationMiddlewaresFirst();
+
+                    if (orderToUse is UseOperationMiddlewaresFirst)
+                    {
+                        foreach (var middleware in methodAttributes)
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType);
+
+                        foreach (var middleware in classFilters)
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType);
+                    }
+                    else
+                    {
+                        foreach (var middleware in classFilters)
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType);
+
+                        foreach (var middleware in methodAttributes)
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType);
+                    }
+
                     var descriptor = new OperationBlueprint(
-                        methodSignature,
-                        interfaceType,
-                        controllerType,
-                        method,
-                        kind,
-                        pipelineBuilder,
-                        serverOptions,
-                        action!
-                    );
+                    methodSignature,
+                    interfaceType,
+                    controllerType,
+                    method,
+                    kind,
+                    pipelineBuilder,
+                    serverOptions,
+                    action!
+                );
 
                     // Usa TryAdd para evitar sobreescritura accidental
                     contractMethods.TryAdd(descriptor.OperationName, descriptor);

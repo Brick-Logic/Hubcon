@@ -1,22 +1,30 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
-using Hubcon.Shared.Abstractions.Attributes;
+using Hubcon.Server.Core.Middlewares;
 using Hubcon.Shared.Abstractions.Interfaces;
+using HubconTest.Filters;
+using HubconTest.Middlewares;
 using HubconTestDomain;
+using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Channels;
-using System.Xml.Linq;
+using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 
 namespace HubconTest.ContractHandlers
 {
+    //[UseHttpEndpointFilter(typeof(ClassLoggingEndpointFilter))]
+    //[UseMiddleware(typeof(ClassLoggingMiddleware))]
+    [Authorize("Manager")]
+    [UseMiddleware(typeof(AuthenticationMiddleware))]
     public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserContract
     {
+        [SubscriptionAuthorize]
         public ISubscription<int?>? OnUserCreated { get; }
         public ISubscription<int?>? OnUserCreated2 { get; }
         public ISubscription<int?>? OnUserCreated3 { get; }
         public ISubscription<int?>? OnUserCreated4 { get; }
 
+        [UseHttpEndpointFilterAttribute(typeof(LoggingEndpointFilter))]
+        [UseMiddleware(typeof(LocalLoggingMiddleware))]
         public Task CreateUser(CancellationToken cancellationToken)
         {
             OnUserCreated?.Emit(1);
@@ -27,6 +35,7 @@ namespace HubconTest.ContractHandlers
             return Task.CompletedTask;
         }
 
+        [Authorize("Admin")]
         public Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
         {
             return Task.FromResult(Random.Shared.Next(-10, 50));

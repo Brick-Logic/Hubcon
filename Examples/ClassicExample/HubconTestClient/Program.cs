@@ -135,6 +135,7 @@ internal class Program
         logger.LogInformation($"Esperando eventos...");
 
         await Task.Delay(100);
+        Console.ReadKey();
 
         if (eventosRecibidos == 4)
         {

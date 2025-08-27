@@ -107,6 +107,9 @@ namespace HubconTest
             builder.AddHubconServer();
             builder.ConfigureHubconServer(serverOptions =>
             {
+
+                serverOptions.AddAuthentication();
+
                 serverOptions.ConfigureCore(config => 
                 {
                     config

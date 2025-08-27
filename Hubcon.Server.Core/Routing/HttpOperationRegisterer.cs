@@ -2,6 +2,7 @@
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Helpers;
+using Hubcon.Server.Core.Middlewares;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Microsoft.AspNetCore.Builder;
@@ -15,6 +16,8 @@ namespace Hubcon.Server.Core.Routing
 {
     public static class HttpOperationRegisterer
     {
+        private static MethodInfo methodInfo = typeof(EndpointFilterExtensions).GetMethod("AddEndpointFilter", [typeof(RouteHandlerBuilder)])!;
+
         public static void MapTypedEndpoint(
             this WebApplication app,
             IOperationBlueprint blueprint)
@@ -38,15 +41,26 @@ namespace Hubcon.Server.Core.Routing
             var method = (MethodInfo)blueprint.OperationInfo!;
 
             var controllerMethod = blueprint.ControllerType.GetMethod(
-                method.Name, 
-                BindingFlags.Public | BindingFlags.Instance,
+                method.Name,
                 method.GetParameters().Select(x => x.ParameterType).ToArray());
 
             var returnType = typeof(IOperationResponse<>).MakeGenericType(blueprint.ReturnType);
 
+            var filters = controllerMethod!.GetCustomAttributes()
+                .Where(x => x is UseHttpEndpointFilterAttribute)
+                .Select(x => (UseHttpEndpointFilterAttribute)x)
+                .ToList();
+
+            var classFilters = blueprint.ControllerType.GetCustomAttributes()
+                .Where(x => x is UseHttpEndpointFilterAttribute)
+                .Select(x => (UseHttpEndpointFilterAttribute)x)
+                .ToList();
+
+            filters.AddRange(classFilters);
+
             if (blueprint.HasReturnType)
             {
-                if(blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0)
+                if (blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0)
                 {
                     builder = app.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter, CancellationToken cancellationToken) =>
                     {
@@ -93,8 +107,7 @@ namespace Hubcon.Server.Core.Routing
 
                         await Ok(context, res);
                         return;
-                    })
-                    .ApplyOpenApiFromMethod(controllerMethod!);
+                    }).ApplyOpenApiFromMethod(controllerMethod!);
                     builder.WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);
                 }
@@ -131,7 +144,7 @@ namespace Hubcon.Server.Core.Routing
             }
             else
             {
-                if(blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0)
+                if (blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0)
                 {
                     builder = app.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter, CancellationToken cancellationToken) =>
                     {
@@ -228,6 +241,11 @@ namespace Hubcon.Server.Core.Routing
                     }).ApplyOpenApiFromMethod(controllerMethod!);
                     builder.WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);
+                }
+
+                foreach (var filter in filters)
+                {
+                    methodInfo.MakeGenericMethod(filter.EndpointFilterType).Invoke(null, [builder]);
                 }
 
                 options.RouteHandlerBuilderConfig?.Invoke(builder);

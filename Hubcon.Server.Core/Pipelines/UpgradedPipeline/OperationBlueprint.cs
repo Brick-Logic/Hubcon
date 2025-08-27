@@ -39,10 +39,10 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
 
         public OperationBlueprint(
-            string operationName, 
-            Type contractType, 
-            Type controllerType, 
-            MemberInfo memberInfo, 
+            string operationName,
+            Type contractType,
+            Type controllerType,
+            MemberInfo memberInfo,
             OperationKind kind,
             IPipelineBuilder pipelineBuilder,
             IInternalServerOptions options,
@@ -62,9 +62,12 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             ParameterTypes = [];
             Kind = kind;
 
+            List<Attribute> endpointAttributes = [];
+
+
             if (memberInfo is MethodInfo methodInfo)
             {
-                foreach(var parameter in methodInfo.GetParameters())
+                foreach (var parameter in methodInfo.GetParameters())
                 {
                     ParameterTypes.Add(parameter.Name!, parameter.ParameterType);
                 }
@@ -78,21 +81,16 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
                 Route = options.HttpPathPrefix + methodInfo.GetRoute();
 
-                if(options.HttpPathPrefix != null)
-
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
 
                 Attributes = ControllerType.GetMethod(
-                    memberInfo.Name, 
+                    memberInfo.Name,
                     methodInfo.GetParameters().Select(x => x.ParameterType).ToArray())!
                     .GetCustomAttributes();
 
-                RequiresAuthorization =
-                    memberInfo.HasCustomAttribute<AuthorizeAttribute>() ? true
-                    : memberInfo.HasCustomAttribute<AllowAnonymousAttribute>() ? false
-                    : true;
-
-                AuthorizationAttributes = memberInfo.GetCustomAttributes<AuthorizeAttribute>();
+                endpointAttributes = Attributes
+                    .Where(x => x is AuthorizeAttribute || x is AllowAnonymousAttribute)
+                    .ToList();
             }
             else if (memberInfo is PropertyInfo propertyInfo)
             {
@@ -104,17 +102,37 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
                 Attributes = ControllerType.GetMethod(propertyInfo.Name)?.GetCustomAttributes() ?? new List<Attribute>();
 
-                RequiresAuthorization =
-                    memberInfo.HasCustomAttribute<AuthorizeAttribute>() ? true
-                    : memberInfo.HasCustomAttribute<BroadcastAttribute>() ? false
-                    : true;
-
-                AuthorizationAttributes = memberInfo.GetCustomAttributes<AuthorizeAttribute>();
+                endpointAttributes = Attributes
+                    .Where(x => x is SubscriptionAuthorizeAttribute || x is AllowAnonymousAttribute)
+                    .ToList();
             }
             else
             {
                 throw new NotSupportedException($"The type {memberInfo.GetType()} is not supported as an operation type. Use PropertyInfo o MethodInfo instead.");
             }
+        
+            var classAttributes = controllerType
+                .GetCustomAttributes()
+                .Where(x => x is AuthorizeAttribute || x is AllowAnonymousAttribute)
+                .ToList();
+
+            List<AuthorizeAttribute> combinedAuthorize = new List<AuthorizeAttribute>();
+
+            // Si el método tiene AllowAnonymous, ignora todo Authorize
+            if (endpointAttributes.Any(a => a is AllowAnonymousAttribute))
+            {
+                RequiresAuthorization = false;
+            }
+            else
+            {
+                // Tomar todos los Authorize del método + clase
+                combinedAuthorize.AddRange(endpointAttributes.OfType<AuthorizeAttribute>());
+                combinedAuthorize.AddRange(classAttributes.OfType<AuthorizeAttribute>());
+
+                RequiresAuthorization = combinedAuthorize.Count > 0;
+            }
+
+            AuthorizationAttributes = combinedAuthorize;
 
             ConfigurationAttributes = new();
 

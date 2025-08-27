@@ -1,7 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace HubconTest.Middlewares
 {
@@ -11,12 +10,28 @@ namespace HubconTest.Middlewares
         {
             try
             {
-                logger.LogInformation($"[Local] Operacion {request.OperationName} iniciada.");
+                logger.LogInformation($"[Operation] Operacion {request.OperationName} iniciada.");
                 await next();
             }
             finally
             {
-                logger.LogInformation($"[Local] Operacion {request.OperationName} terminada.");
+                logger.LogInformation($"[Operation] Operacion {request.OperationName} terminada.");
+            }
+        }
+    }
+
+    public class ClassLoggingMiddleware(ILogger<LocalLoggingMiddleware> logger) : ILoggingMiddleware
+    {
+        public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
+        {
+            try
+            {
+                logger.LogInformation($"[Class] Operacion {request.OperationName} iniciada.");
+                await next();
+            }
+            finally
+            {
+                logger.LogInformation($"[Class] Operacion {request.OperationName} terminada.");
             }
         }
     }

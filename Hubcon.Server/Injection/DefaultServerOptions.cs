@@ -1,5 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
+using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.AspNetCore.Builder;
 
@@ -39,6 +40,11 @@ namespace Hubcon.Server.Injection
         public void AddController(Type controllerType, Action<IControllerOptions>? options = null)
         {
             HubconServerBuilder.AddHubconController(Builder, controllerType, options);
+        }
+
+        public void AddAuthentication()
+        {
+            HubconServerBuilder.AddGlobalMiddleware<AuthenticationMiddleware>();
         }
     }
 }
