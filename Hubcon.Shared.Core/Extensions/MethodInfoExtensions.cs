@@ -12,7 +12,7 @@ namespace Hubcon.Shared.Core.Extensions
     public static class MethodInfoExtensions
     {
         private static readonly Dictionary<string, bool> _attributeCache = new();
-        private static ConcurrentDictionary<MethodInfo, string> _routeCache = new ConcurrentDictionary<MethodInfo, string>();
+        private static ConcurrentDictionary<MethodInfo, (string, string, string)> _routeCache = new ConcurrentDictionary<MethodInfo, (string, string, string)>();
 
 
         public static bool HasCustomAttribute<TCustomAttribute>(this MethodInfo method) where TCustomAttribute : Attribute
@@ -26,7 +26,7 @@ namespace Hubcon.Shared.Core.Extensions
             return hasAttribute;
         }
 
-        public static string GetRoute(this MethodInfo method)
+        public static (string EndpointGroup, string Endpoint, string FullRoute) GetRoute(this MethodInfo method)
         {
             if (_routeCache.TryGetValue(method, out var route))
             {
@@ -34,9 +34,12 @@ namespace Hubcon.Shared.Core.Extensions
             }
             else
             {
-                var result = "/" + NamingHelper.GetCleanName(method.DeclaringType!.Name) + "/" + method.Name;
-                _routeCache.TryAdd(method, result);
-                return result;
+                var cleanName = NamingHelper.GetCleanName(method.DeclaringType!.Name);
+                var result = "/" + method.Name;
+                var fullRoute = "/" + cleanName + "/" + method.Name;
+                var combined = (cleanName, result, fullRoute);
+                _routeCache.TryAdd(method, combined);
+                return combined;
             }
         }
     }

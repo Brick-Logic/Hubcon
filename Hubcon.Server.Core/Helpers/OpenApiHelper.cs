@@ -41,26 +41,26 @@ namespace Hubcon.Server.Core.Helpers
             var effectiveGroupName = groupName ?? GetGroupFromMethod(methodInfo);
 
             // EndpointName - con fallback automático
-            var endpointName = methodInfo.GetCustomAttribute<EndpointNameAttribute>();
+            var endpointName = methodInfo.GetCustomAttributes<EndpointNameAttribute>().FirstOrDefault();
             if (endpointName != null)
                 builder.WithName(endpointName.EndpointName);
             //else if (Defaults.EnableAutoFallbacks)
             //    builder.WithName(GenerateDefaultEndpointName(methodInfo));
 
             // Summary - con fallback automático
-            var summary = methodInfo.GetCustomAttribute<EndpointSummaryAttribute>();
+            var summary = methodInfo.GetCustomAttributes<EndpointSummaryAttribute>().FirstOrDefault();
             if (summary != null)
                 builder.WithSummary(summary.Summary);
             //else if (Defaults.EnableAutoFallbacks)
             //    builder.WithSummary(GenerateDefaultSummary(methodInfo));
 
             // Description
-            var description = methodInfo.GetCustomAttribute<EndpointDescriptionAttribute>();
+            var description = methodInfo.GetCustomAttributes<EndpointDescriptionAttribute>().FirstOrDefault();
             if (description != null)
                 builder.WithDescription(description.Description);
 
             // Tags - usar agrupamiento si no hay tags explícitos
-            var tags = methodInfo.GetCustomAttribute<TagsAttribute>();
+            var tags = methodInfo.GetCustomAttributes<TagsAttribute>().FirstOrDefault();
             if (tags != null)
                 builder.WithTags(tags.Tags.ToArray());
             else if (!string.IsNullOrEmpty(effectiveGroupName))
@@ -78,34 +78,15 @@ namespace Hubcon.Server.Core.Helpers
         public static string GetGroupFromMethod(MethodInfo methodInfo)
         {
             // 1. Primero buscar ApiExplorerSettings
-            var apiExplorer = methodInfo.DeclaringType?.GetCustomAttribute<ApiExplorerSettingsAttribute>();
+            var apiExplorer = methodInfo.DeclaringType?.GetCustomAttributes<ApiExplorerSettingsAttribute>().FirstOrDefault();
             if (!string.IsNullOrEmpty(apiExplorer?.GroupName))
                 return apiExplorer.GroupName;
 
-            // 2. Luego por namespace
-            var namespaceParts = methodInfo.DeclaringType?.Namespace?.Split('.');
-            if (namespaceParts?.Length > 0)
-            {
-                var lastPart = namespaceParts.Last();
-                if (lastPart.EndsWith("Controllers"))
-                    return lastPart.Replace("Controllers", "");
-                return lastPart;
-            }
-
             // 3. Por nombre de clase
-            var className = methodInfo.DeclaringType?.Name ?? "";
-            if (className.EndsWith("Controller"))
-                return className.Replace("Controller", "");
-            if (className.EndsWith("Service"))
-                return className.Replace("Service", "");
-            if (className.EndsWith("Contract"))
-                return className.Replace("Contract", "");
-            if (className.EndsWith("ContractHandler"))
-                return className.Replace("ContractHandler", "");
-            
-            RemoveInterfacePrefix(className);
+            var className = methodInfo.DeclaringType?.Name ?? null;          
+            RemoveInterfacePrefix(className!);
 
-            return Defaults.DefaultGroupName;
+            return className ?? Defaults.DefaultGroupName;
         }
 
 
@@ -270,7 +251,7 @@ namespace Hubcon.Server.Core.Helpers
         private static void ApplyAcceptsWithDefaults(RouteHandlerBuilder builder, MethodInfo methodInfo)
         {
             // Consumes from ConsumesAttribute (lógica original)
-            var consumes = methodInfo.GetCustomAttribute<ConsumesAttribute>();
+            var consumes = methodInfo.GetCustomAttributes<ConsumesAttribute>().FirstOrDefault();
             var parameters = methodInfo.GetParameters().Where(x => !Defaults.ExcludedTypes.Any(t => t.IsAssignableFrom(x.ParameterType)));
 
             if (consumes != null && consumes.ContentTypes.Count > 0)
@@ -322,7 +303,7 @@ namespace Hubcon.Server.Core.Helpers
                 !Defaults.ExcludedTypes.Any(t => t.IsAssignableFrom(p.ParameterType)) &&
                 !p.ParameterType.IsEnum &&
                 // Buscar atributo FromBody o asumir si es tipo complejo
-                (p.GetCustomAttribute<FromBodyAttribute>() != null ||
+                (p.GetCustomAttributes<FromBodyAttribute>().FirstOrDefault() != null ||
                  (!p.ParameterType.IsValueType && p.ParameterType.IsClass)));
         }
 

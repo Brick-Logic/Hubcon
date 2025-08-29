@@ -37,6 +37,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public IPipelineBuilder PipelineBuilder { get; }
         public string Route { get; }
 
+        public string HttpEndpointGroupName { get; }
 
         public OperationBlueprint(
             string operationName,
@@ -79,7 +80,9 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                        ? methodInfo.ReturnType.GetGenericArguments()[0]
                        : methodInfo.ReturnType;
 
-                Route = options.HttpPathPrefix + methodInfo.GetRoute();
+                var combinedRoute = methodInfo.GetRoute();
+                Route = options.HttpPathPrefix + combinedRoute.Endpoint;
+                HttpEndpointGroupName = combinedRoute.EndpointGroup;
 
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
 
@@ -110,7 +113,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             {
                 throw new NotSupportedException($"The type {memberInfo.GetType()} is not supported as an operation type. Use PropertyInfo o MethodInfo instead.");
             }
-        
+
             var classAttributes = controllerType
                 .GetCustomAttributes()
                 .Where(x => x is AuthorizeAttribute || x is AllowAnonymousAttribute)

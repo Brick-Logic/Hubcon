@@ -135,7 +135,6 @@ internal class Program
         logger.LogInformation($"Esperando eventos...");
 
         await Task.Delay(100);
-        Console.ReadKey();
 
         if (eventosRecibidos == 4)
         {
@@ -221,7 +220,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 256
+            MaxDegreeOfParallelism = 25
         };
 
         int rps = 9999999;
@@ -240,7 +239,7 @@ internal class Program
             try
             {
                 var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-                Interlocked.Increment(ref clientCount);
+                //Interlocked.Increment(ref clientCount);
                 //await foreach(var item in client.GetMessages2())
                 while (true)
                 {
@@ -249,10 +248,10 @@ internal class Program
                     {
                         await tokenBucketRateLimiter.AcquireAsync();
                         //await client.IngestMessages(GetMessages2(), default);
-                        await paralellClient.GetTemperatureFromServer(ct);
+                        var item = await paralellClient.GetTemperatureFromServer(ct);
                         Interlocked.Increment(ref _finishedRequestsCount);
                     }
-                    catch
+                    catch(Exception ex)
                     {
                         Interlocked.Increment(ref _errors);
                     }

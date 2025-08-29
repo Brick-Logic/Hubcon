@@ -1,8 +1,10 @@
 using Hubcon.Server.Injection;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Tools;
 using HubconTest.ContractHandlers;
 using HubconTest.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Diagnostics;
@@ -109,6 +111,36 @@ namespace HubconTest
             {
 
                 //serverOptions.AddAuthentication();
+                serverOptions.AddHttpRateLimiter(options =>
+                {
+                    options.AddPolicy("contract", httpContext =>
+                    {
+                        return RateLimitPartition.GetFixedWindowLimiter(
+                            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                            factory: x => new FixedWindowRateLimiterOptions
+                            {
+                                PermitLimit = 5,
+                                Window = TimeSpan.FromSeconds(1),
+                                AutoReplenishment = true,
+                                QueueLimit = 20,
+                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                            });
+                    });
+
+                    options.AddPolicy("endpoint", httpContext =>
+                    {
+                        return RateLimitPartition.GetFixedWindowLimiter(
+                            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                            factory: x => new FixedWindowRateLimiterOptions
+                            {
+                                PermitLimit = 5,
+                                Window = TimeSpan.FromSeconds(1),
+                                AutoReplenishment = true,
+                                QueueLimit = 20,
+                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                            });
+                    });
+                });
 
                 serverOptions.ConfigureCore(config =>
                 {
@@ -165,6 +197,7 @@ namespace HubconTest
                             ReplenishmentPeriod = TimeSpan.FromSeconds(1)
                         })
                         .DisableAllRateLimiters()
+                        .EnableWebsocketsLogging()
                         .EnableRequestDetailedErrors();
                 });
 
@@ -183,6 +216,8 @@ namespace HubconTest
                 app.MapOpenApi();
                 app.MapScalarApiReference();
             }
+
+            app.UseRateLimiter();
 
             app.UseAuthentication(); // debe ir antes de UseAuthorization
             app.UseAuthorization();

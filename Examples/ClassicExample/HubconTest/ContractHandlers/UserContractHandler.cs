@@ -15,8 +15,16 @@ namespace HubconTest.ContractHandlers
     //[UseMiddleware(typeof(ClassLoggingMiddleware))]
     [Authorize(Roles = "Manager")]
     [UseMiddleware(typeof(AuthenticationMiddleware))]
+    [UseHttpRateLimiter("contract")]
     public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserContract
     {
+        [UseHttpRateLimiter("endpoint")]
+        [Authorize(Roles = "Admin")]
+        public Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(Random.Shared.Next(-10, 50));
+        }
+
         [SubscriptionAuthorize]
         public ISubscription<int?>? OnUserCreated { get; }
         public ISubscription<int?>? OnUserCreated2 { get; }
@@ -25,6 +33,7 @@ namespace HubconTest.ContractHandlers
 
         [UseHttpEndpointFilter(typeof(LoggingEndpointFilter))]
         [UseMiddleware(typeof(LocalLoggingMiddleware))]
+        [UseHttpRateLimiter("endpoint")]
         public Task CreateUser(CancellationToken cancellationToken)
         {
             OnUserCreated?.Emit(1);
@@ -35,11 +44,7 @@ namespace HubconTest.ContractHandlers
             return Task.CompletedTask;
         }
 
-        [Authorize(Roles = "Admin")]
-        public Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
-        {
-            return Task.FromResult(Random.Shared.Next(-10, 50));
-        }
+
         public async Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default)
         {
             int i = 0;

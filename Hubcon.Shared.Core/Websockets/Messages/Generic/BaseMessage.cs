@@ -1,6 +1,7 @@
 ﻿using Hubcon.Shared.Core.Tools;
 using System;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -97,11 +98,13 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
                     reader.Read();
                     return typeof(T) switch
                     {
-                        Type t when t == typeof(Guid) => (T)(object)reader.GetGuid(),
-                        Type t when t == typeof(Guid[]) => (T)(object)ReadGuidArray(ref reader),
-                        Type t when t == typeof(string) => (T)(object)reader.GetString()!,
-                        Type t when t == typeof(MessageType) => Enum.TryParse(reader.GetString(), ignoreCase: true, out MessageType result) ? (T)(object)result : default,
-                        Type t when t == typeof(JsonElement) => (T)(object)JsonDocument.ParseValue(ref reader).RootElement,
+                        Type t when t == typeof(Guid) => Cast<T, Guid>(reader.GetGuid()),
+                        Type t when t == typeof(Guid[]) => Cast<T, Guid[]>(ReadGuidArray(ref reader)),
+                        Type t when t == typeof(string) => Cast<T, string?>(reader.GetString()),
+                        Type t when t == typeof(MessageType) => Enum.TryParse(reader.GetString(), ignoreCase: true, out MessageType result) 
+                                                                    ? Cast<T, MessageType>(result) 
+                                                                    : default,
+                        Type t when t == typeof(JsonElement) => Cast<T, JsonElement>(JsonDocument.ParseValue(ref reader).RootElement),
                         _ => default
                     };
                 }
@@ -109,6 +112,9 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
 
             return default;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static T Cast<T, TReal>(TReal value) => Unsafe.As<TReal, T>(ref value);
 
         public T CreateMessage<T>() where T : BaseMessage
         {

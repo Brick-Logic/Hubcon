@@ -3,8 +3,13 @@ using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
+using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
 namespace Hubcon.Server.Injection
@@ -59,6 +64,34 @@ namespace Hubcon.Server.Injection
             {
                 HubconServerBuilder.AddHubconController(Builder, controller);
             }
+        }
+
+        public void AddHttpRateLimiter(Action<RateLimiterOptions> options)
+        {
+            var hubconOptions = (RateLimiterOptions rlo) =>
+            {
+                options.Invoke(rlo);
+
+                var previous = rlo.OnRejected;
+                rlo.OnRejected = async (context, token) =>
+                {
+                    var converter = context.HttpContext.RequestServices.GetRequiredService<IDynamicConverter>();
+
+                    context.HttpContext.Response.StatusCode = 429;
+                    context.HttpContext.Response.ContentType = "application/json";
+
+                    var response = converter.SerializeToElement(new BaseOperationResponse<string>(false, error: "Too many requests."));
+
+                    await context.HttpContext.Response.WriteAsJsonAsync(response, token);
+
+                    if (previous != null)
+                        await previous(context, token);                                
+                };
+
+
+            };
+
+            Builder.Services.AddRateLimiter(hubconOptions);
         }
     }
 }

@@ -16,7 +16,7 @@ namespace Hubcon.Client.Builder
         {
             _proxyRegistry = proxyRegistry ?? throw new ArgumentNullException(nameof(proxyRegistry));
             var envResult = Environment.GetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED");
-            useCached = !bool.TryParse(envResult, out bool result) || result;
+            useCached = bool.TryParse(envResult, out bool result) ? result : true;
         }
 
         public void RegisterModule<TRemoteServerModule>(IServiceCollection services, Func<TRemoteServerModule>? remoteServerFactory = null)

@@ -54,16 +54,16 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             this.options = options;
 
 
-            //if (options.WebsocketLoggingEnabled)
-            //{
-            //    worker = new System.Timers.Timer();
-            //    worker.Interval = 1000;
-            //    worker.Elapsed += (sender, eventArgs) =>
-            //    {
-            //        logger.LogInformation("Connected clients: {0}", clientCount);
-            //    };
-            //    worker.Start();
-            //}
+            if (options.WebsocketLoggingEnabled)
+            {
+                worker = new System.Timers.Timer();
+                worker.Interval = 1000;
+                worker.Elapsed += (sender, eventArgs) =>
+                {
+                    logger.LogInformation("Connected clients: {0}", clientCount);
+                };
+                worker.Start();
+            }
         }
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)

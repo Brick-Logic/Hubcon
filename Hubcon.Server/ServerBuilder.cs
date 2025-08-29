@@ -15,11 +15,15 @@ using Hubcon.Server.Core.Routing.MethodHandling;
 using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Serialization;
+using Hubcon.Shared.Core.Websockets.Messages.Operation;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
+using System.Threading.RateLimiting;
 
 namespace Hubcon.Server
 {
@@ -154,8 +158,8 @@ namespace Hubcon.Server
         internal void AddGlobalMiddleware<TMiddleware>() => AddGlobalMiddleware(typeof(TMiddleware));
         internal void AddGlobalMiddleware(Type middlewareType)
         {
-            if (!middlewareType.IsAssignableTo(typeof(IMiddleware)))
-                throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(IMiddleware)}");
+            if (!middlewareType.IsAssignableTo(typeof(Abstractions.Interfaces.IMiddleware)))
+                throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(Abstractions.Interfaces.IMiddleware)}");
 
             PipelineBuilder.AddglobalMiddleware(middlewareType);
 

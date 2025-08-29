@@ -1,5 +1,6 @@
 ﻿using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Hubcon.Server.Abstractions.Interfaces
 {
@@ -12,5 +13,6 @@ namespace Hubcon.Server.Abstractions.Interfaces
         public void ConfigureCore(Action<ICoreServerOptions> coreServerOptions);
         public void AddAuthentication();
         public void AutoRegisterControllers();
+        public void AddHttpRateLimiter(Action<RateLimiterOptions> options);
     }
 }

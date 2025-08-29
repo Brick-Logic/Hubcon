@@ -1,4 +1,5 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.CustomAttributes;
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Helpers;
@@ -10,13 +11,17 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Routing
 {
     public static class HttpOperationRegisterer
     {
-        private static MethodInfo methodInfo = typeof(EndpointFilterExtensions).GetMethod("AddEndpointFilter", [typeof(RouteHandlerBuilder)])!;
+        private readonly static MethodInfo methodInfo = typeof(EndpointFilterExtensions).GetMethod("AddEndpointFilter", [typeof(RouteHandlerBuilder)])!;
+
+        private readonly static ConcurrentDictionary<string, RouteGroupBuilder> EndpointGroups = new();
+        private readonly static ConcurrentDictionary<RouteGroupBuilder, bool> RateLimiterApplied = new();
 
         public static void MapTypedEndpoint(
             this WebApplication app,
@@ -58,16 +63,20 @@ namespace Hubcon.Server.Core.Routing
 
             filters.AddRange(classFilters);
 
+            var endpointGroup = EndpointGroups.GetOrAdd(blueprint.HttpEndpointGroupName, x =>
+            {
+                var group = app.MapGroup(x);
+                return group;
+            });
+
             if (blueprint.HasReturnType)
             {
                 if (blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0)
                 {
-                    builder = app.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter, CancellationToken cancellationToken) =>
+                    builder = endpointGroup.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter, CancellationToken cancellationToken) =>
                     {
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
-
-                        context.Request.EnableBuffering();
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
@@ -113,12 +122,10 @@ namespace Hubcon.Server.Core.Routing
                 }
                 else
                 {
-                    builder = app.MapGet(route, async (IRequestHandler requestHandler, HttpContext context, CancellationToken cancellationToken) =>
+                    builder = endpointGroup.MapGet(route, async (IRequestHandler requestHandler, HttpContext context, CancellationToken cancellationToken) =>
                     {
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
-
-                        context.Request.EnableBuffering();
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
@@ -146,12 +153,10 @@ namespace Hubcon.Server.Core.Routing
             {
                 if (blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0)
                 {
-                    builder = app.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter, CancellationToken cancellationToken) =>
+                    builder = endpointGroup.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter, CancellationToken cancellationToken) =>
                     {
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
-
-                        context.Request.EnableBuffering();
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
@@ -206,12 +211,10 @@ namespace Hubcon.Server.Core.Routing
                 }
                 else
                 {
-                    builder = app.MapGet(route, async (IRequestHandler requestHandler, HttpContext context, CancellationToken cancellationToken) =>
+                    builder = endpointGroup.MapGet(route, async (IRequestHandler requestHandler, HttpContext context, CancellationToken cancellationToken) =>
                     {
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
-
-                        context.Request.EnableBuffering();
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
@@ -243,14 +246,35 @@ namespace Hubcon.Server.Core.Routing
                     options.EndpointConventions?.Invoke(builder);
                 }
 
-                foreach (var filter in filters)
+
+            }
+
+            foreach (var filter in filters)
+            {
+                methodInfo.MakeGenericMethod(filter.EndpointFilterType).Invoke(null, [builder]);
+            }
+
+            if (!options.ThrottlingIsDisabled)
+            {
+                var limiterApplied = RateLimiterApplied.TryGetValue(endpointGroup, out var result);
+                if (!limiterApplied)
                 {
-                    methodInfo.MakeGenericMethod(filter.EndpointFilterType).Invoke(null, [builder]);
+                    var ContractRateLimiter = blueprint.ControllerType.GetCustomAttributes<UseHttpRateLimiterAttribute>().FirstOrDefault();
+                    if (ContractRateLimiter != null)
+                    {
+                        endpointGroup.RequireRateLimiting(ContractRateLimiter.Policy);
+                        RateLimiterApplied.TryAdd(endpointGroup, true);
+                    }
                 }
 
-                options.RouteHandlerBuilderConfig?.Invoke(builder);
+                var OperationRateLimiter = controllerMethod!.GetCustomAttributes<UseHttpRateLimiterAttribute>().FirstOrDefault();
+                if (OperationRateLimiter != null)
+                    builder.RequireRateLimiting(OperationRateLimiter.Policy);
             }
+
+            options.RouteHandlerBuilderConfig?.Invoke(builder);
         }
+
         private static async Task Ok<T>(HttpContext context, T response)
         {
             context.Response.StatusCode = 200;

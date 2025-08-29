@@ -105,7 +105,7 @@ namespace Hubcon.Client.Integration.Client
                     using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
 
                     HttpMethod httpMethod = request.Arguments!.Any() ? HttpMethod.Post : HttpMethod.Get;
-                    var url = _restHttpUrl + methodInfo.GetRoute();
+                    var url = _restHttpUrl + methodInfo.GetRoute().FullRoute;
 
                     var httpRequest = new HttpRequestMessage(httpMethod, url)
                     {
@@ -203,7 +203,7 @@ namespace Hubcon.Client.Integration.Client
 
                     HttpMethod httpMethod = request.Arguments!.Any() ? HttpMethod.Post : HttpMethod.Get;
 
-                    var url = _restHttpUrl + methodInfo.GetRoute();
+                    var url = _restHttpUrl + methodInfo.GetRoute().FullRoute;
                     var httpRequest = new HttpRequestMessage(httpMethod, url)
                     {
                         Content = content
