@@ -11,7 +11,7 @@ namespace HubconAnalyzers.DiagnosticSuppressors
     /// Suprime CS8618 para cualquier propiedad con [HubconInject].
     /// </summary>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class HubconInjectSuppressor : DiagnosticSuppressor
+    public class InjectSuppressor : DiagnosticSuppressor
     {
         // Identificador propio de la supresión
         private const string SuppressionId = "HUBSUPP0001";

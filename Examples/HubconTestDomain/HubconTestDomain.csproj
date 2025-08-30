@@ -9,4 +9,8 @@
 	<ItemGroup>
 		<PackageReference Include="Hubcon.Shared" Version="[1.0.0-rc*,2.0.0)" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
+	</ItemGroup>
 </Project>

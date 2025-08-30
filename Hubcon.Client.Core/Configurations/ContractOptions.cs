@@ -80,7 +80,7 @@ namespace Hubcon.Client.Core.Configurations
             return false;        
         }
 
-        public IContractConfigurator<T> ConfigureOperations(Action<IGlobalOperationConfigurator<T>> configure)
+        public IContractConfigurator<T> ConfigureOperations(Action<Shared.Abstractions.Interfaces.IOperationSelector<T>> configure)
         {
             var options = new GlobalOperationConfigurator<T>(OperationOptions);
             configure?.Invoke(options);

@@ -82,9 +82,7 @@ namespace Hubcon.Client.Core.Subscriptions
                     {
                         IAsyncEnumerable<JsonElement> eventSource = null!;
 
-                        var interfaces = Property.ReflectedType!.GetInterfaces();
-                        var baseContractType = typeof(IControllerContract);
-                        var contract = interfaces.First(x => x.IsAssignableTo(baseContractType) && x != baseContractType) ?? baseContractType;
+                        var contract = Property.DeclaringType!;
                         var request = new SubscriptionRequest(Property.Name, contract.Name, null);
 
                         eventSource = await Client.GetSubscription(request, Property, _tokenSource.Token);

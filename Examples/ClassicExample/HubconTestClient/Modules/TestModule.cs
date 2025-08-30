@@ -6,6 +6,7 @@ using HubconTestClient.Auth;
 using HubconTestDomain;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace HubconTestClient.Modules
 {
@@ -34,7 +35,9 @@ namespace HubconTestClient.Modules
                 contractConfigurator
                     .UseWebsocketMethods()
                     //.AllowRemoteCancellation(false)
-                    //.AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                    //.AddHook(HookType.OnSend, async ctx => ctx.Services
+                    //    .GetRequiredService<ILogger<object>>()
+                    //    .LogInformation($"Operation {ctx.Request.OperationName} called. OnSend hook working."))
                     //.AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
                     //.AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
                     //.AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
@@ -68,6 +71,11 @@ namespace HubconTestClient.Modules
                         operationSelector
                             .Configure(contract => contract.CreateUser)
                             .UseTransport(TransportType.Websockets)
+                            .LimitPerSecond(1000000);
+
+                        operationSelector
+                            .Configure(contract => contract.OnUserCreated)
+                            .AddHook(HookType.OnEventReceived, async ctx => {  /*some operation logging or notification*/ })
                             .LimitPerSecond(1000000);
                     });
             });

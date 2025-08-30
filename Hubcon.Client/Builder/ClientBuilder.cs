@@ -181,9 +181,15 @@ namespace Hubcon.Client.Builder
                         subscriptionProp.PropertyType.GenericTypeArguments[0], 
                         x => typeof(ClientSubscriptionHandler<>).MakeGenericType(x));
 
+                    var propss = contractType.GetProperties().Where(x => x.Name == subscriptionProp.Name).FirstOrDefault();
+
                     var subscriptionInstance = (ISubscription)services.GetRequiredService(genericType);
                     PropertyTools.AssignProperty(newClient, subscriptionProp, subscriptionInstance);
-                    PropertyTools.AssignProperty(subscriptionInstance, nameof(ClientSubscriptionHandler<object>.Property), subscriptionProp);
+                    PropertyTools.AssignProperty(
+                        subscriptionInstance,
+                        nameof(ClientSubscriptionHandler<object>.Property),
+                        propss
+                        );
                     PropertyTools.AssignProperty(subscriptionInstance, nameof(ClientSubscriptionHandler<object>.Client), hubconClient);
                     subscriptionInstance.Build();
                 }

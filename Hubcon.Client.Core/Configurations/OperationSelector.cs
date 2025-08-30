@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Hubcon.Client.Core.Configurations
 {
-    public class GlobalOperationConfigurator<T> : IGlobalOperationConfigurator<T>, IGlobalOperationOptions
+    public class GlobalOperationConfigurator<T> : IOperationSelector<T>, IGlobalOperationOptions
     {
         public GlobalOperationConfigurator(Dictionary<string, IOperationOptions> operationOptions)
         {
@@ -14,7 +14,7 @@ namespace Hubcon.Client.Core.Configurations
 
         public Dictionary<string, IOperationOptions> OperationOptions { get; }
 
-        public IOperationConfigurator Configure(Expression<Func<T, object>> expression)
+        public IOperationConfigurator Configure<TDelegate>(Expression<Func<T, TDelegate>> expression)
         {
             var memberInfo = ExtractMemberInfo(expression);
 
@@ -36,7 +36,29 @@ namespace Hubcon.Client.Core.Configurations
             return options;
         }
 
-        private MemberInfo ExtractMemberInfo(Expression<Func<T, object>> expression)
+        public IOperationConfigurator Configure(Expression<Func<T, Delegate>> expression)
+        {
+            var memberInfo = ExtractMemberInfo(expression);
+
+            if (memberInfo == null)
+                throw new ArgumentException($"Only property or method expressions from type {typeof(T).Name} are allowed.");
+
+            if (!IsFromTType(memberInfo))
+                throw new ArgumentException($"Only property or method expressions from type {typeof(T).Name} are allowed.");
+
+            string key = GetMemberKey(memberInfo);
+
+            if (OperationOptions.TryGetValue(key, out var existingOptions))
+            {
+                return (IOperationConfigurator)existingOptions;
+            }
+
+            var options = new OperationOptions(memberInfo);
+            OperationOptions.TryAdd(key, options);
+            return options;
+        }
+
+        private MemberInfo ExtractMemberInfo<TDelegate>(Expression<Func<T, TDelegate>> expression)
         {
             Expression body = expression.Body;
 
@@ -60,7 +82,7 @@ namespace Hubcon.Client.Core.Configurations
             if (methodInfo != null)
                 return methodInfo;
 
-            return null;
+            return null!;
         }
 
         private MethodInfo FindMethodInfoInExpression(Expression expression)
