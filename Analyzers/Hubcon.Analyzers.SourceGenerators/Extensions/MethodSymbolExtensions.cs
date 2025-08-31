@@ -40,10 +40,12 @@ namespace HubconAnalyzers.SourceGenerators.Extensions
                 return type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
             }
 
-            var parameters = string.Join(", ",
-                method.Parameters.Select(p => GetRuntimeTypeName(p.Type)));
+            var parameters = string.Join(", ", method.Parameters.Select(p => GetRuntimeTypeName(p.Type)));
 
-            return $"{method.Name}({parameters})";
+            if (method.Parameters.Length > 0)
+                parameters = $"({parameters})";
+
+            return $"{method.Name}{parameters}";
         }
     }
 }

@@ -72,7 +72,7 @@ namespace Hubcon.Client.Integration.Client
             bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
                                       ?? contractOptions?.RemoteCancellationIsAllowed 
                                       ?? false;
-            
+
             await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
 
             try

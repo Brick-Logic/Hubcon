@@ -25,6 +25,13 @@ namespace Hubcon.Server.Core.Routing.Registries
 
         private ConcurrentDictionary<string, ConcurrentDictionary<string, IOperationBlueprint>> AvailableOperations = new();
         private ConcurrentDictionary<Type, bool> RegisteredControllers = new();
+        private readonly bool useHashedNames;
+
+        public OperationRegistry()
+        {
+            var env = Environment.GetEnvironmentVariable("HUBCON_OPNAME_DEBUG_ENABLED");
+            useHashedNames = !bool.TryParse(env, out var parsed) ? true : !parsed;
+        }
 
         public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<ContainerBuilder>> servicesToInject)
         {
@@ -87,7 +94,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                     if (!serverOptions.WebSocketStreamIsAllowed && kind == OperationKind.Stream)
                         continue;
 
-                    var methodSignature = method.GetMethodSignature();
+                    var methodSignature = method.GetMethodSignature(useHashedNames);
                     Func<object?, object[], object?> action = BuildInvoker(method);
 
                     var pipelineBuilder = new PipelineBuilder();

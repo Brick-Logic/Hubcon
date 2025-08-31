@@ -3,9 +3,10 @@
     "http": {
       "commandName": "Project",
       "launchUrl": "scalar",
-      "launchBrowser": true, 
+      "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "HUBCON_OPNAME_DEBUG_ENABLED" : "false"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5000"

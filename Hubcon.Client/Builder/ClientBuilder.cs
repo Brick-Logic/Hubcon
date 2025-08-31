@@ -143,7 +143,7 @@ namespace Hubcon.Client.Builder
         public RateLimiter? HttpFireAndForgetRateBucket => _httpFireAndForgetRateBucket ??= HttpFireAndForgetLimiterOptions != null ? new TokenBucketRateLimiter(HttpFireAndForgetLimiterOptions) : null;
 
         public bool LoggingEnabled {  get; set; }
-
+        public bool DebuggingMethodSignaturesEnabled { get; set; }
         public T GetOrCreateClient<T>(IServiceProvider services, bool useCached = true) where T : IControllerContract
         {
             return (T)GetOrCreateClient(typeof(T), services);

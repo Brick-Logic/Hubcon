@@ -68,7 +68,7 @@ namespace Hubcon.Client.Builder
 
             var proxy = GetProxyType(contractType);
 
-            if( proxy == null)
+            if(proxy == null)
                 throw new InvalidOperationException($"No proxy found for contract type {contractType.FullName}. Ensure the proxy is defined and follows the naming convention.");
             
             Proxies.RegisterProxy(contractType, proxy);

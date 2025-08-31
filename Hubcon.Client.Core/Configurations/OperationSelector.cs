@@ -9,8 +9,13 @@ namespace Hubcon.Client.Core.Configurations
     {
         public GlobalOperationConfigurator(Dictionary<string, IOperationOptions> operationOptions)
         {
+            var env = Environment.GetEnvironmentVariable("HUBCON_OPNAME_DEBUG_ENABLED");
+            useHashedNames = !bool.TryParse(env, out var parsed) ? true : !parsed;
+
             OperationOptions = operationOptions;
         }
+
+        private bool useHashedNames;
 
         public Dictionary<string, IOperationOptions> OperationOptions { get; }
 
@@ -176,7 +181,7 @@ namespace Hubcon.Client.Core.Configurations
         {
             return memberInfo switch
             {
-                MethodInfo method => method.GetMethodSignature(),
+                MethodInfo method => method.GetMethodSignature(useHashedNames),
                 PropertyInfo prop => prop.Name,
                 FieldInfo field => field.Name,
                 _ => memberInfo.Name
