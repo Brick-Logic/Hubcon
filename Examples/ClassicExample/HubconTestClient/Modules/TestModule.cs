@@ -44,7 +44,7 @@ namespace HubconTestClient.Modules
                     .ConfigureOperations(operationSelector =>
                     {
                         operationSelector.Configure(contract => contract.GetTemperatureFromServer)
-                            .UseTransport(TransportType.Http)
+                            .UseTransport(TransportType.Websockets)
                             //.AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
                             //.AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
                             //.AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
@@ -75,7 +75,7 @@ namespace HubconTestClient.Modules
 
                         operationSelector
                             .Configure(contract => contract.OnUserCreated)
-                            .AddHook(HookType.OnEventReceived, async ctx => {  /*some operation logging or notification*/ })
+                            //.AddHook(HookType.OnEventReceived, async ctx => {  /*some operation logging or notification*/ })
                             .LimitPerSecond(1000000);
                     });
             });

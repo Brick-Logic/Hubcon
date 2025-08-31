@@ -77,6 +77,7 @@ namespace Hubcon.Server
                     .RegisterWithInjector(x => x.RegisterType<RateLimiterManager>().As<IRateLimiterManager>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<HubconServiceProvider>().As<IHubconServiceProvider>().AsScoped())
                     .RegisterWithInjector(x => x.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped())
+                    .RegisterWithInjector(x => x.RegisterType<PermissionRegistry>().As<IPermissionRegistry>().AsSingleton())
                     .RegisterWithInjector(x => x.RegisterType<InternalRoutingMiddleware>().As<IInternalRoutingMiddleware>().AsTransient());
 
                 foreach (var services in additionalServices)

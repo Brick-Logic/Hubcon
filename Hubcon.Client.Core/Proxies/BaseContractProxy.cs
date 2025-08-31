@@ -12,7 +12,7 @@ namespace Hubcon.Client.Core.Proxies
 {
     public abstract class BaseContractProxy : BaseProxy
     {
-        private readonly ImmutableCache<(Type, string), (string computedSignature, MethodInfo methodInfo)> Methods = new();
+        private readonly ImmutableCache<string, (string computedSignature, MethodInfo methodInfo)> Methods = new();
 
         private Type _contractType = null!;
         private IHubconClient _client = null!;
@@ -38,13 +38,13 @@ namespace Hubcon.Client.Core.Proxies
             {
                 var signature = method.GetMethodSignature(false);
 
-                Methods.GetOrAdd((_contractType, signature), _ => (method.GetMethodSignature(useHashed), method));
+                Methods.GetOrAdd(signature, _ => (method.GetMethodSignature(useHashed), method));
             }
         }
 
         private (string computedSignature, MethodInfo methodInfo) GetMethod(string methodSignature)
         {
-            if (!Methods.TryGetValue((_contractType, methodSignature), out (string, MethodInfo) info))
+            if (!Methods.TryGetValue(methodSignature, out (string, MethodInfo) info))
                 throw new MissingMethodException($"No se encontró el método '{methodSignature}' en {_contractType}.");
 
             return info;
