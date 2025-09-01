@@ -29,21 +29,15 @@ namespace Hubcon.Server.Core.Extensions
             {
                 List<PropertyInfo> props = GetProps(e.Instance!.GetType());
 
-                foreach (PropertyInfo prop in props!)
+                foreach (var prop in props!.Where(prop => prop.GetValue(e.Instance) == null).Where(prop => !prop.ReflectedType!.IsAssignableTo(typeof(BaseProxy))))
                 {
-                    if (prop.GetValue(e.Instance) != null)
-                        continue;
-
-                    if (prop.ReflectedType!.IsAssignableTo(typeof(BaseProxy)))
-                        continue;
-
                     if (IsSub(prop))
                     {
                         var accessor = e.Context.ResolveOptional<IHttpContextAccessor>();
 
                         if (accessor != null)
                         {
-                            var contract = GetContractType(prop.ReflectedType).Name;
+                            var contract = GetContractType(prop.ReflectedType!).Name;
 
                             var operationRegistry = e.Context.Resolve<IOperationRegistry>();
 
@@ -58,7 +52,7 @@ namespace Hubcon.Server.Core.Extensions
                             if (blueprint.RequiresAuthorization)
                             {             
                                 var token = JwtHelper.ExtractTokenFromHeader(accessor.HttpContext) 
-                                                    ?? accessor.HttpContext?.Request.Headers.Authorization.ToString();
+                                            ?? accessor.HttpContext?.Request.Headers.Authorization.ToString();
 
                                 var descriptor = sub.GetHandler(token!, contract!, prop.Name);
                                 PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);                     

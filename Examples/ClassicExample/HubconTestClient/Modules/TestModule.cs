@@ -34,25 +34,26 @@ namespace HubconTestClient.Modules
             {
                 contractConfigurator
                     .UseWebsocketMethods()
-                    //.AllowRemoteCancellation(false)
+                    .AllowRemoteCancellation(false)
                     //.AddHook(HookType.OnSend, async ctx => ctx.Services
                     //    .GetRequiredService<ILogger<object>>()
                     //    .LogInformation($"Operation {ctx.Request.OperationName} called. OnSend hook working."))
-                    //.AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
-                    //.AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
-                    //.AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
+                    .AddHook(HookType.OnSend, async ctx => { })
+                    .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
+                    .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
+                    .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
                     .ConfigureOperations(operationSelector =>
                     {
                         operationSelector.Configure(contract => contract.GetTemperatureFromServer)
                             .UseTransport(TransportType.Websockets)
-                            //.AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
-                            //.AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
-                            //.AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
-                            //.AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
-                            //.AddValidationHook(async ctx =>
-                            //{
-                            //    if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }
-                            //})
+                            .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                            .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
+                            .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
+                            .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
+                            .AddValidationHook(async ctx =>
+                            {
+                                if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }
+                            })
                             .LimitPerSecond(100);
                         
                         operationSelector.Configure(contract => contract.GetTemperatureFromServerBlocking)

@@ -4,20 +4,20 @@ namespace Hubcon.Shared.Core.Tools
 {
     public static class PropertyTools
     {
-        public static void AssignProperty(object instance, PropertyInfo prop, object? value)
+        public static void AssignProperty<T>(T instance, PropertyInfo prop, object? value)
         {
             if (value == null)
                 return;
 
-            var setMethod = prop!.GetSetMethod(true);
+            var setMethod = prop.GetSetMethod(true);
             if (setMethod != null)
             {
-                setMethod.Invoke(instance, new[] { value });
+                setMethod.Invoke(instance, [value]);
             }
             else
             {
                 // Si no tiene setter, usamos el campo backing
-                var field = prop!.DeclaringType?.GetField($"<{prop.Name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+                var field = prop.DeclaringType?.GetField($"<{prop.Name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
                 field?.SetValue(instance, value);
             }
         }
@@ -30,12 +30,14 @@ namespace Hubcon.Shared.Core.Tools
                     return;
 
                 // Si no tiene setter, usamos el campo backing
-                var field = instance.GetType()!.GetField($"<{propName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+                var field = instance.GetType().GetField($"<{propName}>k__BackingField",
+                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public |
+                    BindingFlags.FlattenHierarchy);
                 field?.SetValue(instance, value);
             }
-            catch
+            catch (Exception)
             {
-                return;
+                // Nothing
             }
         }
     }
