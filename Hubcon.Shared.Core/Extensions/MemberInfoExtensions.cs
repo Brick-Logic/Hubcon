@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,7 +10,7 @@ namespace Hubcon.Shared.Core.Extensions
 {
     public static class MemberInfoExtensions
     {
-        private static readonly Dictionary<string, bool> _attributeCache = new();
+        private static readonly ConcurrentDictionary<string, bool> _attributeCache = new();
 
         public static bool HasCustomAttribute<TCustomAttribute>(this MemberInfo member) where TCustomAttribute : Attribute
         {

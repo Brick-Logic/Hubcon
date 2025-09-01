@@ -1,4 +1,6 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Server.Core.Middlewares;
+using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
+using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Attributes;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using HubconTestDomain;

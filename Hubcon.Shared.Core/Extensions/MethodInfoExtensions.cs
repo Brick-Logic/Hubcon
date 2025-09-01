@@ -11,7 +11,7 @@ namespace Hubcon.Shared.Core.Extensions
 {
     public static class MethodInfoExtensions
     {
-        private static readonly Dictionary<string, bool> _attributeCache = new();
+        private static readonly ConcurrentDictionary<string, bool> _attributeCache = new();
         private static ConcurrentDictionary<MethodInfo, (string, string, string)> _routeCache = new ConcurrentDictionary<MethodInfo, (string, string, string)>();
 
 

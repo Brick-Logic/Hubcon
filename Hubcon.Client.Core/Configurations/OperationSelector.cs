@@ -1,5 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -7,7 +8,7 @@ namespace Hubcon.Client.Core.Configurations
 {
     public class GlobalOperationConfigurator<T> : IOperationSelector<T>, IGlobalOperationOptions
     {
-        public GlobalOperationConfigurator(Dictionary<string, IOperationOptions> operationOptions)
+        public GlobalOperationConfigurator(ConcurrentDictionary<string, IOperationOptions> operationOptions)
         {
             var env = Environment.GetEnvironmentVariable("HUBCON_OPNAME_DEBUG_ENABLED");
             useHashedNames = !bool.TryParse(env, out var parsed) ? true : !parsed;
@@ -17,7 +18,7 @@ namespace Hubcon.Client.Core.Configurations
 
         private bool useHashedNames;
 
-        public Dictionary<string, IOperationOptions> OperationOptions { get; }
+        public ConcurrentDictionary<string, IOperationOptions> OperationOptions { get; }
 
         public IOperationConfigurator Configure<TDelegate>(Expression<Func<T, TDelegate>> expression)
         {

@@ -10,7 +10,7 @@ namespace Hubcon.Server.Core.RateLimiting
 {
     public class RateLimiterManager(ISettingsManager settingsManager, IInternalServerOptions options) : IRateLimiterManager, IAsyncDisposable
     {
-        private readonly Dictionary<MessageType, RateLimiter> _typeLimiters = new();
+        private readonly ConcurrentDictionary<MessageType, RateLimiter> _typeLimiters = new();
 
         private readonly ConcurrentDictionary<IOperationEndpoint, HubconSettings> operationSettings = new();
         private readonly ConcurrentDictionary<Guid, IOperationEndpoint> linkedSettings = new();

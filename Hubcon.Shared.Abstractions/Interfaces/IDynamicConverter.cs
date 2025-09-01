@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IDynamicConverter
     {
-        Dictionary<Delegate, Type[]> TypeCache { get; }
+        ConcurrentDictionary<Delegate, Type[]> TypeCache { get; }
         IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement> stream, CancellationToken cancellationToken);
         IAsyncEnumerable<JsonElement> ConvertToJsonElementStream(IAsyncEnumerable<object?> stream, CancellationToken cancellationToken = default);
         IEnumerable<object?> DeserializeArgs(IEnumerable<Type> types, IEnumerable<object?> args);

@@ -24,7 +24,7 @@ namespace Hubcon.Server.Core.Middlewares
         public IControllerOptions AddMiddleware(Type middlewareType)
         {
             _builder.AddMiddleware(middlewareType);
-            ServicesToInject.Add(x => x.RegisterWithInjector(y => y.RegisterType(middlewareType)));
+            ServicesToInject.Add(x => x.RegisterType(middlewareType));
             return this;
         }
 

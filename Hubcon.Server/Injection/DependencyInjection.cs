@@ -74,12 +74,13 @@ namespace Hubcon.Server.Injection
 
             ServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
             {
-                container.RegisterWithInjector(x => x.RegisterType<DefaultEntrypoint>().AsScoped());
+                container.RegisterType<DefaultEntrypoint>().AsScoped().IfNotRegistered(typeof(DefaultEntrypoint));
 
                 container.RegisterWithInjector(x => x
                     .RegisterGeneric(typeof(ServerSubscriptionHandler<>))
                     .As(typeof(ISubscription<>))
-                    .AsTransient());
+                    .AsTransient()
+                    .IfNotRegistered(typeof(ISubscription<>)));
             });
 
             return builder;
@@ -95,11 +96,6 @@ namespace Hubcon.Server.Injection
 
         public static WebApplication MapHubconControllers(this WebApplication app)
         {
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-            }
-
             var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
             operationRegistry.MapControllers(app);
 

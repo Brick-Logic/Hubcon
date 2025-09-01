@@ -17,7 +17,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         MemberInfo? OperationInfo { get; }
         string OperationName { get; }
         OperationKind Kind { get; }
-        Dictionary<string, Type> ParameterTypes { get; }
+        ConcurrentDictionary<string, Type> ParameterTypes { get; }
         Type RawReturnType { get; }
         bool RequiresAuthorization { get; }
         Type ReturnType { get; }

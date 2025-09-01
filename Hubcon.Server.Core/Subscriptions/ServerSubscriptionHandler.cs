@@ -1,5 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
 
@@ -14,14 +15,9 @@ namespace Hubcon.Server.Core.Subscriptions
         private SubscriptionState _connected = SubscriptionState.Emitter;
         public SubscriptionState Connected => _connected;
 
-        public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
+        public ConcurrentDictionary<object, HubconEventHandler<object>> Handlers { get; } = new();
 
         public event HubconEventHandler<object>? OnEventReceived;
-
-        public ServerSubscriptionHandler()
-        {
-            Handlers = new();
-        }
 
         public void AddHandler(HubconEventHandler<T> handler)
         {
@@ -41,14 +37,14 @@ namespace Hubcon.Server.Core.Subscriptions
         {
             var internalHandler = Handlers[handler];
             OnEventReceived -= internalHandler;
-            Handlers.Remove(handler);
+            Handlers.TryRemove(handler, out _);
         }
 
         public void RemoveGenericHandler(HubconEventHandler<object> handler)
         {
             var internalHandler = Handlers[handler];
             OnEventReceived -= internalHandler;
-            Handlers.Remove(handler);
+            Handlers.TryRemove(handler, out _);
         }
 
         public Task Subscribe()

@@ -1,6 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Models;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,7 +14,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
     {
         public bool WebsocketMethodsEnabled { get; }
         public Type ContractType { get; }
-        Dictionary<string, IOperationOptions> OperationOptions { get; }
+        ConcurrentDictionary<string, IOperationOptions> OperationOptions { get; }
         IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks { get; } 
         bool RemoteCancellationIsAllowed { get; }
 

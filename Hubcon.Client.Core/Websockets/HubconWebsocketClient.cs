@@ -212,7 +212,7 @@ namespace Hubcon.Client.Core.Websockets
             var sourceTasks = new List<Task>();
             var initAckTcs = new TaskCompletionSource<IngestInitAckMessage>();
             var generalTcs = new TaskCompletionSource<IngestResultMessage>();
-            var sources = new Dictionary<Guid, IAsyncEnumerable<JsonElement>>();
+            var sources = new ConcurrentDictionary<Guid, IAsyncEnumerable<JsonElement>>();
             var initialAckId = Guid.NewGuid();
 
             using var registration = cancellationToken.Register(async () =>

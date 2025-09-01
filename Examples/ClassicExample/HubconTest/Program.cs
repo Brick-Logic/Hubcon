@@ -1,10 +1,6 @@
 using Hubcon.Server.Injection;
-using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Tools;
-using HubconTest.ContractHandlers;
-using HubconTest.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Diagnostics;
@@ -85,8 +81,6 @@ namespace HubconTest
                 });
             });
 
-            builder.Services.AddOpenApi();
-
             var tokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -106,10 +100,11 @@ namespace HubconTest
                    options.TokenValidationParameters = tokenValidationParameters;
                });
 
+            builder.Services.AddAuthorization();
+            builder.Services.AddOpenApi();
             builder.AddHubconServer();
             builder.ConfigureHubconServer(serverOptions =>
             {
-
                 //serverOptions.AddAuthentication();
                 serverOptions.AddHttpRateLimiter(options =>
                 {
@@ -203,9 +198,7 @@ namespace HubconTest
 
                 serverOptions.AutoRegisterControllers();
             });
-
-            builder.Services.AddAuthorization();
-
+           
             var app = builder.Build();
 
             app.UseCors();

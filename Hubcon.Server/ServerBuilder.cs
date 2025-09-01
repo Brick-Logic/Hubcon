@@ -29,11 +29,9 @@ namespace Hubcon.Server
 {
     public class ServerBuilder
     {
-        private IProxyRegistry Proxies { get; } = new ProxyRegistry();
         private ILiveSubscriptionRegistry SubscriptionRegistry { get; } = new LiveSubscriptionRegistry();
         private IOperationRegistry OperationRegistry { get; } = new OperationRegistry();
         private List<Action<ContainerBuilder>> ServicesToInject { get; } = new();
-        private List<Type> ProxiesToRegister { get; } = new();
         private CoreServerOptions ServerOptions { get; } = new();
 
 
@@ -58,27 +56,18 @@ namespace Hubcon.Server
             builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
             builder.Host.ConfigureContainer<ContainerBuilder>((context, container) =>
             {
+                container.RegisterInstance(ServerOptions).As<IInternalServerOptions>().AsSingleton().IfNotRegistered(typeof(IInternalServerOptions));
+                container.RegisterInstance(OperationRegistry).As<IOperationRegistry>().AsSingleton().IfNotRegistered(typeof(IOperationRegistry));
+                container.RegisterInstance(SubscriptionRegistry).As<ILiveSubscriptionRegistry>().AsSingleton().IfNotRegistered(typeof(ILiveSubscriptionRegistry));
+                container.RegisterType<PermissionRegistry>().As<IPermissionRegistry>().AsSingleton().IfNotRegistered(typeof(IPermissionRegistry));
+                container.RegisterType<DynamicConverter>().As<IDynamicConverter>().AsSingleton().IfNotRegistered(typeof(IDynamicConverter));
+                container.RegisterType<SettingsManager>().As<ISettingsManager>().AsScoped().IfNotRegistered(typeof(ISettingsManager));
+                container.RegisterType<OperationConfigRegistry>().As<IOperationConfigRegistry>().AsScoped().IfNotRegistered(typeof(IOperationConfigRegistry));
+                container.RegisterType<RateLimiterManager>().As<IRateLimiterManager>().AsScoped().IfNotRegistered(typeof(IRateLimiterManager));
+                container.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped().IfNotRegistered(typeof(IRequestHandler));
+                
                 if (ServicesToInject.Count > 0)
                     ServicesToInject.ForEach(x => x.Invoke(container));
-
-                if (ProxiesToRegister.Count > 0)
-                    ProxiesToRegister.ForEach(x => container.RegisterWithInjector(y => y.RegisterType(x).AsTransient()));
-
-                container
-                    .RegisterWithInjector(x => x.RegisterInstance(ServerOptions).As<IInternalServerOptions>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterInstance(OperationRegistry).As<IOperationRegistry>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterInstance(Proxies).As<IProxyRegistry>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterInstance(SubscriptionRegistry).As<ILiveSubscriptionRegistry>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<OperationConfigRegistry>().As<IOperationConfigRegistry>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterType<DynamicConverter>().As<IDynamicConverter>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<StreamNotificationHandler>().As<IStreamNotificationHandler>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<ClientRegistry>().As<IClientRegistry>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<SettingsManager>().As<ISettingsManager>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterType<RateLimiterManager>().As<IRateLimiterManager>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterType<HubconServiceProvider>().As<IHubconServiceProvider>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped())
-                    .RegisterWithInjector(x => x.RegisterType<PermissionRegistry>().As<IPermissionRegistry>().AsSingleton())
-                    .RegisterWithInjector(x => x.RegisterType<InternalRoutingMiddleware>().As<IInternalRoutingMiddleware>().AsTransient());
 
                 foreach (var services in additionalServices)
                     services?.Invoke(container);
@@ -92,31 +81,31 @@ namespace Hubcon.Server
             return this;
         }
 
-        internal ContainerBuilder AddHubconControllersFromAssembly(ContainerBuilder container, Assembly assembly, Action<IControllerOptions>? globalMiddlewareOptions = null)
-        {
-            var contracts = assembly
-                .GetTypes()
-                .Where(t => t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t))
-                .ToList();
+        //internal ContainerBuilder AddHubconControllersFromAssembly(ContainerBuilder container, Assembly assembly, Action<IControllerOptions>? globalMiddlewareOptions = null)
+        //{
+        //    var contracts = assembly
+        //        .GetTypes()
+        //        .Where(t => t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t))
+        //        .ToList();
 
-            var controllers = assembly
-                .GetTypes()
-                .Where(t => !t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t) && t.IsDefined(typeof(HubconControllerAttribute)))
-                .ToList();
+        //    var controllers = assembly
+        //        .GetTypes()
+        //        .Where(t => !t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t) && t.IsDefined(typeof(HubconControllerAttribute)))
+        //        .ToList();
 
-            foreach (var controller in controllers)
-                container.RegisterWithInjector(x => x.RegisterType(controller));
+        //    foreach (var controller in controllers)
+        //        container.RegisterWithInjector(x => x.RegisterType(controller));
 
-            return container;
-        }
+        //    return container;
+        //}
 
-        internal ContainerBuilder AddHubconEntrypoint(ContainerBuilder container, Type hubconEntrypointType)
-        {
-            if (!hubconEntrypointType.IsAssignableTo(typeof(DefaultEntrypoint)))
-                throw new ArgumentException($"El tipo {hubconEntrypointType.Name} no es compatible con la clase {nameof(DefaultEntrypoint)}");
+        //internal ContainerBuilder AddHubconEntrypoint(ContainerBuilder container, Type hubconEntrypointType)
+        //{
+        //    if (!hubconEntrypointType.IsAssignableTo(typeof(DefaultEntrypoint)))
+        //        throw new ArgumentException($"El tipo {hubconEntrypointType.Name} no es compatible con la clase {nameof(DefaultEntrypoint)}");
 
-            return container.RegisterWithInjector(x => x.RegisterType(hubconEntrypointType));
-        }
+        //    return container.RegisterWithInjector(x => x.RegisterType(hubconEntrypointType));
+        //}
 
         internal WebApplicationBuilder AddHubconController<T>(WebApplicationBuilder builder, Action<IControllerOptions>? options = null) 
             where T : class, IControllerContract
@@ -138,7 +127,7 @@ namespace Hubcon.Server
                 throw new InvalidOperationException($"Class {controllerType.Name} does not implement interface {nameof(IControllerContract)}.");
 
             if (OperationRegistry.ControllerExists(controllerType))
-                return builder;       
+                return builder;
 
             foreach (var type in implementationTypes)
             {
@@ -162,12 +151,9 @@ namespace Hubcon.Server
             if (!middlewareType.IsAssignableTo(typeof(Abstractions.Interfaces.IMiddleware)))
                 throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(Abstractions.Interfaces.IMiddleware)}");
 
-            PipelineBuilder.AddglobalMiddleware(middlewareType);
+            PipelineBuilder.AddGlobalMiddleware(middlewareType);
 
-            ServicesToInject.Add(container => container
-                .RegisterWithInjector(x => x
-                    .RegisterType(middlewareType)
-                        .IfNotRegistered(middlewareType)));
+            ServicesToInject.Add(container => container.RegisterType(middlewareType).IfNotRegistered(middlewareType));
         }
 
         internal void ConfigureCore(Action<ICoreServerOptions> coreServerOptions)

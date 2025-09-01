@@ -13,7 +13,7 @@ namespace Hubcon.Shared.Core.Serialization
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class DynamicConverter(ILogger<DynamicConverter> logger) : IDynamicConverter
     {
-        public Dictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
+        public ConcurrentDictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 
         public static JsonSerializerOptions JsonSerializerOptions { get; } = new()
         {

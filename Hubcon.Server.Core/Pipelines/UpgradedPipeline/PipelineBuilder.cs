@@ -54,8 +54,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             return this;
         }
 
-        public static void AddglobalMiddleware<T>() where T : IMiddleware => AddglobalMiddleware(typeof(T));
-        public static void AddglobalMiddleware(Type middlewareType)
+        public static void AddglobalMiddleware<T>() where T : IMiddleware => AddGlobalMiddleware(typeof(T));
+        public static void AddGlobalMiddleware(Type middlewareType)
         {
             if (typeof(IInternalExceptionMiddleware).IsAssignableFrom(middlewareType))
                 GlobalInternalExceptionMiddleware ??= middlewareType;

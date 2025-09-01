@@ -133,14 +133,14 @@ namespace Hubcon.Server.Core.Routing.Registries
                     }
 
                     var descriptor = new OperationBlueprint(
-                    methodSignature,
-                    interfaceType,
-                    controllerType,
-                    method,
-                    kind,
-                    pipelineBuilder,
-                    serverOptions,
-                    action!
+                        methodSignature,
+                        interfaceType,
+                        controllerType,
+                        method,
+                        kind,
+                        pipelineBuilder,
+                        serverOptions,
+                        action!
                     );
 
 

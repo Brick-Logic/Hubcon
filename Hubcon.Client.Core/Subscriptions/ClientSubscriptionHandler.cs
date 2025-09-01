@@ -4,6 +4,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json;
@@ -25,7 +26,7 @@ namespace Hubcon.Client.Core.Subscriptions
         public PropertyInfo Property { get; } = null!;
         public IHubconClient Client { get; }
 
-        public Dictionary<object, HubconEventHandler<object>> Handlers { get; }
+        public ConcurrentDictionary<object, HubconEventHandler<object>> Handlers { get; }
 
         public ClientSubscriptionHandler(IDynamicConverter converter, ILogger<ClientSubscriptionHandler<T>> logger)
         {
@@ -53,14 +54,14 @@ namespace Hubcon.Client.Core.Subscriptions
         {
             var internalHandler = Handlers[handler];
             OnEventReceived -= internalHandler;
-            Handlers.Remove(handler);
+            Handlers.TryRemove(handler, out _);
         }
 
         public void RemoveGenericHandler(HubconEventHandler<object> handler)
         {
             var internalHandler = Handlers[handler];
             OnEventReceived -= internalHandler;
-            Handlers.Remove(handler);
+            Handlers.TryRemove(handler, out _);
         }
 
         public async Task Subscribe()

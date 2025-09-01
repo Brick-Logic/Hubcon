@@ -10,11 +10,8 @@ using System.Text.Json;
 namespace Hubcon.Server.Core.Entrypoint
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class DefaultEntrypoint
+    public sealed class DefaultEntrypoint(IServiceProvider ServiceProvider)
     {
-        [HubconInject]
-        public IServiceProvider ServiceProvider { get; }
-
         public Task<IOperationResponse<JsonElement>> HandleMethodWithResult(IOperationRequest request, CancellationToken cancellationToken = default)
         {
             using var scope = ServiceProvider.CreateScope();

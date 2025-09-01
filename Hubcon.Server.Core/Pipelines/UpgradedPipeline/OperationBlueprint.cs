@@ -22,7 +22,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public string ControllerName { get; }
         public Type ControllerType { get; }
 
-        public Dictionary<string, Type> ParameterTypes { get; }
+        public ConcurrentDictionary<string, Type> ParameterTypes { get; }
         public Type RawReturnType { get; }
         public Type ReturnType { get; }
         public bool HasReturnType { get; }
@@ -70,7 +70,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             {
                 foreach (var parameter in methodInfo.GetParameters())
                 {
-                    ParameterTypes.Add(parameter.Name!, parameter.ParameterType);
+                    ParameterTypes.TryAdd(parameter.Name!, parameter.ParameterType);
                 }
 
                 RawReturnType = methodInfo.ReturnType;

@@ -19,7 +19,7 @@ namespace Hubcon.Client.Core.Configurations
     {
         public Type ContractType { get; } = typeof(T);
 
-        public Dictionary<string, IOperationOptions> OperationOptions { get; } = new();
+        public ConcurrentDictionary<string, IOperationOptions> OperationOptions { get; } = new();
 
         private bool? websocketMethodsEnabled;
         public bool WebsocketMethodsEnabled => websocketMethodsEnabled ?? false;
