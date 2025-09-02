@@ -17,6 +17,8 @@ internal class Program
 
     static async Task Main()
     {
+        Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "true");
+
         var process = Process.GetCurrentProcess();
 
         long coreMask = 0;
@@ -220,11 +222,11 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 25
+            MaxDegreeOfParallelism = 256
         };
 
         int rps = 9999999;
-
+      
         await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
         {
             TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions() 
@@ -239,7 +241,7 @@ internal class Program
             try
             {
                 var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-                //Interlocked.Increment(ref clientCount);
+                Interlocked.Increment(ref clientCount);
                 //await foreach(var item in client.GetMessages2())
                 while (true)
                 {

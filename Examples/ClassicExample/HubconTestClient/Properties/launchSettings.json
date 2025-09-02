@@ -5,7 +5,8 @@
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "HUBCON_OPNAME_DEBUG_ENABLED": "false"
+        "HUBCON_OPNAME_DEBUG_ENABLED": "false",
+        "HUBCON_CLIENT_CACHE_ENABLED": "false"
       },
       "applicationUrl": "https://localhost:62471;http://localhost:62472"
     }

@@ -44,7 +44,7 @@ namespace Hubcon.Client.Builder
 
                         if (registry.GetClientBuilder(localContractType, out var builder))
                         {
-                            return builder!.GetOrCreateClient(localContractType, serviceProvider);
+                            return builder!.GetOrCreateClient(localContractType, serviceProvider, useCached);
                         }
 
                         return default!;
@@ -58,7 +58,7 @@ namespace Hubcon.Client.Builder
 
                         if (registry.GetClientBuilder(localContractType, out var builder))
                         {
-                            return builder!.GetOrCreateClient(localContractType, serviceProvider);
+                            return builder!.GetOrCreateClient(localContractType, serviceProvider, useCached);
                         }
 
                         return default!;
