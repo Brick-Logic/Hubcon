@@ -31,6 +31,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         public bool RequiresAuthorization { get; }
         public IEnumerable<AuthorizeAttribute> AuthorizationAttributes { get; }
+        public HashSet<string> PrecomputedRoles { get; private set; }
+        public string?[] PrecomputedPolicies { get; private set; }
         public IEnumerable<Attribute> Attributes { get; }
         public ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         public Func<object?, object[], object?>? InvokeDelegate { get; }
@@ -136,6 +138,16 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             }
 
             AuthorizationAttributes = combinedAuthorize;
+
+            PrecomputedRoles = AuthorizationAttributes
+                    .Where(a => !string.IsNullOrWhiteSpace(a.Roles))
+                    .SelectMany(a => a.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            PrecomputedPolicies = AuthorizationAttributes
+                .Where(a => !string.IsNullOrWhiteSpace(a.Policy))
+                .Select(a => a.Policy)
+                .ToArray();
 
             ConfigurationAttributes = new();
 

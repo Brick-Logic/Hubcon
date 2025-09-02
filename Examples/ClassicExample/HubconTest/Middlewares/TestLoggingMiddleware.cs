@@ -1,17 +1,15 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
-namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
+namespace HubconTest.Middlewares
 {
-    public class AuthenticationMiddleware(Lazy<IAuthorizationService> _authorizationService, ILogger<AuthenticationMiddleware> logger) : ILoggingMiddleware
+    public class TestLoggingMiddleware(Lazy<IAuthorizationService> _authorizationService, ILogger<TestLoggingMiddleware> logger) : ILoggingMiddleware
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
@@ -27,7 +25,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
             bool allowed = true;
 
-            if (context.Blueprint.RequiresAuthorization)
+            if(context.Blueprint.RequiresAuthorization)
             {
                 var localCache = new Dictionary<string, bool>();
 

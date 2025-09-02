@@ -26,5 +26,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         string Route { get; }
         ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         IEnumerable<Attribute> Attributes { get; }
+        HashSet<string> PrecomputedRoles { get; }
+        string?[] PrecomputedPolicies { get; }
     }
 }

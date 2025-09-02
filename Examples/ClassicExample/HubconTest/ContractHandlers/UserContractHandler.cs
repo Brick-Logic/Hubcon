@@ -14,12 +14,12 @@ namespace HubconTest.ContractHandlers
     //[UseHttpEndpointFilter(typeof(ClassLoggingEndpointFilter))]
     //[UseMiddleware(typeof(ClassLoggingMiddleware))]
     [Authorize(Roles = "Manager")]
-    //[UseMiddleware(typeof(AuthenticationMiddleware))]
+    [UseMiddleware(typeof(AuthenticationMiddleware))]
     [UseHttpRateLimiter("contract")]
     public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserContract
     {
         [UseHttpRateLimiter("endpoint")]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         public Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
         {
             return Task.FromResult(Random.Shared.Next(-10, 50));

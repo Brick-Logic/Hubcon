@@ -244,7 +244,8 @@ namespace Hubcon.Server.Core.Pipelines
                 Blueprint = blueprint,
                 HttpContext = _serviceProvider.GetRequiredService<IHttpContextAccessor>()?.HttpContext,
                 Request = request,
-                RequestAborted = cancellationToken
+                RequestAborted = cancellationToken,
+                // Ejemplo: durante inicialización del blueprint
             };
         }
 
