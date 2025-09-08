@@ -124,7 +124,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             List<AuthorizeAttribute> combinedAuthorize = new List<AuthorizeAttribute>();
 
             // Si el método tiene AllowAnonymous, ignora todo Authorize
-            if (endpointAttributes.Any(a => a is AllowAnonymousAttribute))
+            if (endpointAttributes.Any(a => a is AllowAnonymousAttribute) || classAttributes.Any(a => a is AllowAnonymousAttribute))
             {
                 RequiresAuthorization = false;
             }

@@ -428,7 +428,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            CancelTask(message.Id, _tasks);
+                            _ = CancelTask(message.Id, _tasks);
 
                             break;
                     }

@@ -16,7 +16,7 @@ namespace HubconTest.ContractHandlers
     [Authorize(Roles = "Manager")]
     [UseMiddleware(typeof(AuthenticationMiddleware))]
     [UseHttpRateLimiter("contract")]
-    public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserContract
+    public class UserController(ILogger<UserController> logger) : IUserContract
     {
         [UseHttpRateLimiter("endpoint")]
         //[Authorize(Roles = "Admin")]
