@@ -94,7 +94,7 @@ namespace Hubcon.Server.Injection
             return builder;
         }
 
-        public static WebApplication MapHubconControllers(this WebApplication app)
+        public static WebApplication UseHubconHttpEndpoints(this WebApplication app)
         {
             var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
             operationRegistry.MapControllers(app);
@@ -102,7 +102,7 @@ namespace Hubcon.Server.Injection
             return app;
         }
 
-        public static WebApplication UseHubconWebsockets(this WebApplication app)
+        public static WebApplication UseHubconWebsocketEndpoints(this WebApplication app)
         {
             app.UseWebSockets();
             app.UseMiddleware<HubconWebSocketMiddleware>();

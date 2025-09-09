@@ -215,8 +215,8 @@ namespace HubconTest
             app.UseAuthentication(); // debe ir antes de UseAuthorization
             app.UseAuthorization();
 
-            app.MapHubconControllers();
-            app.UseHubconWebsockets();
+            app.UseHubconHttpEndpoints();
+            app.UseHubconWebsocketEndpoints();
 
             var logger = app.Services.GetService<ILogger<object>>();
 

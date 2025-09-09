@@ -95,8 +95,8 @@ namespace BlazorTestServer
 
             app.MapControllers();
 
-            app.MapHubconControllers();
-            app.UseHubconWebsockets();
+            app.UseHubconHttpEndpoints();
+            app.UseHubconWebsocketEndpoints();
 
             app.Run();
         }
