@@ -46,8 +46,15 @@ namespace ExampleMicroservice3
             logger.LogInformation("Waiting to start...");
             Console.ReadKey();
 
-            await Task.Run(async () => await microservice1.ProcessMessage("My custom message"));
-
+            _ = Task.Run(async () =>
+            {
+                while (true)
+                {
+                    logger.LogInformation("Sending message to microservice 1...");
+                    await microservice1.ProcessMessage("My custom message.");
+                }
+            });
+                     
             app.Run();
         }
     }

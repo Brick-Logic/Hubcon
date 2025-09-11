@@ -16,7 +16,6 @@ namespace ExampleMicroservice3.ServerModules
             configuration.Implements<IExampleMicroservice1Contract>();
 
             configuration.DisableHttpAuthentication();
-            configuration.EnableLogging();
 
             // Usar conexion insegura
             configuration.UseInsecureConnection();
