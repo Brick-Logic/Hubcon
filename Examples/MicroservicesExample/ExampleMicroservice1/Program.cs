@@ -22,9 +22,7 @@ namespace ExampleMicroservice1
             builder.AddHubconServer();
             builder.ConfigureHubconServer(serverOptions =>
             {
-                serverOptions.AddGlobalMiddleware<ExceptionMiddleware>();
-
-                serverOptions.AddController<ExampleMicroservice1ContractHandler>();
+                serverOptions.AutoRegisterControllers();
             });
 
             builder.Services.AddLogging();
@@ -34,7 +32,7 @@ namespace ExampleMicroservice1
             app.MapOpenApi();
             app.MapScalarApiReference();
 
-            app.MapHubconControllers();
+            app.UseHubconHttpEndpoints();
 
             app.Run();
         }

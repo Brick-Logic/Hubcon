@@ -305,5 +305,11 @@ namespace Hubcon.Client.Builder
             builder.LoggingEnabled = true;
             return this;
         }
+
+        public IServerModuleConfiguration DisableHttpAuthentication()
+        {
+            builder.HttpAuthIsEnabled = false;
+            return this;
+        }
     }
 }

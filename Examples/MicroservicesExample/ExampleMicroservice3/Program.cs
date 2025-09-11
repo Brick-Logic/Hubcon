@@ -10,7 +10,7 @@ namespace ExampleMicroservice3
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -37,7 +37,7 @@ namespace ExampleMicroservice3
             app.MapOpenApi();
             app.MapScalarApiReference();
 
-            app.MapHubconControllers();
+            app.UseHubconHttpEndpoints();
 
             var initialScope = app.Services.CreateScope();
             var microservice1 = initialScope.ServiceProvider.GetRequiredService<IExampleMicroservice1Contract>();
@@ -46,8 +46,7 @@ namespace ExampleMicroservice3
             logger.LogInformation("Waiting to start...");
             Console.ReadKey();
 
-            Task.Run(async () => await microservice1.ProcessMessage("My custom message"));
-
+            await Task.Run(async () => await microservice1.ProcessMessage("My custom message"));
 
             app.Run();
         }

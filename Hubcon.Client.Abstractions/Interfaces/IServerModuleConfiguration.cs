@@ -120,103 +120,134 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// <summary>
         /// Disables all rate limiters.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration DisableAllLimiters();
 
         /// <summary>
         /// Enables a rate limiter for this server.
         /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration GlobalLimit(int messagesPerSecond);
 
         /// <summary>
         /// Sets a rate limit for ingest messages (messages sent to the server).
         /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitIngest(int messagesPerSecond);
 
         /// <summary>
         /// Sets a rate limit for subscription messages (client-side subscriptions).
         /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitSubscription(int messagesPerSecond);
 
         /// <summary>
         /// Sets a rate limit for streaming messages (data streaming from client to server).
         /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitStreaming(int messagesPerSecond);
 
         /// <summary>
         /// Sets a rate limit for round-trip messages over WebSocket (request-response).
         /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitWebsocketRoundTrip(int messagesPerSecond);
 
         /// <summary>
         /// Sets a rate limit for round-trip messages over HTTP (request-response).
         /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitHttpRoundTrip(int messagesPerSecond);
 
         /// <summary>
         /// Sets a rate limit for fire-and-forget messages over WebSocket (no response).
         /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitWebsocketFireAndForget(int messagesPerSecond);
 
         /// <summary>
         /// Sets a rate limit for fire-and-forget messages over HTTP (no response).
         /// If <paramref name="messagesPerSecond"/> is 0, it sets a default high limit of 9,999,999.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitHttpFireAndForget(int messagesPerSecond);
 
         /// <summary>
         /// Enables a rate limiter for this server.
         /// If <paramref name="options"/> is null, the rate limiter will be disabled.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration GlobalLimit(TokenBucketRateLimiterOptions? options);
 
         /// <summary>
         /// Sets a rate limit for ingest messages (messages sent to the server).
         /// If <paramref name="options"/> is null, the rate limiter will be disabled.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitIngest(TokenBucketRateLimiterOptions? options);
 
         /// <summary>
         /// Sets a rate limit for subscription messages (client-side subscriptions).
         /// If <paramref name="options"/> is null, the rate limiter will be disabled.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitSubscription(TokenBucketRateLimiterOptions? options);
 
         /// <summary>
         /// Sets a rate limit for streaming messages (data streaming from client to server).
         /// If <paramref name="options"/> is null, the rate limiter will be disabled.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitStreaming(TokenBucketRateLimiterOptions? options);
 
         /// <summary>
         /// Sets a rate limit for round-trip messages over WebSocket (request-response).
         /// If <paramref name="options"/> is null, the rate limiter will be disabled.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitWebsocketRoundTrip(TokenBucketRateLimiterOptions? options);
 
         /// <summary>
         /// Sets a rate limit for fire-and-forget messages over WebSocket (no response).
         /// If <paramref name="options"/> is null, the rate limiter will be disabled.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitWebsocketFireAndForget(TokenBucketRateLimiterOptions? options);
 
         /// <summary>
         /// Sets a rate limit for round-trip messages over HTTP (request-response).
         /// If <paramref name="options"/> is null, the rate limiter will be disabled.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitHttpRoundTrip(TokenBucketRateLimiterOptions? options);
 
         /// <summary>
         /// Sets a rate limit for fire-and-forget messages over HTTP (no response).
         /// If <paramref name="options"/> is null, the rate limiter will be disabled.
         /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration LimitHttpFireAndForget(TokenBucketRateLimiterOptions? options);
+
+        /// <summary>
+        /// Enables logging for this server module. Logging is disabled by default.
+        /// </summary>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration EnableLogging();
+
+        /// <summary>
+        /// Disables HTTP authentication for the server module.
+        /// </summary>
+        /// <remarks>This method configures the server module to operate without requiring HTTP
+        /// authentication.  Use this method when authentication is not needed or is handled by other
+        /// mechanisms.</remarks>
+        /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
+        IServerModuleConfiguration DisableHttpAuthentication();
     }
 }

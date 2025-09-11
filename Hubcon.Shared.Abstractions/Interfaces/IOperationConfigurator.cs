@@ -16,5 +16,6 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true);
         IOperationConfigurator UseTransport(TransportType transportType);
         IOperationConfigurator AllowRemoteCancellation(bool value = true);
+        IOperationConfigurator DisableHttpAuthentication();
     }
 }

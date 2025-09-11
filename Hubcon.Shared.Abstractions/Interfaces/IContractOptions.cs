@@ -17,7 +17,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         ConcurrentDictionary<string, IOperationOptions> OperationOptions { get; }
         IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks { get; } 
         bool RemoteCancellationIsAllowed { get; }
-
+        bool HttpAuthIsEnabled { get; }
         Task CallHook(HookType hookType, HookContext context);
         Task CallHook(HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null);
         IOperationOptions? GetOperationOptions(string operationName);

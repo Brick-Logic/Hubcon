@@ -9,6 +9,7 @@ using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive.Linq;
@@ -57,6 +58,8 @@ namespace Hubcon.Client.Integration.Client
 
         private IDictionary<Type, IContractOptions> ContractOptionsDict { get; set; } = null!;
 
+        private ConcurrentDictionary<MethodInfo, bool> NeedsAuth = new();
+
         public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {           
             IOperationOptions? operationOptions = null;
@@ -81,7 +84,7 @@ namespace Hubcon.Client.Integration.Client
                 if (isWebsocketMethod)
                 {
                     await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.WebsocketRoundTripRateBucket, operationOptions?.RateBucket);
-                    
+
                     await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
                     await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
 
@@ -112,8 +115,15 @@ namespace Hubcon.Client.Integration.Client
                     {
                         Content = content
                     };
-                    
-                    if (AuthenticationManager.IsSessionActive)
+
+                    bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
+                    {
+                        return (operationOptions?.HttpAuthIsEnabled ?? false) 
+                        && (contractOptions?.HttpAuthIsEnabled ?? false)
+                        && clientOptions!.HttpAuthIsEnabled;
+                    });
+
+                    if (needsAuth && AuthenticationManager.IsSessionActive) 
                         httpRequest.Headers.Authorization = new AuthenticationHeaderValue(AuthenticationManager.TokenType!, AuthenticationManager.AccessToken);
 
                     await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
@@ -209,8 +219,15 @@ namespace Hubcon.Client.Integration.Client
                     {
                         Content = content
                     };
-                    
-                    if (AuthenticationManager.IsSessionActive)
+
+                    bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
+                    {
+                        return (operationOptions?.HttpAuthIsEnabled ?? false)
+                        && (contractOptions?.HttpAuthIsEnabled ?? false)
+                        && clientOptions!.HttpAuthIsEnabled;
+                    });
+
+                    if (needsAuth && AuthenticationManager.IsSessionActive)
                         httpRequest.Headers.Authorization = new AuthenticationHeaderValue(AuthenticationManager.TokenType!, AuthenticationManager.AccessToken);
 
                     await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);

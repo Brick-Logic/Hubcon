@@ -21,6 +21,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         RateLimiter? RateBucket { get; }
         IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks { get; }
         bool RemoteCancellationIsAllowed { get; }
+        bool HttpAuthIsEnabled { get; }
 
         Task CallHook(HookContext context);
 

@@ -35,9 +35,10 @@ namespace Hubcon.Client.Core.Configurations
         private RateLimiter? _rateBucket;
         public RateLimiter? RateBucket => _rateBucket ??= RateBucketOptions != null ? new TokenBucketRateLimiter(RateBucketOptions) : null;
         
-        private Func<RequestValidationContext, Task>? _validationHook;
-        
+        private Func<RequestValidationContext, Task>? _validationHook;   
         public bool RemoteCancellationIsAllowed { get; private set; }
+
+        public bool HttpAuthIsEnabled { get; private set; } = true;
 
         public IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true)
         {
@@ -110,6 +111,12 @@ namespace Hubcon.Client.Core.Configurations
             }
 
             return Task.CompletedTask;
+        }
+
+        public IOperationConfigurator DisableHttpAuthentication()
+        {
+            HttpAuthIsEnabled = false;
+            return this;
         }
     }
 }

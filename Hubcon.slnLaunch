@@ -12,5 +12,22 @@
         "Action": "Start"
       }
     ]
+  },
+  {
+    "Name": "MicroservicesExample",
+    "Projects": [
+      {
+        "Path": "Examples\\MicroservicesExample\\ExampleMicroservice1\\ExampleMicroservice1.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "Examples\\MicroservicesExample\\ExampleMicroservice2\\ExampleMicroservice2.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "Examples\\MicroservicesExample\\ExampleMicroservice3\\ExampleMicroservice3.csproj",
+        "Action": "Start"
+      }
+    ]
   }
 ]

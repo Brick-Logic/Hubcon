@@ -28,7 +28,8 @@ namespace Hubcon.Client.Core.Configurations
         public IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks => _hooks;
 
         public bool RemoteCancellationIsAllowed { get; private set; }
-        
+        public bool HttpAuthIsEnabled { get; private set; } = true;
+
         public IContractConfigurator<T> UseWebsocketMethods(bool value = true)
         {
             websocketMethodsEnabled ??= value;
@@ -96,6 +97,12 @@ namespace Hubcon.Client.Core.Configurations
         public IContractConfigurator<T> AllowRemoteCancellation(bool value = true)
         {
             RemoteCancellationIsAllowed = value;
+            return this;
+        }
+
+        public IContractConfigurator<T> DisableHttpAuthentication()
+        {
+            HttpAuthIsEnabled = false;
             return this;
         }
     }

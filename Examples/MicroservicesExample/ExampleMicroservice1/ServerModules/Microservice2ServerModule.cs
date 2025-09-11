@@ -15,6 +15,8 @@ namespace ExampleMicroservice1.ServerModules
             // Estos contratos se resuelven por DI con la configuracion puesta en este lugar
             configuration.Implements<IExampleMicroservice2Contract>();
 
+            configuration.DisableHttpAuthentication();
+
             // Usar conexion insegura
             configuration.UseInsecureConnection();
         }

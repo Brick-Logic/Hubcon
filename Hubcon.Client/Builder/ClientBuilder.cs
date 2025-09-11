@@ -144,6 +144,8 @@ namespace Hubcon.Client.Builder
 
         public bool LoggingEnabled {  get; set; }
         public bool DebuggingMethodSignaturesEnabled { get; set; }
+        public bool HttpAuthIsEnabled { get; set; } = true;
+
         public T GetOrCreateClient<T>(IServiceProvider services, bool useCached = true) where T : IControllerContract
         {
             return (T)GetOrCreateClient(typeof(T), services);

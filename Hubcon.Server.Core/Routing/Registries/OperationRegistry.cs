@@ -187,10 +187,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             {
                 foreach (var operation in operationskvp.Value)
                 {
-                    if (operation.Value.Kind == OperationKind.Stream)
-                        continue;
-
-                    if (operation.Value.Kind == OperationKind.Subscription)
+                    if (operation.Value.Kind != OperationKind.Method)
                         continue;
 
                     if (operation.Value.OperationInfo is MethodInfo)

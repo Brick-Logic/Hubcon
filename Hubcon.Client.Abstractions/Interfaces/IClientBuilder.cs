@@ -37,6 +37,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         public TokenBucketRateLimiterOptions? WebsocketFireAndForgetLimiterOptions { get; set; }
         public TokenBucketRateLimiterOptions? HttpFireAndForgetLimiterOptions { get; set; }
         bool LoggingEnabled { get; set; }
+        bool HttpAuthIsEnabled { get; set; }
 
         T GetOrCreateClient<T>(IServiceProvider services, bool useCached = true) where T : IControllerContract;
         object GetOrCreateClient(Type contractType, IServiceProvider services, bool useCached = true);

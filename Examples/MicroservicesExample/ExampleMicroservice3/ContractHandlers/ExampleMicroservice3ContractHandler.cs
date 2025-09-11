@@ -1,7 +1,10 @@
 ﻿using ExampleMicroservicesDomain;
+using ExampleMicroservicesDomain.Middlewares;
+using Hubcon.Server.Core.Middlewares;
 
 namespace ExampleMicroservice3.ContractHandlers
 {
+    [UseMiddleware(typeof(ExceptionMiddleware))]
     public class ExampleMicroservice3ContractHandler(
         IExampleMicroservice1Contract microservice1, 
         ILogger<ExampleMicroservice3ContractHandler> logger) : IExampleMicroservice3Contract

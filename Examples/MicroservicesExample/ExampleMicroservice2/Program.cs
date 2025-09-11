@@ -37,7 +37,7 @@ namespace ExampleMicroservice2
             app.MapOpenApi();
             app.MapScalarApiReference();
 
-            app.MapHubconControllers();
+            app.UseHubconHttpEndpoints();
 
             app.Run();
         }
