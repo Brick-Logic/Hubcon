@@ -9,6 +9,7 @@ using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive.Linq;
 using System.Reflection;
@@ -19,7 +20,7 @@ using System.Threading.Channels;
 
 namespace Hubcon.Client.Integration.Client
 {
-    internal sealed class HubconClient(IDynamicConverter converter, IHttpClientFactory clientFactory, ILogger<HubconClient> logger) : IHubconClient
+    internal sealed class HubconClient(IDynamicConverter converter, IHttpClientFactory clientFactory) : IHubconClient
     {
         private string _restHttpUrl = "";
         private string _websocketUrl = "";
@@ -174,8 +175,8 @@ namespace Hubcon.Client.Integration.Client
                 operationOptions = contractOptions.GetOperationOptions(request.OperationName);
             }
             
-            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
-                                      ?? contractOptions?.RemoteCancellationIsAllowed 
+            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed
+                                      ?? contractOptions?.RemoteCancellationIsAllowed
                                       ?? false;
 
             await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);

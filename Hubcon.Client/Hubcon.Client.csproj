@@ -25,6 +25,16 @@
 		<Company>$(Company)</Company>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DebugType>embedded</DebugType>
+		<Deterministic>True</Deterministic>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DebugType>embedded</DebugType>
+		<Deterministic>True</Deterministic>
+	</PropertyGroup>
+
 	<!-- Development -->
 	<ItemGroup Condition="'$(UsePackages)' != 'true'">
 		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" />
@@ -37,14 +47,15 @@
 	<!-- Nuget -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
 		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-rc*" PrivateAssets="True" />
-		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-rc*" PrivateAssets="True"/>
+		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-rc*" PrivateAssets="True" />
 		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-rc*" PrivateAssets="True" />
 		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-rc*" PrivateAssets="True" />
 		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-rc*" PrivateAssets="True" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-rc*" />		
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-rc*" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />		
 	</ItemGroup>
 
 	<ItemGroup>

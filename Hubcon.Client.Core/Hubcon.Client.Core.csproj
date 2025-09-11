@@ -18,12 +18,18 @@
 		<Company>$(Company)</Company>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DebugType>embedded</DebugType>
+		<Deterministic>True</Deterministic>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DebugType>embedded</DebugType>
+		<Deterministic>True</Deterministic>
+	</PropertyGroup>
+
 	<ItemGroup>
-	  <PackageReference Include="K4os.Compression.LZ4" Version="1.3.8" />
-	  <PackageReference Include="K4os.Compression.LZ4.Streams" Version="1.3.8" />
-	  <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.6" />
 	  <PackageReference Include="System.Reactive" Version="6.0.0" />
-	  <PackageReference Include="System.Threading.RateLimiting" Version="9.0.7" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(UsePackages)' != 'true'">
