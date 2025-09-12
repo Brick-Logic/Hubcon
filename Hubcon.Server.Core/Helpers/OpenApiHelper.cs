@@ -5,11 +5,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
+using System;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Helpers
 {
-
     public static class OpenApiHelper
     {
         // Configuración por defecto
@@ -35,6 +35,7 @@ namespace Hubcon.Server.Core.Helpers
         public static RouteHandlerBuilder ApplyOpenApiFromMethod(
             this RouteHandlerBuilder builder,
             MethodInfo methodInfo,
+            HttpMethod httpMethod,
             string? groupName = null)
         {
             // Aplicar agrupamiento por namespace o clase
@@ -70,7 +71,18 @@ namespace Hubcon.Server.Core.Helpers
             ApplyProducesWithDefaults(builder, methodInfo);
 
             // Accepts - con detección automática mejorada (mantener lógica original)
-            ApplyAcceptsWithDefaults(builder, methodInfo);
+            //ApplyAcceptsWithDefaults(builder, methodInfo);
+
+            if(httpMethod == HttpMethod.Get)
+            {
+                // Aplicar parámetros de consulta para GET
+                ApplyQueryParametersWithDefaults(builder, methodInfo);
+            }
+            else
+            {
+                // Aplicar lógica original para otros métodos
+                ApplyAcceptsWithDefaults(builder, methodInfo);
+            }
 
             return builder;
         }
@@ -322,6 +334,185 @@ namespace Hubcon.Server.Core.Helpers
             }
 
             return returnType;
+        }
+
+        private static void ApplyParametersForHttpMethod(
+            RouteHandlerBuilder builder,
+            MethodInfo methodInfo,
+            HttpMethod httpMethod)
+        {
+            var parameters = methodInfo.GetParameters()
+                .Where(x => !Defaults.ExcludedTypes.Any(t => t.IsAssignableFrom(x.ParameterType)))
+                .ToArray();
+
+            if (httpMethod == HttpMethod.Get && parameters.Any())
+            {
+                builder.WithOpenApi(operation =>
+                {
+                    operation.Parameters ??= new List<Microsoft.OpenApi.Models.OpenApiParameter>();
+
+                    foreach (var param in parameters)
+                    {
+                        if (IsSimpleType(param.ParameterType))
+                        {
+                            var schema = new Microsoft.OpenApi.Models.OpenApiSchema
+                            {
+                                Type = MapToOpenApiType(param.ParameterType),
+                                Format = MapToOpenApiFormat(param.ParameterType),
+                                Example = GetDefaultExample(param.ParameterType)
+                            };
+
+                            operation.Parameters.Add(new Microsoft.OpenApi.Models.OpenApiParameter
+                            {
+                                Name = param.Name!,
+                                In = Microsoft.OpenApi.Models.ParameterLocation.Query,
+                                Required = !param.IsOptional && !IsNullable(param.ParameterType),
+                                Schema = schema
+                            });
+                        }
+                    }
+
+                    return operation;
+                });
+            }
+            else
+            {
+                ApplyAcceptsWithDefaults(builder, methodInfo);
+            }
+        }
+
+        private static Microsoft.OpenApi.Any.IOpenApiAny GetDefaultExample(Type type)
+        {
+            return Type.GetTypeCode(type) switch
+            {
+                TypeCode.String => new Microsoft.OpenApi.Any.OpenApiString("example"),
+                TypeCode.Int32 => new Microsoft.OpenApi.Any.OpenApiInteger(123),
+                TypeCode.Int64 => new Microsoft.OpenApi.Any.OpenApiLong(123456789),
+                TypeCode.Boolean => new Microsoft.OpenApi.Any.OpenApiBoolean(true),
+                TypeCode.Double => new Microsoft.OpenApi.Any.OpenApiDouble(12.34),
+                TypeCode.Decimal => new Microsoft.OpenApi.Any.OpenApiDouble(56.78),
+                TypeCode.DateTime => new Microsoft.OpenApi.Any.OpenApiString(DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")),
+                _ when type == typeof(Guid) => new Microsoft.OpenApi.Any.OpenApiString(Guid.Empty.ToString()),
+                _ when type.IsEnum => new Microsoft.OpenApi.Any.OpenApiString(Enum.GetNames(type).FirstOrDefault() ?? "Value"),
+                _ => new Microsoft.OpenApi.Any.OpenApiNull()
+            };
+        }
+
+
+        private static bool IsSimpleType(Type type)
+        {
+            var underlying = Nullable.GetUnderlyingType(type) ?? type;
+            return underlying.IsPrimitive ||
+                   underlying.IsEnum ||
+                   underlying == typeof(string) ||
+                   underlying == typeof(Guid) ||
+                   underlying == typeof(DateTime) ||
+                   underlying == typeof(decimal);
+        }
+
+        private static bool IsNullable(Type type)
+        {
+            return !type.IsValueType || Nullable.GetUnderlyingType(type) != null;
+        }
+
+        private static string MapToOpenApiType(Type type)
+        {
+            var underlying = Nullable.GetUnderlyingType(type) ?? type;
+            if (underlying == typeof(string) || underlying == typeof(Guid)) return "string";
+            if (underlying == typeof(bool)) return "boolean";
+            if (underlying.IsIntegerType()) return "integer";
+            if (underlying == typeof(float) || underlying == typeof(double) || underlying == typeof(decimal)) return "number";
+            if (underlying == typeof(DateTime)) return "string";
+            return "string"; // fallback
+        }
+
+        private static string? MapToOpenApiFormat(Type type)
+        {
+            var underlying = Nullable.GetUnderlyingType(type) ?? type;
+            if (underlying == typeof(int) || underlying == typeof(long)) return "int64";
+            if (underlying == typeof(float) || underlying == typeof(double) || underlying == typeof(decimal)) return "double";
+            if (underlying == typeof(DateTime)) return "date-time";
+            if (underlying == typeof(Guid)) return "uuid";
+            return null;
+        }
+
+        private static bool IsIntegerType(this Type type)
+        {
+            return type == typeof(byte) || type == typeof(sbyte) ||
+                   type == typeof(short) || type == typeof(ushort) ||
+                   type == typeof(int) || type == typeof(uint) ||
+                   type == typeof(long) || type == typeof(ulong);
+        }
+
+        private static void ApplyQueryParametersWithDefaults(RouteHandlerBuilder builder, MethodInfo methodInfo)
+        {
+            var parameters = methodInfo.GetParameters()
+                .Where(x => !Defaults.ExcludedTypes.Any(t => t.IsAssignableFrom(x.ParameterType)))
+                .ToArray();
+
+            if (!parameters.Any())
+                return;
+
+            builder.WithOpenApi(operation =>
+            {
+                operation.Parameters ??= new List<Microsoft.OpenApi.Models.OpenApiParameter>();
+
+                foreach (var param in parameters)
+                {
+                    if (IsSimpleType(param.ParameterType))
+                    {
+                        operation.Parameters.Add(new Microsoft.OpenApi.Models.OpenApiParameter
+                        {
+                            Name = param.Name!,
+                            In = Microsoft.OpenApi.Models.ParameterLocation.Query,
+                            Required = !param.IsOptional && !IsNullable(param.ParameterType),
+                            Schema = new Microsoft.OpenApi.Models.OpenApiSchema
+                            {
+                                Type = MapToOpenApiType(param.ParameterType),
+                                Format = MapToOpenApiFormat(param.ParameterType),
+                            },
+                            Example = new Microsoft.OpenApi.Any.OpenApiString($"Ejemplo_{param.Name}")
+                        });
+                    }
+                    else
+                    {
+                        foreach (var prop in param.ParameterType.GetProperties())
+                        {
+                            if (IsSimpleType(prop.PropertyType))
+                            {
+                                operation.Parameters.Add(new Microsoft.OpenApi.Models.OpenApiParameter
+                                {
+                                    Name = prop.Name,
+                                    In = Microsoft.OpenApi.Models.ParameterLocation.Query,
+                                    Required = false,
+                                    Schema = new Microsoft.OpenApi.Models.OpenApiSchema
+                                    {
+                                        Type = MapToOpenApiType(prop.PropertyType),
+                                        Format = MapToOpenApiFormat(prop.PropertyType),
+                                    },
+                                    Example = new Microsoft.OpenApi.Any.OpenApiString($"Ejemplo_{prop.Name}")
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return operation;
+            });
+        }
+
+
+
+        private static IOpenApiAny GetExampleForType(Type type)
+        {
+            if (type == typeof(int)) return new OpenApiInteger(0);
+            if (type == typeof(long)) return new OpenApiLong(0);
+            if (type == typeof(bool)) return new OpenApiBoolean(false);
+            if (type == typeof(double) || type == typeof(float) || type == typeof(decimal)) return new OpenApiDouble(0.0);
+            if (type == typeof(Guid)) return new OpenApiString(Guid.Empty.ToString());
+            if (type == typeof(DateTime)) return new OpenApiString(DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+            if (type.IsEnum) return new OpenApiString(Enum.GetNames(type).FirstOrDefault() ?? "");
+            return new OpenApiString("string");
         }
     }
 }

@@ -42,5 +42,50 @@ namespace Hubcon.Shared.Core.Extensions
                 return combined;
             }
         }
+
+        // Tipos “permitidos” considerados primitivos para tu caso
+        private static readonly Type[] AllowedTypes = new Type[]
+        {
+            typeof(byte), typeof(sbyte), typeof(short), typeof(ushort),
+            typeof(int), typeof(uint), typeof(long), typeof(ulong),
+            typeof(float), typeof(double), typeof(decimal),
+            typeof(bool), typeof(char), typeof(string),
+            typeof(DateTime), typeof(Guid)
+        };
+
+        public static bool AreParametersValid(this MethodInfo method)
+        {
+            foreach (var param in method.GetParameters())
+            {
+                if (!IsTypeAllowed(param.ParameterType))
+                    return false;
+            }
+            return true;
+        }
+
+        private static bool IsTypeAllowed(Type type)
+        {
+            // Nullable<T> → tomar el tipo subyacente
+            if (Nullable.GetUnderlyingType(type) != null)
+            {
+                type = Nullable.GetUnderlyingType(type)!;
+            }
+
+            if (AllowedTypes.Contains(type))
+                return true;
+
+            // Si es clase o struct definido por usuario, chequear propiedades
+            if (type.IsClass || (type.IsValueType && !type.IsPrimitive))
+            {
+                var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                if (properties.Length == 0)
+                    return false; // clase sin propiedades es inválida
+
+                return properties.All(p => IsTypeAllowed(p.PropertyType));
+            }
+
+            // Cualquier otro tipo (array, list, interface, etc.) → invalido
+            return false;
+        }
     }
 }

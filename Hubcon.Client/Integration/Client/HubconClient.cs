@@ -2,14 +2,17 @@
 using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.Helpers;
 using Hubcon.Client.Core.Websockets;
+using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive.Linq;
@@ -60,6 +63,8 @@ namespace Hubcon.Client.Integration.Client
 
         private ConcurrentDictionary<MethodInfo, bool> NeedsAuth = new();
 
+        private ConcurrentDictionary<MethodInfo, HttpMethod> MethodVerb = new();
+
         public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {           
             IOperationOptions? operationOptions = null;
@@ -103,27 +108,53 @@ namespace Hubcon.Client.Integration.Client
                 }
                 else
                 {
-                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.HttpRoundTripRateBucket, operationOptions?.RateBucket);
+                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.HttpFireAndForgetRateBucket, operationOptions?.RateBucket);
 
-                    var bytes = converter.SerializeToElement(request.Arguments).ToString();
-                    using var content = new StringContent(bytes, Encoding.UTF8, "application/json");
-
-                    HttpMethod httpMethod = request.Arguments!.Any() ? HttpMethod.Post : HttpMethod.Get;
-                    var url = _restHttpUrl + methodInfo.GetRoute().FullRoute;
-
-                    var httpRequest = new HttpRequestMessage(httpMethod, url)
+                    HttpMethod httpMethod = MethodVerb.GetOrAdd(methodInfo, method =>
                     {
-                        Content = content
-                    };
+                        GetMethodAttribute? verb = method.GetCustomAttribute<GetMethodAttribute>();
+                        return verb != null ? HttpMethod.Get : (request.Arguments.Count > 0 ? HttpMethod.Post : HttpMethod.Get);
+                    });
+
+                    StringContent? content = null;
+                    var url = "";
+
+                    if (httpMethod == HttpMethod.Post)
+                    {
+                        var arguments = converter.Serialize(request.Arguments);
+                        content = new StringContent(arguments, Encoding.UTF8, "application/json");
+                        url = _restHttpUrl + methodInfo.GetRoute().FullRoute;
+                    }
+
+                    if (httpMethod == HttpMethod.Get)
+                    {
+                        var builder = new UriBuilder(_restHttpUrl);
+
+                        var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+
+                        foreach (var argument in request.Arguments)
+                        {
+                            query[argument.Key] = argument.Value?.ToString() ?? "";
+                        }
+
+                        builder.Path = methodInfo.GetRoute().FullRoute;
+                        builder.Query = query.ToString();
+                        url = builder.ToString();
+                    }
+
+                    var httpRequest = new HttpRequestMessage(httpMethod, url);
+
+                    if (content != null)
+                        httpRequest.Content = content;
 
                     bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
                     {
-                        return (operationOptions?.HttpAuthIsEnabled ?? false) 
-                        && (contractOptions?.HttpAuthIsEnabled ?? false)
-                        && clientOptions!.HttpAuthIsEnabled;
+                        return (operationOptions?.HttpAuthIsEnabled ?? false)
+                            && (contractOptions?.HttpAuthIsEnabled ?? false)
+                            && clientOptions!.HttpAuthIsEnabled;
                     });
 
-                    if (needsAuth && AuthenticationManager.IsSessionActive) 
+                    if (needsAuth && AuthenticationManager.IsSessionActive)
                         httpRequest.Headers.Authorization = new AuthenticationHeaderValue(AuthenticationManager.TokenType!, AuthenticationManager.AccessToken);
 
                     await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
@@ -148,6 +179,8 @@ namespace Hubcon.Client.Integration.Client
 
                     await CallHook(operationOptions, HookType.OnResponse, ServiceProvider, request, cancellationToken, operationResponse.Data);
                     await CallHook(contractOptions, HookType.OnResponse, ServiceProvider, request, cancellationToken, operationResponse.Data);
+                    
+                    content?.Dispose();
 
                     return operationResponse.Data;
                 }
@@ -166,7 +199,6 @@ namespace Hubcon.Client.Integration.Client
                 else
                     throw new HubconGenericException(ex.Message, ex);
             }
-
         }
 
         public async Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
@@ -209,22 +241,48 @@ namespace Hubcon.Client.Integration.Client
                 {
                     await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.HttpFireAndForgetRateBucket, operationOptions?.RateBucket);
 
-                    var arguments = converter.Serialize(request.Arguments);
-                    using var content = new StringContent(arguments, Encoding.UTF8, "application/json");
-
-                    HttpMethod httpMethod = request.Arguments!.Any() ? HttpMethod.Post : HttpMethod.Get;
-
-                    var url = _restHttpUrl + methodInfo.GetRoute().FullRoute;
-                    var httpRequest = new HttpRequestMessage(httpMethod, url)
+                    HttpMethod httpMethod = MethodVerb.GetOrAdd(methodInfo, method =>
                     {
-                        Content = content
-                    };
+                        GetMethodAttribute? verb = method.GetCustomAttribute<GetMethodAttribute>();
+                        return verb != null ? HttpMethod.Get : (request.Arguments.Count > 0 ? HttpMethod.Post : HttpMethod.Get);
+                    });
+
+                    StringContent? content = null;
+                    var url = "";
+
+                    if (httpMethod == HttpMethod.Post)
+                    {
+                        var arguments = converter.Serialize(request.Arguments);
+                        content = new StringContent(arguments, Encoding.UTF8, "application/json");
+                        url = _restHttpUrl;
+                    }
+                    
+                    if (httpMethod == HttpMethod.Get)
+                    {
+                        var builder = new UriBuilder(_restHttpUrl);
+
+                        var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+
+                        foreach (var argument in request.Arguments)
+                        {
+                            query[argument.Key] = argument.Value?.ToString() ?? "";
+                        }
+
+                        builder.Query = query.ToString();
+                        url = builder.ToString();
+                    }
+
+                    url += methodInfo.GetRoute().FullRoute;
+                    var httpRequest = new HttpRequestMessage(httpMethod, url);
+
+                    if(content != null) 
+                        httpRequest.Content = content;
 
                     bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
                     {
                         return (operationOptions?.HttpAuthIsEnabled ?? false)
-                        && (contractOptions?.HttpAuthIsEnabled ?? false)
-                        && clientOptions!.HttpAuthIsEnabled;
+                            && (contractOptions?.HttpAuthIsEnabled ?? false)
+                            && clientOptions!.HttpAuthIsEnabled;
                     });
 
                     if (needsAuth && AuthenticationManager.IsSessionActive)
@@ -232,11 +290,13 @@ namespace Hubcon.Client.Integration.Client
 
                     await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
                     await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
-
+                    
                     await HttpClient.SendAsync(httpRequest, cancellationToken);
-
+                    
                     await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
                     await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
+
+                    content?.Dispose();
                 }
             }
             catch (Exception ex)

@@ -21,7 +21,17 @@ namespace Hubcon.Server.Core.Helpers
 
             // 3. Buscar todas las clases que implementen una interfaz hija de IControllerContract
             var implementations = assemblies
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a =>
+                {
+                    try
+                    {
+                        return a.GetTypes();
+                    }
+                    catch
+                    {
+                        return []; // Ignorar assemblies que no se puedan cargar
+                    }
+                })
                 .Where(t => t.IsClass && !t.IsAbstract)
                 .Where(t => !excludedTypes.Any(x => x.IsAssignableFrom(t)))
                 .Where(t =>

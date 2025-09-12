@@ -1,10 +1,15 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Client.Core.Exceptions;
+using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Cache;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Core.Websockets.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
 using System.Text.Json;
 
@@ -39,6 +44,13 @@ namespace Hubcon.Client.Core.Proxies
                 var signature = method.GetMethodSignature(false);
 
                 Methods.GetOrAdd(signature, _ => (method.GetMethodSignature(useHashed), method));
+
+                var verb = method.GetCustomAttribute<GetMethodAttribute>();
+
+                if (verb != null && !method.AreParametersValid())
+                {
+                    throw new HubconGenericException($"Operation '{method.Name}' cannot be used with GET verb as it contains complex or null types. Use primitive types or a DTO class with primitive types instead.");
+                }
             }
         }
 

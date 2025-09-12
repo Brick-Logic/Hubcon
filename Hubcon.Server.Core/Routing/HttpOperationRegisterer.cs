@@ -4,8 +4,11 @@ using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
+using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Core.Websockets.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -69,9 +72,54 @@ namespace Hubcon.Server.Core.Routing
                 return group;
             });
 
+            var verb = method.GetCustomAttribute<GetMethodAttribute>();
+
+            if (verb != null && !method.AreParametersValid())
+            {
+                throw new InvalidOperationException($"Operation '{method.Name}' cannot be used with GET verb as it contains complex or null types. Use primitive types or a DTO class with primitive types instead.");
+            }
+
+            var verbResult = verb != null 
+                ? HttpMethod.Get 
+                : (blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0 ? HttpMethod.Post : HttpMethod.Get);
+
             if (blueprint.HasReturnType)
             {
-                if (blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0)
+                if (verbResult == HttpMethod.Get)
+                {
+                    builder = endpointGroup.MapGet(route, async (IRequestHandler requestHandler, HttpContext context, CancellationToken cancellationToken) =>
+                    {
+                        var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
+                        mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
+
+                        // No necesitamos revisar content length porque no hay body
+
+                        var operationRequest = new OperationRequest(operationName, contractName);
+
+                        // Parsear argumentos desde query string
+                        foreach (var kvp in context.Request.Query)
+                        {
+                            // kvp.Key = nombre del argumento
+                            // kvp.Value = valor del argumento (StringValues)
+                            // Convertir a string y agregar al request
+                            // Si tu OperationRequest tiene un diccionario de argumentos
+                            operationRequest.Arguments[kvp.Key] = kvp.Value.ToString();
+                        }
+
+                        var res = await requestHandler.HandleWithResultAsync(operationRequest, cancellationToken);
+
+                        if (!res.Success)
+                        {
+                            await InternalServerError(context, res);
+                            return;
+                        }
+
+                        await Ok(context, res);
+                    }).ApplyOpenApiFromMethod(controllerMethod!, verbResult);
+                    builder.WithRequestTimeout(options.HttpTimeout);
+                    options.EndpointConventions?.Invoke(builder);
+                }
+                else
                 {
                     builder = endpointGroup.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter, CancellationToken cancellationToken) =>
                     {
@@ -116,42 +164,49 @@ namespace Hubcon.Server.Core.Routing
 
                         await Ok(context, res);
                         return;
-                    }).ApplyOpenApiFromMethod(controllerMethod!);
-                    builder.WithRequestTimeout(options.HttpTimeout);
-                    options.EndpointConventions?.Invoke(builder);
-                }
-                else
-                {
-                    builder = endpointGroup.MapGet(route, async (IRequestHandler requestHandler, HttpContext context, CancellationToken cancellationToken) =>
-                    {
-                        var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
-                        mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
-
-                        if (context.Request.ContentLength > options.MaxHttpMessageSize)
-                        {
-                            await RequestTooLarge(context, new BaseOperationResponse(false, "Request too large."));
-                            return;
-                        }
-
-                        var operationRequest = new OperationRequest(operationName, contractName);
-                        var res = await requestHandler.HandleWithResultAsync(operationRequest, cancellationToken);
-
-                        if (!res.Success)
-                        {
-                            await InternalServerError(context, res);
-                            return;
-                        }
-
-                        await Ok(context, res);
-                        return;
-                    }).ApplyOpenApiFromMethod(controllerMethod!);
+                    }).ApplyOpenApiFromMethod(controllerMethod!, verbResult);
                     builder.WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);
                 }
             }
             else
             {
-                if (blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0)
+                if (verbResult == HttpMethod.Get)
+                {
+                    builder = endpointGroup.MapGet(route, async (IRequestHandler requestHandler, HttpContext context, CancellationToken cancellationToken) =>
+                    {
+                        // Ya no necesitamos limitar el tamaño del body
+                        // var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
+                        // mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
+
+                        var operationRequest = new OperationRequest(operationName, contractName);
+
+                        // Parsear argumentos desde query string
+                        foreach (var kvp in context.Request.Query)
+                        {
+                            // kvp.Key = nombre del argumento
+                            // kvp.Value = valor del argumento (StringValues)
+                            operationRequest.Arguments[kvp.Key] = kvp.Value.ToString();
+                        }
+
+                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest, cancellationToken);
+
+                        if (!res.Success)
+                        {
+                            var errorMessage = options.DetailedErrorsEnabled
+                                ? res.Error ?? "Internal error"
+                                : "Internal error";
+
+                            await InternalServerError(context, new BaseOperationResponse(false, errorMessage));
+                            return;
+                        }
+
+                        await Ok(context, res);
+                    }).ApplyOpenApiFromMethod(controllerMethod!, verbResult);
+                    builder.WithRequestTimeout(options.HttpTimeout);
+                    options.EndpointConventions?.Invoke(builder);
+                }
+                else 
                 {
                     builder = endpointGroup.MapPost(route, async (HttpContext context, IRequestHandler requestHandler, IDynamicConverter converter, CancellationToken cancellationToken) =>
                     {
@@ -205,48 +260,10 @@ namespace Hubcon.Server.Core.Routing
                         await Ok(context, res);
                         return;
                     })
-                    .ApplyOpenApiFromMethod(controllerMethod!);
+                    .ApplyOpenApiFromMethod(controllerMethod!, verbResult);
                     builder.WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);
                 }
-                else
-                {
-                    builder = endpointGroup.MapGet(route, async (IRequestHandler requestHandler, HttpContext context, CancellationToken cancellationToken) =>
-                    {
-                        var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
-                        mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
-
-                        if (context.Request.ContentLength > options.MaxHttpMessageSize)
-                        {
-                            await RequestTooLarge(context, new BaseOperationResponse(false, "Request too large."));
-                            return;
-                        }
-
-                        var operationRequest = new OperationRequest(operationName, contractName);
-                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest, cancellationToken);
-
-                        if (!res.Success)
-                        {
-                            if (options.DetailedErrorsEnabled)
-                            {
-                                await InternalServerError(context, new BaseOperationResponse(false, res.Error ?? "Internal error"));
-                                return;
-                            }
-                            else
-                            {
-                                await InternalServerError(context, new BaseOperationResponse(false, "Internal error"));
-                                return;
-                            }
-                        }
-
-                        await Ok(context, res);
-                        return;
-                    }).ApplyOpenApiFromMethod(controllerMethod!);
-                    builder.WithRequestTimeout(options.HttpTimeout);
-                    options.EndpointConventions?.Invoke(builder);
-                }
-
-
             }
 
             foreach (var filter in filters)

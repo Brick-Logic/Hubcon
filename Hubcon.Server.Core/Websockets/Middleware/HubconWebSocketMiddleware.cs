@@ -74,6 +74,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 return;
             }
 
+            Interlocked.Increment(ref clientCount);
+
             IOperationConfigRegistry operationConfigRegistry = context.RequestServices.GetRequiredService<IOperationConfigRegistry>();
             IRateLimiterManager rateLimiterManager = context.RequestServices.GetRequiredService<IRateLimiterManager>();
             DefaultEntrypoint entrypoint = context.RequestServices.GetRequiredService<DefaultEntrypoint>();
@@ -178,9 +180,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 _ingestHandlers = new();
                 _ackChannels = new();
                 _tasks = new();
-
-                Interlocked.Increment(ref clientCount);
-
+              
                 while (webSocket.State == WebSocketState.Open)
                 {
                     TrimmedMemoryOwner? tmo;
