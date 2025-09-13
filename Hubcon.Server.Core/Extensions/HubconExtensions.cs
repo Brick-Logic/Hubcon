@@ -37,7 +37,7 @@ namespace Hubcon.Server.Core.Extensions
 
                         if (accessor != null)
                         {
-                            var contract = GetContractType(prop.ReflectedType!).Name;
+                            var contract = NamingHelper.GetCleanName(GetContractType(prop.ReflectedType!).Name);
 
                             var operationRegistry = e.Context.Resolve<IOperationRegistry>();
 

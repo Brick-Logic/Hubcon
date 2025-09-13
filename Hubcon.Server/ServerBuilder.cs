@@ -18,6 +18,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Serialization;
+using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets.Messages.Operation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -135,7 +136,7 @@ namespace Hubcon.Server
                 {
                     var controllerProp = controllerType.GetProperty(property.Name);
 
-                    SubscriptionRegistry.RegisterSubscriptionMetadata(property.ReflectedType!.Name, property.Name, controllerProp!);
+                    SubscriptionRegistry.RegisterSubscriptionMetadata(NamingHelper.GetCleanName(property.DeclaringType!.Name), property.Name, controllerProp!);
                 }
             }
 

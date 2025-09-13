@@ -5,6 +5,7 @@ using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using System.Reflection;
@@ -17,6 +18,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public OperationKind Kind { get; }
 
         public string ContractName { get; }
+        public string SimpleContractName { get; }
         public Type ContractType { get; }
 
         public string ControllerName { get; }
@@ -59,6 +61,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             OperationName = operationName;
             ContractType = contractType;
             ContractName = contractType.Name;
+            SimpleContractName = NamingHelper.GetCleanName(contractType.Name);
             ControllerType = controllerType;
             ControllerName = controllerType.Name;
             OperationInfo = memberInfo;

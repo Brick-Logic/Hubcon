@@ -89,13 +89,13 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 if (!context.Blueprint.RequiresAuthorization)
                 {
-                    subDescriptor = liveSubscriptionRegistry.GetHandler("", request.ContractName, request.OperationName);
+                    subDescriptor = liveSubscriptionRegistry.GetHandler("", NamingHelper.GetCleanName(context.Blueprint.ContractName), context.Blueprint.OperationName);
 
                     if (subDescriptor == null)
                     {
                         var subscription = (ISubscription?)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
 
-                        subDescriptor = liveSubscriptionRegistry.RegisterHandler("", request.ContractName, request.OperationName, subscription);
+                        subDescriptor = liveSubscriptionRegistry.RegisterHandler("", NamingHelper.GetCleanName(context.Blueprint.ContractName), context.Blueprint.OperationName, subscription);
                     }
                 }
                 else
@@ -110,7 +110,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                     clientId = websocketToken;
 
-                    subDescriptor = liveSubscriptionRegistry.GetHandler(websocketToken, request.ContractName, request.OperationName);
+                    subDescriptor = liveSubscriptionRegistry.GetHandler(websocketToken, NamingHelper.GetCleanName(context.Blueprint.ContractName), context.Blueprint.OperationName);
 
 
                     if (subDescriptor == null)
@@ -123,7 +123,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                             return;
                         }
 
-                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(websocketToken, request.ContractName, request.OperationName, subscription);
+                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(websocketToken, NamingHelper.GetCleanName(context.Blueprint.ContractName), context.Blueprint.OperationName, subscription);
                     }
                 }
 
@@ -167,7 +167,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     finally
                     {
                         observer.OnCompleted();
-                        liveSubscriptionRegistry.RemoveHandler(clientId, request.ContractName, request.OperationName);
+                        liveSubscriptionRegistry.RemoveHandler(clientId, NamingHelper.GetCleanName(context.Blueprint.ContractName), context.Blueprint.OperationName);
                         subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
                     };
                 };

@@ -151,5 +151,10 @@ namespace BlazorTestServer.Controllers
         {
             throw new NotImplementedException();
         }
+
+        public Task<int> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -3,6 +3,7 @@ using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.ComponentModel;
@@ -77,14 +78,16 @@ namespace Hubcon.Client.Core.Subscriptions
             {
                 int retry = 0;
 
+                var contract = Property.DeclaringType!;
+                var simpleContractName = NamingHelper.GetCleanName(Property.DeclaringType!.Name);
+                var request = new SubscriptionRequest(Property.Name, simpleContractName, null);
+
                 while (!_tokenSource.IsCancellationRequested)
                 {
                     try
                     {
                         IAsyncEnumerable<JsonElement> eventSource = null!;
 
-                        var contract = Property.DeclaringType!;
-                        var request = new SubscriptionRequest(Property.Name, contract.Name, null);
 
                         eventSource = await Client.GetSubscription(request, Property, _tokenSource.Token);
                         

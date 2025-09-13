@@ -9,6 +9,7 @@ using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Concurrent;
@@ -55,7 +56,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                 if (methods.Length == 0)
                     continue;
 
-                var contractMethods = AvailableOperations.GetOrAdd(interfaceType.Name, _ => new ConcurrentDictionary<string, IOperationBlueprint>());
+                var contractMethods = AvailableOperations.GetOrAdd(NamingHelper.GetCleanName(interfaceType.Name), _ => new ConcurrentDictionary<string, IOperationBlueprint>());
 
                 var classFilters = controllerType.GetCustomAttributes()
                         .Where(x => x is UseMiddlewareAttribute)

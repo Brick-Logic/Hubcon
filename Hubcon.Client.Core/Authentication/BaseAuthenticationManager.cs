@@ -8,7 +8,7 @@ namespace Hubcon.Client.Core.Authentication
         public event Action? OnSessionIsActive;
         public event Action? OnSessionIsInactive;
 
-        public abstract string? TokenType{ get; protected set; }
+        public abstract string? TokenType { get; protected set; }
         public abstract string? AccessToken { get; protected set; }
         public abstract string? RefreshToken { get; protected set; }
         public abstract DateTime? AccessTokenExpiresAt { get; protected set; }

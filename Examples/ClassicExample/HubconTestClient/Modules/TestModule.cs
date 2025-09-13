@@ -7,6 +7,7 @@ using HubconTestDomain;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Microsoft.AspNetCore.Connections.Features;
 
 namespace HubconTestClient.Modules
 {

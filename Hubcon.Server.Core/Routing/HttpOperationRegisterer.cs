@@ -9,6 +9,7 @@ using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -49,7 +50,8 @@ namespace Hubcon.Server.Core.Routing
         {
             var route = blueprint.Route;
             var operationName = blueprint.OperationName;
-            var contractName = blueprint.ContractName;
+            //var contractName = blueprint.ContractName;
+            var simpleContractName = NamingHelper.GetCleanName(blueprint.ContractName);
             var options = app.Services.GetRequiredService<IInternalServerOptions>();
             RouteHandlerBuilder builder = null!;
             var method = (MethodInfo)blueprint.OperationInfo!;
@@ -117,7 +119,7 @@ namespace Hubcon.Server.Core.Routing
 
                         // No necesitamos revisar content length porque no hay body
 
-                        var operationRequest = new OperationRequest(operationName, contractName);
+                        var operationRequest = new OperationRequest(operationName, simpleContractName);
 
                         // Parsear argumentos desde query string
                         foreach (var kvp in context.Request.Query)
@@ -195,7 +197,7 @@ namespace Hubcon.Server.Core.Routing
 
                         var operationRequest = new OperationRequest(
                             operationName,
-                            contractName,
+                            simpleContractName,
                             args
                         );
 
@@ -237,7 +239,7 @@ namespace Hubcon.Server.Core.Routing
                         // var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         // mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
 
-                        var operationRequest = new OperationRequest(operationName, contractName);
+                        var operationRequest = new OperationRequest(operationName, simpleContractName);
 
                         // Parsear argumentos desde query string
                         foreach (var kvp in context.Request.Query)
@@ -297,7 +299,7 @@ namespace Hubcon.Server.Core.Routing
 
                         var operationRequest = new OperationRequest(
                             operationName,
-                            contractName,
+                            simpleContractName,
                             args
                         );
 

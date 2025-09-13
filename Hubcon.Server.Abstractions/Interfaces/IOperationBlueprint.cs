@@ -28,5 +28,6 @@ namespace Hubcon.Server.Abstractions.Interfaces
         IEnumerable<Attribute> Attributes { get; }
         HashSet<string> PrecomputedRoles { get; }
         string?[] PrecomputedPolicies { get; }
+        string SimpleContractName { get; }
     }
 }

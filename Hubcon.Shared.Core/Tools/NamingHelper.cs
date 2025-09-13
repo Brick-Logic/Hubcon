@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Hubcon.Shared.Abstractions.Standard.Cache;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,28 +11,31 @@ namespace Hubcon.Shared.Core.Tools
 {
     public static class NamingHelper
     {
+        private static readonly ConcurrentDictionary<string, string> CleanNames = new();
+
         public static string GetCleanName(string name)
         {
-            var cleanedName = name;
-
-            if (name.EndsWith("Controller"))
-                cleanedName = name.Replace("Controller", "");
-            if (name.EndsWith("Service"))
-                cleanedName = name.Replace("Service", "");
-            if (name.EndsWith("Contract"))
-                cleanedName = name.Replace("Contract", "");
-            if (name.EndsWith("ContractHandler"))
-                cleanedName = name.Replace("ContractHandler", "");
-
-            // Verificar si empieza con 'I' y tiene al menos 2 caracteres
-            if (cleanedName.Length >= 2 &&
-                cleanedName[0] == 'I' &&
-                char.IsUpper(cleanedName[1]))
+            return CleanNames.GetOrAdd(name, inputName =>
             {
-                cleanedName = cleanedName.Substring(1);
-            }
+                var cleanedName = inputName;
 
-            return cleanedName;
+                if (inputName.EndsWith("Controller"))
+                    cleanedName = inputName.Replace("Controller", "");
+                if (inputName.EndsWith("Service"))
+                    cleanedName = inputName.Replace("Service", "");
+                if (inputName.EndsWith("Contract"))
+                    cleanedName = inputName.Replace("Contract", "");
+                if (inputName.EndsWith("ContractHandler"))
+                    cleanedName = inputName.Replace("ContractHandler", "");
+
+                // Verificar si empieza con 'I' y tiene al menos 2 caracteres
+                if (cleanedName.Length >= 2 && cleanedName[0] == 'I' && char.IsUpper(cleanedName[1]))
+                {
+                    cleanedName = cleanedName.Substring(1);
+                }
+
+                return cleanedName;
+            });
         }
     }
 }
