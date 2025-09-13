@@ -59,28 +59,24 @@ namespace Hubcon.Client.Integration.Client
 
         private bool IsBuilt { get; set; }
 
-        private IDictionary<Type, IContractOptions> ContractOptionsDict { get; set; } = null!;
+        //private IDictionary<Type, IContractOptions> ContractOptionsDict { get; set; } = null!;
 
         private ConcurrentDictionary<MethodInfo, bool> NeedsAuth = new();
 
         private ConcurrentDictionary<MethodInfo, HttpMethod> MethodVerb = new();
 
+        private ConcurrentDictionary<MethodInfo, bool> ShouldUseBody = new();
+
         public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {           
-            IOperationOptions? operationOptions = null;
-            ContractOptionsDict!.TryGetValue(methodInfo.ReflectedType!, out IContractOptions? contractOptions);
+            var contractOptions = clientOptions.GetContractOptions(methodInfo.ReflectedType!);
+            IOperationOptions operationOptions = contractOptions!.GetOperationOptions(request.OperationName, methodInfo)!;
 
-            bool isWebsocketMethod = false;
-            
-            if (contractOptions != null)
-            {
-                isWebsocketMethod = contractOptions.IsWebsocketOperation(request.OperationName);
-                operationOptions = contractOptions.GetOperationOptions(request.OperationName);
-            }
+            bool isWebsocketMethod = contractOptions.IsWebsocketOperation(request.OperationName);
 
             bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
-                                      ?? contractOptions?.RemoteCancellationIsAllowed 
-                                      ?? false;
+                ?? contractOptions?.RemoteCancellationIsAllowed 
+                ?? false;
 
             await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
 
@@ -118,15 +114,26 @@ namespace Hubcon.Client.Integration.Client
 
                     StringContent? content = null;
                     var url = "";
+                    var shouldUseBody = ShouldUseBody.GetOrAdd(methodInfo, method =>
+                    {
+                        var parameters = method.GetParameters();
+                        bool shouldUseBodyParameters = true;
 
-                    if (httpMethod == HttpMethod.Post)
+                        foreach (var parameter in parameters)
+                        {
+                            shouldUseBodyParameters &= ShouldBindFromBody(parameter.ParameterType);
+                        }
+
+                        return shouldUseBodyParameters;
+                    });
+
+                    if (shouldUseBody)
                     {
                         var arguments = converter.Serialize(request.Arguments);
                         content = new StringContent(arguments, Encoding.UTF8, "application/json");
                         url = _restHttpUrl + methodInfo.GetRoute().FullRoute;
                     }
-
-                    if (httpMethod == HttpMethod.Get)
+                    else
                     {
                         var builder = new UriBuilder(_restHttpUrl);
 
@@ -149,8 +156,8 @@ namespace Hubcon.Client.Integration.Client
 
                     bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
                     {
-                        return (operationOptions?.HttpAuthIsEnabled ?? false)
-                            && (contractOptions?.HttpAuthIsEnabled ?? false)
+                        return (operationOptions?.HttpAuthIsEnabled ?? true)
+                            && (contractOptions?.HttpAuthIsEnabled ?? true)
                             && clientOptions!.HttpAuthIsEnabled;
                     });
 
@@ -206,16 +213,10 @@ namespace Hubcon.Client.Integration.Client
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
 
-            IOperationOptions? operationOptions = null;
-            IContractOptions? contractOptions = null;
+            var contractOptions = clientOptions.GetContractOptions(methodInfo.ReflectedType!);
+            IOperationOptions? operationOptions = contractOptions!.GetOperationOptions(request.OperationName, methodInfo);
 
-            bool isWebsocketOperation = false;
-
-            if (ContractOptionsDict!.TryGetValue(methodInfo.ReflectedType!, out contractOptions))
-            {
-                isWebsocketOperation = contractOptions.IsWebsocketOperation(request.OperationName);
-                operationOptions = contractOptions.GetOperationOptions(request.OperationName);
-            }
+            bool isWebsocketOperation = contractOptions.IsWebsocketOperation(request.OperationName);
             
             bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed
                                       ?? contractOptions?.RemoteCancellationIsAllowed
@@ -249,15 +250,26 @@ namespace Hubcon.Client.Integration.Client
 
                     StringContent? content = null;
                     var url = "";
+                    var shouldUseBody = ShouldUseBody.GetOrAdd(methodInfo, method =>
+                    {
+                        var parameters = method.GetParameters();
+                        bool shouldUseBodyParameters = true;
 
-                    if (httpMethod == HttpMethod.Post)
+                        foreach (var parameter in parameters)
+                        {
+                            shouldUseBodyParameters &= ShouldBindFromBody(parameter.ParameterType);
+                        }
+
+                        return shouldUseBodyParameters;
+                    });
+
+                    if (shouldUseBody)
                     {
                         var arguments = converter.Serialize(request.Arguments);
                         content = new StringContent(arguments, Encoding.UTF8, "application/json");
-                        url = _restHttpUrl;
+                        url = _restHttpUrl + methodInfo.GetRoute().FullRoute;
                     }
-                    
-                    if (httpMethod == HttpMethod.Get)
+                    else
                     {
                         var builder = new UriBuilder(_restHttpUrl);
 
@@ -268,6 +280,7 @@ namespace Hubcon.Client.Integration.Client
                             query[argument.Key] = argument.Value?.ToString() ?? "";
                         }
 
+                        builder.Path = methodInfo.GetRoute().FullRoute;
                         builder.Query = query.ToString();
                         url = builder.ToString();
                     }
@@ -280,8 +293,8 @@ namespace Hubcon.Client.Integration.Client
 
                     bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
                     {
-                        return (operationOptions?.HttpAuthIsEnabled ?? false)
-                            && (contractOptions?.HttpAuthIsEnabled ?? false)
+                        return (operationOptions?.HttpAuthIsEnabled ?? true)
+                            && (contractOptions?.HttpAuthIsEnabled ?? true)
                             && clientOptions!.HttpAuthIsEnabled;
                     });
 
@@ -317,15 +330,11 @@ namespace Hubcon.Client.Integration.Client
 
         public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, MethodInfo method, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            IOperationOptions? operationOptions = null;
+            var contractOptions = clientOptions.GetContractOptions(method.ReflectedType!);
+            IOperationOptions? operationOptions = contractOptions!.GetOperationOptions(request.OperationName, method);
 
-            if (ContractOptionsDict!.TryGetValue(method.ReflectedType!, out IContractOptions? contractOptions))
-            {
-                operationOptions = contractOptions.GetOperationOptions(request.OperationName);
-            }
-            
-            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
-                                      ?? contractOptions?.RemoteCancellationIsAllowed 
+            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed
+                                      ?? contractOptions?.RemoteCancellationIsAllowed
                                       ?? false;
 
             IObservable<JsonElement> observable;
@@ -402,18 +411,13 @@ namespace Hubcon.Client.Integration.Client
 
         public async Task<T> Ingest<T>(IOperationRequest request, MethodInfo method, CancellationToken cancellationToken)
         {
-            IOperationOptions? operationOptions = null;
-            IContractOptions? contractOptions = null;
+            var contractOptions = clientOptions.GetContractOptions(method.ReflectedType!);
+            IOperationOptions? operationOptions = contractOptions!.GetOperationOptions(request.OperationName, method);
 
-            if (ContractOptionsDict!.TryGetValue(method.ReflectedType!, out contractOptions))
-            {
-                operationOptions = contractOptions.GetOperationOptions(request.OperationName);
-            }
-
-            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
-                                      ?? contractOptions?.RemoteCancellationIsAllowed 
+            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed
+                                      ?? contractOptions?.RemoteCancellationIsAllowed
                                       ?? false;
-            
+
             await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
 
             try 
@@ -449,16 +453,11 @@ namespace Hubcon.Client.Integration.Client
 
         public async Task<IAsyncEnumerable<JsonElement>> GetSubscription(IOperationRequest request, MemberInfo method, CancellationToken cancellationToken = default)
         {
-            IOperationOptions? operationOptions = null;
-            IContractOptions? contractOptions = null;
+            var contractOptions = clientOptions.GetContractOptions(method.ReflectedType!);
+            IOperationOptions? operationOptions = contractOptions!.GetOperationOptions(request.OperationName, method);
 
-            if (ContractOptionsDict!.TryGetValue(method.ReflectedType!, out contractOptions))
-            {
-                operationOptions = contractOptions.GetOperationOptions(request.OperationName);
-            }
-            
-            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
-                                      ?? contractOptions?.RemoteCancellationIsAllowed 
+            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed
+                                      ?? contractOptions?.RemoteCancellationIsAllowed
                                       ?? false;
 
             await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
@@ -582,6 +581,38 @@ namespace Hubcon.Client.Integration.Client
             return options == null ? Task.CompletedTask : options.CallValidationHook(services, request, cancellationToken);
         }
 
+        // Devuelve true si el parámetro debería ir al body, false si va a query
+        public static bool ShouldBindFromBody(Type type)
+        {
+            if (type == null) throw new ArgumentNullException(nameof(type));
+
+            // Nullable<T> → revisar T subyacente
+            if (Nullable.GetUnderlyingType(type) is Type underlying)
+                type = underlying;
+
+            // Tipos primitivos / simples → query
+            if (type.IsPrimitive
+                || type.IsEnum
+                || type == typeof(string)
+                || type == typeof(decimal)
+                || type == typeof(Guid)
+                || type == typeof(DateTime)
+                || type == typeof(DateTimeOffset)
+                || type == typeof(TimeSpan))
+            {
+                return false; // bindear de query
+            }
+
+            // IEnumerable de tipo simple → normalmente se toma de query como array
+            if (typeof(IEnumerable<>).IsAssignableFrom(type) && type != typeof(string))
+            {
+                return false;
+            }
+
+            // Todo lo demás → body
+            return true;
+        }
+
         public void Build(
             IClientOptions options,
             IServiceProvider serviceProvider,
@@ -595,7 +626,7 @@ namespace Hubcon.Client.Integration.Client
             var websocketEndpoint = options.WebsocketPrefix;
             var authenticationManagerType = options.AuthenticationManagerType;
 
-            ContractOptionsDict ??= contractOptions;
+            //ContractOptionsDict ??= contractOptions;
 
             var baseRestHttpUrl = $"{baseUri!.AbsoluteUri}/{httpEndpoint ?? ""}".TrimEnd('/');
             var baseRestWebsocketUrl = $"{baseUri!.AbsoluteUri}/{websocketEndpoint ?? "ws"}".TrimEnd('/');

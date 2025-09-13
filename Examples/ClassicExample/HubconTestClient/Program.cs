@@ -250,7 +250,7 @@ internal class Program
                     {
                         await tokenBucketRateLimiter.AcquireAsync();
                         //await client.IngestMessages(GetMessages2(), default);
-                        var item = await paralellClient.GetTemperatureFromServer(ct);
+                        var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass() ,ct);
                         Interlocked.Increment(ref _finishedRequestsCount);
                     }
                     catch(Exception ex)

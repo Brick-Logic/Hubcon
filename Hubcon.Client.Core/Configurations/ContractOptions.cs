@@ -55,14 +55,9 @@ namespace Hubcon.Client.Core.Configurations
             return Task.CompletedTask;
         }
 
-        public IOperationOptions? GetOperationOptions(string operationName)
+        public IOperationOptions? GetOperationOptions(string operationName, MemberInfo memberInfo)
         {
-            if (OperationOptions.TryGetValue(operationName, out IOperationOptions? operationOptions))
-            {
-                return operationOptions;
-            }
-
-            return null;
+            return OperationOptions.GetOrAdd(operationName, name => new OperationOptions(memberInfo));
         }
 
         public bool IsWebsocketOperation(string operationName)

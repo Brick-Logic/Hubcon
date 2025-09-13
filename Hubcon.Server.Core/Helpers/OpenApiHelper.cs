@@ -73,16 +73,12 @@ namespace Hubcon.Server.Core.Helpers
             // Accepts - con detección automática mejorada (mantener lógica original)
             //ApplyAcceptsWithDefaults(builder, methodInfo);
 
-            if(httpMethod == HttpMethod.Get)
-            {
-                // Aplicar parámetros de consulta para GET
-                ApplyQueryParametersWithDefaults(builder, methodInfo);
-            }
-            else
-            {
-                // Aplicar lógica original para otros métodos
-                ApplyAcceptsWithDefaults(builder, methodInfo);
-            }
+            //if(httpMethod != HttpMethod.Get)
+            //{
+            //    // Aplicar parámetros de consulta para GET
+            //    RemoveQueryParameters(builder, methodInfo);
+            //    //ApplyAcceptsWithDefaults(builder, methodInfo);
+            //}
 
             return builder;
         }
@@ -501,7 +497,14 @@ namespace Hubcon.Server.Core.Helpers
             });
         }
 
-
+        private static void RemoveQueryParameters(RouteHandlerBuilder builder, MethodInfo methodInfo)
+        {
+            builder.WithOpenApi(operation =>
+            {
+                operation.Parameters?.Clear();
+                return operation;
+            });
+        }
 
         private static IOpenApiAny GetExampleForType(Type type)
         {

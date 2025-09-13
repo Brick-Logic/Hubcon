@@ -173,6 +173,7 @@ namespace Hubcon.Client.Core.Configurations
             return null;
         }
 
+
         private static bool IsFromTType(MemberInfo memberInfo)
         {
             return memberInfo.DeclaringType == typeof(T);

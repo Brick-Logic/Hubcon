@@ -19,8 +19,9 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
             if ((context.Blueprint.Kind == OperationKind.Subscription || context.Blueprint.Kind == OperationKind.Stream) && user?.Identity?.IsAuthenticated != true)
             {
-                logger.LogError($"Server: Subscriptions are required to be authenticated. Source IP: {context.HttpContext?.Connection.RemoteIpAddress}.");
-                context.Result = new BaseOperationResponse<object>(false, "Access denied");
+                logger.LogError("Server: Subscriptions are required to be authenticated. Source IP: {0}.", context.HttpContext?.Connection.RemoteIpAddress);
+                context.Result = new BaseOperationResponse<object>(false, "Subscriptions are required to be authenticated.");
+                context.Exception = new UnauthorizedAccessException("Subscriptions are required to be authenticated.");
                 context.HttpContext?.Connection.RequestClose();
                 return;
             }
@@ -45,6 +46,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             if (!allowed)
             {
                 context.Result = new BaseOperationResponse<object>(false, "Access denied");
+                context.Exception = new UnauthorizedAccessException("Access denied");
                 return;
             }
 

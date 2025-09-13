@@ -11,6 +11,13 @@ namespace HubconTestDomain
         Task ShowTempOnServerFromClient();
     }
 
+    public class TestInputClass
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public string Type { get; set; }
+    }
+
     public interface IUserContract : IControllerContract
     {
         ISubscription<int?>? OnUserCreated { get; }
@@ -19,6 +26,7 @@ namespace HubconTestDomain
         ISubscription<int?>? OnUserCreated4 { get; }
 
         Task<int> GetTemperatureFromServer(CancellationToken cancellationToken = default);
+        Task<int> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default);
         Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default);
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();

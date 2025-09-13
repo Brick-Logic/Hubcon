@@ -225,9 +225,20 @@ namespace Hubcon.Client.Builder
             if (!_contractOptions.TryGetValue(typeof(T), out _))
             {
                 var options = new ContractOptions<T>();
+
                 configure(options);
                 _contractOptions.TryAdd(typeof(T), options);
             }
+        }
+
+        public IContractOptions GetContractOptions(Type type)
+        {
+            return _contractOptions.GetOrAdd(type, contractType =>
+            {
+                var openType = typeof(ContractOptions<>);
+                var closedType = openType.MakeGenericType(contractType);
+                return (IContractOptions)Activator.CreateInstance(closedType)!;
+            });
         }
     }
 }

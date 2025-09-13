@@ -54,7 +54,7 @@ namespace HubconTestClient.Modules
                                 if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }
                             })
                             .LimitPerSecond(100);
-                        
+
                         operationSelector.Configure(contract => contract.GetTemperatureFromServerBlocking)
                             .LimitPerSecond(10000000);
 

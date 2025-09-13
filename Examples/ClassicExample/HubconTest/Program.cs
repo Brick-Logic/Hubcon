@@ -1,9 +1,13 @@
 using Hubcon.Server.Injection;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Diagnostics;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.RateLimiting;
 
@@ -148,7 +152,6 @@ namespace HubconTest
                         .SetWebSocketTimeout(TimeSpan.FromSeconds(15))
                         .SetMaxHttpMessageSize(4 * 1024)
                         .SetMaxWebSocketMessageSize(4 * 1024)
-                        // .AllowRemoteTokenCancellation()
                         .ConfigureWebsocketRateLimiter(() => new TokenBucketRateLimiterOptions()
                         {
                             TokenLimit = 100,
@@ -203,7 +206,6 @@ namespace HubconTest
 
             app.UseCors();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
@@ -217,35 +219,6 @@ namespace HubconTest
 
             app.UseHubconHttpEndpoints();
             app.UseHubconWebsocketEndpoints();
-
-            app.MapGet("/test-simple", (string nombre, int edad) =>
-                Results.Ok($"Hola {nombre}, tienes {edad} años"))
-               .WithName("TestSimple")
-               .WithOpenApi(operation =>
-               {
-                   Console.WriteLine($"Parámetros automáticos: {operation.Parameters?.Count ?? 0}");
-
-                   // Solo modificar, no agregar
-                   if (operation.Parameters != null)
-                   {
-                       foreach (var param in operation.Parameters)
-                       {
-                           param.Example = param.Name == "nombre"
-                               ? new Microsoft.OpenApi.Any.OpenApiString("Juan")
-                               : new Microsoft.OpenApi.Any.OpenApiInteger(25);
-                           param.Description = $"Parámetro mejorado: {param.Name}";
-                       }
-                   }
-
-                   Console.WriteLine($"Parámetros después de modificar: {operation.Parameters?.Count ?? 0}");
-                   return operation;
-               });
-
-            // Instancia del mapeador de endpoints
-            var endpointMapper = new EndpointMapper(app);
-
-            // Mapear automáticamente todos los métodos del controller
-            endpointMapper.MapController<MyCustomController>();
 
             var logger = app.Services.GetService<ILogger<object>>();
 

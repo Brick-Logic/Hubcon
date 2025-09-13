@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +21,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         bool HttpAuthIsEnabled { get; }
         Task CallHook(HookType hookType, HookContext context);
         Task CallHook(HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null);
-        IOperationOptions? GetOperationOptions(string operationName);
+        IOperationOptions? GetOperationOptions(string operationName, MemberInfo memberInfo);
         bool IsWebsocketOperation(string operationName);
     }
 }

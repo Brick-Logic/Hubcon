@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
@@ -49,5 +50,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         RateLimiter? HttpFireAndForgetRateBucket { get; }
         bool LoggingEnabled { get; }
         bool HttpAuthIsEnabled { get; }
+
+        public IContractOptions GetContractOptions(Type type);
     }
 }

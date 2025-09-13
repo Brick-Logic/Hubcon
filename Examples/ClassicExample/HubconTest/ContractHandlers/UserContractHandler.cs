@@ -18,13 +18,6 @@ namespace HubconTest.ContractHandlers
     [UseHttpRateLimiter("contract")]
     public class UserController(ILogger<UserController> logger) : IUserContract
     {
-        [UseHttpRateLimiter("endpoint")]
-        //[Authorize(Roles = "Admin")]
-        public Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
-        {
-            return Task.FromResult(Random.Shared.Next(-10, 50));
-        }
-
         [SubscriptionAuthorize]
         public ISubscription<int?>? OnUserCreated { get; }
         public ISubscription<int?>? OnUserCreated2 { get; }
@@ -44,6 +37,12 @@ namespace HubconTest.ContractHandlers
             return Task.CompletedTask;
         }
 
+        [UseHttpRateLimiter("endpoint")]
+        //[Authorize(Roles = "Admin")]
+        public Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(Random.Shared.Next(-10, 50));
+        }
 
         public async Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default)
         {
@@ -259,6 +258,12 @@ namespace HubconTest.ContractHandlers
             }
 
             logger.LogInformation("Ingest terminado exitosamente");
+        }
+
+        [AllowAnonymous]
+        public Task<int> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Random.Shared.Next(-10, 50));
         }
     }
 }

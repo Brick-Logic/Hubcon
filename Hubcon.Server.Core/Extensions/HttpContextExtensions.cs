@@ -32,7 +32,7 @@ namespace Hubcon.Server.Core.Extensions
                     return JsonReadResult.Failure("El body de la request está vacío");
                 }
 
-                context.Request.EnableBuffering();
+                //context.Request.EnableBuffering();
 
                 using var reader = new StreamReader(
                     context.Request.Body,

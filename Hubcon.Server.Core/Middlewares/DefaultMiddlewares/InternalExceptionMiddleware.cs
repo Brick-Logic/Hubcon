@@ -20,15 +20,15 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 await next();
             }
-            catch(TaskCanceledException)
+            catch (TaskCanceledException)
             {
                 exception = new OperationCanceledException();
             }
-            catch(OperationCanceledException)
+            catch (OperationCanceledException)
             {
                 exception = new OperationCanceledException();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 exception = ex;
             }
@@ -43,46 +43,65 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     isError ??= true;
 
                     logMsg ??= new StringBuilder();
-                    logMsg.AppendLine(context.Result.Error);
+
+                    if (!string.IsNullOrWhiteSpace(context.Result.Error))
+                        logMsg.AppendLine(context.Result.Error);
 
                     responseMsg ??= new StringBuilder();
-                    responseMsg.AppendLine(context.Result.Error);
+
+                    if (!string.IsNullOrWhiteSpace(context.Result.Error))
+                        responseMsg.AppendLine(context.Result.Error);
                 }
 
                 if (context.Exception != null)
                 {
                     isError ??= true;
 
-                    logMsg ??= new StringBuilder();
-                    responseMsg ??= new StringBuilder();
-
-                    logMsg.AppendLine(context.Exception.ToString());
-
-                    if (options.DetailedErrorsEnabled)
+                    if (!string.IsNullOrWhiteSpace(context.Exception.Message))
                     {
-                        responseMsg.AppendLine(context.Exception.ToString());
-                    }
-                    else
-                    {
-                        responseMsg.AppendLine(context.Exception.Message);
+                        logMsg ??= new StringBuilder();
+                        responseMsg ??= new StringBuilder();
+
+                        logMsg.AppendLine(context.Exception.ToString());
+
+                        if (options.DetailedErrorsEnabled)
+                        {
+                            if (!string.IsNullOrWhiteSpace(context.Exception.Message))
+                                responseMsg.AppendLine(context.Exception.Message);
+
+                            if (!string.IsNullOrWhiteSpace(context.Exception.StackTrace))
+                                responseMsg.AppendLine(context.Exception.StackTrace);                         
+                        }
+                        else
+                        {
+                            responseMsg.AppendLine(context.Exception.Message);
+                        }
                     }
                 }
 
                 if (exception != null)
                 {
                     isError ??= true;
-                    logMsg ??= new StringBuilder();
-                    responseMsg ??= new StringBuilder();
 
-                    logMsg.AppendLine(exception.ToString());
+                    if (!string.IsNullOrWhiteSpace(exception.Message))
+                    {
+                        logMsg ??= new StringBuilder();
+                        responseMsg ??= new StringBuilder();
 
-                    if (options.DetailedErrorsEnabled)
-                    {
-                        responseMsg.AppendLine(exception.Message);
-                    }
-                    else
-                    {
-                        responseMsg.AppendLine(exception.ToString());
+                        logMsg.AppendLine(exception.ToString());
+
+                        if (options.DetailedErrorsEnabled)
+                        {
+                            if (!string.IsNullOrWhiteSpace(exception.Message))
+                                responseMsg.AppendLine(exception.Message);
+
+                            if (!string.IsNullOrWhiteSpace(exception.StackTrace))
+                                responseMsg.AppendLine(exception.StackTrace);                           
+                        }
+                        else
+                        {
+                            responseMsg.AppendLine(exception.Message);
+                        }                  
                     }
                 }
 
