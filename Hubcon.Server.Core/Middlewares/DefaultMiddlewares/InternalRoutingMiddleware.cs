@@ -31,29 +31,31 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 || context.Blueprint.Kind == OperationKind.Stream 
                 || context.Blueprint.Kind == OperationKind.Ingest)
             {
-                foreach(var kvp in context.Blueprint!.ParameterTypes)
+                var dict = context.Request.Arguments.ToDictionary();
+
+                foreach (var kvp in context.Blueprint!.ParameterTypes)
                 {
                     var type = context.Blueprint!.ParameterTypes[kvp.Key];
 
                     if (type == typeof(CancellationToken))
                     {
-                        context.Request.Arguments[kvp.Key] = context.RequestAborted;
+                        dict[kvp.Key] = context.RequestAborted;
                     }
-                    else if (context.Request.Arguments[kvp.Key] is JsonElement element)
+                    else if (dict[kvp.Key] is JsonElement element)
                     {
-                        context.Request.Arguments[kvp.Key] = dynamicConverter.DeserializeJsonElement(element, type);
+                        dict[kvp.Key] = dynamicConverter.DeserializeJsonElement(element, type);
                     }
-                    else if (EnumerableTools.IsAsyncEnumerable(context.Request.Arguments[kvp.Key]!)
-                        && EnumerableTools.GetAsyncEnumerableType(context.Request.Arguments[kvp.Key]!) == typeof(IAsyncEnumerable<JsonElement>))
+                    else if (EnumerableTools.IsAsyncEnumerable(dict[kvp.Key]!)
+                        && EnumerableTools.GetAsyncEnumerableType(dict[kvp.Key]!) == typeof(IAsyncEnumerable<JsonElement>))
                     {
-                        context.Request.Arguments[kvp.Key] = EnumerableTools.ConvertAsyncEnumerableDynamic(
+                        dict[kvp.Key] = EnumerableTools.ConvertAsyncEnumerableDynamic(
                             type,
-                            ((IAsyncEnumerable<JsonElement>)context.Request.Arguments[kvp.Key]!),
+                            ((IAsyncEnumerable<JsonElement>)dict[kvp.Key]!),
                             dynamicConverter);
 
                         continue;
                     }
-                    else if (context.Request.Arguments[kvp.Key]?.GetType().IsAssignableTo(type) ?? false)
+                    else if (dict[kvp.Key]?.GetType().IsAssignableTo(type) ?? false)
                     {
                         continue;
                     }
@@ -64,14 +66,14 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     }
                 }
 
-                if(context.Blueprint!.ParameterTypes.Count != context.Request.Arguments!.Count)
+                if(context.Blueprint!.ParameterTypes.Count != dict!.Count)
                 {
                     context.Result = new BaseOperationResponse<JsonElement>(false, default, "Argument count mismatch.");
                     return;
                 }
 
                 var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);
-                object? result = await Task.Run(() => context.Blueprint!.InvokeDelegate?.Invoke(controller, context.Request.Arguments.Values.ToArray()!));
+                object? result = await Task.Run(() => context.Blueprint!.InvokeDelegate?.Invoke(controller, dict.Values.ToArray()!));
                 context.Result = await resultHandler.Invoke(result);
                 await next();
             }

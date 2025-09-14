@@ -1,4 +1,6 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Enums;
+using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,5 +54,6 @@ namespace Hubcon.Client.Abstractions.Interfaces
         bool HttpAuthIsEnabled { get; }
 
         public IContractOptions GetContractOptions(Type type);
+        Task CallInterceptor(InterceptorType interceptorType, InvocationContext context);
     }
 }

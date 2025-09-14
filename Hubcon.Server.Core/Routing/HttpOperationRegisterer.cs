@@ -4,25 +4,19 @@ using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
-using Hubcon.Server.Core.Pipelines;
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
-using Hubcon.Shared.Core.Websockets.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.Serialization;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Hubcon.Server.Core.Routing
 {
@@ -117,20 +111,13 @@ namespace Hubcon.Server.Core.Routing
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
 
-                        // No necesitamos revisar content length porque no hay body
-
-                        var operationRequest = new OperationRequest(operationName, simpleContractName);
-
-                        // Parsear argumentos desde query string
+                        var dict = new Dictionary<string, object>();
                         foreach (var kvp in context.Request.Query)
                         {
-                            // kvp.Key = nombre del argumento
-                            // kvp.Value = valor del argumento (StringValues)
-                            // Convertir a string y agregar al request
-                            // Si tu OperationRequest tiene un diccionario de argumentos
-                            operationRequest.Arguments[kvp.Key] = kvp.Value.ToString();
+                            dict[kvp.Key] = kvp.Value.ToString();
                         }
 
+                        var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
                         var res = await requestHandler.HandleWithResultAsync(operationRequest, cancellationToken);
 
                         if (!res.Success)
@@ -162,9 +149,6 @@ namespace Hubcon.Server.Core.Routing
                         var converter = services.GetRequiredService<IDynamicConverter>();
                         var cancellationToken = context.RequestAborted;
 
-                        //var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
-                        //mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
-
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
                             await RequestTooLarge(context);
@@ -174,21 +158,7 @@ namespace Hubcon.Server.Core.Routing
                         var queryDict = context.Request.Query.ToDictionary(k => k.Key, v => (object?)v.Value.ToString());
                         var bodyRequest = await context.TryReadJsonAsync();
 
-                        //if (!bodyRequest.IsSuccess)
-                        //{
-                        //    if (options.DetailedErrorsEnabled)
-                        //    {
-                        //        await BadRequest(context);
-                        //        return new BaseOperationResponse(false, bodyRequest.ErrorMessage ?? "");
-                        //    }
-                        //    else
-                        //    {
-                        //        await BadRequest(context);
-                        //        return new BaseOperationResponse(false, "The request is malformed.");
-                        //    }
-                        //}
-
-                        Dictionary<string, object?> args = new Dictionary<string, object?>();
+                        Dictionary<string, object> args = new Dictionary<string, object>();
 
                         for(int i = 0; i < orderedParameterNames.Length; i++)
                         {
@@ -235,19 +205,14 @@ namespace Hubcon.Server.Core.Routing
                         var requestHandler = services.GetRequiredService<IRequestHandler>();
                         var cancellationToken = context.RequestAborted;
 
-                        // Ya no necesitamos limitar el tamaño del body
-                        // var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
-                        // mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
-
-                        var operationRequest = new OperationRequest(operationName, simpleContractName);
-
+                        var dict = new Dictionary<string, object>();
                         // Parsear argumentos desde query string
                         foreach (var kvp in context.Request.Query)
                         {
-                            // kvp.Key = nombre del argumento
-                            // kvp.Value = valor del argumento (StringValues)
-                            operationRequest.Arguments[kvp.Key] = kvp.Value.ToString();
+                            dict[kvp.Key] = kvp.Value.ToString();
                         }
+
+                        var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
 
                         var res = await requestHandler.HandleWithoutResultAsync(operationRequest, cancellationToken);
 
@@ -290,7 +255,7 @@ namespace Hubcon.Server.Core.Routing
                             return new BaseOperationResponse(false, "Request too large.");
                         }
 
-                        Dictionary<string, object?> args = new Dictionary<string, object?>();
+                        Dictionary<string, object> args = new Dictionary<string, object>();
 
                         for (int i = 0; i < orderedParameterNames.Length; i++)
                         {
@@ -335,7 +300,7 @@ namespace Hubcon.Server.Core.Routing
                 RouteGroupBuilder endpointGroup,
                 IOperationBlueprint blueprint,
                 MethodInfo controllerMethod,
-                List<UseHttpEndpointFilterAttribute>? filters)
+                List<UseHttpEndpointFilterAttribute> filters)
         {
             options.EndpointConventions?.Invoke(builder);
 

@@ -3,6 +3,8 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.WebSockets;
 using System.Threading.RateLimiting;
+using Hubcon.Shared.Abstractions.Enums;
+using Hubcon.Shared.Abstractions.Models;
 
 namespace Hubcon.Client.Abstractions.Interfaces
 {
@@ -249,5 +251,13 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// mechanisms.</remarks>
         /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
         IServerModuleConfiguration DisableHttpAuthentication();
+
+        /// <summary>
+        /// Adds an interceptor to be triggered during the operation lifecycle.
+        /// </summary>
+        /// <param name="interceptorType">The type of hook to add, specifying when it should be triggered.</param>
+        /// <param name="interceptorDelegate">The delegate to execute when the hook is triggered.</param>
+        /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
+        IServerModuleConfiguration AddInterceptor(InterceptorType interceptorType, Func<InvocationContext, Task> interceptorDelegate);
     }
 }

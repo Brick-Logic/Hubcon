@@ -4,6 +4,8 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.WebSockets;
 using System.Threading.RateLimiting;
+using Hubcon.Shared.Abstractions.Enums;
+using Hubcon.Shared.Abstractions.Models;
 
 namespace Hubcon.Client.Builder
 {
@@ -309,6 +311,12 @@ namespace Hubcon.Client.Builder
         public IServerModuleConfiguration DisableHttpAuthentication()
         {
             builder.HttpAuthIsEnabled = false;
+            return this;
+        }
+
+        public IServerModuleConfiguration AddInterceptor(InterceptorType interceptorType, Func<InvocationContext, Task> interceptorDelegate)
+        {
+            builder.AddInterceptor(interceptorType, interceptorDelegate);
             return this;
         }
     }

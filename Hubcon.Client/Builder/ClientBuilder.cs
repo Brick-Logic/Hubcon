@@ -3,7 +3,9 @@ using Hubcon.Client.Core.Configurations;
 using Hubcon.Client.Core.Proxies;
 using Hubcon.Client.Core.Subscriptions;
 using Hubcon.Client.Interceptors;
+using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;
@@ -12,7 +14,6 @@ using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Threading.RateLimiting;
-
 
 namespace Hubcon.Client.Builder
 {
@@ -37,6 +38,7 @@ namespace Hubcon.Client.Builder
         private ConcurrentDictionary<Type, Type> _subTypesCache { get; } = new();
         private ConcurrentDictionary<Type, IEnumerable<PropertyInfo>> _propTypesCache { get; } = new();
         private ConcurrentDictionary<Type, IContractOptions> _contractOptions { get; } = new();
+        private ConcurrentDictionary<InterceptorType, Func<InvocationContext, Task>> _interceptors = new();
         private Dictionary<Type, object> _clients { get; } = new();
         public bool AutoReconnect { get; set; } = true;
         public bool ReconnectStreams { get; set; } = false;
@@ -239,6 +241,16 @@ namespace Hubcon.Client.Builder
                 var closedType = openType.MakeGenericType(contractType);
                 return (IContractOptions)Activator.CreateInstance(closedType)!;
             });
+        }
+
+        public void AddInterceptor(InterceptorType interceptorType, Func<InvocationContext, Task> interceptorDelegate)
+        {
+            _interceptors.TryAdd(interceptorType, interceptorDelegate);
+        }
+
+        public Task CallInterceptor(InterceptorType interceptorType, InvocationContext context)
+        {
+            return _interceptors.GetOrAdd(interceptorType, _ => Task.CompletedTask).Invoke(context);
         }
     }
 }

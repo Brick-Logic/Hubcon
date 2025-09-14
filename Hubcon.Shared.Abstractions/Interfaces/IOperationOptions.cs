@@ -19,19 +19,11 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         int RequestsPerSecond { get; }
         bool RateLimiterIsShared { get; }
         RateLimiter? RateBucket { get; }
-        IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks { get; }
-        bool RemoteCancellationIsAllowed { get; }
-        bool HttpAuthIsEnabled { get; }
+        IReadOnlyDictionary<HookType, Func<InvocationContext, Task>> Hooks { get; }
+        bool? RemoteCancellationIsAllowed { get; }
+        bool? HttpAuthIsEnabled { get; }
 
-        Task CallHook(HookContext context);
-
-        Task CallHook(
-            HookType Type,
-            IServiceProvider Services,
-            IOperationRequest Request,
-            CancellationToken cancellationToken,
-            object? Result = null,
-            Exception? Exception = null);
+        Task CallHook(HookType hookType, InvocationContext context);
 
         Task CallValidationHook(IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken);
     }

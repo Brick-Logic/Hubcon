@@ -24,8 +24,8 @@ namespace Hubcon.Client.Core.Configurations
         private bool? websocketMethodsEnabled;
         public bool WebsocketMethodsEnabled => websocketMethodsEnabled ?? false;
 
-        ConcurrentDictionary<HookType, Func<HookContext, Task>> _hooks = new();
-        public IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks => _hooks;
+        ConcurrentDictionary<HookType, Func<InvocationContext, Task>> _hooks = new();
+        public IReadOnlyDictionary<HookType, Func<InvocationContext, Task>> Hooks => _hooks;
 
         public bool RemoteCancellationIsAllowed { get; private set; }
         public bool HttpAuthIsEnabled { get; private set; } = true;
@@ -36,26 +36,12 @@ namespace Hubcon.Client.Core.Configurations
             return this;
         }
 
-        public Task CallHook(HookType hookType, HookContext context)
+        public Task CallHook(HookType hookType, InvocationContext context)
         {
-            if (_hooks.TryGetValue(hookType, out var hookDelegate))
-            {
-                return hookDelegate(context);
-            }
-            return Task.CompletedTask;
+            return _hooks.GetOrAdd(hookType, _ => Task.CompletedTask).Invoke(context);
         }
 
-        public Task CallHook(HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null)
-        {
-            if (_hooks.TryGetValue(type, out var hookDelegate))
-            {
-                return hookDelegate(new HookContext(type, services, request, cancellationToken, result, exception));
-            }
-
-            return Task.CompletedTask;
-        }
-
-        public IOperationOptions? GetOperationOptions(string operationName, MemberInfo memberInfo)
+        public IOperationOptions GetOperationOptions(string operationName, MemberInfo memberInfo)
         {
             return OperationOptions.GetOrAdd(operationName, name => new OperationOptions(memberInfo));
         }
@@ -83,7 +69,7 @@ namespace Hubcon.Client.Core.Configurations
             return this;
         }
 
-        public IContractConfigurator<T> AddHook(HookType hookType, Func<HookContext, Task> hookDelegate)
+        public IContractConfigurator<T> AddHook(HookType hookType, Func<InvocationContext, Task> hookDelegate)
         {
             _hooks.TryAdd(hookType, hookDelegate);
             return this;

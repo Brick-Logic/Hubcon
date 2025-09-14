@@ -7,7 +7,7 @@ namespace Hubcon.Shared.Abstractions.Models
     {
         public string ContractName { get; set; }
         public string OperationName { get; set; }
-        public Dictionary<string, object> Arguments { get; set; }
+        public IReadOnlyDictionary<string, object> Arguments { get; set; }
 
         public OperationRequest()
         {
@@ -18,14 +18,14 @@ namespace Hubcon.Shared.Abstractions.Models
         {
             OperationName = operationName;
             ContractName = contractName;
-            Arguments = [];
+            Arguments = new Dictionary<string, object>();
         }
 
-        public OperationRequest(string methodName, string contractName, Dictionary<string, object?>? args)
+        public OperationRequest(string methodName, string contractName, IReadOnlyDictionary<string, object>? args)
         {
             OperationName = methodName;
             ContractName = contractName;
-            Arguments = args ?? [];
+            Arguments = args ?? new Dictionary<string, object>();
         }
 
         public override bool Equals(object? obj)

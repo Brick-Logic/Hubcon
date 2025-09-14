@@ -195,11 +195,13 @@ namespace Hubcon.Server.Core.Pipelines
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Ingest))
                 return null!;
 
-            var count = request.Arguments?.Count + blueprint?.ParameterTypes.Count(x => x.GetType() == typeof(CancellationToken));
+            var dict = request.Arguments.ToDictionary();
 
-            if (request.Arguments?.Count == 0
+            var count = dict?.Count + blueprint?.ParameterTypes.Count(x => x.GetType() == typeof(CancellationToken));
+
+            if (dict?.Count == 0
                 || count == 0
-                || count != request.Arguments?.Count)
+                || count != dict?.Count)
             {
                 return new BaseOperationResponse<JsonElement>(false, default, "Parameter count mismatch.");
             }
@@ -210,7 +212,7 @@ namespace Hubcon.Server.Core.Pipelines
             {
                 object? arg = null;
 
-                if (!request.Arguments!.TryGetValue(parameterType.Key, out arg))
+                if (!dict!.TryGetValue(parameterType.Key, out arg))
                 {
                     continue;
                 }
@@ -223,10 +225,10 @@ namespace Hubcon.Server.Core.Pipelines
 
                     var source = sources.TryGetValue(id!, out object? value);
 
-                    request.Arguments![parameterType.Key] = value;
+                    dict![parameterType.Key] = value;
                 }
             }
-
+            PropertyTools.AssignProperty(request, nameof(request.Arguments), dict);
             IOperationContext context = BuildContext(request, blueprint, cancellationToken);
 
             var pipeline = blueprint.PipelineBuilder.Build(request, context, WithResultHandler, _serviceProvider);

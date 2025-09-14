@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 namespace Hubcon.Shared.Abstractions.Enums
 {
     /// <summary>
-    /// Represents the types of hooks that can be triggered during an operation.
+    /// Represents the types of interceptors that can be triggered on a all operations.
     /// </summary>
-    /// <remarks>Use these values to specify the type of hook to handle in your implementation.</remarks>
-    public enum HookType
+    /// <remarks>Use these values to specify the type of interceptor to handle in your implementation.</remarks>
+    public enum InterceptorType
     {
         /// <summary>
         /// Triggered before sending the operation. Applies to all operations.
@@ -50,6 +50,36 @@ namespace Hubcon.Shared.Abstractions.Enums
         /// <summary>
         /// Triggered when the ingestion process for the operation is completed. Ingest operations only.
         /// </summary>
-        OnIngestCompleted
+        OnIngestCompleted,
+
+        /// <summary>
+        /// Triggered when the websocket connection is established.
+        /// </summary>
+        OnConnected,
+
+        /// <summary>
+        /// Triggered when the websocket connection is established.
+        /// </summary>
+        OnConnecting,
+
+        /// <summary>
+        /// Triggered when the websocket connection disconnects.
+        /// </summary>
+        OnDisconnected,
+
+        /// <summary>
+        /// Triggered when the websocket connection is being reconnected.
+        /// </summary>
+        OnReconnect,
+
+        /// <summary>
+        /// Triggered when the websocket connection sends a ping message to the server.
+        /// </summary>
+        OnPing,
+
+        /// <summary>
+        /// Triggered when the websocket connection receives a pong message from the server.
+        /// </summary>
+        OnPong,
     }
 }

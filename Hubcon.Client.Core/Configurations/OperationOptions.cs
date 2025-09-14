@@ -29,16 +29,16 @@ namespace Hubcon.Client.Core.Configurations
         public bool RateLimiterIsShared { get; private set; }
         public int RequestsPerSecond { get; private set; }
 
-        ConcurrentDictionary<HookType, Func<HookContext, Task>> _hooks = new();
-        public IReadOnlyDictionary<HookType, Func<HookContext, Task>> Hooks => _hooks;
+        ConcurrentDictionary<HookType, Func<InvocationContext, Task>> _hooks = new();
+        public IReadOnlyDictionary<HookType, Func<InvocationContext, Task>> Hooks => _hooks;
 
         private RateLimiter? _rateBucket;
         public RateLimiter? RateBucket => _rateBucket ??= RateBucketOptions != null ? new TokenBucketRateLimiter(RateBucketOptions) : null;
         
         private Func<RequestValidationContext, Task>? _validationHook;   
-        public bool RemoteCancellationIsAllowed { get; private set; }
+        public bool? RemoteCancellationIsAllowed { get; private set; }
 
-        public bool HttpAuthIsEnabled { get; private set; } = true;
+        public bool? HttpAuthIsEnabled { get; private set; }
 
         public IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true)
         {
@@ -71,30 +71,15 @@ namespace Hubcon.Client.Core.Configurations
             return this;
         }
 
-        public IOperationConfigurator AddHook(HookType hookType, Func<HookContext, Task> hookDelegate)
+        public IOperationConfigurator AddHook(HookType hookType, Func<InvocationContext, Task> hookDelegate)
         {
             _hooks.TryAdd(hookType, hookDelegate);
             return this;
         }
 
-        public Task CallHook(HookContext context)
+        public Task CallHook(HookType hookType, InvocationContext context)
         {
-            if (_hooks.TryGetValue(context.Type, out var hookDelegate))
-            {
-                return hookDelegate(context);
-            }
-
-            return Task.CompletedTask;
-        }
-
-        public Task CallHook(HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null)
-        {
-            if (_hooks.TryGetValue(type, out var hookDelegate))
-            {
-                return hookDelegate(new HookContext(type, services, request, cancellationToken, result, exception));
-            }
-
-            return Task.CompletedTask;
+            return _hooks.GetOrAdd(hookType, _ => Task.CompletedTask).Invoke(context);
         }
 
         public IOperationConfigurator AddValidationHook(Func<RequestValidationContext, Task> value)

@@ -89,6 +89,8 @@ namespace HubconTestClient.Modules
             // Manager de autenticación (opcional)
             configuration.UseAuthenticationManager<AuthenticationManager>();
 
+            configuration.AddInterceptor(InterceptorType.OnPing, async ctx => { });
+
             // Usar conexion insegura
             configuration.UseInsecureConnection();
         }

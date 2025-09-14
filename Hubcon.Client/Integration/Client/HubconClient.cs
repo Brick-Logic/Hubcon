@@ -11,6 +11,8 @@ using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http;
@@ -34,7 +36,7 @@ namespace Hubcon.Client.Integration.Client
         IAuthenticationManager? _authenticationManager;
         IAuthenticationManager AuthenticationManager => _authenticationManager 
             ??= authenticationManagerFactory?.Invoke() 
-            ?? throw new InvalidOperationException($"Authentication Manager not defined for server module '{clientOptions.ServerModuleName}'.");
+            ?? throw new InvalidOperationException($"Authentication Manager not defined for server module '{ClientOptions.ServerModuleName}'.");
         
         HubconWebSocketClient client = null!;
 
@@ -47,7 +49,7 @@ namespace Hubcon.Client.Integration.Client
                     return _httpClient;
 
                 _httpClient ??= clientFactory.CreateClient();
-                clientOptions?.HttpClientOptions?.Invoke(_httpClient, ServiceProvider);
+                ClientOptions.HttpClientOptions?.Invoke(_httpClient, ServiceProvider);
 
                 return _httpClient;
             }
@@ -55,7 +57,7 @@ namespace Hubcon.Client.Integration.Client
 
         private IServiceProvider ServiceProvider { get; set; } = null!;
 
-        private IClientOptions clientOptions { get; set; } = null!;
+        private IClientOptions ClientOptions { get; set; } = null!;
 
         private bool IsBuilt { get; set; }
 
@@ -68,43 +70,51 @@ namespace Hubcon.Client.Integration.Client
         private ConcurrentDictionary<MethodInfo, bool> ShouldUseBody = new();
 
         public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
-        {           
-            var contractOptions = clientOptions.GetContractOptions(methodInfo.ReflectedType!);
-            IOperationOptions operationOptions = contractOptions!.GetOperationOptions(request.OperationName, methodInfo)!;
+        {
+            var context = new InvocationContext()
+            {
+                Services = ServiceProvider,
+                CancellationToken = cancellationToken,
+                Request = request,
+            };
+
+            IContractOptions contractOptions = ClientOptions.GetContractOptions(methodInfo.DeclaringType!);
+            IOperationOptions operationOptions = contractOptions.GetOperationOptions(request.OperationName, methodInfo);
 
             bool isWebsocketMethod = contractOptions.IsWebsocketOperation(request.OperationName);
 
-            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed 
-                ?? contractOptions?.RemoteCancellationIsAllowed 
-                ?? false;
+            bool remoteCancellation = operationOptions.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed;
 
-            await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
+            await operationOptions.CallValidationHook(ServiceProvider, request, cancellationToken);
 
             try
             {
                 if (isWebsocketMethod)
                 {
-                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.WebsocketRoundTripRateBucket, operationOptions?.RateBucket);
+                    await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.WebsocketRoundTripRateBucket, operationOptions.RateBucket);
 
-                    await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
-                    await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
+                    await operationOptions.CallHook(HookType.OnSend, context);
+                    await contractOptions.CallHook(HookType.OnSend, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
 
                     var result = await client.InvokeAsync<T>(request, remoteCancellation, cancellationToken);
 
-                    await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
-                    await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
+                    await operationOptions.CallHook(HookType.OnAfterSend, context);
+                    await contractOptions.CallHook(HookType.OnAfterSend, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
 
                     if (!result.Success)
                         throw new HubconRemoteException($"Ocurrió un error en el servidor. Mensaje recibido: {result.Error}");
 
-                    await CallHook(operationOptions, HookType.OnResponse, ServiceProvider, request, cancellationToken, result.Data);
-                    await CallHook(contractOptions, HookType.OnResponse, ServiceProvider, request, cancellationToken, result.Data);
+                    await operationOptions.CallHook(HookType.OnResponse, context);
+                    await contractOptions.CallHook(HookType.OnResponse, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnResponse, context);
 
                     return result.Data!;
                 }
                 else
                 {
-                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.HttpFireAndForgetRateBucket, operationOptions?.RateBucket);
+                    await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
                     HttpMethod httpMethod = MethodVerb.GetOrAdd(methodInfo, method =>
                     {
@@ -156,21 +166,23 @@ namespace Hubcon.Client.Integration.Client
 
                     bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
                     {
-                        return (operationOptions?.HttpAuthIsEnabled ?? true)
-                            && (contractOptions?.HttpAuthIsEnabled ?? true)
-                            && clientOptions!.HttpAuthIsEnabled;
+                        return (operationOptions.HttpAuthIsEnabled ?? true)
+                            && (contractOptions.HttpAuthIsEnabled)
+                            && ClientOptions.HttpAuthIsEnabled;
                     });
 
                     if (needsAuth && AuthenticationManager.IsSessionActive)
                         httpRequest.Headers.Authorization = new AuthenticationHeaderValue(AuthenticationManager.TokenType!, AuthenticationManager.AccessToken);
 
-                    await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
-                    await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
+                    await operationOptions.CallHook(HookType.OnSend, context);
+                    await contractOptions.CallHook(HookType.OnSend, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
 
                     HttpResponseMessage response = await HttpClient.SendAsync(httpRequest, cancellationToken);
 
-                    await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
-                    await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
+                    await operationOptions.CallHook(HookType.OnAfterSend, context);
+                    await contractOptions.CallHook(HookType.OnAfterSend, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
 
                     var responseBytes = await response.Content.ReadAsByteArrayAsync();
                     var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
@@ -181,12 +193,18 @@ namespace Hubcon.Client.Integration.Client
                     var operationResponse = converter.DeserializeJsonElement<BaseOperationResponse<T>>(result)
                         ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
 
+                    context.IsSuccess = operationResponse.Success;
+                    context.Result = operationResponse.Data;
+                    context.Error = operationResponse.Error;
+
                     if (!operationResponse.Success)
                         throw new HubconRemoteException($"Ocurrió un error en el servidor. Mensaje recibido: {operationResponse.Error}");
 
-                    await CallHook(operationOptions, HookType.OnResponse, ServiceProvider, request, cancellationToken, operationResponse.Data);
-                    await CallHook(contractOptions, HookType.OnResponse, ServiceProvider, request, cancellationToken, operationResponse.Data);
-                    
+
+                    await operationOptions.CallHook(HookType.OnResponse, context);
+                    await contractOptions.CallHook(HookType.OnResponse, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnResponse, context);
+
                     content?.Dispose();
 
                     return operationResponse.Data;
@@ -194,8 +212,12 @@ namespace Hubcon.Client.Integration.Client
             }
             catch (Exception ex)
             {
-                await CallHook(operationOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
-                await CallHook(contractOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
+                context.IsSuccess = false;
+                context.Exception = ex;
+
+                await operationOptions.CallHook(HookType.OnError, context);
+                await contractOptions.CallHook(HookType.OnError, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
 
                 if (ex is OperationCanceledException)
                     throw;
@@ -213,34 +235,41 @@ namespace Hubcon.Client.Integration.Client
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
 
-            var contractOptions = clientOptions.GetContractOptions(methodInfo.ReflectedType!);
-            IOperationOptions? operationOptions = contractOptions!.GetOperationOptions(request.OperationName, methodInfo);
+            var context = new InvocationContext()
+            {
+                Services = ServiceProvider,
+                CancellationToken = cancellationToken,
+                Request = request,
+            };
+
+            IContractOptions contractOptions = ClientOptions.GetContractOptions(methodInfo.ReflectedType!);
+            IOperationOptions operationOptions = contractOptions.GetOperationOptions(request.OperationName, methodInfo);
 
             bool isWebsocketOperation = contractOptions.IsWebsocketOperation(request.OperationName);
-            
-            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed
-                                      ?? contractOptions?.RemoteCancellationIsAllowed
-                                      ?? false;
 
-            await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
+            bool remoteCancellation = operationOptions.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed;
+
+            await operationOptions.CallValidationHook(ServiceProvider, request, cancellationToken);
 
             try
             {
                 if (isWebsocketOperation)
                 {
-                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.WebsocketFireAndForgetRateBucket, operationOptions?.RateBucket);
-                    
-                    await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
-                    await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
+                    await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.WebsocketFireAndForgetRateBucket, operationOptions.RateBucket);
+                   
+                    await operationOptions.CallHook(HookType.OnSend, context);
+                    await contractOptions.CallHook(HookType.OnSend, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
 
                     await client.SendAsync(request, remoteCancellation, cancellationToken);
 
-                    await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
-                    await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
+                    await operationOptions.CallHook(HookType.OnAfterSend, context);
+                    await contractOptions.CallHook(HookType.OnAfterSend, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
                 }
                 else
                 {
-                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.HttpFireAndForgetRateBucket, operationOptions?.RateBucket);
+                    await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
                     HttpMethod httpMethod = MethodVerb.GetOrAdd(methodInfo, method =>
                     {
@@ -293,29 +322,35 @@ namespace Hubcon.Client.Integration.Client
 
                     bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
                     {
-                        return (operationOptions?.HttpAuthIsEnabled ?? true)
-                            && (contractOptions?.HttpAuthIsEnabled ?? true)
-                            && clientOptions!.HttpAuthIsEnabled;
+                        return (operationOptions.HttpAuthIsEnabled ?? true)
+                            && contractOptions.HttpAuthIsEnabled
+                            && ClientOptions.HttpAuthIsEnabled;
                     });
 
                     if (needsAuth && AuthenticationManager.IsSessionActive)
                         httpRequest.Headers.Authorization = new AuthenticationHeaderValue(AuthenticationManager.TokenType!, AuthenticationManager.AccessToken);
 
-                    await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
-                    await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
-                    
+                    await operationOptions.CallHook(HookType.OnSend, context);
+                    await contractOptions.CallHook(HookType.OnSend, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
+
                     await HttpClient.SendAsync(httpRequest, cancellationToken);
-                    
-                    await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
-                    await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
+
+                    await operationOptions.CallHook(HookType.OnAfterSend, context);
+                    await contractOptions.CallHook(HookType.OnAfterSend, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
 
                     content?.Dispose();
                 }
             }
             catch (Exception ex)
             {
-                await CallHook(operationOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
-                await CallHook(contractOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
+                context.Exception = ex;
+                context.IsSuccess = false;
+
+                await operationOptions.CallHook(HookType.OnError, context);
+                await contractOptions.CallHook(HookType.OnError, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
 
                 if (ex is OperationCanceledException)
                     throw;
@@ -330,33 +365,44 @@ namespace Hubcon.Client.Integration.Client
 
         public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, MethodInfo method, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            var contractOptions = clientOptions.GetContractOptions(method.ReflectedType!);
-            IOperationOptions? operationOptions = contractOptions!.GetOperationOptions(request.OperationName, method);
+            var context = new InvocationContext()
+            {
+                Services = ServiceProvider,
+                CancellationToken = cancellationToken,
+                Request = request
+            };
 
-            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed
-                                      ?? contractOptions?.RemoteCancellationIsAllowed
-                                      ?? false;
+            IContractOptions contractOptions = ClientOptions.GetContractOptions(method.ReflectedType!);
+            IOperationOptions operationOptions = contractOptions!.GetOperationOptions(request.OperationName, method);
+
+            bool remoteCancellation = operationOptions.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed;
 
             IObservable<JsonElement> observable;
 
-            await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
+            await operationOptions.CallValidationHook(ServiceProvider, request, cancellationToken);
 
             try
             {
-                await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.StreamingRateBucket, operationOptions?.RateBucket);
+                await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.StreamingRateBucket, operationOptions.RateBucket);
 
-                await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
-                await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
+                await operationOptions.CallHook(HookType.OnSend, context);
+                await contractOptions.CallHook(HookType.OnSend, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
 
                 observable = await client.Stream<JsonElement>(request, remoteCancellation, cancellationToken);
 
-                await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
-                await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
+                await operationOptions.CallHook(HookType.OnAfterSend, context);
+                await contractOptions.CallHook(HookType.OnAfterSend, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
             }
             catch (Exception ex)
             {
-                await CallHook(operationOptions, HookType.OnError, ServiceProvider, request, cancellationToken);
-                await CallHook(contractOptions, HookType.OnError, ServiceProvider, request, cancellationToken);
+                context.Exception = ex;
+                context.IsSuccess = false;
+
+                await operationOptions.CallHook(HookType.OnError, context);
+                await contractOptions.CallHook(HookType.OnError, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
 
                 if (ex is HubconRemoteException)
                     throw;
@@ -371,27 +417,34 @@ namespace Hubcon.Client.Integration.Client
             using (observable.Subscribe(observer))
             {
                 var enumerator = observer.GetAsyncEnumerable(cancellationToken).GetAsyncEnumerator(cancellationToken);
-
-                if (operationOptions != null)
-                    await operationOptions.CallHook(HookType.OnSubscribed, ServiceProvider, request, cancellationToken);
+                
+                await operationOptions.CallHook(HookType.OnSubscribed, context);
+                await contractOptions.CallHook(HookType.OnSubscribed, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnSubscribed, context);              
 
                 while (true)
                 {
                     JsonElement result = default;
-
                     try
                     {
                         if (!await enumerator.MoveNextAsync())
                             break;
 
-                        await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.StreamingRateBucket, operationOptions?.RateBucket);
+                        await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.StreamingRateBucket, operationOptions.RateBucket);
 
                         result = enumerator.Current;
+                        context.IsSuccess = true;
+                        context.Result = result;
                     }
                     catch (Exception ex)
                     {
-                        await CallHook(operationOptions, HookType.OnError, ServiceProvider, request, cancellationToken);
-                        await CallHook(contractOptions, HookType.OnError, ServiceProvider, request, cancellationToken);
+                        context.IsSuccess = false;
+                        context.Result = result;
+                        context.Exception = ex;
+
+                        await operationOptions.CallHook(HookType.OnError, context);
+                        await contractOptions.CallHook(HookType.OnError, context);
+                        await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
 
                         if (ex is HubconRemoteException)
                             throw;
@@ -405,42 +458,60 @@ namespace Hubcon.Client.Integration.Client
                 }
             }
 
-            await CallHook(operationOptions, HookType.OnUnsubscribed, ServiceProvider, request, cancellationToken);
-            await CallHook(contractOptions, HookType.OnUnsubscribed, ServiceProvider, request, cancellationToken);
+            await operationOptions.CallHook(HookType.OnUnsubscribed, context);
+            await contractOptions.CallHook(HookType.OnUnsubscribed, context);
+            await ClientOptions.CallInterceptor(InterceptorType.OnUnsubscribed, context);
+
         }
 
         public async Task<T> Ingest<T>(IOperationRequest request, MethodInfo method, CancellationToken cancellationToken)
         {
-            var contractOptions = clientOptions.GetContractOptions(method.ReflectedType!);
-            IOperationOptions? operationOptions = contractOptions!.GetOperationOptions(request.OperationName, method);
+            var context = new InvocationContext()
+            {
+                Services = ServiceProvider,
+                CancellationToken = cancellationToken,
+                Request = request,
+            };
 
-            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed
-                                      ?? contractOptions?.RemoteCancellationIsAllowed
-                                      ?? false;
+            IContractOptions contractOptions = ClientOptions.GetContractOptions(method.ReflectedType!);
+            IOperationOptions operationOptions = contractOptions!.GetOperationOptions(request.OperationName, method);
 
-            await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
+            bool remoteCancellation = operationOptions.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed;
+
+            await operationOptions.CallValidationHook(ServiceProvider, request, cancellationToken);
 
             try 
             {
-                await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.IngestRateBucket, operationOptions?.RateBucket);
+                await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.IngestRateBucket, operationOptions.RateBucket);
 
-                await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
-                await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
+                await operationOptions.CallHook(HookType.OnSend, context);
+                await contractOptions.CallHook(HookType.OnSend, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
 
-                var response = await client.IngestMultiple<T>(request, remoteCancellation, clientOptions, operationOptions, cancellationToken);
+                var response = await client.IngestMultiple<T>(request, remoteCancellation, ClientOptions, operationOptions, cancellationToken);
 
-                await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
-                await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
+                await operationOptions.CallHook(HookType.OnAfterSend, context);
+                await contractOptions.CallHook(HookType.OnAfterSend, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
 
-                await CallHook(operationOptions, HookType.OnResponse, ServiceProvider, request, cancellationToken);
-                await CallHook(contractOptions, HookType.OnResponse, ServiceProvider, request, cancellationToken);
+                context.IsSuccess = response.Success;
+                context.Result = response.Data;
+                context.Error = response.Error;
+
+                await operationOptions.CallHook(HookType.OnResponse, context);
+                await contractOptions.CallHook(HookType.OnResponse, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnResponse, context);
 
                 return response.Data;
             }
             catch (Exception ex)
             {
-                await CallHook(operationOptions, HookType.OnError, ServiceProvider, request, cancellationToken);
-                await CallHook(contractOptions, HookType.OnError, ServiceProvider, request, cancellationToken);
+                context.IsSuccess = false;
+                context.Exception = ex;
+
+                await operationOptions.CallHook(HookType.OnError, context);
+                await contractOptions.CallHook(HookType.OnError, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
 
                 if (ex is HubconRemoteException)
                     throw;
@@ -453,23 +524,32 @@ namespace Hubcon.Client.Integration.Client
 
         public async Task<IAsyncEnumerable<JsonElement>> GetSubscription(IOperationRequest request, MemberInfo method, CancellationToken cancellationToken = default)
         {
-            var contractOptions = clientOptions.GetContractOptions(method.ReflectedType!);
-            IOperationOptions? operationOptions = contractOptions!.GetOperationOptions(request.OperationName, method);
+            var context = new InvocationContext()
+            {
+                Services = ServiceProvider,
+                CancellationToken = cancellationToken,
+                Request = request
+            };
 
-            bool remoteCancellation = operationOptions?.RemoteCancellationIsAllowed
-                                      ?? contractOptions?.RemoteCancellationIsAllowed
-                                      ?? false;
+            IContractOptions contractOptions = ClientOptions.GetContractOptions(method.ReflectedType!);
+            IOperationOptions operationOptions = contractOptions!.GetOperationOptions(request.OperationName, method);
 
-            await CallValidationHook(operationOptions, ServiceProvider, request, cancellationToken);
+            bool remoteCancellation = operationOptions.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed;
+
+            await operationOptions.CallValidationHook(ServiceProvider, request, cancellationToken);
 
             try
             {
-                return HandleSubscription(request, remoteCancellation, method, contractOptions, operationOptions, cancellationToken);
+                return HandleSubscription(request, remoteCancellation, method, contractOptions, operationOptions, context, cancellationToken);
             }
             catch (Exception ex)
             {
-                await CallHook(operationOptions, HookType.OnError, ServiceProvider, request, cancellationToken);
-                await CallHook(contractOptions, HookType.OnError, ServiceProvider, request, cancellationToken);
+                context.IsSuccess = false;
+                context.Exception = ex;
+
+                await operationOptions.CallHook(HookType.OnError, context);
+                await contractOptions.CallHook(HookType.OnError, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
 
                 if (ex is HubconRemoteException)
                     throw;
@@ -478,35 +558,41 @@ namespace Hubcon.Client.Integration.Client
                 else
                     throw new HubconGenericException(ex.Message, ex);
             }
-
         }
 
         private async IAsyncEnumerable<JsonElement> HandleSubscription(
             IOperationRequest request,
             bool remoteCancellation, 
             MemberInfo method, 
-            IContractOptions? contractOptions,
-            IOperationOptions? operationOptions, 
+            IContractOptions contractOptions,
+            IOperationOptions operationOptions, 
+            InvocationContext context,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.SubscriptionRateBucket, operationOptions?.RateBucket);
+            await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.SubscriptionRateBucket, operationOptions.RateBucket);
 
             IObservable<JsonElement> observable;
 
             try
             {
-                await CallHook(operationOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
-                await CallHook(contractOptions, HookType.OnSend, ServiceProvider, request, cancellationToken);
+                await operationOptions.CallHook(HookType.OnSend, context);
+                await contractOptions.CallHook(HookType.OnSend, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
 
                 observable = await client.Subscribe<JsonElement>(request, remoteCancellation);
 
-                await CallHook(operationOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
-                await CallHook(contractOptions, HookType.OnAfterSend, ServiceProvider, request, cancellationToken);
+                await operationOptions.CallHook(HookType.OnAfterSend, context);
+                await contractOptions.CallHook(HookType.OnAfterSend, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
             }
             catch (Exception ex)
             {
-                await CallHook(operationOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
-                await CallHook(contractOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
+                context.IsSuccess = false;
+                context.Exception = ex;
+
+                await operationOptions.CallHook(HookType.OnError, context);
+                await contractOptions.CallHook(HookType.OnError, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
 
                 throw new HubconGenericException($"Error al obtener el stream del servidor. Mensaje: {ex.Message}", ex);
             }
@@ -519,8 +605,9 @@ namespace Hubcon.Client.Integration.Client
             {
                 using (observable.Subscribe(observer))
                 {
-                    await CallHook(operationOptions, HookType.OnSubscribed, ServiceProvider, request, cancellationToken);
-                    await CallHook(contractOptions, HookType.OnSubscribed, ServiceProvider, request, cancellationToken);
+                    await operationOptions.CallHook(HookType.OnSubscribed, context);
+                    await contractOptions.CallHook(HookType.OnSubscribed, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnSubscribed, context);
 
                     var enumerator = observer.GetAsyncEnumerable(cancellationToken).GetAsyncEnumerator();
 
@@ -533,17 +620,22 @@ namespace Hubcon.Client.Integration.Client
                             if (!await enumerator.MoveNextAsync())
                                 break;
 
-                            await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.SubscriptionRateBucket, operationOptions?.RateBucket);
+                            await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.SubscriptionRateBucket, operationOptions.RateBucket);
 
                             result = enumerator.Current;
 
-                            await CallHook(operationOptions, HookType.OnEventReceived, ServiceProvider, request, cancellationToken, result, null);
-                            await CallHook(contractOptions, HookType.OnEventReceived, ServiceProvider, request, cancellationToken, result, null);
+                            await operationOptions.CallHook(HookType.OnEventReceived, context);
+                            await contractOptions.CallHook(HookType.OnEventReceived, context);
+                            await ClientOptions.CallInterceptor(InterceptorType.OnEventReceived, context);
                         }
                         catch (Exception ex)
                         {
-                            await CallHook(operationOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
-                            await CallHook(contractOptions, HookType.OnError, ServiceProvider, request, cancellationToken, null, ex);
+                            context.IsSuccess = false;
+                            context.Exception = ex;
+
+                            await operationOptions.CallHook(HookType.OnError, context);
+                            await contractOptions.CallHook(HookType.OnError, context);
+                            await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
 
                             if (ex is HubconRemoteException)
                                 throw;
@@ -561,28 +653,14 @@ namespace Hubcon.Client.Integration.Client
             {
                 observer.OnCompleted();
 
-                await CallHook(operationOptions, HookType.OnUnsubscribed, ServiceProvider, request, cancellationToken);
-                await CallHook(contractOptions, HookType.OnUnsubscribed, ServiceProvider, request, cancellationToken);
+                await operationOptions.CallHook(HookType.OnUnsubscribed, context);
+                await contractOptions.CallHook(HookType.OnUnsubscribed, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnUnsubscribed, context);
             }
         }
 
-        private static Task CallHook(IContractOptions? options, HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null)
-        {
-            return options == null ? Task.CompletedTask : options.CallHook(type, services, request, cancellationToken, result, exception);
-        }
-
-        private static Task CallHook(IOperationOptions? options, HookType type, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken, object? result = null, Exception? exception = null)
-        {
-            return options != null ? options.CallHook(type, services, request, cancellationToken, result, exception) : Task.CompletedTask;
-        }
-
-        private static Task CallValidationHook(IOperationOptions? options, IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken)
-        {
-            return options == null ? Task.CompletedTask : options.CallValidationHook(services, request, cancellationToken);
-        }
-
         // Devuelve true si el parámetro debería ir al body, false si va a query
-        public static bool ShouldBindFromBody(Type type)
+        private static bool ShouldBindFromBody(Type type)
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
 
@@ -620,13 +698,11 @@ namespace Hubcon.Client.Integration.Client
             bool useSecureConnection = true)
         {
             if (IsBuilt) return;
-
+            
             var baseUri = options.BaseUri;
             var httpEndpoint = options.HttpPrefix;
             var websocketEndpoint = options.WebsocketPrefix;
             var authenticationManagerType = options.AuthenticationManagerType;
-
-            //ContractOptionsDict ??= contractOptions;
 
             var baseRestHttpUrl = $"{baseUri!.AbsoluteUri}/{httpEndpoint ?? ""}".TrimEnd('/');
             var baseRestWebsocketUrl = $"{baseUri!.AbsoluteUri}/{websocketEndpoint ?? "ws"}".TrimEnd('/');
@@ -648,9 +724,11 @@ namespace Hubcon.Client.Integration.Client
 
             client.LoggingEnabled = options.LoggingEnabled;
 
+            client.ClientOptions = options;
+
             this.ServiceProvider = serviceProvider;
 
-            clientOptions = options;
+            ClientOptions = options;
 
             IsBuilt = true;
         }
