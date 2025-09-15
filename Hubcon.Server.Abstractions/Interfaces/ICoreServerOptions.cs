@@ -203,6 +203,13 @@ namespace Hubcon.Server.Core.Configuration
         /// <returns></returns>
         ICoreServerOptions ConfigureWebsocketPingRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
+        /// <summary>
+        /// Configures a client-limited ping rate limiter for the server's websocket.
+        /// </summary>
+        /// <param name="rateLimiterOptionsFactory"></param>
+        /// <returns></returns>
+        ICoreServerOptions ConfigureWebsocketTokenUpdateRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
+
         ICoreServerOptions UseGlobalRouteHandlerBuilder(Action<RouteHandlerBuilder> configure);
         ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure);
         ICoreServerOptions LimitHttpRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
@@ -367,7 +374,12 @@ namespace Hubcon.Server.Core.Configuration
         Func<TokenBucketRateLimiterOptions> WebsocketStreamingRateLimiter { get; }
         
         /// <summary>
-        /// Determines if remote task cancellation is allowed.
+        /// Rate limiter options for websocket token updates.
+        /// </summary>
+        Func<TokenBucketRateLimiterOptions> WebsocketTokenUpdateRateLimiter { get; }
+
+        /// <summary>
+        /// Defines if remote operation cancellation through cancellation token is allowed.
         /// </summary>
         bool RemoteCancellationIsAllowed { get; }
     }

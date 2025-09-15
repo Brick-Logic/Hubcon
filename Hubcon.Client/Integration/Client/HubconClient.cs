@@ -8,16 +8,10 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System;
 using System.Collections.Concurrent;
-using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Reactive.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -76,6 +70,7 @@ namespace Hubcon.Client.Integration.Client
                 Services = ServiceProvider,
                 CancellationToken = cancellationToken,
                 Request = request,
+                TryRefreshToken = client.TryRefreshToken
             };
 
             IContractOptions contractOptions = ClientOptions.GetContractOptions(methodInfo.DeclaringType!);
@@ -240,6 +235,7 @@ namespace Hubcon.Client.Integration.Client
                 Services = ServiceProvider,
                 CancellationToken = cancellationToken,
                 Request = request,
+                TryRefreshToken = client.TryRefreshToken
             };
 
             IContractOptions contractOptions = ClientOptions.GetContractOptions(methodInfo.ReflectedType!);
@@ -369,7 +365,8 @@ namespace Hubcon.Client.Integration.Client
             {
                 Services = ServiceProvider,
                 CancellationToken = cancellationToken,
-                Request = request
+                Request = request,
+                TryRefreshToken = client.TryRefreshToken
             };
 
             IContractOptions contractOptions = ClientOptions.GetContractOptions(method.ReflectedType!);
@@ -471,6 +468,7 @@ namespace Hubcon.Client.Integration.Client
                 Services = ServiceProvider,
                 CancellationToken = cancellationToken,
                 Request = request,
+                TryRefreshToken = client.TryRefreshToken
             };
 
             IContractOptions contractOptions = ClientOptions.GetContractOptions(method.ReflectedType!);
@@ -528,7 +526,8 @@ namespace Hubcon.Client.Integration.Client
             {
                 Services = ServiceProvider,
                 CancellationToken = cancellationToken,
-                Request = request
+                Request = request,
+                TryRefreshToken = client.TryRefreshToken
             };
 
             IContractOptions contractOptions = ClientOptions.GetContractOptions(method.ReflectedType!);

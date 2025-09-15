@@ -1,13 +1,8 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Builder;
 using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Models;
 using HubconTestClient.Auth;
 using HubconTestDomain;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
-using System.ComponentModel.DataAnnotations;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Microsoft.AspNetCore.Connections.Features;
 
 namespace HubconTestClient.Modules
 {
@@ -86,12 +81,19 @@ namespace HubconTestClient.Modules
                 x.DefaultRequestHeaders.Add("User-Agent", "HubconTestClient");
             });
 
-            // Manager de autenticación (opcional)
             configuration.UseAuthenticationManager<AuthenticationManager>();
 
-            configuration.AddInterceptor(InterceptorType.OnPing, async ctx => { });
+            configuration.AddInterceptor(InterceptorType.OnPing, async ctx => 
+            {
+                var item = ctx.Services.GetRequiredService<AuthenticationManager>();
 
-            // Usar conexion insegura
+                if (item.IsSessionActive)
+                    return;
+
+                var refreshedToken = await item.TryRefreshSessionAsync();
+                await ctx.TryRefreshToken.Invoke(item.RefreshToken!);
+            });
+
             configuration.UseInsecureConnection();
         }
     }

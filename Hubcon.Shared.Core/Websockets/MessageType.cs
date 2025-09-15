@@ -28,6 +28,7 @@
         stream_data_with_ack,
         ingest_result,
         cancel,
-        none
+        none,
+        token_update
     }
 }

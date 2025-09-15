@@ -19,6 +19,7 @@ using Hubcon.Shared.Core.Websockets.Messages.Operation;
 using Hubcon.Shared.Core.Websockets.Messages.Ping;
 using Hubcon.Shared.Core.Websockets.Messages.Streams;
 using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
+using Hubcon.Shared.Core.Websockets.Messages.Token;
 using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
@@ -29,8 +30,10 @@ using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
+using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Websockets
 {
@@ -59,6 +62,8 @@ namespace Hubcon.Client.Core.Websockets
         private readonly ConcurrentDictionary<Guid, TaskCompletionSource<IngestDataAckMessage>> _ingestDataAck = new();
 
         private readonly ConcurrentDictionary<Guid, TaskCompletionSource<OperationResponseMessage>> _operationTcs = new();
+
+        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<TokenUpdateResponseMessage>> _tokenUpdateTcs = new();
 
         private readonly SemaphoreSlim _reconnectLock = new(1, 1);
 
@@ -1064,6 +1069,45 @@ namespace Hubcon.Client.Core.Websockets
             {
                 /*Ignore*/
             }
+        }
+
+        public async Task<IOperationResponse<string>> TryRefreshToken(string token)
+        {
+            var request = new TokenUpdateMessage(Guid.NewGuid(), token);
+            var tcs = new TaskCompletionSource<TokenUpdateResponseMessage>();
+            _tokenUpdateTcs.TryAdd(request.Id, tcs);
+            TokenUpdateResponseMessage? response = null;
+
+            if (_webSocket?.State != WebSocketState.Open)
+                await EnsureConnectedAsync();
+
+            try
+            {
+                await SendMessageAsync(request, CancellationToken.None);
+
+                response = await TimeoutHelper.WaitWithTimeoutAsync(tcs.Task.WaitAsync, options.WebsocketTimeout);
+            }
+            catch (Exception ex)
+            {
+                if (LoggingEnabled)
+                    logger?.LogError(ex.Message);
+
+                _errorStream.OnNext(ex);
+            }
+            finally
+            {
+                _operationTcs.TryRemove(request.Id, out _);
+            }
+
+            if (tcs.Task.Exception?.InnerException is OperationCanceledException)
+                throw tcs.Task.Exception.InnerException;
+
+            if (response == null)
+                throw new HubconGenericException("There was an unknown error or the request timed out.");
+
+            var converted = new BaseOperationResponse<string>(response.Result, "", response.Message);
+
+            return converted;
         }
     }
 }

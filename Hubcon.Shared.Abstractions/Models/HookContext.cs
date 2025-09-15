@@ -17,6 +17,7 @@ namespace Hubcon.Shared.Abstractions.Models
         public bool IsSuccess { get; }
         public string Error { get; }
         public Exception? Exception { get; }
+        public Func<string, Task<IOperationResponse<string>>> TryRefreshToken { get; }
     }
 
     public sealed record class InvocationContext : IInvocationContext
@@ -28,5 +29,6 @@ namespace Hubcon.Shared.Abstractions.Models
         public bool IsSuccess { get; set; }
         public string Error { get; set; } = string.Empty;
         public Exception? Exception { get; set; }
+        public Func<string, Task<IOperationResponse<string>>> TryRefreshToken { get; set; }
     }
 }

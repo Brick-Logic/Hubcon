@@ -122,6 +122,16 @@ namespace Hubcon.Server.Core.Configuration
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst
         };
 
+        private Func<TokenBucketRateLimiterOptions> websocketTokenUpdateRateLimiter = () => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 10,
+            TokensPerPeriod = 10,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            AutoReplenishment = true,
+            QueueLimit = 1,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        };
+
         // Defaults
         public int MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
         public int MaxHttpMessageSize => maxHttpSize ?? (128 * 1024);   // 128 KB
@@ -166,6 +176,8 @@ namespace Hubcon.Server.Core.Configuration
         public Func<TokenBucketRateLimiterOptions> WebsocketStreamingRateLimiter => websocketStreamingRateLimiter;
 
         public bool RemoteCancellationIsAllowed => remoteCancellationIsAllowed ?? false;
+
+        public Func<TokenBucketRateLimiterOptions> WebsocketTokenUpdateRateLimiter => websocketTokenUpdateRateLimiter;
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -339,6 +351,12 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions ConfigureWebsocketPingRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory)
         {
             websocketPingRateLimiter = rateLimiterOptionsFactory;
+            return this;
+        }
+
+        public ICoreServerOptions ConfigureWebsocketTokenUpdateRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory)
+        {
+            websocketTokenUpdateRateLimiter = rateLimiterOptionsFactory;
             return this;
         }
     }

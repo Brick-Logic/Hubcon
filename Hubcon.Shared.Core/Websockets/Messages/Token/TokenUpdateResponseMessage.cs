@@ -1,0 +1,30 @@
+﻿using Hubcon.Shared.Core.Websockets.Messages.Generic;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+
+namespace Hubcon.Shared.Core.Websockets.Messages.Token
+{
+    public record class TokenUpdateResponseMessage : BaseMessage
+    {
+        private bool? _result;
+        private string? _message;
+
+        public TokenUpdateResponseMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        {
+        }
+
+        [JsonConstructor]
+        public TokenUpdateResponseMessage(Guid id, bool result, string message) : base(MessageType.token_update, id)
+        {
+            _result = result;
+            _message = message;
+        }
+
+        public bool Result => _result ??= Extract<bool>("result")!;
+        public string Message => _message ??= Extract<string>("message")!;
+    }
+}

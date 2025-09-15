@@ -16,6 +16,7 @@ using Hubcon.Shared.Core.Websockets.Messages.Operation;
 using Hubcon.Shared.Core.Websockets.Messages.Ping;
 using Hubcon.Shared.Core.Websockets.Messages.Streams;
 using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
+using Hubcon.Shared.Core.Websockets.Messages.Token;
 using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -429,6 +430,25 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             }
 
                             _ = CancelTask(message.Id, _tasks);
+
+                            break;
+                        case MessageType.token_update:
+                            if (!options.ThrottlingIsDisabled)
+                                await rateLimiterManager.TryAcquireAsync(MessageType.token_update, message.Id);
+
+                            var msg = new TokenUpdateMessage(tmo.Memory, message.Id, message.Type);
+                            var user = options.WebsocketTokenHandler?.Invoke(msg.Token!, context.RequestServices)!;
+
+                            if (user is null)
+                            {
+                                await sender.SendAsync(new TokenUpdateResponseMessage(msg.Id, false, "Token refresh failed."));
+                                await webSocket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Unauthorized", default);
+                                logger?.LogInformation("Websocket re-authentication failed.");
+                                return;
+                            }
+
+                            context.Request.Headers.Authorization = msg.Token;
+                            context.User = user;
 
                             break;
                     }

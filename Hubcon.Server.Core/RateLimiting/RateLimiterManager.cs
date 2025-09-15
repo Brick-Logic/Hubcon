@@ -21,6 +21,7 @@ namespace Hubcon.Server.Core.RateLimiting
         private RateLimiter? _subscriptionLimiter = null;
         private RateLimiter? _operationCallLimiter = null;
         private RateLimiter? _operationInvokeLimiter = null;
+        private RateLimiter? _tokenUpdateLimiter = null;
 
         public async ValueTask<bool> TryAcquireAsync(MessageType type, IOperationEndpoint? operation = null)
         {
@@ -114,52 +115,53 @@ namespace Hubcon.Server.Core.RateLimiting
             // No limiters (inicialización, ack, errores, pong, etc.)
             return type switch
             {
-                MessageType.connection_ack 
-                or MessageType.connection_init 
-                or MessageType.pong 
-                or MessageType.error 
-                or MessageType.ack 
-                or MessageType.ingest_init_ack 
-                or MessageType.ingest_data_ack 
-                or MessageType.operation_response 
+                MessageType.connection_ack
+                or MessageType.connection_init
+                or MessageType.pong
+                or MessageType.error
+                or MessageType.ack
+                or MessageType.ingest_init_ack
+                or MessageType.ingest_data_ack
+                or MessageType.operation_response
                     => null,
-                
+
                 // Ping limiter (para evitar abuso)
-                MessageType.ping 
-                    => new TokenBucketRateLimiter(options.WebsocketPingRateLimiter.Invoke()),
+                MessageType.ping => new TokenBucketRateLimiter(options.WebsocketPingRateLimiter.Invoke()),
 
                 // Operation messages (round-trip)
-                MessageType.operation_invoke 
-                    => _operationInvokeLimiter ??= new TokenBucketRateLimiter(options.HttpRoundTripMethodRateLimiter.Invoke()),
+                MessageType.operation_invoke
+                    => _operationInvokeLimiter ??= new TokenBucketRateLimiter(options.WebsocketRoundTripMethodRateLimiter.Invoke()),
 
                 // Operation call (fire and forget)
-                MessageType.operation_call 
-                    => _operationCallLimiter ??= new TokenBucketRateLimiter(options.HttpRoundTripMethodRateLimiter.Invoke()),
+                MessageType.operation_call
+                    => _operationCallLimiter ??= new TokenBucketRateLimiter(options.WebsocketRoundTripMethodRateLimiter.Invoke()),
 
                 // Subscription group (comparten el mismo limiter)
-                MessageType.subscription_init 
-                or MessageType.subscription_data 
-                or MessageType.subscription_data_with_ack 
-                or MessageType.subscription_complete 
-                    => _subscriptionLimiter ??= new TokenBucketRateLimiter(options.HttpRoundTripMethodRateLimiter.Invoke()),
-                
+                MessageType.subscription_init
+                or MessageType.subscription_data
+                or MessageType.subscription_data_with_ack
+                or MessageType.subscription_complete
+                    => _subscriptionLimiter ??= new TokenBucketRateLimiter(options.WebsocketRoundTripMethodRateLimiter.Invoke()),
+
                 // Stream group (todos comparten)
-                MessageType.stream_init 
-                or MessageType.stream_complete 
-                or MessageType.stream_data 
-                or MessageType.stream_data_ack 
-                or MessageType.stream_data_with_ack 
-                    => _streamLimiter ??= new TokenBucketRateLimiter(options.HttpRoundTripMethodRateLimiter.Invoke()),
-                
+                MessageType.stream_init
+                or MessageType.stream_complete
+                or MessageType.stream_data
+                or MessageType.stream_data_ack
+                or MessageType.stream_data_with_ack
+                    => _streamLimiter ??= new TokenBucketRateLimiter(options.WebsocketRoundTripMethodRateLimiter.Invoke()),
+
                 // Ingest group (comparten)
-                MessageType.ingest_init 
-                or MessageType.ingest_data 
-                or MessageType.ingest_data_with_ack 
-                or MessageType.ingest_complete 
-                or MessageType.ingest_result 
-                    => _ingestLimiter ??= new TokenBucketRateLimiter(options.HttpRoundTripMethodRateLimiter.Invoke()),
-                
-                _ => null,
+                MessageType.ingest_init
+                or MessageType.ingest_data
+                or MessageType.ingest_data_with_ack
+                or MessageType.ingest_complete
+                or MessageType.ingest_result
+                    => _ingestLimiter ??= new TokenBucketRateLimiter(options.WebsocketRoundTripMethodRateLimiter.Invoke()),
+
+                MessageType.token_update => _tokenUpdateLimiter ??= new TokenBucketRateLimiter(options.WebsocketTokenUpdateRateLimiter.Invoke()),
+
+                _ => _globalLimiter,
             };
         }
 
