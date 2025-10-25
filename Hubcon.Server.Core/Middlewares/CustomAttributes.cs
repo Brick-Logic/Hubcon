@@ -16,6 +16,12 @@ namespace Hubcon.Server.Core.Middlewares
             : throw new ArgumentException("The type used in the UseMiddleware attribute is not a Hubcon Middleware type.");
     }
 
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Class)]
+    public sealed class UseMiddlewareAttribute<T> : Attribute where T : class, Abstractions.Interfaces.IMiddleware
+    {
+        public Type MiddlewareType { get; } = typeof(T);
+    }
+
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
     public sealed class UseHttpEndpointFilterAttribute(Type endpointFilterType) : Attribute
     {

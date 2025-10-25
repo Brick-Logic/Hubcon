@@ -150,7 +150,11 @@ internal class Program
         await Task.Delay(100);
 
         logger.LogWarning("Probando invocación con retorno...");
+
+
         var temp = await client.GetTemperatureFromServer();
+
+
         logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
 
         await Task.Delay(100);

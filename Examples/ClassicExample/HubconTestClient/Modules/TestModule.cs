@@ -3,6 +3,9 @@ using Hubcon.Client.Builder;
 using Hubcon.Shared.Abstractions.Enums;
 using HubconTestClient.Auth;
 using HubconTestDomain;
+using Newtonsoft.Json.Linq;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace HubconTestClient.Modules
 {
@@ -87,7 +90,7 @@ namespace HubconTestClient.Modules
             {
                 var item = ctx.Services.GetRequiredService<AuthenticationManager>();
 
-                if (item.IsSessionActive)
+                if (!item.AccessTokenExpiresAt.HasValue || item.AccessTokenExpiresAt.Value.AddMinutes(-1) < DateTime.Now)
                     return;
 
                 var refreshedToken = await item.TryRefreshSessionAsync();

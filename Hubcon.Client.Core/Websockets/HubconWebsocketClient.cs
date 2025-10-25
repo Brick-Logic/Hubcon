@@ -857,6 +857,7 @@ namespace Hubcon.Client.Core.Websockets
             var context = new InvocationContext();
             context.Services = serviceProvider;
             context.CancellationToken = _cts.Token;
+            context.TryRefreshToken = TryRefreshToken;
 
             while (!cancellationToken.IsCancellationRequested)
             {
