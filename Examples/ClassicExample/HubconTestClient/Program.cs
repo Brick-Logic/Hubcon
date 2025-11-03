@@ -17,13 +17,13 @@ internal class Program
 
     static async Task Main()
     {
-        Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "true");
+        Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "false");
 
         var process = Process.GetCurrentProcess();
 
         long coreMask = 0;
 
-        int? customCores = 0;
+        int? customCores = null;
         int cores = customCores ?? Environment.ProcessorCount - 1;
 
         for (int i = 0; i <= cores; i++)
@@ -226,7 +226,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 256
+            MaxDegreeOfParallelism = 5000
         };
 
         int rps = 9999999;

@@ -100,6 +100,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
                     {
                         Type t when t == typeof(Guid) => Cast<T, Guid>(reader.GetGuid()),
                         Type t when t == typeof(Guid[]) => Cast<T, Guid[]>(ReadGuidArray(ref reader)),
+                        Type t when t == typeof(bool) => Cast<T, bool>(reader.GetBoolean()),
                         Type t when t == typeof(string) => Cast<T, string?>(reader.GetString()),
                         Type t when t == typeof(MessageType) => Enum.TryParse(reader.GetString(), ignoreCase: true, out MessageType result) 
                                                                     ? Cast<T, MessageType>(result) 

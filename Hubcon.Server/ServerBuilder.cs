@@ -13,6 +13,7 @@ using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Server.Core.RateLimiting;
 using Hubcon.Server.Core.Routing.MethodHandling;
 using Hubcon.Server.Core.Routing.Registries;
+using Hubcon.Server.Core.Supervisor;
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
@@ -61,6 +62,7 @@ namespace Hubcon.Server
                 container.RegisterInstance(OperationRegistry).As<IOperationRegistry>().AsSingleton().IfNotRegistered(typeof(IOperationRegistry));
                 container.RegisterInstance(SubscriptionRegistry).As<ILiveSubscriptionRegistry>().AsSingleton().IfNotRegistered(typeof(ILiveSubscriptionRegistry));
                 container.RegisterType<PermissionRegistry>().As<IPermissionRegistry>().AsSingleton().IfNotRegistered(typeof(IPermissionRegistry));
+                container.RegisterType<ConnectionSupervisor>().As<IConnectionSupervisor>().AsSingleton().IfNotRegistered(typeof(IConnectionSupervisor));
                 container.RegisterType<DynamicConverter>().As<IDynamicConverter>().AsSingleton().IfNotRegistered(typeof(IDynamicConverter));
                 container.RegisterType<SettingsManager>().As<ISettingsManager>().AsScoped().IfNotRegistered(typeof(ISettingsManager));
                 container.RegisterType<OperationConfigRegistry>().As<IOperationConfigRegistry>().AsScoped().IfNotRegistered(typeof(IOperationConfigRegistry));

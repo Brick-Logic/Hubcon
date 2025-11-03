@@ -25,12 +25,13 @@ namespace Hubcon.Server.Core.Configuration
         private Action<IEndpointConventionBuilder>? endpointConventions;
         private Action<RouteHandlerBuilder>? routeHandlerBuilderConfig;
         private bool? throttlingIsDisabled;
-        private Func<string, IServiceProvider, ClaimsPrincipal?>? websocketTokenHandler;
+        private Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? websocketTokenHandler;
         private bool? websocketRequiresAuthorization;
         private bool? websocketLoggingEnabled;
         private bool? httpLoggingEnabled;
         private TimeSpan? ingestTimeout;
         private bool? remoteCancellationIsAllowed;
+        private bool? checkTokenExpirationOnMsgReceived;
 
         private Func<TokenBucketRateLimiterOptions> websocketReaderRateLimiter = () => new TokenBucketRateLimiterOptions
         {
@@ -131,7 +132,7 @@ namespace Hubcon.Server.Core.Configuration
             QueueLimit = 1,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst
         };
-
+      
         // Defaults
         public int MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
         public int MaxHttpMessageSize => maxHttpSize ?? (128 * 1024);   // 128 KB
@@ -155,7 +156,7 @@ namespace Hubcon.Server.Core.Configuration
 
         public bool ThrottlingIsDisabled => throttlingIsDisabled ?? false;
 
-        public Func<string, IServiceProvider, ClaimsPrincipal?>? WebsocketTokenHandler => websocketTokenHandler;
+        public Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? WebsocketTokenHandler => websocketTokenHandler;
 
         public bool WebsocketRequiresAuthorization => websocketRequiresAuthorization ?? false;
 
@@ -178,6 +179,8 @@ namespace Hubcon.Server.Core.Configuration
         public bool RemoteCancellationIsAllowed => remoteCancellationIsAllowed ?? false;
 
         public Func<TokenBucketRateLimiterOptions> WebsocketTokenUpdateRateLimiter => websocketTokenUpdateRateLimiter;
+
+        public bool CheckTokenExpirationOnMsgReceived => checkTokenExpirationOnMsgReceived ?? true;
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -281,7 +284,7 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
 
-        public ICoreServerOptions UseWebsocketTokenHandler(Func<string, IServiceProvider, ClaimsPrincipal?> tokenHandler)
+        public ICoreServerOptions UseWebsocketTokenHandler(Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? tokenHandler)
         {
             websocketTokenHandler ??= tokenHandler;
             websocketRequiresAuthorization ??= true;
@@ -357,6 +360,12 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions ConfigureWebsocketTokenUpdateRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory)
         {
             websocketTokenUpdateRateLimiter = rateLimiterOptionsFactory;
+            return this;
+        }
+
+        public ICoreServerOptions DisableTokenExpirationCheckCheckOnWSMessage()
+        {
+            checkTokenExpirationOnMsgReceived = true;
             return this;
         }
     }

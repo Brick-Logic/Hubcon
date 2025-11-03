@@ -152,7 +152,7 @@ namespace Hubcon.Server.Core.Configuration
         /// <param name="tokenHandler">A function that returns a <see cref="ClaimsPrincipal"/> representing the authenticated user,  or <see
         /// langword="null"/> if authentication fails.</param>
         /// <returns>The <see cref="ICoreServerOptions"/> instance, allowing for method chaining.</returns>
-        ICoreServerOptions UseWebsocketTokenHandler(Func<string, IServiceProvider, ClaimsPrincipal?> tokenHandler);
+        ICoreServerOptions UseWebsocketTokenHandler(Func<string, IServiceProvider, (ClaimsPrincipal?, DateTime expirationDate)?> tokenHandler);
 
         /// <summary>
         /// Sets a delay for websocket ingest message reception.
@@ -214,6 +214,7 @@ namespace Hubcon.Server.Core.Configuration
         ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure);
         ICoreServerOptions LimitHttpRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
         ICoreServerOptions AllowRemoteTokenCancellation();
+        ICoreServerOptions DisableTokenExpirationCheckCheckOnWSMessage();
     }
 
     public interface IInternalServerOptions
@@ -221,112 +222,112 @@ namespace Hubcon.Server.Core.Configuration
         /// <summary>
         /// Determines the maximum incoming websocket message size in bytes.
         /// </summary>
-        int MaxWebSocketMessageSize { get; }
+        public int MaxWebSocketMessageSize { get; }
 
         /// <summary>
         /// Disabled. Determines the maximum incoming http message size in bytes.
         /// </summary>
-        int MaxHttpMessageSize { get; }
+        public int MaxHttpMessageSize { get; }
 
         /// <summary>
         /// Websocket connection timeout when the
         /// </summary>
-        TimeSpan WebSocketTimeout { get; }
+        public TimeSpan WebSocketTimeout { get; }
 
         /// <summary>
         /// Disabled. Http message processing timeout.
         /// </summary>
-        TimeSpan HttpTimeout { get; }
+        public TimeSpan HttpTimeout { get; }
 
         /// <summary>
         /// Websocket ingest timeout.
         /// </summary>
-        TimeSpan IngestTimeout { get; }
+        public TimeSpan IngestTimeout { get; }
 
         /// <summary>
         /// Determines if clients need to send ping messages to keep the connection alive.
         /// </summary>
-        bool WebsocketRequiresPing { get; }
+        public bool WebsocketRequiresPing { get; }
 
         /// <summary>
         /// Determines if the websocket should handle RetryableMessage.
         /// </summary>
-        bool MessageRetryIsEnabled { get; }
+        public bool MessageRetryIsEnabled { get; }
 
         /// <summary>
         /// Determines if "pong" message is sent to the client when a ping message is received.
         /// </summary>
-        bool WebSocketPongEnabled { get; }
+        public bool WebSocketPongEnabled { get; }
 
         /// <summary>
         /// Websocket prefix to bind to.
         /// </summary>
-        string WebSocketPathPrefix { get; }
+        public string WebSocketPathPrefix { get; }
 
         /// <summary>
         /// HTTP prefix to bind to.
         /// </summary>
-        string HttpPathPrefix { get; }
+        public string HttpPathPrefix { get; }
 
         /// <summary>
         /// Determines if ingest methods are allowed.
         /// </summary>
-        bool WebSocketIngestIsAllowed { get; }
+        public bool WebSocketIngestIsAllowed { get; }
 
         /// <summary>
         /// Determines if subscriptions are allowed.
         /// </summary>
-        bool WebSocketSubscriptionIsAllowed { get; }
+        public bool WebSocketSubscriptionIsAllowed { get; }
 
         /// <summary>
         /// Determines if websocket streams are allowed.
         /// </summary>
-        bool WebSocketStreamIsAllowed { get; }
+        public bool WebSocketStreamIsAllowed { get; }
 
         /// <summary>
         /// Determines if typical controller methods are allowed.
         /// </summary>
-        bool WebSocketMethodsIsAllowed { get; }
+        public bool WebSocketMethodsIsAllowed { get; }
 
         /// <summary>
         /// Determines if responses should include detailed error messages.
         /// </summary>
-        bool DetailedErrorsEnabled { get; }
+        public bool DetailedErrorsEnabled { get; }
 
         /// <summary>
         /// The websocket handler for authentication tokens.
         /// </summary>
-        bool WebsocketRequiresAuthorization { get; }
+        public bool WebsocketRequiresAuthorization { get; }
 
         /// <summary>
         /// Determines if the WebSocket ping feature is disabled.
         /// </summary>
-        bool WebsocketLoggingEnabled { get; }
+        public bool WebsocketLoggingEnabled { get; }
 
         /// <summary>
         /// Determines if the HTTP logging feature is enabled.
         /// </summary>
-        bool HttpLoggingEnabled { get; }
+        public bool HttpLoggingEnabled { get; }
 
         /// <summary>
         /// The websocket handler for authentication tokens.
         /// </summary>
-        Func<string, IServiceProvider, ClaimsPrincipal?>? WebsocketTokenHandler { get; }
+        public Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? WebsocketTokenHandler { get; }
 
         /// <summary>
         /// Delay for a websocket client receive loop.
         /// </summary>
-        bool ThrottlingIsDisabled { get; }
+        public bool ThrottlingIsDisabled { get; }
 
         /// <summary>
         /// Allows configuring extra some global settings for HTTP endpoints.
         /// </summary>
-        Action<IEndpointConventionBuilder>? EndpointConventions { get; }
+        public Action<IEndpointConventionBuilder>? EndpointConventions { get; }
 
         /// <summary>
         /// Allows configuring extra some global settings for HTTP endpoints.
         /// </summary>
-        Action<RouteHandlerBuilder> RouteHandlerBuilderConfig { get; }
+        public Action<RouteHandlerBuilder> RouteHandlerBuilderConfig { get; }
 
         /// <summary>
         /// Allows configuring the rate limiter options for the server websocket.
@@ -382,5 +383,10 @@ namespace Hubcon.Server.Core.Configuration
         /// Defines if remote operation cancellation through cancellation token is allowed.
         /// </summary>
         bool RemoteCancellationIsAllowed { get; }
+
+        /// <summary>
+        /// Defines if token expiration should be checked when a websocket message is received.
+        /// </summary>
+        bool CheckTokenExpirationOnMsgReceived { get; }
     }
 }

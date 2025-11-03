@@ -572,6 +572,18 @@ namespace Hubcon.Client.Core.Websockets
 
                             break;
 
+                        case MessageType.token_update:
+                            var tokenUpdateResponseMessage = new TokenUpdateResponseMessage(tmo.Memory, message.Id, message.Type);
+
+                            if (tokenUpdateResponseMessage == null) break;
+
+                            if (_tokenUpdateTcs.TryGetValue(tokenUpdateResponseMessage.Id, out var tokenUpdateResponseTcs))
+                            {
+                                tokenUpdateResponseTcs.TrySetResult(tokenUpdateResponseMessage);
+                            }
+
+                            break;
+
                         case MessageType.ingest_data_ack:
                             var ingestDataAckMessage = new IngestDataAckMessage(tmo.Memory, message.Id, message.Type);
 
@@ -1072,7 +1084,7 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        public async Task<IOperationResponse<string>> TryRefreshToken(string token)
+        public async Task<IOperationResponse<bool>> TryRefreshToken(string token)
         {
             var request = new TokenUpdateMessage(Guid.NewGuid(), token);
             var tcs = new TaskCompletionSource<TokenUpdateResponseMessage>();
@@ -1106,7 +1118,7 @@ namespace Hubcon.Client.Core.Websockets
             if (response == null)
                 throw new HubconGenericException("There was an unknown error or the request timed out.");
 
-            var converted = new BaseOperationResponse<string>(response.Result, "", response.Message);
+            var converted = new BaseOperationResponse<bool>(response.Result, default, response.Message);
 
             return converted;
         }

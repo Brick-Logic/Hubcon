@@ -90,11 +90,11 @@ namespace HubconTestClient.Modules
             {
                 var item = ctx.Services.GetRequiredService<AuthenticationManager>();
 
-                if (!item.AccessTokenExpiresAt.HasValue || item.AccessTokenExpiresAt.Value.AddMinutes(-1) < DateTime.Now)
+                if (!item.AccessTokenExpiresAt.HasValue || DateTime.Now > item.AccessTokenExpiresAt.Value.AddMinutes(-1))
                     return;
 
                 var refreshedToken = await item.TryRefreshSessionAsync();
-                await ctx.TryRefreshToken.Invoke(item.RefreshToken!);
+                await ctx.TryRefreshToken.Invoke(item.AccessToken!);
             });
 
             configuration.UseInsecureConnection();

@@ -145,7 +145,26 @@ namespace HubconTest
                 {
                     config.UseWebsocketTokenHandler((token, serviceProvider) =>
                     {
-                        return JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
+                        var user = JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
+
+                        DateTime? expiration = null;
+
+                        var expClaim = user?.FindFirst("exp")?.Value;
+
+                        if (expClaim == null)
+                            return null;
+
+                        // Convierte de segundos desde epoch a DateTime
+                        if (long.TryParse(expClaim, out var expSeconds))
+                        {
+                            var dateTime = DateTimeOffset.FromUnixTimeSeconds(expSeconds).UtcDateTime;
+                            expiration = dateTime;
+                        }
+
+                        if (user == null || expiration == null)
+                            return null;
+
+                        return (user, expiration.Value);
                     })
                     .DisableAllRateLimiters()
                     .EnableWebsocketsLogging()
