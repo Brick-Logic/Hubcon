@@ -703,8 +703,19 @@ namespace Hubcon.Client.Integration.Client
             var websocketEndpoint = options.WebsocketPrefix;
             var authenticationManagerType = options.AuthenticationManagerType;
 
-            var baseRestHttpUrl = $"{baseUri!.AbsoluteUri}/{httpEndpoint ?? ""}".TrimEnd('/');
-            var baseRestWebsocketUrl = $"{baseUri!.AbsoluteUri}/{websocketEndpoint ?? "ws"}".TrimEnd('/');
+            string baseRestHttpUrl = string.Empty;
+            string baseRestWebsocketUrl = string.Empty;
+
+            if (baseUri!.IsAbsoluteUri)
+            {
+                baseRestHttpUrl = $"{baseUri!.Host}:{baseUri.Port}/{httpEndpoint ?? ""}".TrimEnd('/');
+                baseRestWebsocketUrl = $"{baseUri!.Host}:{baseUri.Port}/{websocketEndpoint ?? "ws"}".TrimEnd('/');
+            }
+            else
+            {
+                baseRestHttpUrl = $"{baseUri!.OriginalString.TrimEnd('/')}/{httpEndpoint ?? ""}".TrimEnd('/');
+                baseRestWebsocketUrl = $"{baseUri!.OriginalString.TrimEnd('/')}/{websocketEndpoint ?? "ws"}".TrimEnd('/');
+            }
 
             _restHttpUrl = useSecureConnection ? $"https://{baseRestHttpUrl}" : $"http://{baseRestHttpUrl}";
             _websocketUrl = useSecureConnection ? $"wss://{baseRestWebsocketUrl}" : $"ws://{baseRestWebsocketUrl}";
