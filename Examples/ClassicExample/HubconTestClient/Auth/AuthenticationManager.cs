@@ -13,7 +13,7 @@ namespace HubconTestClient.Auth
 
         protected async override Task<IAuthResult> AuthenticateAsync(string username, string password)
         {
-            var token = await secondTestContract.LoginAsync(username, password);
+            var token = await secondTestContract.LoginAsync(new LoginCommand(username, password, true), "url");
 
             TokenType = "Bearer";
             AccessToken = token;
@@ -35,7 +35,7 @@ namespace HubconTestClient.Auth
 
         protected async override Task<PersistedSession?> LoadPersistedSessionAsync()
         {
-            var token = await secondTestContract.LoginAsync("aaa", "bbb");
+            var token = await secondTestContract.LoginAsync(new LoginCommand("username", "password", true), "url");
 
             TokenType = "Bearer";
             AccessToken = token;
@@ -52,7 +52,7 @@ namespace HubconTestClient.Auth
 
         protected async override Task<IAuthResult> RefreshSessionAsync(string refreshToken)
         {
-            var token = await secondTestContract.LoginAsync(Username, Password);
+            var token = await secondTestContract.LoginAsync(new LoginCommand("username", "password", true), "url");
 
             TokenType = "Bearer";
             AccessToken = token;

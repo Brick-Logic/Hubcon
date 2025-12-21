@@ -55,15 +55,15 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                         continue;
                     }
-                    else if (dict[kvp.Key]?.GetType().IsAssignableTo(type) ?? false)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        context.Result = new BaseOperationResponse<object>(false);
-                        return;
-                    }
+                    //else if (dict[kvp.Key]?.GetType().IsAssignableTo(type) ?? false)
+                    //{
+                    //    continue;
+                    //}
+                    //else
+                    //{
+                    //    context.Result = new BaseOperationResponse<object>(false);
+                    //    return;
+                    //}
                 }
 
                 if(context.Blueprint!.ParameterTypes.Count != dict!.Count)

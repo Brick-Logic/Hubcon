@@ -13,7 +13,7 @@ namespace HubconTestClient.Modules
     {
         public override void Configure(IServerModuleConfiguration configuration)
         {
-            configuration.WithBaseUrl("localhost:5000");
+            configuration.WithBaseUrl("http://localhost:5000");
 
             configuration.EnableWebsocketAutoReconnect(true);
 

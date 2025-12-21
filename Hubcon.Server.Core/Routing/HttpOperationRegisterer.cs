@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
 
@@ -91,7 +92,8 @@ namespace Hubcon.Server.Core.Routing
                 ? HttpMethod.Get 
                 : (blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0 ? HttpMethod.Post : HttpMethod.Get);
 
-            var endpointDelegate = CreateDelegate(controllerMethod!);
+            var (endpointDelegate, wrapperType) = CreateDelegate(controllerMethod!);
+            var wrapperProps = wrapperType.GetProperties();
 
             if (blueprint.HasReturnType)
             {
@@ -155,14 +157,21 @@ namespace Hubcon.Server.Core.Routing
                             return new BaseOperationResponse(false, "Request too large.");
                         }
 
-                        var queryDict = context.Request.Query.ToDictionary(k => k.Key, v => (object?)v.Value.ToString());
-                        var bodyRequest = await context.TryReadJsonAsync();
+                        var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType); 
 
-                        Dictionary<string, object> args = new Dictionary<string, object>();
-
-                        for(int i = 0; i < orderedParameterNames.Length; i++)
+                        if(wrapper == null)
                         {
-                            args[orderedParameterNames[i]] = invocationContext.Arguments[i]!;
+                            await BadRequest(context);
+                            return new BaseOperationResponse(false, "Invalid request payload.");
+                        }
+                      
+                        // 2. Extraemos los valores para el Invoke
+                        var args = new Dictionary<string, object>();
+
+                        foreach(var prop in wrapperProps)
+                        {
+                            var value = prop.GetValue(wrapper);
+                            args[prop.Name!] = value!;
                         }
 
                         var operationRequest = new OperationRequest(
@@ -255,12 +264,7 @@ namespace Hubcon.Server.Core.Routing
                             return new BaseOperationResponse(false, "Request too large.");
                         }
 
-                        Dictionary<string, object> args = new Dictionary<string, object>();
-
-                        for (int i = 0; i < orderedParameterNames.Length; i++)
-                        {
-                            args[orderedParameterNames[i]] = invocationContext.Arguments[i]!;
-                        }
+                        var args = await context.Request.ReadFromJsonAsync<Dictionary<string, object>>();
 
                         var operationRequest = new OperationRequest(
                             operationName,
@@ -354,12 +358,16 @@ namespace Hubcon.Server.Core.Routing
             context.Response.ContentType = "application/json";
         }
 
-        public static Delegate CreateDelegate(MethodInfo methodInfo)
+        public static (Delegate endpointDelegate, Type wrapperType) CreateDelegate(MethodInfo methodInfo)
         {
             if (methodInfo == null)
                 throw new ArgumentNullException(nameof(methodInfo));
 
-            var paramTypes = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
+            var paramType = ParameterWrapHelper.CreateWrapperType(methodInfo);
+
+            var (Instance, Method) = ProxyFactory.CreateProxyInstance(methodInfo, paramType);
+            //var paramTypes = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
+            var paramTypes = new Type[] { paramType };
             var returnType = methodInfo.ReturnType;
 
             if (paramTypes.Length > 16)
@@ -421,13 +429,38 @@ namespace Hubcon.Server.Core.Routing
 
             if (methodInfo.IsStatic)
             {
-                return Delegate.CreateDelegate(delegateType, methodInfo);
+                return (Delegate.CreateDelegate(delegateType, methodInfo), null);
             }
             else
             {
-                object instance = FormatterServices.GetUninitializedObject(methodInfo.DeclaringType!);
-                return Delegate.CreateDelegate(delegateType, instance, methodInfo);
+                return (Delegate.CreateDelegate(delegateType, Instance, Method), paramType);
             }
+        }
+
+        public static Delegate CreateHandler(MethodInfo methodInfo, Type wrapperType)
+        {
+            // Definimos el parámetro de entrada: (WrapperType wrapper)
+            var wrapperParam = Expression.Parameter(wrapperType, "wrapper");
+
+            // Obtenemos la instancia del servicio (se asume que se pasa o se obtiene de DI)
+            // Para Minimal APIs, el primer parámetro suele ser el servicio
+            var serviceParam = Expression.Parameter(methodInfo.DeclaringType!, "service");
+
+            // Construimos los argumentos para llamar al método real: wrapper.Prop1, wrapper.Prop2...
+            var args = methodInfo.GetParameters().Select(p =>
+            {
+                var propInfo = wrapperType.GetProperty(p.Name!);
+                return Expression.Property(wrapperParam, propInfo!);
+            });
+
+            // Llamada al método: service.Method(wrapper.Prop1, ...)
+            var methodCall = Expression.Call(serviceParam, methodInfo, args);
+
+            // Convertimos el resultado a object (para manejar Task o void)
+            var conversion = Expression.Convert(methodCall, typeof(object));
+
+            // Creamos el delegado: (service, wrapper) => (object)service.Method(wrapper.Prop1, ...)
+            return Expression.Lambda(conversion, serviceParam, wrapperParam).Compile();
         }
     }
 }

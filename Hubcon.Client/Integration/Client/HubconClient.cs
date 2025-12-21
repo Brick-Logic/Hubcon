@@ -119,20 +119,20 @@ namespace Hubcon.Client.Integration.Client
 
                     StringContent? content = null;
                     var url = "";
-                    var shouldUseBody = ShouldUseBody.GetOrAdd(methodInfo, method =>
-                    {
-                        var parameters = method.GetParameters();
-                        bool shouldUseBodyParameters = true;
+                    //var shouldUseBody = ShouldUseBody.GetOrAdd(methodInfo, method =>
+                    //{
+                    //    var parameters = method.GetParameters();
+                    //    bool shouldUseBodyParameters = true;
 
-                        foreach (var parameter in parameters)
-                        {
-                            shouldUseBodyParameters &= ShouldBindFromBody(parameter.ParameterType);
-                        }
+                    //    foreach (var parameter in parameters)
+                    //    {
+                    //        shouldUseBodyParameters &= ShouldBindFromBody(parameter.ParameterType);
+                    //    }
 
-                        return shouldUseBodyParameters;
-                    });
+                    //    return shouldUseBodyParameters;
+                    //});
 
-                    if (shouldUseBody)
+                    if (httpMethod == HttpMethod.Post)
                     {
                         var arguments = converter.Serialize(request.Arguments);
                         content = new StringContent(arguments, Encoding.UTF8, "application/json");

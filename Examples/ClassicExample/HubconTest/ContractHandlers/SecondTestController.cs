@@ -44,19 +44,19 @@ namespace HubconTest.ContractHandlers
 
         //[EndpointName("CreateUser")]
         //[EndpointSummary("Crear un nuevo usuario")]
-        //[EndpointDescription("Endpoint para crear un nuevo usuario en el sistema")]
+        [EndpointDescription("Endpoint para crear un nuevo usuario en el sistema")]
         //[ProducesResponseType(400)]
         //[ProducesResponseType(500)]
         //[ProducesResponseType<IOperationResponse<string>>(200)]
         //[Consumes("application/json")]
         [AllowAnonymous]
-        public async Task<string> LoginAsync(string username, string password)
+        public async Task<string> LoginAsync(LoginCommand command, string? url, LoginCommand command2 = null, LoginCommand command3 = null, LoginCommand command4 = null)
         {
             try
             {
                 var claims = new[]
                 {
-                    new Claim(JwtRegisteredClaimNames.Sub, username),
+                    new Claim(JwtRegisteredClaimNames.Sub, command.Username),
                     new Claim(ClaimTypes.Role, "Manager"),
                     new Claim(ClaimTypes.Role, "Admin"),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
