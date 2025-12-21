@@ -68,7 +68,7 @@ namespace HubconTestClient.Modules
 
                         operationSelector
                             .Configure(contract => contract.GetTemperatureFromServerWithInput)
-                            .UseTransport(TransportType.Http);
+                            .UseTransport(TransportType.Websockets);
                     });
             });
 
