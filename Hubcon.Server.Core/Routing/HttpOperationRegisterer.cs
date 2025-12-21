@@ -15,6 +15,8 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -164,6 +166,14 @@ namespace Hubcon.Server.Core.Routing
                             await BadRequest(context);
                             return new BaseOperationResponse(false, "Invalid request payload.");
                         }
+
+                        var (Result, Errors) = TriggerValidators(wrapper);
+
+                        if (Errors.Count > 0)
+                        {
+                            await InternalServerError(context);
+                            return new BaseOperationResponse<object>(false, Errors, "Validation problems detected.");
+                        }
                       
                         // 2. Extraemos los valores para el Invoke
                         var args = new Dictionary<string, object>();
@@ -296,6 +306,28 @@ namespace Hubcon.Server.Core.Routing
                     options.EndpointConventions?.Invoke(builder);
                 }
             }
+        }
+
+        public static (IResult Result, IReadOnlyDictionary<string, string[]> Errors) TriggerValidators(object wrapper)
+        {
+            // 2. ACTIVAR LA VALIDACIÓN
+            var validationContext = new ValidationContext(wrapper);
+            var validationResults = new List<ValidationResult>();
+
+            var type = wrapper.GetType();
+
+            // Esto disparará todos los [Required], [StringLength], etc. que clonamos
+            if (!Validator.TryValidateObject(wrapper, validationContext, validationResults, true))
+            {
+                // Si hay errores, devolvemos un 400 Bad Request con los detalles
+                var errors = validationResults.ToDictionary(
+                    k => k.MemberNames.FirstOrDefault() ?? "error",
+                    v => new[] { v.ErrorMessage ?? "Invalid value" }
+                );
+                return (Results.ValidationProblem(errors), errors);
+            }
+
+            return (Results.Ok(), ReadOnlyDictionary<string, string[]>.Empty);
         }
 
         static void SetupEndpointGroup(

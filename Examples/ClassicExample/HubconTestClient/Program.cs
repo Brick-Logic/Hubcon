@@ -17,7 +17,7 @@ internal class Program
 
     static async Task Main()
     {
-        Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "false");
+        Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "true");
 
         var process = Process.GetCurrentProcess();
 
@@ -226,7 +226,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 5000
+            MaxDegreeOfParallelism = 1
         };
 
         int rps = 9999999;
@@ -252,7 +252,7 @@ internal class Program
                     // var swReq = Stopwatch.StartNew();
                     try
                     {
-                        await tokenBucketRateLimiter.AcquireAsync();
+                        //await tokenBucketRateLimiter.AcquireAsync();
                         //await client.IngestMessages(GetMessages2(), default);
                         var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass() ,ct);
                         Interlocked.Increment(ref _finishedRequestsCount);

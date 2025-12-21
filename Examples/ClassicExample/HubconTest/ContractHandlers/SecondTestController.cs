@@ -7,6 +7,8 @@ using HubconTestDomain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -50,7 +52,7 @@ namespace HubconTest.ContractHandlers
         //[ProducesResponseType<IOperationResponse<string>>(200)]
         //[Consumes("application/json")]
         [AllowAnonymous]
-        public async Task<string> LoginAsync(LoginCommand command, string? url, LoginCommand command2 = null, LoginCommand command3 = null, LoginCommand command4 = null)
+        public async Task<string> LoginAsync(LoginCommand command)
         {
             try
             {

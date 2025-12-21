@@ -5,7 +5,7 @@ namespace HubconTestDomain
 {
     public interface ISecondTestContract : IControllerContract
     {
-        public Task<string> LoginAsync(LoginCommand command, string? url, LoginCommand command2 = null, LoginCommand command3 = null, LoginCommand command4 = null);
+        public Task<string> LoginAsync(LoginCommand command); 
         public Task TestMethod();
         public Task TestVoid();
         public Task TestMethod(string message);
