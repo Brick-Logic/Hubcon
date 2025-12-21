@@ -4,6 +4,7 @@ using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Extensions;
+using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Shared.Abstractions.Interfaces;
@@ -96,7 +97,10 @@ namespace Hubcon.Server.Core.Routing.Registries
                         continue;
 
                     var methodSignature = method.GetMethodSignature(useHashedNames);
-                    Func<object?, object[], object?> action = BuildInvoker(method);
+                    var wrapperType = ParameterWrapHelper.CreateWrapperType(method);
+                    var parametersss = method.GetParameters();
+                    var wrapperMapper = BuildMapper(wrapperType);
+                    Func<object?, object, object?> action = BuildWrapperInvoker(method, wrapperType);
 
                     var pipelineBuilder = new PipelineBuilder();
                     var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);
@@ -141,6 +145,8 @@ namespace Hubcon.Server.Core.Routing.Registries
                         kind,
                         pipelineBuilder,
                         serverOptions,
+                        wrapperType,
+                        wrapperMapper,
                         action!
                     );
 
@@ -310,6 +316,87 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                 return Expression.Lambda<Func<object?, object[], object?>>(castCallExp, targetExp, argsExp).Compile();
             }
+        }
+
+        public static Func<object?, object, object?> BuildWrapperInvoker(MethodInfo method, Type wrapperType)
+        {
+            // Parámetros de la función: (object? target, object wrapper)
+            var targetExp = Expression.Parameter(typeof(object), "target");
+            var wrapperExp = Expression.Parameter(typeof(object), "wrapper");
+
+            // Convertir el object wrapper al tipo específico generado por IL
+            var typedWrapper = Expression.Convert(wrapperExp, wrapperType);
+
+            var methodParams = method.GetParameters();
+            var paramExps = new Expression[methodParams.Length];
+
+            for (int i = 0; i < methodParams.Length; i++)
+            {
+                var param = methodParams[i];
+
+                // Buscamos la propiedad en el wrapper que coincida con el nombre del parámetro
+                // Asumimos que tu generador de IL llamó a la propiedad igual que al parámetro
+                var property = wrapperType.GetProperty(param.Name!);
+
+                if (property == null)
+                    throw new InvalidOperationException($"La propiedad {param.Name} no existe en el wrapper {wrapperType.Name}");
+
+                // Acceso a la propiedad: wrapper.ParamName
+                paramExps[i] = Expression.Property(typedWrapper, property);
+            }
+
+            // Expresión para la instancia
+            Expression? instanceExp = method.IsStatic
+                ? null
+                : Expression.Convert(targetExp, method.DeclaringType!);
+
+            // Crear la llamada al método: target.Method(wrapper.Prop1, wrapper.Prop2...)
+            MethodCallExpression callExp = Expression.Call(instanceExp, method, paramExps);
+
+            // Manejo de retorno (void vs object)
+            if (method.ReturnType == typeof(void))
+            {
+                var block = Expression.Block(callExp, Expression.Constant(null, typeof(object)));
+                return Expression.Lambda<Func<object?, object, object?>>(block, targetExp, wrapperExp).Compile();
+            }
+            else
+            {
+                var castCallExp = Expression.Convert(callExp, typeof(object));
+                return Expression.Lambda<Func<object?, object, object?>>(castCallExp, targetExp, wrapperExp).Compile();
+            }
+        }
+
+        public static Action<IDictionary<string, object>, object> BuildMapper(Type wrapperType)
+        {
+            var dictParam = Expression.Parameter(typeof(IDictionary<string, object>), "dict");
+            var wrapperParam = Expression.Parameter(typeof(object), "wrapperObj");
+            var typedWrapper = Expression.Convert(wrapperParam, wrapperType);
+
+            var assignments = new List<Expression>();
+
+            foreach (var prop in wrapperType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                // key = "NombrePropiedad"
+                var keyExp = Expression.Constant(prop.Name);
+
+                // dict[key]
+                var getItem = Expression.Property(dictParam, "Item", keyExp);
+
+                // (TargetType)dict[key]
+                var castExp = Expression.Convert(getItem, prop.PropertyType);
+
+                // wrapper.Prop = (TargetType)dict[key]
+                var bindExp = Expression.Assign(Expression.Property(typedWrapper, prop), castExp);
+
+                // Solo asignar si el diccionario contiene la llave para evitar KeyNotFoundException
+                var containsKey = Expression.Call(dictParam, typeof(IDictionary<string, object>).GetMethod("ContainsKey")!, keyExp);
+                var conditionalAssign = Expression.IfThen(containsKey, bindExp);
+
+                assignments.Add(conditionalAssign);
+            }
+
+            var body = Expression.Block(assignments);
+            return Expression.Lambda<Action<IDictionary<string, object>, object>>(body, dictParam, wrapperParam).Compile();
         }
 
         public bool ControllerExists(Type controllerType)

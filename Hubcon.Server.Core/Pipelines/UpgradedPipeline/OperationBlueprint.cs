@@ -37,11 +37,14 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public string?[] PrecomputedPolicies { get; private set; }
         public IEnumerable<Attribute> Attributes { get; }
         public ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
-        public Func<object?, object[], object?>? InvokeDelegate { get; }
+        public Func<object?, object, object?>? InvokeDelegate { get; }
         public IPipelineBuilder PipelineBuilder { get; }
         public string Route { get; }
 
         public string HttpEndpointGroupName { get; }
+
+        public Type? CallWrapperType { get; }
+        public Action<IDictionary<string, object>, object>? WrapperMapper { get; }
 
         public OperationBlueprint(
             string operationName,
@@ -51,7 +54,9 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             OperationKind kind,
             IPipelineBuilder pipelineBuilder,
             IInternalServerOptions options,
-            Func<object?, object[], object?>? invokeDelegate = null)
+            Type? callWrapperType = null,
+            Action<IDictionary<string, object>, object>? wrapperMapper = null,
+            Func<object?, object, object?>? invokeDelegate = null)
         {
             ArgumentException.ThrowIfNullOrEmpty(operationName);
             ArgumentNullException.ThrowIfNull(contractType);
@@ -67,7 +72,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             OperationInfo = memberInfo;
             ParameterTypes = [];
             Kind = kind;
-
+            CallWrapperType = callWrapperType;
+            WrapperMapper = wrapperMapper;
             List<Attribute> endpointAttributes = [];
 
 

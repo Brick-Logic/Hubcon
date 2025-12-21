@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Threading.Channels;
 using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
@@ -73,7 +74,24 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 }
 
                 var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);
-                object? result = await Task.Run(() => context.Blueprint!.InvokeDelegate?.Invoke(controller, dict.Values.ToArray()!));
+                var wrapper = Activator.CreateInstance(context.Blueprint!.CallWrapperType)!;
+                context.Blueprint!.WrapperMapper!.Invoke(dict, wrapper);
+
+                var validationResults = new List<ValidationResult>();
+                var validationContext = new ValidationContext(wrapper);
+                if (!Validator.TryValidateObject(wrapper, validationContext, validationResults, true))
+                {
+                    // Si hay errores, devolvemos un 400 Bad Request con los detalles
+                    var errors = validationResults.ToDictionary(
+                        k => k.MemberNames.FirstOrDefault() ?? "error",
+                        v => new[] { v.ErrorMessage ?? "Invalid value" }
+                    );
+
+                    context.Result = new BaseOperationResponse<object>(false, errors, "Validation errors detected.");
+                    return;
+                }
+
+                object? result = await Task.Run(() => context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper));
                 context.Result = await resultHandler.Invoke(result);
                 await next();
             }

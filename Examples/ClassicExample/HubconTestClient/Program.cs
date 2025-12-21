@@ -226,7 +226,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 24
+            MaxDegreeOfParallelism = 48
         };
 
         int rps = 9999999;

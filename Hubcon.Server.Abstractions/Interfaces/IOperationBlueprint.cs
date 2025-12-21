@@ -21,13 +21,15 @@ namespace Hubcon.Server.Abstractions.Interfaces
         Type RawReturnType { get; }
         bool RequiresAuthorization { get; }
         Type ReturnType { get; }
-        Func<object?, object[], object?>? InvokeDelegate { get; }
+        Func<object?, object, object?>? InvokeDelegate { get; }
         IPipelineBuilder PipelineBuilder { get; }
+        Type CallWrapperType { get; }
         string Route { get; }
         ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         IEnumerable<Attribute> Attributes { get; }
         HashSet<string> PrecomputedRoles { get; }
         string?[] PrecomputedPolicies { get; }
         string SimpleContractName { get; }
+        Action<IDictionary<string, object>, object>? WrapperMapper { get; }
     }
 }

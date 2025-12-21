@@ -159,30 +159,7 @@ namespace Hubcon.Server.Core.Routing
                             return new BaseOperationResponse(false, "Request too large.");
                         }
 
-                        var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType); 
-
-                        if(wrapper == null)
-                        {
-                            await BadRequest(context);
-                            return new BaseOperationResponse(false, "Invalid request payload.");
-                        }
-
-                        var (Result, Errors) = TriggerValidators(wrapper);
-
-                        if (Errors.Count > 0)
-                        {
-                            await InternalServerError(context);
-                            return new BaseOperationResponse<object>(false, Errors, "Validation problems detected.");
-                        }
-                      
-                        // 2. Extraemos los valores para el Invoke
-                        var args = new Dictionary<string, object>();
-
-                        foreach(var prop in wrapperProps)
-                        {
-                            var value = prop.GetValue(wrapper);
-                            args[prop.Name!] = value!;
-                        }
+                       var args = await context.Request.ReadFromJsonAsync<Dictionary<string, object>>();
 
                         var operationRequest = new OperationRequest(
                             operationName,
@@ -306,28 +283,6 @@ namespace Hubcon.Server.Core.Routing
                     options.EndpointConventions?.Invoke(builder);
                 }
             }
-        }
-
-        public static (IResult Result, IReadOnlyDictionary<string, string[]> Errors) TriggerValidators(object wrapper)
-        {
-            // 2. ACTIVAR LA VALIDACIÓN
-            var validationContext = new ValidationContext(wrapper);
-            var validationResults = new List<ValidationResult>();
-
-            var type = wrapper.GetType();
-
-            // Esto disparará todos los [Required], [StringLength], etc. que clonamos
-            if (!Validator.TryValidateObject(wrapper, validationContext, validationResults, true))
-            {
-                // Si hay errores, devolvemos un 400 Bad Request con los detalles
-                var errors = validationResults.ToDictionary(
-                    k => k.MemberNames.FirstOrDefault() ?? "error",
-                    v => new[] { v.ErrorMessage ?? "Invalid value" }
-                );
-                return (Results.ValidationProblem(errors), errors);
-            }
-
-            return (Results.Ok(), ReadOnlyDictionary<string, string[]>.Empty);
         }
 
         static void SetupEndpointGroup(

@@ -24,7 +24,7 @@ public static class ParameterWrapHelper
 
     public static Type CreateWrapperType(MethodInfo methodInfo)
     {
-        string typeName = $"{methodInfo.DeclaringType?.Name}_{methodInfo.Name}_RequestWrapper";
+        string typeName = $"{methodInfo.DeclaringType?.Name}_{methodInfo.Name}_{Guid.NewGuid().ToString()}_RequestWrapper";
 
         if (_cache.TryGetValue(typeName, out var cachedType)) return cachedType;
 
