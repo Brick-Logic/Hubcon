@@ -74,6 +74,8 @@ namespace Hubcon.Server
 
                 foreach (var services in additionalServices)
                     services?.Invoke(container);
+
+                OperationRegistry.Build();
             });
 
             AddGlobalMiddleware<InternalRoutingMiddleware>(); 

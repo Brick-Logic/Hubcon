@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.ComponentModel;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -31,6 +32,8 @@ namespace Hubcon.Server.Core.Routing.Registries
         private ConcurrentDictionary<string, ConcurrentDictionary<string, IOperationBlueprint>> AvailableOperations = new();
         private ConcurrentDictionary<Type, bool> RegisteredControllers = new();
         private readonly bool useHashedNames;
+
+        private FrozenDictionary<(string Contract, string Operation), IOperationBlueprint>? _blueprintCache;
 
         public OperationRegistry()
         {
@@ -272,12 +275,12 @@ namespace Hubcon.Server.Core.Routing.Registries
 
         public bool GetOperationBlueprint(string contractName, string operationName, out IOperationBlueprint? value)
         {
-            if (string.IsNullOrEmpty(contractName) || string.IsNullOrEmpty(operationName))
+            if (_blueprintCache != null)
             {
-                value = null;
-                return false;
+                return _blueprintCache.TryGetValue((contractName, operationName), out value);
             }
 
+            // Fallback por si la caché no se ha buildeado aún
             if (AvailableOperations.TryGetValue(contractName, out var descriptors)
                 && descriptors.TryGetValue(operationName, out var descriptor))
             {
@@ -287,6 +290,18 @@ namespace Hubcon.Server.Core.Routing.Registries
 
             value = null;
             return false;
+        }
+
+        public void Build()
+        {
+            var flatList = AvailableOperations
+                .SelectMany(contract => contract.Value
+                    .Select(op => new KeyValuePair<(string, string), IOperationBlueprint>(
+                        (contract.Key, op.Key), // Llave por valor (Tupla)
+                        op.Value)))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            _blueprintCache = flatList.ToFrozenDictionary();
         }
 
         private Delegate CreateMethodDescriptor(MethodInfo method)
@@ -422,7 +437,6 @@ namespace Hubcon.Server.Core.Routing.Registries
             }
         }
 
-        // Cambia la firma para que reciba el Token directamente
         public static Action<IDictionary<string, object>, object, CancellationToken> BuildMapper(Type wrapperType)
         {
             var dictParam = Expression.Parameter(typeof(IDictionary<string, object>), "dict");
