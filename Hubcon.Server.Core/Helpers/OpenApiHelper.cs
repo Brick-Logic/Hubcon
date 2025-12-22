@@ -32,8 +32,8 @@ namespace Hubcon.Server.Core.Helpers
             ];
         }
 
-        public static RouteHandlerBuilder ApplyOpenApiFromMethod(
-            this RouteHandlerBuilder builder,
+        public static IEndpointConventionBuilder ApplyOpenApiFromMethod(
+            this IEndpointConventionBuilder builder,
             MethodInfo methodInfo,
             HttpMethod httpMethod,
             string? groupName = null)
@@ -68,7 +68,7 @@ namespace Hubcon.Server.Core.Helpers
                 builder.WithTags(effectiveGroupName);
 
             // Produces - con valores por defecto inteligentes
-            ApplyProducesWithDefaults(builder, methodInfo);
+            ApplyProducesWithDefaults((builder as RouteHandlerBuilder)!, methodInfo);
 
             // Accepts - con detección automática mejorada (mantener lógica original)
             //ApplyAcceptsWithDefaults(builder, methodInfo);

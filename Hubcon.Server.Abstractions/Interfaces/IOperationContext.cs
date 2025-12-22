@@ -12,6 +12,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         IDictionary<string, object> Items { get; }
         string OperationName { get; init; }
         IOperationRequest Request { get; init; }
+        object? WrappedRequest { get; init; }
         CancellationToken RequestAborted { get; init; }
         IServiceProvider RequestServices { get; init; }
         IOperationResult? Result { get; set; }

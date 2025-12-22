@@ -8,6 +8,8 @@ namespace HubconTestDomain
         public Task<string> LoginAsync(LoginCommand command); 
         public Task TestMethod();
         public Task TestVoid();
+
+        [GetMethod]
         public Task TestMethod(string message);
         public Task<string> TestReturn(string message);
         public Task<string> TestReturn();

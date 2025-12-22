@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -20,28 +22,47 @@ namespace Hubcon.Server.Core.Helpers
             _moduleBuilder = ab.DefineDynamicModule("MainProxyModule");
         }
 
-        public static (object Instance, MethodInfo Method) CreateProxyInstance(MethodInfo originalMethod, Type wrapperType)
+        public static (object Instance, MethodInfo Method) CreateProxyInstance(MethodInfo originalMethod, Type wrapperType, bool isGet)
         {
             var typeBuilder = _moduleBuilder.DefineType($"Proxy_{Guid.NewGuid():N}", TypeAttributes.Public | TypeAttributes.Class);
+
+            // Determinamos si el método original tiene parámetros comparando con el Wrapper
+            // (O chequeando si el originalMethod.GetParameters() está vacío)
+            bool hasParameters = originalMethod.GetParameters().Length > 0;
+
+            // Definimos los tipos de los parámetros del método del proxy
+            Type[] proxyParamTypes = hasParameters ? new[] { wrapperType } : Type.EmptyTypes;
 
             var methodBuilder = typeBuilder.DefineMethod("InvokeRpc",
                 MethodAttributes.Public | MethodAttributes.HideBySig,
                 originalMethod.ReturnType,
-                new[] { wrapperType });
+                proxyParamTypes);
 
-            // 1. Definir el parámetro (índice 1 porque el 0 es 'this')
-            var parameterBuilder = methodBuilder.DefineParameter(1, ParameterAttributes.None, "request");
+            if (hasParameters)
+            {
+                // 1. Definir el parámetro (índice 1 porque el 0 es 'this')
+                var parameterBuilder = methodBuilder.DefineParameter(1, ParameterAttributes.None, "request");
 
-            // 2. Localizar el constructor de [FromBody]
-            ConstructorInfo fromBodyCtor = typeof(FromBodyAttribute).GetConstructor(Type.EmptyTypes)!;
-
-            // 3. Crear el constructor del atributo y asignarlo al parámetro
-            CustomAttributeBuilder customAttributeBuilder = new CustomAttributeBuilder(fromBodyCtor, Array.Empty<object>());
-            parameterBuilder.SetCustomAttribute(customAttributeBuilder);
+                // 2. Aplicar atributos según el verbo
+                if (isGet)
+                {
+                    // Usamos AsParametersAttribute para que descomponga el objeto en la Query String
+                    var asParamsCtor = typeof(Microsoft.AspNetCore.Http.AsParametersAttribute).GetConstructor(Type.EmptyTypes);
+                    var attrBuilder = new CustomAttributeBuilder(asParamsCtor!, Array.Empty<object>());
+                    parameterBuilder.SetCustomAttribute(attrBuilder);
+                }
+                else
+                {
+                    // Para POST/PUT/etc, usamos FromBody
+                    var fromBodyCtor = typeof(Microsoft.AspNetCore.Mvc.FromBodyAttribute).GetConstructor(Type.EmptyTypes);
+                    var attrBuilder = new CustomAttributeBuilder(fromBodyCtor!, Array.Empty<object>());
+                    parameterBuilder.SetCustomAttribute(attrBuilder);
+                }
+            }
 
             var il = methodBuilder.GetILGenerator();
 
-            // Lógica de retorno (Default)
+            // Lógica de retorno (Default para que compile, luego tú inyectarás la llamada real)
             if (originalMethod.ReturnType != typeof(void))
             {
                 if (originalMethod.ReturnType.IsValueType)

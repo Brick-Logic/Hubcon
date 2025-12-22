@@ -68,5 +68,10 @@ namespace BlazorTestServer.Controllers
                 throw;
             }
         }
+
+        public Task<string> LoginAsync(LoginCommand command)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

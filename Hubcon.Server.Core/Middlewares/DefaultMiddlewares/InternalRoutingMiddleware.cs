@@ -77,6 +77,12 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 var wrapper = Activator.CreateInstance(context.Blueprint!.CallWrapperType)!;
                 context.Blueprint!.WrapperMapper!.Invoke(dict, wrapper);
 
+                wrapper.GetType()
+                       .GetFields()
+                       .Where(f => f.FieldType == typeof(CancellationToken))
+                       .ToList()
+                       .ForEach(x => x.SetValue(wrapper, context.HttpContext.RequestAborted));
+
                 var validationResults = new List<ValidationResult>();
                 var validationContext = new ValidationContext(wrapper);
                 if (!Validator.TryValidateObject(wrapper, validationContext, validationResults, true))

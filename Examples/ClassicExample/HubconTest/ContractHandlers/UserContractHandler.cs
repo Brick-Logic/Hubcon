@@ -39,7 +39,7 @@ namespace HubconTest.ContractHandlers
 
         [UseHttpRateLimiter("endpoint")]
         //[Authorize(Roles = "Admin")]
-        public Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
+        public Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken)
         {
             return Task.FromResult(Random.Shared.Next(-10, 50));
         }

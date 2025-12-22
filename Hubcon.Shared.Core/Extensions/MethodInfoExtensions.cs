@@ -63,7 +63,17 @@ namespace Hubcon.Shared.Core.Extensions
             return true;
         }
 
-        private static bool IsTypeAllowed(Type type)
+        public static bool AreParametersValid(this ParameterInfo[] parameters)
+        {
+            foreach (var param in parameters)
+            {
+                if (!IsTypeAllowed(param.ParameterType))
+                    return false;
+            }
+            return true;
+        }
+
+        public static bool IsTypeAllowed(this Type type)
         {
             // Nullable<T> → tomar el tipo subyacente
             if (Nullable.GetUnderlyingType(type) != null)

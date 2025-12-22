@@ -214,7 +214,8 @@ namespace Hubcon.Server.Core.Configuration
         ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure);
         ICoreServerOptions LimitHttpRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
         ICoreServerOptions AllowRemoteTokenCancellation();
-        ICoreServerOptions DisableTokenExpirationCheckCheckOnWSMessage();
+        ICoreServerOptions DisableTokenExpirationCheckOnWSMessage();
+        ICoreServerOptions EnableEndpointOverloading();
     }
 
     public interface IInternalServerOptions
@@ -388,5 +389,10 @@ namespace Hubcon.Server.Core.Configuration
         /// Defines if token expiration should be checked when a websocket message is received.
         /// </summary>
         bool CheckTokenExpirationOnMsgReceived { get; }
+
+        /// <summary>
+        /// Defines if method overloading is enabled for endpoints.
+        /// </summary>
+        bool MethodOverloadingIsEnabled { get; }
     }
 }

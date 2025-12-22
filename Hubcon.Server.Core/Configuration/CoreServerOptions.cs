@@ -32,6 +32,8 @@ namespace Hubcon.Server.Core.Configuration
         private TimeSpan? ingestTimeout;
         private bool? remoteCancellationIsAllowed;
         private bool? checkTokenExpirationOnMsgReceived;
+        private bool? methodOverloadingIsEnabled;
+
 
         private Func<TokenBucketRateLimiterOptions> websocketReaderRateLimiter = () => new TokenBucketRateLimiterOptions
         {
@@ -132,7 +134,7 @@ namespace Hubcon.Server.Core.Configuration
             QueueLimit = 1,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst
         };
-      
+
         // Defaults
         public int MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
         public int MaxHttpMessageSize => maxHttpSize ?? (128 * 1024);   // 128 KB
@@ -181,6 +183,8 @@ namespace Hubcon.Server.Core.Configuration
         public Func<TokenBucketRateLimiterOptions> WebsocketTokenUpdateRateLimiter => websocketTokenUpdateRateLimiter;
 
         public bool CheckTokenExpirationOnMsgReceived => checkTokenExpirationOnMsgReceived ?? true;
+
+        public bool MethodOverloadingIsEnabled => methodOverloadingIsEnabled ?? false;
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -363,9 +367,15 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
 
-        public ICoreServerOptions DisableTokenExpirationCheckCheckOnWSMessage()
+        public ICoreServerOptions DisableTokenExpirationCheckOnWSMessage()
         {
             checkTokenExpirationOnMsgReceived = true;
+            return this;
+        }
+
+        public ICoreServerOptions EnableEndpointOverloading()
+        {
+            methodOverloadingIsEnabled = true;
             return this;
         }
     }

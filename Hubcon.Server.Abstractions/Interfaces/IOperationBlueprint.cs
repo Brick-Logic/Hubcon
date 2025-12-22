@@ -23,7 +23,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         Type ReturnType { get; }
         Func<object?, object, object?>? InvokeDelegate { get; }
         IPipelineBuilder PipelineBuilder { get; }
-        Type CallWrapperType { get; }
+        Type? CallWrapperType { get; }
         string Route { get; }
         ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         IEnumerable<Attribute> Attributes { get; }
@@ -31,5 +31,6 @@ namespace Hubcon.Server.Abstractions.Interfaces
         string?[] PrecomputedPolicies { get; }
         string SimpleContractName { get; }
         Action<IDictionary<string, object>, object>? WrapperMapper { get; }
+        HttpMethod? HttpVerb { get; }
     }
 }

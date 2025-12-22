@@ -7,6 +7,7 @@ using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Server.Core.Websockets.Middleware;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Any;
@@ -61,7 +62,7 @@ namespace Hubcon.Server.Injection
 
                 options.SchemaFilter<RemoveNullableSchemaFilter>();
             });
-           
+
             builder.Services.ConfigureSwaggerGen(options =>
             {
                 options.MapType<string>(() => new OpenApiSchema

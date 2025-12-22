@@ -45,6 +45,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         public Type? CallWrapperType { get; }
         public Action<IDictionary<string, object>, object>? WrapperMapper { get; }
+        public HttpMethod? HttpVerb { get; }
 
         public OperationBlueprint(
             string operationName,
@@ -54,6 +55,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             OperationKind kind,
             IPipelineBuilder pipelineBuilder,
             IInternalServerOptions options,
+            HttpMethod? httpMethod = null,
             Type? callWrapperType = null,
             Action<IDictionary<string, object>, object>? wrapperMapper = null,
             Func<object?, object, object?>? invokeDelegate = null)
@@ -75,7 +77,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             CallWrapperType = callWrapperType;
             WrapperMapper = wrapperMapper;
             List<Attribute> endpointAttributes = [];
-
+            HttpVerb = httpMethod;
 
             if (memberInfo is MethodInfo methodInfo)
             {

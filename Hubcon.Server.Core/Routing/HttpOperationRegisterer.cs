@@ -14,9 +14,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileSystemGlobbing.Internal;
+using Microsoft.Extensions.Primitives;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -50,7 +53,7 @@ namespace Hubcon.Server.Core.Routing
             //var contractName = blueprint.ContractName;
             var simpleContractName = NamingHelper.GetCleanName(blueprint.ContractName);
             var options = app.Services.GetRequiredService<IInternalServerOptions>();
-            RouteHandlerBuilder builder = null!;
+            IEndpointConventionBuilder builder = null!;
             var method = (MethodInfo)blueprint.OperationInfo!;
 
             var controllerMethod = blueprint.ControllerType.GetMethod(
@@ -83,25 +86,29 @@ namespace Hubcon.Server.Core.Routing
                 return group;
             });
 
-            var verb = method.GetCustomAttribute<GetMethodAttribute>();
-
-            if (verb != null && !method.AreParametersValid())
-            {
-                throw new InvalidOperationException($"Operation '{method.Name}' cannot be used with GET verb as it contains complex or null types. Use primitive types or a DTO class with primitive types instead.");
-            }
-
-            var verbResult = verb != null 
-                ? HttpMethod.Get 
-                : (blueprint.ParameterTypes.Count - blueprint.ParameterTypes.Count(x => x.Value == typeof(CancellationToken)) > 0 ? HttpMethod.Post : HttpMethod.Get);
-
-            var (endpointDelegate, wrapperType) = CreateDelegate(controllerMethod!);
+            HttpMethod verbResult = blueprint.HttpVerb!;
+            var wrapperType = blueprint.CallWrapperType!;
             var wrapperProps = wrapperType.GetProperties();
 
             if (blueprint.HasReturnType)
             {
                 if (verbResult == HttpMethod.Get)
                 {
-                    builder = endpointGroup.MapGet(route, endpointDelegate);
+                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, true);
+                    builder = endpointGroup.MapGet(route, endpointDelegate).WithOpenApi(op =>
+                    {
+                        var toRemove = op.Parameters
+                            .Where(p => p.Name == "cancellationToken" || p.Name == "debug")
+                            .ToList();
+
+                        foreach (var p in toRemove)
+                            op.Parameters.Remove(p);
+
+                        return op;
+                    });
+
+                    // 2. Registramos el GET con un RequestDelegate manual
+                    //builder = app.MapGet(route, async (HttpContext context) => { });
 
                     SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
 
@@ -115,14 +122,33 @@ namespace Hubcon.Server.Core.Routing
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
 
-                        var dict = new Dictionary<string, object>();
-                        foreach (var kvp in context.Request.Query)
+                        // Creamos la instancia del Wrapper (el Monstruo)
+                        var wrapper = Activator.CreateInstance(wrapperType);
+
+                        // Llenamos solo lo que sea Simple Type desde la Query
+                        foreach (var prop in wrapperType.GetProperties())
                         {
-                            dict[kvp.Key] = kvp.Value.ToString();
+                            var value = context.Request.Query[prop.Name];
+                            if (value.Count > 0)
+                            {
+                                // Aquí puedes usar un TypeConverter o un simple Convert.ChangeType
+                                // Para performance extrema, esto se puede pre-compilar con IL
+                                var converted = Convert.ChangeType(value.ToString(), prop.PropertyType);
+                                prop.SetValue(wrapper, converted);
+                            }
                         }
 
+                        // Inyectamos el CancellationToken si el Wrapper lo tiene
+                        // (Esto soluciona tu problema anterior también)
+                        var ctProp = wrapperType.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(CancellationToken));
+                        ctProp?.SetValue(wrapper, context.RequestAborted);
+
+                        var dict = context.Request.Query
+                            .Cast<KeyValuePair<string, StringValues>>()
+                            .ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString());
+
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
-                        var res = await requestHandler.HandleWithResultAsync(operationRequest, cancellationToken);
+                        var res = await requestHandler.HandleWithResultAsync(operationRequest, wrapper, context.RequestAborted);
 
                         if (!res.Success)
                         {
@@ -136,11 +162,13 @@ namespace Hubcon.Server.Core.Routing
 
                         await Ok(context);
                         return res;
-                    }).ApplyOpenApiFromMethod(controllerMethod!, verbResult);
+                    })
+                    .ApplyOpenApiFromMethod(controllerMethod!, verbResult);
                     builder.WithRequestTimeout(options.HttpTimeout);
                 }
                 else
                 {
+                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, false);
                     builder = endpointGroup.MapPost(route, endpointDelegate);
 
                     SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
@@ -159,7 +187,21 @@ namespace Hubcon.Server.Core.Routing
                             return new BaseOperationResponse(false, "Request too large.");
                         }
 
-                       var args = await context.Request.ReadFromJsonAsync<Dictionary<string, object>>();
+                        var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType); 
+
+                        if(wrapper == null)
+                        {
+                            await BadRequest(context);
+                            return new BaseOperationResponse(false, "Invalid request payload.");
+                        }
+                      
+                        var args = new Dictionary<string, object>();
+
+                        foreach(var prop in wrapperProps)
+                        {
+                            var value = prop.GetValue(wrapper);
+                            args[prop.Name!] = value!;
+                        }
 
                         var operationRequest = new OperationRequest(
                             operationName,
@@ -167,7 +209,7 @@ namespace Hubcon.Server.Core.Routing
                             args
                         );
 
-                        var res = await requestHandler.HandleWithResultAsync(operationRequest, cancellationToken);
+                        var res = await requestHandler.HandleWithResultAsync(operationRequest, wrapper, cancellationToken);
 
                         if (!res.Success)
                         {
@@ -190,6 +232,7 @@ namespace Hubcon.Server.Core.Routing
             {
                 if (verbResult == HttpMethod.Get)
                 {
+                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, true);
                     builder = endpointGroup.MapGet(route, endpointDelegate);
 
                     SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
@@ -210,7 +253,7 @@ namespace Hubcon.Server.Core.Routing
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
 
-                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest, cancellationToken);
+                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest, null, cancellationToken);
 
                         if (!res.Success)
                         {
@@ -224,12 +267,13 @@ namespace Hubcon.Server.Core.Routing
 
                         await Ok(context);
                         return res;
-                    }).ApplyOpenApiFromMethod(controllerMethod!, verbResult);
+                    }).ApplyOpenApiFromMethod(controllerMethod!, verbResult).WithMetadata(new AsParametersAttribute());
                     builder.WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);
                 }
                 else 
                 {
+                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, false);
                     builder = endpointGroup.MapPost(route, endpointDelegate);
 
                     SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
@@ -251,7 +295,21 @@ namespace Hubcon.Server.Core.Routing
                             return new BaseOperationResponse(false, "Request too large.");
                         }
 
-                        var args = await context.Request.ReadFromJsonAsync<Dictionary<string, object>>();
+                        var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType);
+
+                        if (wrapper == null)
+                        {
+                            await BadRequest(context);
+                            return new BaseOperationResponse(false, "Invalid request payload.");
+                        }
+
+                        var args = new Dictionary<string, object>();
+
+                        foreach (var prop in wrapperProps)
+                        {
+                            var value = prop.GetValue(wrapper);
+                            args[prop.Name!] = value!;
+                        }
 
                         var operationRequest = new OperationRequest(
                             operationName,
@@ -259,7 +317,7 @@ namespace Hubcon.Server.Core.Routing
                             args
                         );
 
-                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest, cancellationToken);
+                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest, wrapper, cancellationToken);
 
                         if (!res.Success)
                         {
@@ -285,9 +343,31 @@ namespace Hubcon.Server.Core.Routing
             }
         }
 
+        public static (IResult Result, IReadOnlyDictionary<string, string[]> Errors) TriggerValidators(object wrapper)
+        {
+            // 2. ACTIVAR LA VALIDACIÓN
+            var validationContext = new ValidationContext(wrapper);
+            var validationResults = new List<ValidationResult>();
+
+            var type = wrapper.GetType();
+
+            // Esto disparará todos los [Required], [StringLength], etc. que clonamos
+            if (!Validator.TryValidateObject(wrapper, validationContext, validationResults, true))
+            {
+                // Si hay errores, devolvemos un 400 Bad Request con los detalles
+                var errors = validationResults.ToDictionary(
+                    k => k.MemberNames.FirstOrDefault() ?? "error",
+                    v => new[] { v.ErrorMessage ?? "Invalid value" }
+                );
+                return (Results.ValidationProblem(errors), errors);
+            }
+
+            return (Results.Ok(), ReadOnlyDictionary<string, string[]>.Empty);
+        }
+
         static void SetupEndpointGroup(
                 IInternalServerOptions options,
-                RouteHandlerBuilder builder,
+                IEndpointConventionBuilder builder,
                 RouteGroupBuilder endpointGroup,
                 IOperationBlueprint blueprint,
                 MethodInfo controllerMethod,
@@ -318,7 +398,7 @@ namespace Hubcon.Server.Core.Routing
                     builder.RequireRateLimiting(OperationRateLimiter.Policy);
             }
 
-            options.RouteHandlerBuilderConfig?.Invoke(builder);
+            options.RouteHandlerBuilderConfig?.Invoke((builder as RouteHandlerBuilder)!);
         }
 
         private static async Task Ok(HttpContext context)
@@ -345,16 +425,23 @@ namespace Hubcon.Server.Core.Routing
             context.Response.ContentType = "application/json";
         }
 
-        public static (Delegate endpointDelegate, Type wrapperType) CreateDelegate(MethodInfo methodInfo)
+        public static Delegate CreateDelegate(MethodInfo methodInfo, Type wrapperType, bool isGet = false)
         {
             if (methodInfo == null)
                 throw new ArgumentNullException(nameof(methodInfo));
 
-            var paramType = ParameterWrapHelper.CreateWrapperType(methodInfo);
+            Type[] paramTypes;
+            var parameters = methodInfo.GetParameters();
+            if (parameters.Length > 0)
+            {
+                paramTypes = [wrapperType];
+            }
+            else
+            {
+                paramTypes = [..parameters.Select(x => x.ParameterType)];
+            }
 
-            var (Instance, Method) = ProxyFactory.CreateProxyInstance(methodInfo, paramType);
-            //var paramTypes = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
-            var paramTypes = new Type[] { paramType };
+            var (Instance, Method) = ProxyFactory.CreateProxyInstance(methodInfo, wrapperType, isGet);
             var returnType = methodInfo.ReturnType;
 
             if (paramTypes.Length > 16)
@@ -413,15 +500,8 @@ namespace Hubcon.Server.Core.Routing
                     _ => throw new NotSupportedException()
                 };
             }
-
-            if (methodInfo.IsStatic)
-            {
-                return (Delegate.CreateDelegate(delegateType, methodInfo), null);
-            }
-            else
-            {
-                return (Delegate.CreateDelegate(delegateType, Instance, Method), paramType);
-            }
+        
+            return Delegate.CreateDelegate(delegateType, Instance, Method);        
         }
 
         public static Delegate CreateHandler(MethodInfo methodInfo, Type wrapperType)

@@ -1,11 +1,17 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.Serialization;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 
 
 namespace Hubcon.Server.Core.Helpers;
@@ -22,18 +28,62 @@ public static class ParameterWrapHelper
         _moduleBuilder = assemblyBuilder.DefineDynamicModule("MainWrapperModule");
     }
 
-    public static Type CreateWrapperType(MethodInfo methodInfo)
+    public static Type CreateWrapperType(MethodInfo methodInfo, Func<ParameterInfo, bool>? typeExclusionExpression = null)
     {
-        string typeName = $"{methodInfo.DeclaringType?.Name}_{methodInfo.Name}_{Guid.NewGuid().ToString()}_RequestWrapper";
+        string typeName = $"{methodInfo.Name}Request_{methodInfo.GetMethodSignature(true)}";
 
         if (_cache.TryGetValue(typeName, out var cachedType)) return cachedType;
 
         var typeBuilder = _moduleBuilder.DefineType(typeName, TypeAttributes.Public | TypeAttributes.Class);
+        var parameters = methodInfo.GetParameters();
 
-        foreach (var param in methodInfo.GetParameters())
+        foreach (var param in parameters)
         {
-            // Pasamos el ParameterInfo completo para poder extraer sus atributos
-            CreateProperty(typeBuilder, param);
+            // --- CAMBIO AQUÍ: Lógica de Field vs Property ---
+            if (param.ParameterType == typeof(CancellationToken))
+            {
+                // Definimos un Field. Minimal API y System.Text.Json ignoran los fields por defecto.
+                // Usamos el nombre original del parámetro para encontrarlo luego por reflexión.
+                typeBuilder.DefineField(param.Name!, typeof(CancellationToken), FieldAttributes.Public);
+            }
+            else
+            {
+                var isQuery = typeExclusionExpression?.Invoke(param) ?? false;
+                CreateProperty(typeBuilder, param, isQuery);
+            }
+        }
+
+        if (parameters.Length > 0)
+        {
+            // 1. Definimos el tipo genérico cerrado usando el Builder
+            Type valueTaskType = typeof(ValueTask<>).MakeGenericType(typeBuilder);
+
+            // 2. Definimos el constructor por defecto
+            var defaultCtor = typeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
+
+            // 3. Constructor de ValueTask<T>
+            ConstructorInfo genericCtor = typeof(ValueTask<>).GetConstructors()
+                .First(c => c.GetParameters().Length == 1 && c.GetParameters()[0].ParameterType.IsGenericParameter);
+
+            ConstructorInfo valueTaskCtor = TypeBuilder.GetConstructor(valueTaskType, genericCtor);
+
+            // 4. Implementación de TryParse (Pase VIP para el ruteo)
+            var tryParseBuilder = typeBuilder.DefineMethod(
+                "TryParse",
+                MethodAttributes.Public | MethodAttributes.Static,
+                typeof(bool),
+                new[] { typeof(string), typeBuilder.MakeByRefType() }
+            );
+
+            tryParseBuilder.DefineParameter(1, ParameterAttributes.None, "s");
+            tryParseBuilder.DefineParameter(2, ParameterAttributes.Out, "result");
+
+            var il = tryParseBuilder.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Newobj, defaultCtor);
+            il.Emit(OpCodes.Stind_Ref);
+            il.Emit(OpCodes.Ldc_I4_1);
+            il.Emit(OpCodes.Ret);
         }
 
         var generatedType = typeBuilder.CreateType()!;
@@ -41,11 +91,10 @@ public static class ParameterWrapHelper
         return generatedType;
     }
 
-    private static void CreateProperty(TypeBuilder tb, ParameterInfo param)
+    private static void CreateProperty(TypeBuilder tb, ParameterInfo param, bool isExcluded)
     {
         string propertyName = param.Name ?? "arg";
         Type propertyType = param.ParameterType;
-
         var fieldBuilder = tb.DefineField("_" + propertyName, propertyType, FieldAttributes.Private);
         var propBuilder = tb.DefineProperty(propertyName, PropertyAttributes.HasDefault, propertyType, null);
 
@@ -102,18 +151,40 @@ public static class ParameterWrapHelper
             }
         }
 
+        if (isExcluded)
+        {
+            var ignoreCtor = typeof(IgnoreDataMemberAttribute).GetConstructor(Type.EmptyTypes);
+            var attrBuilder = new CustomAttributeBuilder(ignoreCtor!, Array.Empty<object>());
+            propBuilder.SetCustomAttribute(attrBuilder);
+
+            var ignoreCtor2 = typeof(BindNeverAttribute).GetConstructor(Type.EmptyTypes);
+            var attrBuilder2 = new CustomAttributeBuilder(ignoreCtor2!, Array.Empty<object>());
+            propBuilder.SetCustomAttribute(attrBuilder2);
+        }
+
         // --- RESTO DE LA LÓGICA (GETTER Y SETTER) SE MANTIENE IGUAL ---
 
-        var getMethodBuilder = tb.DefineMethod("get_" + propertyName,
-            MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
-            propertyType, Type.EmptyTypes);
+        MethodAttributes visibility = MethodAttributes.Public;
+
+        //if (param.ParameterType == typeof(CancellationToken))
+        //{
+        //    visibility = MethodAttributes.Private;
+        //}
+        //else
+        //{
+        //    visibility = MethodAttributes.Public;
+        //}
+
+            var getMethodBuilder = tb.DefineMethod("get_" + propertyName,
+                visibility | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
+                propertyType, Type.EmptyTypes);
         var getIl = getMethodBuilder.GetILGenerator();
         getIl.Emit(OpCodes.Ldarg_0);
         getIl.Emit(OpCodes.Ldfld, fieldBuilder);
         getIl.Emit(OpCodes.Ret);
 
         var setMethodBuilder = tb.DefineMethod("set_" + propertyName,
-            MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
+            visibility | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
             null, new[] { propertyType });
         var setIl = setMethodBuilder.GetILGenerator();
         setIl.Emit(OpCodes.Ldarg_0);

@@ -17,5 +17,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public HttpContext? HttpContext { get; init; }
         public Exception? Exception { get; set; }
         public CancellationToken RequestAborted { get; init; }
+        public object? WrappedRequest { get; init; }
     }
 }

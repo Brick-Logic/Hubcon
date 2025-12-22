@@ -152,7 +152,7 @@ internal class Program
         logger.LogWarning("Probando invocación con retorno...");
 
 
-        var temp = await client.GetTemperatureFromServer();
+        var temp = await client.GetTemperatureFromServer("");
 
 
         logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");

@@ -7,12 +7,15 @@ using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
+using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Linq.Expressions;
@@ -87,6 +90,9 @@ namespace Hubcon.Server.Core.Routing.Registries
                                          isIngest ? OperationKind.Ingest :
                                          OperationKind.Method;
 
+                    if (method.IsStatic)
+                        continue;
+
                     if (!serverOptions.WebSocketMethodsIsAllowed && kind == OperationKind.Method)
                         continue;
 
@@ -97,8 +103,23 @@ namespace Hubcon.Server.Core.Routing.Registries
                         continue;
 
                     var methodSignature = method.GetMethodSignature(useHashedNames);
-                    var wrapperType = ParameterWrapHelper.CreateWrapperType(method);
-                    var parametersss = method.GetParameters();
+
+                    var verb = method.GetCustomAttribute<GetMethodAttribute>();
+
+                    if (verb != null && !method.AreParametersValid())
+                    {
+                        throw new InvalidOperationException($"Operation '{method.Name}' cannot be used with GET verb as it contains complex types. Use primitive types or a DTO class with primitive types instead.");
+                    }
+
+                    var httpVerb = verb != null
+                        ? HttpMethod.Get
+                        : (parameters.Length - parameters.Count(x => x.ParameterType == typeof(CancellationToken)) > 0 ? HttpMethod.Post : HttpMethod.Get);
+
+                    var wrapperType = ParameterWrapHelper.CreateWrapperType(method, x =>
+                    {
+                        return x.ParameterType.IsTypeAllowed();
+                    });
+
                     var wrapperMapper = BuildMapper(wrapperType);
                     Func<object?, object, object?> action = BuildWrapperInvoker(method, wrapperType);
 
@@ -145,6 +166,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                         kind,
                         pipelineBuilder,
                         serverOptions,
+                        httpVerb,
                         wrapperType,
                         wrapperMapper,
                         action!
@@ -186,6 +208,35 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                 RegisteredControllers.TryAdd(controllerType, true);
             }
+        }
+
+        private static readonly HashSet<Type> SimpleTypes = new()
+        {
+            typeof(string), typeof(decimal), typeof(DateTime), typeof(DateTimeOffset),
+            typeof(TimeSpan), typeof(Guid), typeof(Uri), typeof(byte[])
+        };
+
+        public static bool IsQuerySupported(Type type)
+        {
+            // 1. Descartar explícitamente tipos de infraestructura conocidos
+            if (type == typeof(CancellationToken) || typeof(IProgress<>).IsAssignableFrom(type))
+                return false;
+
+            var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+
+            // 2. Primitivos (int, bool, char, etc) y Enums
+            if (underlyingType.IsPrimitive || underlyingType.IsEnum)
+                return true;
+
+            // 3. Tipos simples conocidos
+            if (SimpleTypes.Contains(underlyingType))
+                return true;
+
+            // 4. Soporte para Arrays de tipos simples (opcional)
+            if (type.IsArray && IsQuerySupported(type.GetElementType()!))
+                return true;
+
+            return false;
         }
 
         public void MapControllers(WebApplication app)
@@ -334,15 +385,17 @@ namespace Hubcon.Server.Core.Routing.Registries
             {
                 var param = methodParams[i];
 
-                // Buscamos la propiedad en el wrapper que coincida con el nombre del parámetro
-                // Asumimos que tu generador de IL llamó a la propiedad igual que al parámetro
-                var property = wrapperType.GetProperty(param.Name!);
-
-                if (property == null)
-                    throw new InvalidOperationException($"La propiedad {param.Name} no existe en el wrapper {wrapperType.Name}");
-
-                // Acceso a la propiedad: wrapper.ParamName
-                paramExps[i] = Expression.Property(typedWrapper, property);
+                // No necesitás buscar PropertyInfo ni FieldInfo. 
+                // PropertyOrField busca en el wrapperType (que está en typedWrapper) 
+                // un miembro que se llame igual que el parámetro.
+                try
+                {
+                    paramExps[i] = Expression.PropertyOrField(typedWrapper, param.Name!);
+                }
+                catch (ArgumentException)
+                {
+                    throw new InvalidOperationException($"El parámetro '{param.Name}' no se encontró como Propiedad ni como Field en el wrapper {wrapperType.Name}");
+                }
             }
 
             // Expresión para la instancia
