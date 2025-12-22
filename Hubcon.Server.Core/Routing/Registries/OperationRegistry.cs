@@ -118,11 +118,6 @@ namespace Hubcon.Server.Core.Routing.Registries
                         ? HttpMethod.Get
                         : (parameters.Length - parameters.Count(x => x.ParameterType == typeof(CancellationToken)) > 0 ? HttpMethod.Post : HttpMethod.Get);
 
-                    if (method.Name == "TestMethod")
-                    {
-
-                    }
-
                     var wrapperType = ParameterWrapHelper.CreateWrapperType(controllerMethod, x =>
                     {
                         if (httpVerb == HttpMethod.Get)
