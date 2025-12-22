@@ -52,6 +52,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         RateLimiter? HttpFireAndForgetRateBucket { get; }
         bool LoggingEnabled { get; }
         bool HttpAuthIsEnabled { get; }
+        bool UseHttpEndpointOverloading { get; }
 
         public IContractOptions GetContractOptions(Type type);
         Task CallInterceptor(InterceptorType interceptorType, InvocationContext context);

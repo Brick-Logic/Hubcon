@@ -143,7 +143,6 @@ namespace HubconTest
 
                 serverOptions.ConfigureCore(config =>
                 {
-                    config.EnableEndpointOverloading();
                     config.UseWebsocketTokenHandler((token, serviceProvider) =>
                     {
                         var user = JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);

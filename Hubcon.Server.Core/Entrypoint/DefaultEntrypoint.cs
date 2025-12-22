@@ -16,21 +16,21 @@ namespace Hubcon.Server.Core.Entrypoint
         {
             using var scope = ServiceProvider.CreateScope();
             var requestHandler = scope.ServiceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.HandleWithResultAsync(request, cancellationToken);
+            return requestHandler.HandleWithResultAsync(request, null, cancellationToken);
         }
 
         public Task<IResponse> HandleMethodVoid(IOperationRequest request, CancellationToken cancellationToken = default)
         {
             using var scope = ServiceProvider.CreateScope();
             var requestHandler = scope.ServiceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.HandleWithoutResultAsync(request, cancellationToken);
+            return requestHandler.HandleWithoutResultAsync(request, null, cancellationToken);
         }
 
         public Task<IOperationResponse<IAsyncEnumerable<object?>?>> HandleMethodStream(IOperationRequest request, CancellationToken cancellationToken = default)
         {
             using var scope = ServiceProvider.CreateScope();
             var requestHandler = scope.ServiceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.GetStream(request, cancellationToken);
+            return requestHandler.GetStream(request, null, cancellationToken);
         }
         
         public Task<IOperationResponse<IAsyncEnumerable<object?>?>> HandleSubscription(IOperationRequest request, CancellationToken cancellationToken = default)
@@ -44,7 +44,7 @@ namespace Hubcon.Server.Core.Entrypoint
         {
             using var scope = ServiceProvider.CreateScope();
             var requestHandler = scope.ServiceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.HandleIngest(request, sources, cancellationToken);
+            return requestHandler.HandleIngest(request, sources, null, cancellationToken);
         }
      
         public void Build()

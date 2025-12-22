@@ -44,5 +44,9 @@ namespace Hubcon.Shared.Abstractions.Models
 
         public override int GetHashCode() => HashCode.Combine(ContractName ?? string.Empty, OperationName ?? string.Empty);
 
+        public void SetOperationName(string operationName)
+        {
+            OperationName = operationName;
+        }
     }
 }

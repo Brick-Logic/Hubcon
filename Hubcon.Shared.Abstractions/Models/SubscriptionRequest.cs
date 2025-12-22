@@ -8,7 +8,7 @@ namespace Hubcon.Shared.Abstractions.Models
     public sealed class SubscriptionRequest : IOperationRequest
     {
         public string ContractName { get; }
-        public string OperationName { get; }
+        public string OperationName { get; private set; }
         public IReadOnlyDictionary<string, object> Arguments { get; }
 
         public SubscriptionRequest(string operationName, string contractName, Dictionary<string, object>? arguments)
@@ -33,5 +33,10 @@ namespace Hubcon.Shared.Abstractions.Models
         }
 
         public override int GetHashCode() => HashCode.Combine(ContractName ?? string.Empty, OperationName ?? string.Empty);
+
+        public void SetOperationName(string operationName)
+        {
+            OperationName = operationName;
+        }
     }
 }

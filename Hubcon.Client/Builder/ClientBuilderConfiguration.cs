@@ -319,5 +319,12 @@ namespace Hubcon.Client.Builder
             builder.AddInterceptor(interceptorType, interceptorDelegate);
             return this;
         }
+
+        public IServerModuleConfiguration EnableHttpEndpointOverloading()
+        {
+            throw new NotImplementedException("This feature is not yet implemented.");
+            builder.EnableHttpEndpointOverloading();
+            return this;
+        }
     }
 }

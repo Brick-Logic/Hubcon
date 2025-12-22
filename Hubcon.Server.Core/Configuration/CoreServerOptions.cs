@@ -375,6 +375,7 @@ namespace Hubcon.Server.Core.Configuration
 
         public ICoreServerOptions EnableEndpointOverloading()
         {
+            throw new NotImplementedException("This feature is not yet implemented.");
             methodOverloadingIsEnabled = true;
             return this;
         }

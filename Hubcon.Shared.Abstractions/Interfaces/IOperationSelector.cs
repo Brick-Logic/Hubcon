@@ -8,7 +8,7 @@ using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.Shared.Abstractions.Interfaces
 {
-    public interface IOperationSelector<T> : Hubcon.Shared.Abstractions.Standard.Interfaces.IOperationSelector<T>
+    public interface IOperationSelector<T> : Standard.Interfaces.IOperationSelector<T>
     {
         IOperationConfigurator Configure<TResult>(Expression<Func<T, TResult>> expression);
         IOperationConfigurator Configure(Expression<Func<T, Delegate>> expression);

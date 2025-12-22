@@ -215,6 +215,10 @@ namespace Hubcon.Server.Core.Configuration
         ICoreServerOptions LimitHttpRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
         ICoreServerOptions AllowRemoteTokenCancellation();
         ICoreServerOptions DisableTokenExpirationCheckOnWSMessage();
+
+        /// <summary>
+        /// Not implemented, will throw on use. Enables support for endpoint overloading, allowing multiple identical endpoints with diferent parameters to be used.
+        /// </summary>
         ICoreServerOptions EnableEndpointOverloading();
     }
 

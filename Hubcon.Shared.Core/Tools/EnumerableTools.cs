@@ -48,39 +48,30 @@ namespace Hubcon.Shared.Core.Tools
                           i.GetGenericTypeDefinition() == typeof(IAsyncEnumerator<>))
                       ?.GetGenericArguments()[0];
         }
-        public static IAsyncEnumerable<JsonElement>? WrapEnumeratorAsJsonElementEnumerable(object enumeratorObj)
+
+        public static IAsyncEnumerable<JsonElement>? WrapEnumeratorAsJsonElementEnumerable(object enumeratorObj, CancellationToken ct)
         {
             if (enumeratorObj is null) return null;
 
             var t = GetAsyncEnumeratorType(enumeratorObj);
             if (t == null) return null;
 
+            // Obtenemos el método genérico que hará el cast y aplicará el token
             var method = typeof(EnumerableTools)
-                .GetMethod(nameof(WrapToJsonElement), BindingFlags.Static | BindingFlags.Public)!
+                .GetMethod(nameof(WrapToJsonElementWithCancellation), BindingFlags.Static | BindingFlags.Public)!
                 .MakeGenericMethod(t);
 
-            var enumerator = GetAsyncEnumeratorViaReflection(enumeratorObj);
-
-            return (IAsyncEnumerable<JsonElement>)method.Invoke(null, new[] { enumerator })!;
+            // Invocamos pasando el objeto fuente Y el token
+            return (IAsyncEnumerable<JsonElement>)method.Invoke(null, new[] { enumeratorObj, ct })!;
         }
 
-        public static IAsyncEnumerable<JsonElement> WrapToJsonElement<T>(IAsyncEnumerator<T> enumerator)
+        public static async IAsyncEnumerable<JsonElement> WrapToJsonElementWithCancellation<T>(IAsyncEnumerable<T> source, [EnumeratorCancellation] CancellationToken ct)
         {
-            return Wrap(enumerator);
-
-            static async IAsyncEnumerable<JsonElement> Wrap(IAsyncEnumerator<T> enumerator)
+            // Usamos WithCancellation para que el iterador interno (el ingest) se entere del cierre
+            await foreach (var item in source.WithCancellation(ct).ConfigureAwait(false))
             {
-                try
-                {
-                    while (await enumerator.MoveNextAsync())
-                    {
-                        yield return JsonSerializer.SerializeToElement(enumerator.Current);
-                    }
-                }
-                finally
-                {
-                    await enumerator.DisposeAsync();
-                }
+                // Aquí tu lógica de conversión a JsonElement (serialización manual o JsonSerializer)
+                yield return JsonSerializer.SerializeToElement(item);
             }
         }
 

@@ -17,6 +17,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 
 namespace Hubcon.Client.Integration.Client
 {
@@ -92,6 +93,9 @@ namespace Hubcon.Client.Integration.Client
                     await contractOptions.CallHook(HookType.OnSend, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
 
+                    if (ClientOptions.UseHttpEndpointOverloading)
+                        request.SetOperationName(methodInfo.GetMethodSignature(true));
+
                     var result = await client.InvokeAsync<T>(request, remoteCancellation, cancellationToken);
 
                     await operationOptions.CallHook(HookType.OnAfterSend, context);
@@ -119,24 +123,12 @@ namespace Hubcon.Client.Integration.Client
 
                     StringContent? content = null;
                     var url = "";
-                    //var shouldUseBody = ShouldUseBody.GetOrAdd(methodInfo, method =>
-                    //{
-                    //    var parameters = method.GetParameters();
-                    //    bool shouldUseBodyParameters = true;
-
-                    //    foreach (var parameter in parameters)
-                    //    {
-                    //        shouldUseBodyParameters &= ShouldBindFromBody(parameter.ParameterType);
-                    //    }
-
-                    //    return shouldUseBodyParameters;
-                    //});
 
                     if (httpMethod == HttpMethod.Post)
                     {
                         var arguments = converter.Serialize(request.Arguments);
                         content = new StringContent(arguments, Encoding.UTF8, "application/json");
-                        url = _restHttpUrl + methodInfo.GetRoute().FullRoute;
+                        url = _restHttpUrl + methodInfo.GetRoute(ClientOptions.UseHttpEndpointOverloading).FullRoute;
                     }
                     else
                     {
@@ -149,7 +141,7 @@ namespace Hubcon.Client.Integration.Client
                             query[argument.Key] = argument.Value?.ToString() ?? "";
                         }
 
-                        builder.Path = methodInfo.GetRoute().FullRoute;
+                        builder.Path = methodInfo.GetRoute(ClientOptions.UseHttpEndpointOverloading).FullRoute;
                         builder.Query = query.ToString();
                         url = builder.ToString();
                     }
@@ -257,6 +249,9 @@ namespace Hubcon.Client.Integration.Client
                     await contractOptions.CallHook(HookType.OnSend, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
 
+                    if (ClientOptions.UseHttpEndpointOverloading)
+                        request.SetOperationName(methodInfo.GetMethodSignature(true));
+
                     await client.SendAsync(request, remoteCancellation, cancellationToken);
 
                     await operationOptions.CallHook(HookType.OnAfterSend, context);
@@ -275,24 +270,12 @@ namespace Hubcon.Client.Integration.Client
 
                     StringContent? content = null;
                     var url = "";
-                    var shouldUseBody = ShouldUseBody.GetOrAdd(methodInfo, method =>
-                    {
-                        var parameters = method.GetParameters();
-                        bool shouldUseBodyParameters = true;
 
-                        foreach (var parameter in parameters)
-                        {
-                            shouldUseBodyParameters &= ShouldBindFromBody(parameter.ParameterType);
-                        }
-
-                        return shouldUseBodyParameters;
-                    });
-
-                    if (shouldUseBody)
+                    if (httpMethod == HttpMethod.Post)
                     {
                         var arguments = converter.Serialize(request.Arguments);
                         content = new StringContent(arguments, Encoding.UTF8, "application/json");
-                        url = _restHttpUrl + methodInfo.GetRoute().FullRoute;
+                        url = _restHttpUrl + methodInfo.GetRoute(ClientOptions.UseHttpEndpointOverloading).FullRoute;
                     }
                     else
                     {
@@ -305,12 +288,12 @@ namespace Hubcon.Client.Integration.Client
                             query[argument.Key] = argument.Value?.ToString() ?? "";
                         }
 
-                        builder.Path = methodInfo.GetRoute().FullRoute;
+                        builder.Path = methodInfo.GetRoute(ClientOptions.UseHttpEndpointOverloading).FullRoute;
                         builder.Query = query.ToString();
                         url = builder.ToString();
                     }
 
-                    url += methodInfo.GetRoute().FullRoute;
+                    url += methodInfo.GetRoute(ClientOptions.UseHttpEndpointOverloading).FullRoute;
                     var httpRequest = new HttpRequestMessage(httpMethod, url);
 
                     if(content != null) 
@@ -385,6 +368,9 @@ namespace Hubcon.Client.Integration.Client
                 await operationOptions.CallHook(HookType.OnSend, context);
                 await contractOptions.CallHook(HookType.OnSend, context);
                 await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
+
+                if (ClientOptions.UseHttpEndpointOverloading)
+                    request.SetOperationName(method.GetMethodSignature(true));
 
                 observable = await client.Stream<JsonElement>(request, remoteCancellation, cancellationToken);
 
@@ -485,6 +471,9 @@ namespace Hubcon.Client.Integration.Client
                 await operationOptions.CallHook(HookType.OnSend, context);
                 await contractOptions.CallHook(HookType.OnSend, context);
                 await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
+
+                if (ClientOptions.UseHttpEndpointOverloading)
+                    request.SetOperationName(method.GetMethodSignature(true));
 
                 var response = await client.IngestMultiple<T>(request, remoteCancellation, ClientOptions, operationOptions, cancellationToken);
 

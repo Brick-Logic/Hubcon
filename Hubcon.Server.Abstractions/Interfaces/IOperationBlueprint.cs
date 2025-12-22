@@ -30,7 +30,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         HashSet<string> PrecomputedRoles { get; }
         string?[] PrecomputedPolicies { get; }
         string SimpleContractName { get; }
-        Action<IDictionary<string, object>, object>? WrapperMapper { get; }
+        Action<IDictionary<string, object>, object, CancellationToken>? WrapperMapper { get; }
         HttpMethod? HttpVerb { get; }
     }
 }

@@ -422,37 +422,39 @@ namespace Hubcon.Server.Core.Routing.Registries
             }
         }
 
-        public static Action<IDictionary<string, object>, object> BuildMapper(Type wrapperType)
+        // Cambia la firma para que reciba el Token directamente
+        public static Action<IDictionary<string, object>, object, CancellationToken> BuildMapper(Type wrapperType)
         {
             var dictParam = Expression.Parameter(typeof(IDictionary<string, object>), "dict");
             var wrapperParam = Expression.Parameter(typeof(object), "wrapperObj");
-            var typedWrapper = Expression.Convert(wrapperParam, wrapperType);
+            var tokenParam = Expression.Parameter(typeof(CancellationToken), "ct"); // <--- Nuevo parámetro
 
+            var typedWrapper = Expression.Convert(wrapperParam, wrapperType);
             var assignments = new List<Expression>();
 
             foreach (var prop in wrapperType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                // key = "NombrePropiedad"
+                // CASO ESPECIAL: Si la propiedad del Wrapper es un CancellationToken
+                if (prop.PropertyType == typeof(CancellationToken))
+                {
+                    // Asignación directa desde el parámetro 'ct', saltándose el diccionario
+                    assignments.Add(Expression.Assign(Expression.Property(typedWrapper, prop), tokenParam));
+                    continue;
+                }
+
+                // --- Tu lógica actual para el resto de propiedades ---
                 var keyExp = Expression.Constant(prop.Name);
-
-                // dict[key]
                 var getItem = Expression.Property(dictParam, "Item", keyExp);
-
-                // (TargetType)dict[key]
                 var castExp = Expression.Convert(getItem, prop.PropertyType);
-
-                // wrapper.Prop = (TargetType)dict[key]
                 var bindExp = Expression.Assign(Expression.Property(typedWrapper, prop), castExp);
 
-                // Solo asignar si el diccionario contiene la llave para evitar KeyNotFoundException
                 var containsKey = Expression.Call(dictParam, typeof(IDictionary<string, object>).GetMethod("ContainsKey")!, keyExp);
-                var conditionalAssign = Expression.IfThen(containsKey, bindExp);
-
-                assignments.Add(conditionalAssign);
+                assignments.Add(Expression.IfThen(containsKey, bindExp));
             }
 
             var body = Expression.Block(assignments);
-            return Expression.Lambda<Action<IDictionary<string, object>, object>>(body, dictParam, wrapperParam).Compile();
+            return Expression.Lambda<Action<IDictionary<string, object>, object, CancellationToken>>(
+                body, dictParam, wrapperParam, tokenParam).Compile();
         }
 
         public bool ControllerExists(Type controllerType)

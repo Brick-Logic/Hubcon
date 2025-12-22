@@ -14,7 +14,6 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Threading.Channels;
-using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
@@ -34,51 +33,46 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 var dict = context.Request.Arguments.ToDictionary();
 
-                foreach (var kvp in context.Blueprint!.ParameterTypes)
+                if(context.Blueprint.Kind == OperationKind.Ingest)
                 {
-                    if(context.Blueprint!.ParameterTypes.TryGetValue(kvp.Key, out var type))
+                    foreach (var kvp in context.Blueprint!.ParameterTypes)
                     {
-                        continue;
-                    }
+                        if (!context.Blueprint!.ParameterTypes.TryGetValue(kvp.Key, out var type))
+                        {
+                            continue;
+                        }
+                        if (dict.TryGetValue(kvp.Key, out var item) && item is JsonElement element)
+                        {
+                            dict[kvp.Key] = dynamicConverter.DeserializeJsonElement(element, type)!;
+                        }
+                        else if (EnumerableTools.IsAsyncEnumerable(dict[kvp.Key]!)
+                            && EnumerableTools.GetAsyncEnumerableType(dict[kvp.Key]!) == typeof(IAsyncEnumerable<JsonElement>))
+                        {
+                            dict[kvp.Key] = EnumerableTools.ConvertAsyncEnumerableDynamic(
+                                type,
+                                ((IAsyncEnumerable<JsonElement>)dict[kvp.Key]!),
+                                dynamicConverter);
 
-                    if (type == typeof(CancellationToken))
-                    {
-                        dict[kvp.Key] = context.RequestAborted;
+                            continue;
+                        }
                     }
-                    else if (dict[kvp.Key] is JsonElement element)
-                    {
-                        dict[kvp.Key] = dynamicConverter.DeserializeJsonElement(element, type);
+                }
+                else
+                {             
+                    foreach (var kvp in context.Blueprint!.ParameterTypes)
+                    {                      
+                        if (context.Blueprint!.ParameterTypes.TryGetValue(kvp.Key, out var type) 
+                            && dict.TryGetValue(kvp.Key, out var item)
+                            && item is JsonElement element)
+                        {
+                            dict[kvp.Key] = dynamicConverter.DeserializeJsonElement(element, type)!;
+                        }
                     }
-                    else if (EnumerableTools.IsAsyncEnumerable(dict[kvp.Key]!)
-                        && EnumerableTools.GetAsyncEnumerableType(dict[kvp.Key]!) == typeof(IAsyncEnumerable<JsonElement>))
-                    {
-                        dict[kvp.Key] = EnumerableTools.ConvertAsyncEnumerableDynamic(
-                            type,
-                            ((IAsyncEnumerable<JsonElement>)dict[kvp.Key]!),
-                            dynamicConverter);
-
-                        continue;
-                    }
-                    //else if (dict[kvp.Key]?.GetType().IsAssignableTo(type) ?? false)
-                    //{
-                    //    continue;
-                    //}
-                    //else
-                    //{
-                    //    context.Result = new BaseOperationResponse<object>(false);
-                    //    return;
-                    //}
                 }
 
                 var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);
-                var wrapper = Activator.CreateInstance(context.Blueprint!.CallWrapperType)!;
-                context.Blueprint!.WrapperMapper!.Invoke(dict, wrapper);
-
-                wrapper.GetType()
-                       .GetFields()
-                       .Where(f => f.FieldType == typeof(CancellationToken))
-                       .ToList()
-                       .ForEach(x => x.SetValue(wrapper, context.HttpContext.RequestAborted));
+                var wrapper = Activator.CreateInstance(context.Blueprint!.CallWrapperType!)!;
+                context.Blueprint!.WrapperMapper!.Invoke(dict, wrapper, context.RequestAborted);
 
                 var validationResults = new List<ValidationResult>();
                 var validationContext = new ValidationContext(wrapper);

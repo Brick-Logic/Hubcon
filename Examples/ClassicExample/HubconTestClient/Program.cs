@@ -4,6 +4,7 @@ using HubconTestClient.Modules;
 using HubconTestDomain;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading.RateLimiting;
 
 internal class Program
@@ -61,6 +62,18 @@ internal class Program
 
         await Task.Delay(100);
 
+
+        try
+        {
+            await client.IngestMessages(GetMessages(10), null);
+        }
+        catch(Exception ex)
+        {
+            logger.LogInformation($"Validaciones OK.");
+        }
+
+        await Task.Delay(100);
+        
         logger.LogWarning($"Probando ingest...");
         var source1 = GetMessages(2);
         var source2 = GetMessages(2);
@@ -74,6 +87,19 @@ internal class Program
 
         logger.LogWarning($"Probando invocación sin parametros...");
         var text = await client2.TestReturn();
+        
+        logger.LogWarning($"Probando parametros sobrecargados sobre http...");
+        try
+        {
+            await client2.TestMethod();
+            await client2.TestMethod("hola");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error en invocación sobrecargada: {ex}");
+            logger.LogError($"La sobrecarga falló o no está habilitada.");
+        }
+
 
         if (text != null)
             logger.LogInformation($"Invocación sin parametros OK.");
@@ -136,7 +162,7 @@ internal class Program
         await client.CreateUser();
         logger.LogInformation($"Esperando eventos...");
 
-        await Task.Delay(100);
+        await Task.Delay(3000);
 
         if (eventosRecibidos == 4)
         {
@@ -275,10 +301,16 @@ internal class Program
         });
     }
 
-    static async IAsyncEnumerable<string> GetMessages(int count)
+    static async IAsyncEnumerable<string> GetMessages(int count, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         for (int i = 0; i < count; i++)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                Console.WriteLine("Enumerador cancelado.");
+                break;
+            }
+
             var message = $"string:{i}";
             Console.WriteLine($"Enviando mensaje... [{message}]");
             yield return message;

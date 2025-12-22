@@ -68,7 +68,13 @@ namespace Hubcon.Client.Core.Configurations
         {
             Expression body = expression.Body;
 
-            // Caso 1: Acceso directo a propiedad o campo
+            // Caso 1: Invocación directa
+            if (body is MethodCallExpression methodCall)
+            {
+                return methodCall.Method;
+            }
+
+            // Caso 2: Acceso directo a propiedad o campo
             if (body is MemberExpression memberExpr && memberExpr.Member is PropertyInfo or FieldInfo)
             {
                 return memberExpr.Member;

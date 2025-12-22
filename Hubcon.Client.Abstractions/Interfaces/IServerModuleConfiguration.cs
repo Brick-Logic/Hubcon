@@ -259,5 +259,11 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// <param name="interceptorDelegate">The delegate to execute when the hook is triggered.</param>
         /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
         IServerModuleConfiguration AddInterceptor(InterceptorType interceptorType, Func<InvocationContext, Task> interceptorDelegate);
+
+        /// <summary>
+        /// Not implemented, will throw if used. Enables client-side endpoint overload usage. This needs the server to also enable endpoint overloading. Otherwise, it will fail.
+        /// </summary>
+        /// <returns></returns>
+        IServerModuleConfiguration EnableHttpEndpointOverloading();
     }
 }

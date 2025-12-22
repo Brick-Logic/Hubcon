@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -221,7 +222,6 @@ namespace Hubcon.Client.Core.Websockets
             CancellationToken cancellationToken = default)
         {
             using var cts = new CancellationTokenSource();
-
             var sourceTasks = new List<Task>();
             var initAckTcs = new TaskCompletionSource<IngestInitAckMessage>();
             var generalTcs = new TaskCompletionSource<IngestResultMessage>();
@@ -253,7 +253,7 @@ namespace Hubcon.Client.Core.Websockets
                         var obj = kvp.Value;
                         var id = Guid.NewGuid();
                         dict[kvp.Key] = id;
-                        var stream = EnumerableTools.WrapEnumeratorAsJsonElementEnumerable(obj);
+                        var stream = EnumerableTools.WrapEnumeratorAsJsonElementEnumerable(obj, cts.Token);
                         sources.TryAdd(id, stream!);
                     }
                 }
@@ -330,8 +330,7 @@ namespace Hubcon.Client.Core.Websockets
                     sourceTasks.Add(sourceTask);
                 }
 
-                var ingestRequest = new IngestInitMessage(initialAckId, sources.Keys.ToArray(),
-                    converter.SerializeToElement(operationRequest));
+                var ingestRequest = new IngestInitMessage(initialAckId, sources.Keys.ToArray(), converter.SerializeToElement(operationRequest));
 
                 try
                 {
@@ -362,8 +361,7 @@ namespace Hubcon.Client.Core.Websockets
 
                 await SendMessageAsync(new IngestCompleteMessage(initialAckId, sources.Keys.ToArray()));
 
-                var result =
-                    await TimeoutHelper.WaitWithTimeoutAsync(generalTcs.Task.WaitAsync, options.WebsocketTimeout);
+                var result = await TimeoutHelper.WaitWithTimeoutAsync(generalTcs.Task.WaitAsync, options.WebsocketTimeout);
 
                 if (generalTcs.Task.Exception?.InnerException is OperationCanceledException)
                     throw generalTcs.Task.Exception.InnerException;
@@ -384,7 +382,6 @@ namespace Hubcon.Client.Core.Websockets
                     logger?.LogError(ex, "Error general en IngestMultiple");
 
                 _errorStream.OnNext(ex);
-
                 throw new HubconGenericException(ex.Message, ex);
             }
             finally
@@ -400,6 +397,7 @@ namespace Hubcon.Client.Core.Websockets
                 _ingests.TryRemove(initialAckId, out var removedIngest);
                 removedIngest.Item1?.TrySetCanceled();
                 removedIngest.Item2?.Cancel();
+                cts.Cancel();
             }
         }
 

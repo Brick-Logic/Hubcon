@@ -47,5 +47,6 @@ namespace Hubcon.Client.Abstractions.Interfaces
         void UseAuthenticationManager<T>(IServiceCollection services) where T : class, IAuthenticationManager;
         void ConfigureContract<T>(Action<IContractConfigurator<T>>? configure) where T : IControllerContract;
         void AddInterceptor(InterceptorType interceptorType, Func<InvocationContext, Task> interceptorDelegate);
+        void EnableHttpEndpointOverloading();
     }
 }

@@ -44,7 +44,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public string HttpEndpointGroupName { get; }
 
         public Type? CallWrapperType { get; }
-        public Action<IDictionary<string, object>, object>? WrapperMapper { get; }
+        public Action<IDictionary<string, object>, object, CancellationToken>? WrapperMapper { get; }
         public HttpMethod? HttpVerb { get; }
 
         public OperationBlueprint(
@@ -57,7 +57,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             IInternalServerOptions options,
             HttpMethod? httpMethod = null,
             Type? callWrapperType = null,
-            Action<IDictionary<string, object>, object>? wrapperMapper = null,
+            Action<IDictionary<string, object>, object, CancellationToken>? wrapperMapper = null,
             Func<object?, object, object?>? invokeDelegate = null)
         {
             ArgumentException.ThrowIfNullOrEmpty(operationName);
@@ -83,6 +83,9 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             {
                 foreach (var parameter in methodInfo.GetParameters())
                 {
+                    if (parameter.ParameterType == typeof(CancellationToken))
+                        continue;
+
                     ParameterTypes.TryAdd(parameter.Name!, parameter.ParameterType);
                 }
 
@@ -93,7 +96,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                        ? methodInfo.ReturnType.GetGenericArguments()[0]
                        : methodInfo.ReturnType;
 
-                var combinedRoute = methodInfo.GetRoute();
+                var combinedRoute = methodInfo.GetRoute(options.MethodOverloadingIsEnabled);
                 Route = options.HttpPathPrefix + combinedRoute.Endpoint;
                 HttpEndpointGroupName = combinedRoute.EndpointGroup;
 

@@ -10,5 +10,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
     {
         string ContractName { get; }
         string OperationName { get; }
+
+        public void SetOperationName(string operationName);
     }
 }

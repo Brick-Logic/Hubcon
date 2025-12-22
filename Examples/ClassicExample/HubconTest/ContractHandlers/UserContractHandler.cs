@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
+using System.ComponentModel.DataAnnotations;
 
 namespace HubconTest.ContractHandlers
 {
@@ -236,7 +237,7 @@ namespace HubconTest.ContractHandlers
         static Stopwatch sw;
 
         [IngestSettings(100, 1)]
-        public async Task IngestMessages(IAsyncEnumerable<string> source, CancellationToken cancellationToken)
+        public async Task IngestMessages(IAsyncEnumerable<string> source, [Required] int? count, CancellationToken cancellationToken)
         {
             _monitor ??= Monitor(cancellationToken);
 

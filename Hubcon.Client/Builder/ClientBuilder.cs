@@ -51,6 +51,8 @@ namespace Hubcon.Client.Builder
         public TokenBucketRateLimiterOptions? RateBucketOptions { get; set; }
         public bool LimitersDisabled { get; set; }
 
+        public bool UseHttpEndpointOverloading { get; set; }
+
         public TokenBucketRateLimiterOptions? IngestLimiterOptions { get; set; } = new TokenBucketRateLimiterOptions
         {
             TokenLimit = 200,
@@ -251,6 +253,11 @@ namespace Hubcon.Client.Builder
         public Task CallInterceptor(InterceptorType interceptorType, InvocationContext context)
         {
             return _interceptors.GetOrAdd(interceptorType, _ => Task.CompletedTask).Invoke(context);
+        }
+
+        public void EnableHttpEndpointOverloading()
+        {
+            UseHttpEndpointOverloading = true;
         }
     }
 }

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 
 namespace Hubcon.Shared.Core.Extensions
 {
@@ -26,7 +27,7 @@ namespace Hubcon.Shared.Core.Extensions
             return hasAttribute;
         }
 
-        public static (string EndpointGroup, string Endpoint, string FullRoute) GetRoute(this MethodInfo method)
+        public static (string EndpointGroup, string Endpoint, string FullRoute) GetRoute(this MethodInfo method, bool useHashed)
         {
             if (_routeCache.TryGetValue(method, out var route))
             {
@@ -35,9 +36,9 @@ namespace Hubcon.Shared.Core.Extensions
             else
             {
                 var cleanName = NamingHelper.GetCleanName(method.DeclaringType!.Name);
-                var result = "/" + method.Name;
-                var fullRoute = "/" + cleanName + "/" + method.Name;
-                var combined = (cleanName, result, fullRoute);
+                var resultName = useHashed ? method.GetMethodSignature(true) : method.Name;
+                var fullRoute = "/" + cleanName + "/" + resultName;
+                var combined = (cleanName, resultName, fullRoute);
                 _routeCache.TryAdd(method, combined);
                 return combined;
             }

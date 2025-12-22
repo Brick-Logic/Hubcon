@@ -16,7 +16,6 @@ namespace HubconTestClient.Modules
             configuration.WithBaseUrl("http://localhost:5000");
 
             configuration.EnableWebsocketAutoReconnect(true);
-
             configuration.GlobalLimit(20000000);
 
             configuration.LimitIngest(100);
@@ -72,7 +71,14 @@ namespace HubconTestClient.Modules
                     });
             });
 
-            configuration.Implements<ISecondTestContract>();
+            configuration.Implements<ISecondTestContract>(contractConfigurator =>
+            {
+                contractConfigurator.ConfigureOperations(operationSelector =>
+                {
+                    operationSelector.Configure(c => c.TestMethod(default!)).UseTransport(TransportType.Http);
+                    operationSelector.Configure(c => c.TestMethod()).UseTransport(TransportType.Http);
+                });
+            });
 
             configuration.ConfigureWebsocketClient((x, services) =>
             {
