@@ -36,7 +36,10 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 foreach (var kvp in context.Blueprint!.ParameterTypes)
                 {
-                    var type = context.Blueprint!.ParameterTypes[kvp.Key];
+                    if(context.Blueprint!.ParameterTypes.TryGetValue(kvp.Key, out var type))
+                    {
+                        continue;
+                    }
 
                     if (type == typeof(CancellationToken))
                     {
@@ -65,12 +68,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     //    context.Result = new BaseOperationResponse<object>(false);
                     //    return;
                     //}
-                }
-
-                if(context.Blueprint!.ParameterTypes.Count != dict!.Count)
-                {
-                    context.Result = new BaseOperationResponse<JsonElement>(false, default, "Argument count mismatch.");
-                    return;
                 }
 
                 var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);

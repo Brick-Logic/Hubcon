@@ -23,6 +23,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 
 namespace Hubcon.Server.Core.Routing
 {
@@ -48,13 +49,14 @@ namespace Hubcon.Server.Core.Routing
             WebApplication app,
             IOperationBlueprint blueprint)
         {
+            IEndpointConventionBuilder builder = null!;
             var route = blueprint.Route;
             var operationName = blueprint.OperationName;
-            //var contractName = blueprint.ContractName;
             var simpleContractName = NamingHelper.GetCleanName(blueprint.ContractName);
             var options = app.Services.GetRequiredService<IInternalServerOptions>();
-            IEndpointConventionBuilder builder = null!;
             var method = (MethodInfo)blueprint.OperationInfo!;
+
+            if (options.MethodOverloadingIsEnabled) route = $"{method.GetMethodSignature()}";
 
             var controllerMethod = blueprint.ControllerType.GetMethod(
                 method.Name,
@@ -95,17 +97,7 @@ namespace Hubcon.Server.Core.Routing
                 if (verbResult == HttpMethod.Get)
                 {
                     var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, true);
-                    builder = endpointGroup.MapGet(route, endpointDelegate).WithOpenApi(op =>
-                    {
-                        var toRemove = op.Parameters
-                            .Where(p => p.Name == "cancellationToken" || p.Name == "debug")
-                            .ToList();
-
-                        foreach (var p in toRemove)
-                            op.Parameters.Remove(p);
-
-                        return op;
-                    });
+                    builder = endpointGroup.MapGet(route, endpointDelegate);
 
                     // 2. Registramos el GET con un RequestDelegate manual
                     //builder = app.MapGet(route, async (HttpContext context) => { });

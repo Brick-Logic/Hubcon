@@ -22,7 +22,7 @@ namespace HubconTest.ContractHandlers
             logger.LogInformation("TestMethod called");
         }
 
-        public async Task TestMethod(string message)
+        public async Task TestMethod([Required] string message)
         {
             logger.LogInformation(message);
         }
@@ -52,7 +52,7 @@ namespace HubconTest.ContractHandlers
         //[ProducesResponseType<IOperationResponse<string>>(200)]
         //[Consumes("application/json")]
         [AllowAnonymous]
-        public async Task<string> LoginAsync(LoginCommand command)
+        public async Task<string> LoginAsync([Required] LoginCommand command)
         {
             try
             {

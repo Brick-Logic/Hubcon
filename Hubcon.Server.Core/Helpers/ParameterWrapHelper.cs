@@ -48,8 +48,8 @@ public static class ParameterWrapHelper
             }
             else
             {
-                var isQuery = typeExclusionExpression?.Invoke(param) ?? false;
-                CreateProperty(typeBuilder, param, isQuery);
+                var isExcluded = typeExclusionExpression?.Invoke(param) ?? false;
+                CreateProperty(typeBuilder, param, isExcluded);
             }
         }
 
@@ -98,8 +98,9 @@ public static class ParameterWrapHelper
         var fieldBuilder = tb.DefineField("_" + propertyName, propertyType, FieldAttributes.Private);
         var propBuilder = tb.DefineProperty(propertyName, PropertyAttributes.HasDefault, propertyType, null);
 
+        var attributes = param.GetCustomAttributesData();
         // --- CLONACIÓN MEJORADA ---
-        foreach (var attrData in param.GetCustomAttributesData())
+        foreach (var attrData in attributes)
         {
             try
             {

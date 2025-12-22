@@ -102,6 +102,9 @@ namespace Hubcon.Server.Core.Routing.Registries
                     if (!serverOptions.WebSocketStreamIsAllowed && kind == OperationKind.Stream)
                         continue;
 
+                    var parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
+                    var controllerMethod = controllerType.GetMethod(method.Name, parameterTypes)!;
+
                     var methodSignature = method.GetMethodSignature(useHashedNames);
 
                     var verb = method.GetCustomAttribute<GetMethodAttribute>();
@@ -115,9 +118,17 @@ namespace Hubcon.Server.Core.Routing.Registries
                         ? HttpMethod.Get
                         : (parameters.Length - parameters.Count(x => x.ParameterType == typeof(CancellationToken)) > 0 ? HttpMethod.Post : HttpMethod.Get);
 
-                    var wrapperType = ParameterWrapHelper.CreateWrapperType(method, x =>
+                    if (method.Name == "TestMethod")
                     {
-                        return x.ParameterType.IsTypeAllowed();
+
+                    }
+
+                    var wrapperType = ParameterWrapHelper.CreateWrapperType(controllerMethod, x =>
+                    {
+                        if (httpVerb == HttpMethod.Get)
+                            return !x.ParameterType.IsTypeAllowed();
+                        else
+                            return true;
                     });
 
                     var wrapperMapper = BuildMapper(wrapperType);
@@ -127,9 +138,6 @@ namespace Hubcon.Server.Core.Routing.Registries
                     var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);
 
                     options?.Invoke(middlewareOptions);
-
-                    var parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
-                    var controllerMethod = controllerType.GetMethod(method.Name, parameterTypes);
 
                     var methodAttributes = controllerMethod!.GetCustomAttributes()
                         .Where(x => x is UseMiddlewareAttribute)
