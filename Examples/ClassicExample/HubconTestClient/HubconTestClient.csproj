@@ -5,13 +5,6 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		
-		<IsTrimmable>false</IsTrimmable>
-		<IsAotCompatible>true</IsAotCompatible>
-		<PublishAot>true</PublishAot>
-		<OptimizationPreference>Size</OptimizationPreference>
-		<StackTraceSupport>false</StackTraceSupport>
-		
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
 		<ServerGarbageCollection>false</ServerGarbageCollection>
