@@ -69,13 +69,13 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         if (context.Blueprint!.ParameterTypes.TryGetValue(kvp.Key, out var type) 
                             && dict.TryGetValue(kvp.Key, out var item)
                             && item is JsonElement element)
-                        {
+                        { 
                             dict[kvp.Key] = dynamicConverter.DeserializeJsonElement(element, type)!;
                         }
                     }
                 }
 
-                var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);
+                var controller = context.Blueprint!.ControllerFactory.Invoke(serviceProvider, null);
 
                 if (context.Blueprint.HasSubscriptions)
                 {

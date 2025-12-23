@@ -9,6 +9,8 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Reflection;
 
@@ -50,6 +52,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public HttpMethod? HttpVerb { get; }
         public IReadOnlyList<(PropertyInfo PropInfo, Action<object, object?> FastSetter)> SubscriptionProperties { get; }
         public bool HasSubscriptions { get; }
+        public ObjectFactory ControllerFactory { get; }
 
         public OperationBlueprint(
             string operationName,
@@ -82,6 +85,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             WrapperMapper = wrapperMapper;
             List<Attribute> endpointAttributes = [];
             HttpVerb = httpMethod;
+            ControllerFactory = ActivatorUtilities.CreateFactory(controllerType, Type.EmptyTypes);
 
             SubscriptionProperties = controllerType
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)

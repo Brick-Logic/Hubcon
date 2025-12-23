@@ -1,5 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Enums;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Reflection;
 
@@ -35,5 +36,6 @@ namespace Hubcon.Server.Abstractions.Interfaces
         IReadOnlyList<(PropertyInfo PropInfo, Action<object, object?> FastSetter)> SubscriptionProperties { get; }
 
         bool HasSubscriptions { get; }
+        ObjectFactory ControllerFactory { get; }
     }
 }
