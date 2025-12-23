@@ -123,7 +123,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 static bool RecordDiagnostics(Exception ex, IOperationContext context)
                 {
                     context.Exception = ex;
-                    return true;
+                    return false;
                 }
 
                 object? result = null;

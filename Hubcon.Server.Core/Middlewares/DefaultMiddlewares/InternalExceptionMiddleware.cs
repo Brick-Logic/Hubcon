@@ -126,7 +126,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             bool RecordDiagnostics(Exception ex)
             {
                 exception = ex;
-                return true;
+                return false;
             }
         }
     }
