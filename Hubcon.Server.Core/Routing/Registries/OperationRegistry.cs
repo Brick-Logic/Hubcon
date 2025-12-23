@@ -43,6 +43,9 @@ namespace Hubcon.Server.Core.Routing.Registries
 
         public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<ContainerBuilder>> servicesToInject)
         {
+            if (_blueprintCache != null)
+                throw new InvalidOperationException("El registro de operaciones ya fue construido, no puede agregar mas operaciones.");
+
             if (!typeof(IControllerContract).IsAssignableFrom(controllerType))
                 throw new NotImplementedException($"El tipo {controllerType.FullName} no implementa la interfaz {nameof(IControllerContract)} o un tipo derivado.");
 

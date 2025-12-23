@@ -32,5 +32,8 @@ namespace Hubcon.Server.Abstractions.Interfaces
         string SimpleContractName { get; }
         Action<IDictionary<string, object>, object, CancellationToken>? WrapperMapper { get; }
         HttpMethod? HttpVerb { get; }
+        IReadOnlyList<(PropertyInfo PropInfo, Action<object, object?> FastSetter)> SubscriptionProperties { get; }
+
+        bool HasSubscriptions { get; }
     }
 }

@@ -3,6 +3,7 @@ using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
+using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Tools;
@@ -10,8 +11,11 @@ using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.Contracts;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Channels;
 
@@ -22,6 +26,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
         IServiceProvider serviceProvider,
         IDynamicConverter dynamicConverter,
         IInternalServerOptions options,
+        IOperationRegistry operationRegistry,
         ILogger<InternalRoutingMiddleware> logger,
         ILiveSubscriptionRegistry liveSubscriptionRegistry) : IInternalRoutingMiddleware
     {
@@ -71,6 +76,33 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 }
 
                 var controller = serviceProvider.GetRequiredService(context.Blueprint!.ControllerType);
+
+                if (context.Blueprint.HasSubscriptions)
+                {
+                    var subRegistry = context.RequestServices.GetRequiredService<ILiveSubscriptionRegistry>();
+
+                    string identity = "anonymous";
+                    if (context.Blueprint.RequiresAuthorization)
+                    {
+                        if (context.HttpContext!.Request.Headers.TryGetValue("Authorization", out var authHeader))
+                        {
+                            string rawValue = authHeader.ToString();
+                            identity = rawValue;
+                        }
+                    }
+
+                    foreach(var sub in context.Blueprint.SubscriptionProperties)
+                    {
+                        if (!operationRegistry.GetOperationBlueprint(context.Blueprint.SimpleContractName, sub.PropInfo.Name, out IOperationBlueprint? blueprint))
+                            continue;
+
+                        object? subInstance = null;
+                        var descriptor = subRegistry.GetHandler(identity, context.Blueprint.SimpleContractName, blueprint!.OperationName);
+                        subInstance = descriptor?.Subscription;
+                        sub.FastSetter.Invoke(controller, subInstance);
+                    }
+                }
+
                 var wrapper = Activator.CreateInstance(context.Blueprint!.CallWrapperType!)!;
                 context.Blueprint!.WrapperMapper!.Invoke(dict, wrapper, context.RequestAborted);
 
@@ -106,13 +138,13 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 if (!context.Blueprint.RequiresAuthorization)
                 {
-                    subDescriptor = liveSubscriptionRegistry.GetHandler("", NamingHelper.GetCleanName(context.Blueprint.ContractName), context.Blueprint.OperationName);
+                    subDescriptor = liveSubscriptionRegistry.GetHandler("", context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
 
                     if (subDescriptor == null)
                     {
                         var subscription = (ISubscription?)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
 
-                        subDescriptor = liveSubscriptionRegistry.RegisterHandler("", NamingHelper.GetCleanName(context.Blueprint.ContractName), context.Blueprint.OperationName, subscription);
+                        subDescriptor = liveSubscriptionRegistry.RegisterHandler("", context.Blueprint.SimpleContractName, context.Blueprint.OperationName, subscription);
                     }
                 }
                 else
@@ -127,7 +159,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                     clientId = websocketToken;
 
-                    subDescriptor = liveSubscriptionRegistry.GetHandler(websocketToken, NamingHelper.GetCleanName(context.Blueprint.ContractName), context.Blueprint.OperationName);
+                    subDescriptor = liveSubscriptionRegistry.GetHandler(websocketToken, context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
 
 
                     if (subDescriptor == null)
@@ -140,7 +172,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                             return;
                         }
 
-                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(websocketToken, NamingHelper.GetCleanName(context.Blueprint.ContractName), context.Blueprint.OperationName, subscription);
+                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(websocketToken, context.Blueprint.SimpleContractName, context.Blueprint.OperationName, subscription);
                     }
                 }
 
@@ -184,7 +216,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     finally
                     {
                         observer.OnCompleted();
-                        liveSubscriptionRegistry.RemoveHandler(clientId, NamingHelper.GetCleanName(context.Blueprint.ContractName), context.Blueprint.OperationName);
+                        liveSubscriptionRegistry.RemoveHandler(clientId, context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
                         subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
                     };
                 };

@@ -9,7 +9,9 @@ using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Emit;
 
 namespace Hubcon.Server.Core.Extensions
 {
@@ -23,69 +25,7 @@ namespace Hubcon.Server.Core.Extensions
             this ContainerBuilder container,
             Func<ContainerBuilder, IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle>>? options = null)
         {
-            var registered = options?.Invoke(container);
-
-            registered?.OnActivated(e =>
-            {
-                List<PropertyInfo> props = GetProps(e.Instance!.GetType());
-
-                foreach (var prop in props!.Where(prop => prop.GetValue(e.Instance) == null).Where(prop => !prop.ReflectedType!.IsAssignableTo(typeof(BaseProxy))))
-                {
-                    if (IsSub(prop))
-                    {
-                        var accessor = e.Context.ResolveOptional<IHttpContextAccessor>();
-
-                        if (accessor != null)
-                        {
-                            var contract = NamingHelper.GetCleanName(GetContractType(prop.ReflectedType!).Name);
-
-                            var operationRegistry = e.Context.Resolve<IOperationRegistry>();
-
-                            if (!operationRegistry.GetOperationBlueprint(contract!, prop.Name, out IOperationBlueprint? blueprint))
-                                continue;
-
-                            if (blueprint?.Kind != OperationKind.Subscription)
-                                continue;
-
-                            var sub = e.Context.Resolve<ILiveSubscriptionRegistry>();
-
-                            if (blueprint.RequiresAuthorization)
-                            {             
-                                var token = JwtHelper.ExtractTokenFromHeader(accessor.HttpContext) 
-                                            ?? accessor.HttpContext?.Request.Headers.Authorization.ToString();
-
-                                var descriptor = sub.GetHandler(token!, contract!, prop.Name);
-                                PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);                     
-                            }
-                            else
-                            {
-                                var descriptor = sub.GetHandler("anonymous", contract!, prop.Name);
-                                PropertyTools.AssignProperty(e.Instance, prop, descriptor?.Subscription);
-                            }
-                        }
-                        else
-                        {
-                            var resolved = e.Context.ResolveOptional(prop.PropertyType);
-
-                            var resolvedSubscription = (ISubscription?)resolved!;
-
-                            if (resolvedSubscription != null && resolvedSubscription.Property == null)
-                            {
-                                PropertyTools.AssignProperty(resolvedSubscription, nameof(resolvedSubscription.Property), prop);
-                                resolvedSubscription?.Build();
-                            }
-
-                            PropertyTools.AssignProperty(e.Instance, prop, resolvedSubscription);
-                        }
-                    }
-                    else
-                    {
-                        var resolved = e.Context.ResolveOptional(prop.PropertyType);
-                        PropertyTools.AssignProperty(e.Instance, prop, resolved);
-                    }
-                }
-            });
-
+            options?.Invoke(container);
             return container;
         }
 
@@ -96,6 +36,39 @@ namespace Hubcon.Server.Core.Extensions
                 return prop.PropertyType.IsAssignableTo(typeof(ISubscription))
                         && prop.ReflectedType!.IsAssignableTo(typeof(IControllerContract));
             });
+        }
+
+        public static Action<object, object?> CreateFastSetter(this PropertyInfo prop)
+        {
+            // 1. Buscar el campo (igual que antes)
+            var field = prop.DeclaringType?.GetField($"<{prop.Name}>k__BackingField",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+
+            if (field == null)
+            {
+                throw new InvalidOperationException($"No se encontró el backing field para {prop.Name}");
+            }
+
+            // 2. Crear un método dinámico: (nombre, retorno, parámetros, módulo propietario)
+            var method = new DynamicMethod(
+                $"Set_{prop.Name}",
+                null,
+                new[] { typeof(object), typeof(object) },
+                prop.DeclaringType!.Module,
+                true); // El 'true' permite saltarse chequeos de visibilidad (acceso a campos privados)
+
+            var il = method.GetILGenerator();
+
+            // 3. Escribir el IL (Lenguaje Intermedio)
+            il.Emit(OpCodes.Ldarg_0); // Cargar la instancia (el controller)
+            il.Emit(OpCodes.Castclass, prop.DeclaringType!); // Castear a su tipo real
+            il.Emit(OpCodes.Ldarg_1); // Cargar el valor a asignar (la suscripción)
+            il.Emit(OpCodes.Unbox_Any, prop.PropertyType); // Unbox o cast al tipo de la propiedad
+            il.Emit(OpCodes.Stfld, field); // ALMACENAR EN EL CAMPO (stfld no tiene restricción de readonly aquí)
+            il.Emit(OpCodes.Ret); // Retornar
+
+            // 4. Crear el delegado
+            return (Action<object, object?>)method.CreateDelegate(typeof(Action<object, object?>));
         }
 
         private static List<PropertyInfo> GetProps(Type type)

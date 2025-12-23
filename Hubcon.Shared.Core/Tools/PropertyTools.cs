@@ -16,7 +16,6 @@ namespace Hubcon.Shared.Core.Tools
             }
             else
             {
-                // Si no tiene setter, usamos el campo backing
                 var field = prop.DeclaringType?.GetField($"<{prop.Name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
                 field?.SetValue(instance, value);
             }

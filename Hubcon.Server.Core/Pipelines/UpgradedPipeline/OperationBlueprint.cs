@@ -1,7 +1,9 @@
-﻿using Hubcon.Server.Abstractions.CustomAttributes;
+﻿using Autofac;
+using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
+using Hubcon.Server.Core.Extensions;
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
@@ -46,6 +48,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public Type? CallWrapperType { get; }
         public Action<IDictionary<string, object>, object, CancellationToken>? WrapperMapper { get; }
         public HttpMethod? HttpVerb { get; }
+        public IReadOnlyList<(PropertyInfo PropInfo, Action<object, object?> FastSetter)> SubscriptionProperties { get; }
+        public bool HasSubscriptions { get; }
 
         public OperationBlueprint(
             string operationName,
@@ -78,6 +82,14 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             WrapperMapper = wrapperMapper;
             List<Attribute> endpointAttributes = [];
             HttpVerb = httpMethod;
+
+            SubscriptionProperties = controllerType
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.PropertyType.IsGenericType && p.PropertyType.GetGenericTypeDefinition() == typeof(ISubscription<>))
+                .Select(prop => (prop, prop.CreateFastSetter()))
+                .ToList();
+
+            HasSubscriptions = SubscriptionProperties.Count > 0;
 
             if (memberInfo is MethodInfo methodInfo)
             {
