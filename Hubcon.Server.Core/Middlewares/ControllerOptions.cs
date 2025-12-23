@@ -1,16 +1,14 @@
-﻿using Autofac;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Extensions;
-using Hubcon.Shared.Core.Extensions;
+﻿using Hubcon.Server.Abstractions.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Server.Core.Middlewares
 {
     internal sealed class ControllerOptions : IControllerOptions
     {
         IPipelineBuilder _builder;
-        public List<Action<ContainerBuilder>> ServicesToInject;
+        public List<Action<IServiceCollection>> ServicesToInject;
 
-        public ControllerOptions(IPipelineBuilder builder, List<Action<ContainerBuilder>> servicesToInject)
+        public ControllerOptions(IPipelineBuilder builder, List<Action<IServiceCollection>> servicesToInject)
         {
             _builder = builder;
             ServicesToInject = servicesToInject;
@@ -24,7 +22,7 @@ namespace Hubcon.Server.Core.Middlewares
         public IControllerOptions AddMiddleware(Type middlewareType)
         {
             _builder.AddMiddleware(middlewareType);
-            ServicesToInject.Add(x => x.RegisterType(middlewareType));
+            ServicesToInject.Add(x => x.AddScoped(middlewareType));
             return this;
         }
 

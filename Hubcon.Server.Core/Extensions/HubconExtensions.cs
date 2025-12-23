@@ -1,15 +1,7 @@
-﻿using Autofac;
-using Autofac.Builder;
-using Hubcon.Server.Abstractions.Enums;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Attributes;
-using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Core.Tools;
-using Microsoft.AspNetCore.Http;
 using System.Collections.Concurrent;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -20,14 +12,6 @@ namespace Hubcon.Server.Core.Extensions
         private static readonly ConcurrentDictionary<Type, List<PropertyInfo>> _propertyCache = new();
         private static readonly ConcurrentDictionary<Type, Type> _contractCache = new();
         private static readonly ConcurrentDictionary<PropertyInfo, bool> _isSubCache = new();
-
-        public static ContainerBuilder RegisterWithInjector<TType, TActivatorData, TSingleRegistrationStyle>(
-            this ContainerBuilder container,
-            Func<ContainerBuilder, IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle>>? options = null)
-        {
-            options?.Invoke(container);
-            return container;
-        }
 
         private static bool IsSub(PropertyInfo prop)
         {
@@ -109,14 +93,5 @@ namespace Hubcon.Server.Core.Extensions
                         .Find(x => x.IsAssignableTo(typeof(IControllerContract)))!;
             });
         }
-
-        public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsScoped<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
-            => regBuilder.InstancePerLifetimeScope();
-
-        public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsTransient<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
-            => regBuilder.InstancePerDependency();
-
-        public static IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> AsSingleton<TType, TActivatorData, TSingleRegistrationStyle>(this IRegistrationBuilder<TType, TActivatorData, TSingleRegistrationStyle> regBuilder)
-            => regBuilder.SingleInstance();
     }
 }

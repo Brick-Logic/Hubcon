@@ -1134,11 +1134,11 @@ All operations will always wait for the connection to be established before doin
 
 Hubcon is designed for high-performance scenarios:
 
-- HTTP round-trip: Up to ~66k RPS.
+- HTTP round-trip: Up to ~85k RPS.
 - HTTP one-way call: Up to ~90k RPS.
-- Websocket Round-Trip: Up to ~75k RPS.
-- Websocket One-Way Call: Up to ~140k RPS.
-- Websocket Ingest: ~140k event/s.
+- Websocket Round-Trip: Up to ~93k RPS.
+- Websocket One-Way Call: Up to ~170k RPS.
+- Websocket Ingest: ~170k event/s.
 - Event Streaming and Subscriptions: Up to ~450k events/s per receiver on client (scalable through
   `RemoteServerModule`).
 
@@ -1150,15 +1150,15 @@ Some notes:
 - 256 concurrent requests (TPL library) is the sweet spot. Keeps working even with 65k parallelism level at the cost of
   latency over websockets.
 - HTTP consumes around 50% of the CPU, while WebSockets consume around 33% of the CPU under invoke load.
-- Observed stable ~45mb of RAM in all cases under testing load, both on client and server.
+- Observed stable ~35mb of RAM in all cases under load testing, both on client and server.
 - Hubcon Authentication Middleware has around ~7% performance cost for all tested RPS values.
   The tests include hooks, remote cancellation coordination, validation hooks, and all features
   configured in the `ClassicExample` project.
 
-Another test was conducted regarding max websocket clients. I managed to connect up to 39k clients (1.6-1.9gb of RAM
+Another test was conducted regarding max websocket clients. I managed to connect up to 40k clients (1.7-2.1gb of RAM
 usage).
 Due to socket assignment limitations on Windows, I'm unable to test more client counts for now, but it should theoretically
-support up to 220k concurrent websocket clients. 200k clients at 1 RPS would be a safe bet on this processor or similar. In the
+support up to 270k concurrent websocket clients at 1 RPS. Around 230k clients at 1 RPS would be a safe bet on this processor or similar. In the
 future, I will be making a testing environment for this using Linux.
 
 This is for a single instance.
@@ -1266,7 +1266,7 @@ Note that both are accumulative.
 
 - **Source Generation**: Automatic minimal proxy generation at compile-time
 - **Type Safety**: Full compile-time validation, any incompatible type **will not be tolerated**
-- **Dependency Injection**: Seamless DI container integration (needs Autofac)
+- **Dependency Injection**: Seamless DI container integration. Use your services as you always do.
 
 ## 🤝 Integration
 

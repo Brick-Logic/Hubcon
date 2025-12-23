@@ -262,9 +262,10 @@ namespace HubconTest.ContractHandlers
         }
 
         [AllowAnonymous]
-        public Task<int> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
+        public Task<TestInputClass> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(Random.Shared.Next(-10, 50));
+            return Task.FromResult(input);
+            //return Task.FromResult(Random.Shared.Next(-10, 50));
         }
     }
 }

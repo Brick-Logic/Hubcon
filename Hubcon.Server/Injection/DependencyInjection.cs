@@ -1,5 +1,4 @@
-﻿using Autofac;
-using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.EndpointDocumentation;
 using Hubcon.Server.Core.Entrypoint;
 using Hubcon.Server.Core.Extensions;
@@ -40,7 +39,7 @@ namespace Hubcon.Server.Injection
 
     public static class DependencyInjection
     {
-        public static WebApplicationBuilder AddHubconServer(this WebApplicationBuilder builder, Action<ContainerBuilder>? additionalServices = null)
+        public static WebApplicationBuilder AddHubconServer(this WebApplicationBuilder builder, Action<IServiceCollection>? additionalServices = null)
         {
             builder.Services.AddControllers();
             builder.Services.ConfigureHttpJsonOptions(options =>
@@ -75,13 +74,8 @@ namespace Hubcon.Server.Injection
 
             ServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
             {
-                container.RegisterType<DefaultEntrypoint>().AsScoped().IfNotRegistered(typeof(DefaultEntrypoint));
-
-                container.RegisterWithInjector(x => x
-                    .RegisterGeneric(typeof(ServerSubscriptionHandler<>))
-                    .As(typeof(ISubscription<>))
-                    .AsTransient()
-                    .IfNotRegistered(typeof(ISubscription<>)));
+                container.AddScoped<DefaultEntrypoint>();
+                container.AddTransient(typeof(ISubscription<>), typeof(ServerSubscriptionHandler<>));        
             });
 
             return builder;
@@ -99,35 +93,19 @@ namespace Hubcon.Server.Injection
         {
             var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
             operationRegistry.MapControllers(app);
+            operationRegistry.Build();
 
             return app;
         }
 
         public static WebApplication UseHubconWebsocketEndpoints(this WebApplication app)
         {
+            var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
             app.UseWebSockets();
             app.UseMiddleware<HubconWebSocketMiddleware>();
+            operationRegistry.Build();
 
             return app;
-        }
-
-        //public static WebApplication UseHubcon(this WebApplication app, string path = "operation")
-        //{
-        //    var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
-        //    operationRegistry.MapControllers(app);
-
-        //    app.UseWebSockets();
-        //    app.UseMiddleware<HubconWebSocketMiddleware>();
-
-        //    return app;
-        //}
-
-        static async IAsyncEnumerable<JsonElement> SerializeStream(IAsyncEnumerable<object?> source)
-        {
-            await foreach(var element in source)
-            {
-                yield return JsonSerializer.SerializeToElement(element);
-            }
         }
     }
 }

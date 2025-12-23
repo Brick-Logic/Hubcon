@@ -1,31 +1,17 @@
-﻿using Autofac;
-using Autofac.Extensions.DependencyInjection;
-using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Core.Registries;
-using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
-using Hubcon.Server.Core.Entrypoint;
-using Hubcon.Server.Core.Extensions;
-using Hubcon.Server.Core.Injectors;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Server.Core.Pipelines;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Server.Core.RateLimiting;
-using Hubcon.Server.Core.Routing.MethodHandling;
 using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Server.Core.Supervisor;
-using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Serialization;
 using Hubcon.Shared.Core.Tools;
-using Hubcon.Shared.Core.Websockets.Messages.Operation;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
-using System.Threading.RateLimiting;
 
 namespace Hubcon.Server
 {
@@ -33,8 +19,8 @@ namespace Hubcon.Server
     {
         private ILiveSubscriptionRegistry SubscriptionRegistry { get; } = new LiveSubscriptionRegistry();
         private IOperationRegistry OperationRegistry { get; } = new OperationRegistry();
-        private List<Action<ContainerBuilder>> ServicesToInject { get; } = new();
         private CoreServerOptions ServerOptions { get; } = new();
+        private IServiceCollection Services;
 
 
         private static ServerBuilder _current = null!;
@@ -53,31 +39,25 @@ namespace Hubcon.Server
 
         internal ServerBuilder AddHubconServer(
             WebApplicationBuilder builder,
-            params Action<ContainerBuilder>?[] additionalServices)
+            params Action<IServiceCollection>?[] additionalServices)
         {
-            builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
-            builder.Host.ConfigureContainer<ContainerBuilder>((context, container) =>
-            {
-                container.RegisterInstance(ServerOptions).As<IInternalServerOptions>().AsSingleton().IfNotRegistered(typeof(IInternalServerOptions));
-                container.RegisterInstance(OperationRegistry).As<IOperationRegistry>().AsSingleton().IfNotRegistered(typeof(IOperationRegistry));
-                container.RegisterInstance(SubscriptionRegistry).As<ILiveSubscriptionRegistry>().AsSingleton().IfNotRegistered(typeof(ILiveSubscriptionRegistry));
-                container.RegisterType<PermissionRegistry>().As<IPermissionRegistry>().AsSingleton().IfNotRegistered(typeof(IPermissionRegistry));
-                container.RegisterType<ConnectionSupervisor>().As<IConnectionSupervisor>().AsSingleton().IfNotRegistered(typeof(IConnectionSupervisor));
-                container.RegisterType<DynamicConverter>().As<IDynamicConverter>().AsSingleton().IfNotRegistered(typeof(IDynamicConverter));
-                container.RegisterType<SettingsManager>().As<ISettingsManager>().AsScoped().IfNotRegistered(typeof(ISettingsManager));
-                container.RegisterType<OperationConfigRegistry>().As<IOperationConfigRegistry>().AsScoped().IfNotRegistered(typeof(IOperationConfigRegistry));
-                container.RegisterType<RateLimiterManager>().As<IRateLimiterManager>().AsScoped().IfNotRegistered(typeof(IRateLimiterManager));
-                container.RegisterType<RequestHandler>().As<IRequestHandler>().AsScoped().IfNotRegistered(typeof(IRequestHandler));
-                
-                if (ServicesToInject.Count > 0)
-                    ServicesToInject.ForEach(x => x.Invoke(container));
+            Services = builder.Services;
+           
+            Services.AddSingleton<IInternalServerOptions>(ServerOptions);
+            Services.AddSingleton(OperationRegistry);
+            Services.AddSingleton(SubscriptionRegistry);
+            Services.AddSingleton<IPermissionRegistry, PermissionRegistry>();
+            Services.AddSingleton<IConnectionSupervisor, ConnectionSupervisor>();
+            Services.AddSingleton<IDynamicConverter, DynamicConverter>();
+            Services.AddSingleton(OperationRegistry);
+            Services.AddScoped<ISettingsManager, SettingsManager>();
+            Services.AddScoped<IOperationConfigRegistry, OperationConfigRegistry>();
+            Services.AddScoped<IRateLimiterManager, RateLimiterManager>();
+            Services.AddScoped<IRequestHandler, RequestHandler>();
 
-                foreach (var services in additionalServices)
-                    services?.Invoke(container);
-
-                OperationRegistry.Build();
-            });
-
+            foreach (var services in additionalServices)
+                services?.Invoke(Services);
+            
             AddGlobalMiddleware<InternalRoutingMiddleware>(); 
             AddGlobalMiddleware<InternalExceptionMiddleware>(); 
 
@@ -145,7 +125,9 @@ namespace Hubcon.Server
             }
 
             OperationRegistry.RegisterOperations(controllerType, options, ServerOptions, out var services);
-            ServicesToInject.AddRange(services);
+            
+            foreach(var service in services)
+                service.Invoke(Services);
 
             return builder;
         }
@@ -157,8 +139,7 @@ namespace Hubcon.Server
                 throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(Abstractions.Interfaces.IMiddleware)}");
 
             PipelineBuilder.AddGlobalMiddleware(middlewareType);
-
-            ServicesToInject.Add(container => container.RegisterType(middlewareType).IfNotRegistered(middlewareType));
+            Services.AddScoped(middlewareType);
         }
 
         internal void ConfigureCore(Action<ICoreServerOptions> coreServerOptions)

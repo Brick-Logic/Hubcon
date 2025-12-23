@@ -1,9 +1,7 @@
-﻿using Autofac;
-using Hubcon.Server.Abstractions.Delegates;
+﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
-using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
@@ -14,8 +12,7 @@ using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using System;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.ComponentModel;
@@ -35,13 +32,15 @@ namespace Hubcon.Server.Core.Routing.Registries
 
         private FrozenDictionary<(string Contract, string Operation), IOperationBlueprint>? _blueprintCache;
 
+        public bool IsBuilt => _blueprintCache != null;
+
         public OperationRegistry()
         {
             var env = Environment.GetEnvironmentVariable("HUBCON_OPNAME_DEBUG_ENABLED");
             useHashedNames = !bool.TryParse(env, out var parsed) ? true : !parsed;
         }
 
-        public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<ContainerBuilder>> servicesToInject)
+        public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<IServiceCollection>> servicesToInject)
         {
             if (_blueprintCache != null)
                 throw new InvalidOperationException("El registro de operaciones ya fue construido, no puede agregar mas operaciones.");
@@ -49,9 +48,9 @@ namespace Hubcon.Server.Core.Routing.Registries
             if (!typeof(IControllerContract).IsAssignableFrom(controllerType))
                 throw new NotImplementedException($"El tipo {controllerType.FullName} no implementa la interfaz {nameof(IControllerContract)} o un tipo derivado.");
 
-            servicesToInject = new List<Action<ContainerBuilder>>();
+            servicesToInject = new List<Action<IServiceCollection>>();
 
-            void Injector(ContainerBuilder x) => x.RegisterWithInjector(x => x.RegisterType(controllerType).AsTransient().IfNotRegistered(controllerType));
+            void Injector(IServiceCollection x) => x.AddScoped(controllerType);
             servicesToInject.Add(Injector);
 
             var interfaces = controllerType.GetInterfaces().Where(x => typeof(IControllerContract).IsAssignableFrom(x));
@@ -297,6 +296,9 @@ namespace Hubcon.Server.Core.Routing.Registries
 
         public void Build()
         {
+            if (IsBuilt)
+                return;
+
             var flatList = AvailableOperations
                 .SelectMany(contract => contract.Value
                     .Select(op => new KeyValuePair<(string, string), IOperationBlueprint>(

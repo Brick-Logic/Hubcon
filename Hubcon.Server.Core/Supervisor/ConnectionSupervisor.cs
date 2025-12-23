@@ -5,8 +5,7 @@ namespace Hubcon.Server.Core.Supervisor
 {
     public class ConnectionSupervisor : IConnectionSupervisor, IDisposable
     {
-        private readonly ConcurrentDictionary<string, (DateTime Expiration, Action cancellationCallback)> _connections
-            = new();
+        private readonly ConcurrentDictionary<string, (DateTime Expiration, Action cancellationCallback)> _connections = new();
 
         private readonly SemaphoreSlim _cleanupSemaphore = new(1, 1);
         private readonly Timer _timer;

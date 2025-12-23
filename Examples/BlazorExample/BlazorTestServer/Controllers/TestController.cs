@@ -161,5 +161,10 @@ namespace BlazorTestServer.Controllers
         {
             throw new NotImplementedException();
         }
+
+        public Task IngestMessages(IAsyncEnumerable<string> source, int? count, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
