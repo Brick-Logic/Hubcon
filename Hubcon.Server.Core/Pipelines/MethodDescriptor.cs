@@ -1,10 +1,4 @@
-﻿using Hubcon.Server.Abstractions.Delegates;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using System.Reflection;
-
-namespace Hubcon.Server.Core.Pipelines
+﻿namespace Hubcon.Server.Core.Pipelines
 {
     //public class MethodDescriptor : IMethodDescriptor
     //{

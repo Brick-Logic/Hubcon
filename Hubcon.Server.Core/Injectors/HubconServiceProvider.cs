@@ -18,7 +18,7 @@ namespace Hubcon.Server.Core.Injectors
         public object? GetService(Type serviceType)
         {
             var instance = _innerService.GetServiceWithInjector(serviceType);
-            
+
             return this;
         }
 

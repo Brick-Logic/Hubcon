@@ -1,14 +1,4 @@
-﻿using Hubcon.Server.Abstractions.Delegates;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Extensions;
-using Hubcon.Server.Core.Pipelines;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Core.Extensions;
-using System.Linq.Expressions;
-using System.Reflection;
-
-namespace Hubcon.Server.Core.Routing.MethodHandling
+﻿namespace Hubcon.Server.Core.Routing.MethodHandling
 {
     //public class MethodDescriptorProvider : IMethodDescriptorProvider
     //{
@@ -45,7 +35,7 @@ namespace Hubcon.Server.Core.Routing.MethodHandling
     //                OnMethodRegistered?.Invoke(methodDescriptor);
     //            }
     //        }
-            
+
     //    }
 
     //    public bool GetMethodDescriptor(IOperationRequest request, out IMethodDescriptor? value)

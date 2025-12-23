@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.CodeAnalysis;
 using System.Linq;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.Analyzers
 {

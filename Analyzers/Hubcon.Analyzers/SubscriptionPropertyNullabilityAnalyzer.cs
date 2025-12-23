@@ -1,15 +1,9 @@
-﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Diagnostics;
-using System.Collections.Immutable;
-using System.Linq;
-
-namespace Hubcon.Analyzers
+﻿namespace Hubcon.Analyzers
 {
-    using System.Collections.Immutable;
-    using System.Linq;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using System.Collections.Immutable;
+    using System.Linq;
 
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class SubscriptionPropertyNullabilityAnalyzer : DiagnosticAnalyzer

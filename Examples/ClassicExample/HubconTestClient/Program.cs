@@ -67,13 +67,13 @@ internal class Program
         {
             await client.IngestMessages(GetMessages(10), null);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             logger.LogInformation($"Validaciones OK.");
         }
 
         await Task.Delay(100);
-        
+
         logger.LogWarning($"Probando ingest...");
         var source1 = GetMessages(2);
         var source2 = GetMessages(2);
@@ -87,7 +87,7 @@ internal class Program
 
         logger.LogWarning($"Probando invocación sin parametros...");
         var text = await client2.TestReturn();
-        
+
         logger.LogWarning($"Probando parametros sobrecargados sobre http...");
         try
         {
@@ -189,19 +189,19 @@ internal class Program
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         bool temp2 = false;
         try
-        { 
+        {
             temp2 = await client.GetTemperatureFromServerBlocking(cts.Token);
         }
         catch (Exception e)
         {
             logger.LogInformation(e.ToString());
         }
-        
+
         logger.LogInformation($"Cancelacion OK. Datos recibidos: {temp2}");
-        
+
         await Task.Delay(100);
 
-        logger.LogWarning("Probando streaming de 10 mensajes..."); 
+        logger.LogWarning("Probando streaming de 10 mensajes...");
 
         await foreach (var item in client.GetMessages(10))
         {
@@ -256,11 +256,11 @@ internal class Program
         };
 
         int rps = 9999999;
-      
+
         await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
         {
-            TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions() 
-            { 
+            TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions()
+            {
                 QueueLimit = 1,
                 AutoReplenishment = true,
                 ReplenishmentPeriod = TimeSpan.FromSeconds(1),
@@ -280,10 +280,10 @@ internal class Program
                     {
                         //await tokenBucketRateLimiter.AcquireAsync();
                         //await client.IngestMessages(GetMessages2(), default);
-                        var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass() ,ct);
+                        var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
                         Interlocked.Increment(ref _finishedRequestsCount);
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         Interlocked.Increment(ref _errors);
                     }
@@ -330,7 +330,7 @@ internal class Program
         //    QueueProcessingOrder = QueueProcessingOrder.OldestFirst
         //});
 
-        while(true)
+        while (true)
         {
             var swReq = Stopwatch.StartNew();
             try

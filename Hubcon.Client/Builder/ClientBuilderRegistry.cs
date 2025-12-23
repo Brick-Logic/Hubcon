@@ -1,5 +1,6 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Concurrent;
 
 namespace Hubcon.Client.Builder
@@ -8,7 +9,7 @@ namespace Hubcon.Client.Builder
     {
         private readonly IProxyRegistry _proxyRegistry;
 
-        private readonly ConcurrentDictionary<Type, IClientBuilder> _clientBuilders = new();
+        private readonly ConcurrentDictionary<Type, IClientBuilder> _clientBuilders = new ConcurrentDictionary<Type, IClientBuilder>();
 
         private readonly bool useCached;
 

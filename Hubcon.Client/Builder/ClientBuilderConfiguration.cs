@@ -1,16 +1,27 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Net.Http;
 using System.Net.WebSockets;
 using System.Threading.RateLimiting;
-using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Models;
 
 namespace Hubcon.Client.Builder
 {
-    internal class ServerModuleConfiguration(IClientBuilder builder, IServiceCollection services) : IServerModuleConfiguration
+    internal class ServerModuleConfiguration : IServerModuleConfiguration
     {
+        private readonly IClientBuilder builder;
+        private readonly IServiceCollection services;
+
+        public ServerModuleConfiguration(IClientBuilder builder, IServiceCollection services)
+        {
+            this.builder = builder;
+            this.services = services;
+        }
+
         public IServerModuleConfiguration Implements<T>(Action<IContractConfigurator<T>>? configure = null) where T : IControllerContract
         {
             if (typeof(T).IsClass || builder.Contracts.Any(x => x == typeof(T)))

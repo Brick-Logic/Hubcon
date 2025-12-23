@@ -9,17 +9,17 @@ namespace BlazorTestServer.Middlewares
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
-			try
-			{
-				await next();
-			}
-			catch (Exception ex)
-			{
-				context.Result = new BaseOperationResponse<object>(false, default!, ex.Message);
-				context.Exception = ex;
+            try
+            {
+                await next();
+            }
+            catch (Exception ex)
+            {
+                context.Result = new BaseOperationResponse<object>(false, default!, ex.Message);
+                context.Exception = ex;
                 logger.LogInformation(ex.ToString());
-				return;
-			}
+                return;
+            }
         }
     }
 }

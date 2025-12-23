@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Channels;
-using System.Threading.RateLimiting;
-using System.Threading.Tasks;
+﻿using System.Threading.RateLimiting;
 
 namespace Hubcon.Server.Abstractions.CustomAttributes
 {
@@ -77,8 +71,8 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
 
             Factory = () => new StreamingSettings(
                 rateTokensPerPeriod,
-                rateTokenLimit, 
-                1, 
+                rateTokenLimit,
+                1,
                 queueProcessingOrder,
                 replenishmentPeriod);
         }

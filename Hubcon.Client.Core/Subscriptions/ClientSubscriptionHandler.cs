@@ -2,13 +2,13 @@
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Subscriptions
 {
@@ -34,7 +34,7 @@ namespace Hubcon.Client.Core.Subscriptions
             _converter = converter;
             this.logger = logger;
             _tokenSource = new CancellationTokenSource();
-            Handlers = new(); 
+            Handlers = new();
         }
 
         public void AddHandler(HubconEventHandler<T> handler)
@@ -72,7 +72,7 @@ namespace Hubcon.Client.Core.Subscriptions
 
             _tokenSource = new CancellationTokenSource();
 
-            var tcs = new TaskCompletionSource();
+            var tcs = new TaskCompletionSource<object>();
 
             _ = Task.Run(async () =>
             {
@@ -81,6 +81,7 @@ namespace Hubcon.Client.Core.Subscriptions
                 var contract = Property.DeclaringType!;
                 var simpleContractName = NamingHelper.GetCleanName(Property.DeclaringType!.Name);
                 var request = new SubscriptionRequest(Property.Name, simpleContractName, null);
+                var random = new Random();
 
                 while (!_tokenSource.IsCancellationRequested)
                 {
@@ -90,20 +91,21 @@ namespace Hubcon.Client.Core.Subscriptions
 
 
                         eventSource = await Client.GetSubscription(request, Property, _tokenSource.Token);
-                        
+
                         _connected = SubscriptionState.Connected;
 
-                        tcs.SetResult();
+                        tcs.SetResult(null!);
 
-                        await foreach(var item in eventSource)
+                        await foreach (var item in eventSource)
                         {
                             if (retry > 0) retry = 0;
 
                             var result = _converter.DeserializeData<T>(item);
 
-                            if(OnEventReceived != null)
+                            if (OnEventReceived != null)
                                 await OnEventReceived.Invoke(result);
-                        };
+                        }
+                        ;
                     }
                     catch (Exception ex)
                     {
@@ -115,7 +117,7 @@ namespace Hubcon.Client.Core.Subscriptions
                         int maxReconnectionDelay = 3000;
 
                         int expDelay = baseReconnectionDelay * (int)Math.Pow(2, retry);
-                        int jitter = Random.Shared.Next(0, 1000);
+                        int jitter = random.Next(0, 2000);
                         int delay = Math.Min(expDelay + jitter, maxReconnectionDelay);
 
                         await Task.Delay(delay);

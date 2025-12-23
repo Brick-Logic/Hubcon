@@ -1,5 +1,4 @@
-﻿using Hubcon.Shared.Abstractions.Standard.Extensions;
-using Hubcon.Shared.Abstractions.Standard.Interceptor;
+﻿using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using HubconAnalyzers.SourceGenerators.Extensions;
 using Microsoft.CodeAnalysis;
@@ -11,7 +10,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace HubconAnalyzers.SourceGenerators
 {
@@ -150,7 +148,7 @@ namespace HubconAnalyzers.SourceGenerators
                 var type = $"{baseIndent}    public {property.Type.ToString()} {property.Name} {{ {accessors} }}";
 
                 sb.AppendLine(type);
-            }       
+            }
 
             foreach (var method in iface
                 .GetMembers()
@@ -202,7 +200,7 @@ namespace HubconAnalyzers.SourceGenerators
 
                 string cancellationTokenName = "";
 
-                if(method.Parameters.Any(x => x.Type.Name.ToLower().Contains("CancellationToken".ToLower())))
+                if (method.Parameters.Any(x => x.Type.Name.ToLower().Contains("CancellationToken".ToLower())))
                 {
                     cancellationTokenName = ", " + method.Parameters.First(x => x.Type.Name.ToLower().Contains("CancellationToken".ToLower())).Name;
                 }

@@ -11,7 +11,7 @@ using System.Text.Json.Serialization;
 namespace Hubcon.Shared.Core.Serialization
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class DynamicConverter(ILogger<DynamicConverter> logger) : IDynamicConverter
+    public sealed class DynamicConverter : IDynamicConverter
     {
         public ConcurrentDictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 
@@ -29,10 +29,10 @@ namespace Hubcon.Shared.Core.Serialization
         public IEnumerable<object?> DeserializeArgs(IEnumerable<Type> types, IEnumerable<object?> args)
         {
             if (!types.Any() || !args.Any())
-                return [];
+                return Enumerable.Empty<object?>();
 
             if (types.Count() != args.Count())
-                return [];
+                return Enumerable.Empty<object?>();
 
             var typesEnumerator = types.GetEnumerator();
             var argsEnumerator = args.GetEnumerator();
@@ -63,10 +63,16 @@ namespace Hubcon.Shared.Core.Serialization
         }
 
         private static ConcurrentDictionary<Delegate, Type[]> _delegateParametersCache = new();
+        private readonly ILogger<DynamicConverter> logger;
+
+        public DynamicConverter(ILogger<DynamicConverter> logger)
+        {
+            this.logger = logger;
+        }
 
         public IEnumerable<object?> DeserializedArgs(Delegate del, IEnumerable<object?> args)
         {
-            if (!args.Any()) return [];
+            if (!args.Any()) return Enumerable.Empty<object?>();
 
             Type[] parameterTypes;
 
@@ -179,7 +185,7 @@ namespace Hubcon.Shared.Core.Serialization
             catch (Exception ex)
             {
                 logger.LogInformation(ex.ToString());
-                return [];
+                return Enumerable.Empty<object?>();
             }
 
         }
@@ -229,7 +235,7 @@ namespace Hubcon.Shared.Core.Serialization
 
         public JsonElement SerializeToElement<T>(T value)
         {
-            if(value == null)
+            if (value == null)
                 return default;
 
             try

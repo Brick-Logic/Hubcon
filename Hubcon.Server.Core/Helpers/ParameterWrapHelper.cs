@@ -1,17 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.Serialization;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using Hubcon.Shared.Abstractions.Standard.Extensions;
 
 
 namespace Hubcon.Server.Core.Helpers;
@@ -176,9 +168,9 @@ public static class ParameterWrapHelper
         //    visibility = MethodAttributes.Public;
         //}
 
-            var getMethodBuilder = tb.DefineMethod("get_" + propertyName,
-                visibility | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
-                propertyType, Type.EmptyTypes);
+        var getMethodBuilder = tb.DefineMethod("get_" + propertyName,
+            visibility | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
+            propertyType, Type.EmptyTypes);
         var getIl = getMethodBuilder.GetILGenerator();
         getIl.Emit(OpCodes.Ldarg_0);
         getIl.Emit(OpCodes.Ldfld, fieldBuilder);

@@ -19,7 +19,7 @@ namespace Hubcon.Server.Core.Supervisor
 
         public bool IsExpired(string id)
         {
-            if(_connections.TryGetValue(id, out (DateTime Expiration, Action cancellationCallback) connection))
+            if (_connections.TryGetValue(id, out (DateTime Expiration, Action cancellationCallback) connection))
             {
                 return connection.Expiration > DateTime.Now;
             }
@@ -51,7 +51,7 @@ namespace Hubcon.Server.Core.Supervisor
             try
             {
                 if (_connections.TryRemove(id, out var entry))
-                {              
+                {
                     entry.cancellationCallback();
                 }
             }

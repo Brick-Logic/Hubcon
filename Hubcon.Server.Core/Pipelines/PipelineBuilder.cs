@@ -33,7 +33,7 @@
     //    public IPipeline Build(IOperationRequest request, PipelineDelegate handler, ILifetimeScope serviceProvider)
     //    {
     //        return new Pipeline(default!);
-        
+
     //    }
 
     //    public IPipeline Build(IOperationRequest request, PipelineDelegate handler, IServiceProvider serviceProvider)

@@ -3,19 +3,14 @@ using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
-using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets.Events;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.Contracts;
-using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Channels;
 
@@ -32,13 +27,13 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, PipelineDelegate next)
         {
-            if (context.Blueprint.Kind == OperationKind.Method 
-                || context.Blueprint.Kind == OperationKind.Stream 
+            if (context.Blueprint.Kind == OperationKind.Method
+                || context.Blueprint.Kind == OperationKind.Stream
                 || context.Blueprint.Kind == OperationKind.Ingest)
             {
                 var dict = context.Request.Arguments.ToDictionary();
 
-                if(context.Blueprint.Kind == OperationKind.Ingest)
+                if (context.Blueprint.Kind == OperationKind.Ingest)
                 {
                     foreach (var kvp in context.Blueprint!.ParameterTypes)
                     {
@@ -63,13 +58,13 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     }
                 }
                 else
-                {             
+                {
                     foreach (var kvp in context.Blueprint!.ParameterTypes)
-                    {                      
-                        if (context.Blueprint!.ParameterTypes.TryGetValue(kvp.Key, out var type) 
+                    {
+                        if (context.Blueprint!.ParameterTypes.TryGetValue(kvp.Key, out var type)
                             && dict.TryGetValue(kvp.Key, out var item)
                             && item is JsonElement element)
-                        { 
+                        {
                             dict[kvp.Key] = dynamicConverter.DeserializeJsonElement(element, type)!;
                         }
                     }
@@ -91,7 +86,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         }
                     }
 
-                    foreach(var sub in context.Blueprint.SubscriptionProperties)
+                    foreach (var sub in context.Blueprint.SubscriptionProperties)
                     {
                         if (!operationRegistry.GetOperationBlueprint(context.Blueprint.SimpleContractName, sub.PropInfo.Name, out IOperationBlueprint? blueprint))
                             continue;
@@ -130,9 +125,9 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 try
                 {
-                    result = await Task.Run(() => context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper));             
+                    result = await Task.Run(() => context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper));
                 }
-                catch(Exception ex) when (RecordDiagnostics(ex, context)) 
+                catch (Exception ex) when (RecordDiagnostics(ex, context))
                 {
                 }
 
@@ -233,8 +228,10 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         observer.OnCompleted();
                         liveSubscriptionRegistry.RemoveHandler(clientId, context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
                         subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
-                    };
-                };
+                    }
+                    ;
+                }
+                ;
 
                 context.Result = new BaseOperationResponse<object>(true, SubDelegate());
                 await next();

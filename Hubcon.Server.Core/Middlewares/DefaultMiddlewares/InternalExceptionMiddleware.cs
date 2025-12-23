@@ -70,7 +70,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                                 responseMsg.AppendLine(context.Exception.Message);
 
                             if (!string.IsNullOrWhiteSpace(context.Exception.StackTrace))
-                                responseMsg.AppendLine(context.Exception.StackTrace);                         
+                                responseMsg.AppendLine(context.Exception.StackTrace);
                         }
                         else
                         {
@@ -96,12 +96,12 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                                 responseMsg.AppendLine(exception.Message);
 
                             if (!string.IsNullOrWhiteSpace(exception.StackTrace))
-                                responseMsg.AppendLine(exception.StackTrace);                           
+                                responseMsg.AppendLine(exception.StackTrace);
                         }
                         else
                         {
                             responseMsg.AppendLine(exception.Message);
-                        }                  
+                        }
                     }
                 }
 

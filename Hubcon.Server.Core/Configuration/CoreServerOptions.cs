@@ -138,10 +138,10 @@ namespace Hubcon.Server.Core.Configuration
         // Defaults
         public int MaxWebSocketMessageSize => maxWsSize ?? (64 * 1024); // 64 KB
         public int MaxHttpMessageSize => maxHttpSize ?? (128 * 1024);   // 128 KB
-    
-        public TimeSpan WebSocketTimeout => wsTimeout ?? TimeSpan.FromSeconds(30); 
+
+        public TimeSpan WebSocketTimeout => wsTimeout ?? TimeSpan.FromSeconds(30);
         public TimeSpan HttpTimeout => httpTimeout ?? TimeSpan.FromSeconds(15);
-         
+
         public string WebSocketPathPrefix => wsPrefix ?? "/ws";
         public string HttpPathPrefix => httpPrefix ?? "";
 
@@ -269,7 +269,7 @@ namespace Hubcon.Server.Core.Configuration
             detailedErrorsEnabled ??= enabled;
             return this;
         }
-        
+
         public ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure)
         {
             endpointConventions ??= configure;
@@ -294,7 +294,7 @@ namespace Hubcon.Server.Core.Configuration
             websocketRequiresAuthorization ??= true;
             return this;
         }
-        
+
         public ICoreServerOptions EnableWebsocketsLogging(bool enabled = true)
         {
             websocketLoggingEnabled ??= enabled;

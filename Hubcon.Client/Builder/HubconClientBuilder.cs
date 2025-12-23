@@ -1,16 +1,16 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Core.Proxies;
 using Hubcon.Client.Core.Registries;
 using Hubcon.Client.Core.Subscriptions;
 using Hubcon.Client.Integration.Client;
-using Hubcon.Client.Interceptors;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Attributes;
 using Hubcon.Shared.Core.Injection;
 using Hubcon.Shared.Core.Serialization;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.ComponentModel;
+using System.Linq;
 
 namespace Hubcon.Client.Builder
 {
@@ -22,7 +22,7 @@ namespace Hubcon.Client.Builder
 
         private HubconClientBuilder()
         {
-            Proxies = new();
+            Proxies = new ProxyRegistry();
             ClientBuilders = new ClientBuilderRegistry(Proxies);
         }
 
@@ -63,14 +63,14 @@ namespace Hubcon.Client.Builder
 
         public void LoadContractProxy(Type contractType, IServiceCollection services)
         {
-            if (!contractType.IsAssignableTo(typeof(IControllerContract)))
+            if (!typeof(IControllerContract).IsAssignableFrom(contractType))
                 return;
 
             var proxy = GetProxyType(contractType);
 
-            if(proxy == null)
+            if (proxy == null)
                 throw new InvalidOperationException($"No proxy found for contract type {contractType.FullName}. Ensure the proxy is defined and follows the naming convention.");
-            
+
             Proxies.RegisterProxy(contractType, proxy);
             services.AddSingleton(proxy);
         }
@@ -108,7 +108,7 @@ namespace Hubcon.Client.Builder
 
             var proxies = assembly
                 .GetTypes()
-                .Where(t => !t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t) && t.IsDefined(typeof(HubconProxyAttribute), inherit:true))
+                .Where(t => !t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t) && t.IsDefined(typeof(HubconProxyAttribute), inherit: true))
                 .ToList();
 
             foreach (var contract in contracts)

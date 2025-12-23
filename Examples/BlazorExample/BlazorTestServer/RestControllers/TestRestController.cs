@@ -1,6 +1,4 @@
-﻿using HubconTestDomain;
-
-namespace BlazorTestServer.RestControllers
+﻿namespace BlazorTestServer.RestControllers
 {
     //public class TestRestController : CarterModule, ITestRestController
     //{

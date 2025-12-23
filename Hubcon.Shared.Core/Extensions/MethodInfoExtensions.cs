@@ -1,18 +1,15 @@
-﻿using Hubcon.Shared.Core.Tools;
+﻿using Hubcon.Shared.Abstractions.Standard.Extensions;
+using Hubcon.Shared.Core.Tools;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using Hubcon.Shared.Abstractions.Standard.Extensions;
 
 namespace Hubcon.Shared.Core.Extensions
 {
     public static class MethodInfoExtensions
     {
-        private static readonly ConcurrentDictionary<string, bool> _attributeCache = new();
+        private static readonly ConcurrentDictionary<string, bool> _attributeCache = new ConcurrentDictionary<string, bool>();
         private static ConcurrentDictionary<MethodInfo, (string, string, string)> _routeCache = new ConcurrentDictionary<MethodInfo, (string, string, string)>();
 
 

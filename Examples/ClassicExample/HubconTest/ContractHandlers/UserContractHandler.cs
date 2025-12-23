@@ -1,14 +1,14 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Core.Middlewares;
+using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTest.Filters;
 using HubconTest.Middlewares;
 using HubconTestDomain;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
-using System.Diagnostics;
-using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 
 namespace HubconTest.ContractHandlers
 {
@@ -59,7 +59,7 @@ namespace HubconTest.ContractHandlers
 
                 i++;
             }
-            
+
             return true;
         }
 
@@ -75,7 +75,7 @@ namespace HubconTest.ContractHandlers
         [StreamingSettings(0)]
         public async IAsyncEnumerable<string> GetMessages2(CancellationToken cancellationToken)
         {
-            while(true)
+            while (true)
             {
                 yield return "hola2";
             }

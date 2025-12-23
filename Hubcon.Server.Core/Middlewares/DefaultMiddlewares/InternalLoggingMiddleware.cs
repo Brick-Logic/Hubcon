@@ -13,8 +13,8 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             logger.LogInformation($"[Inicio] Methodo {request.OperationName} llamado...");
             Stopwatch stopwatch = Stopwatch.StartNew();
 
-            try 
-            {        
+            try
+            {
                 await next();
             }
             finally

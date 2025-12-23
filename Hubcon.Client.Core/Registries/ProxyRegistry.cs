@@ -1,5 +1,6 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Linq;
@@ -9,7 +10,7 @@ namespace Hubcon.Client.Core.Registries
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class ProxyRegistry : IProxyRegistry
     {
-        private readonly ConcurrentDictionary<Type, Type> _proxyTypes = new();
+        private readonly ConcurrentDictionary<Type, Type> _proxyTypes = new ConcurrentDictionary<Type, Type>();
 
         public void RegisterProxy(Type interfaceType, Type proxyType)
         {

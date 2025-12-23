@@ -1,9 +1,5 @@
 ﻿using Hubcon.Shared.Core.Websockets.Interfaces;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Resilience
@@ -15,7 +11,7 @@ namespace Hubcon.Shared.Core.Websockets.Resilience
         private readonly int maxRetries;
         private int _completed = 0;
         private bool firstReadPassed = false;
-        private readonly TaskCompletionSource<bool> _tcs = new();
+        private readonly TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>();
 
         public RetryableMessage(object message, int retries, TimeSpan timeout)
         {

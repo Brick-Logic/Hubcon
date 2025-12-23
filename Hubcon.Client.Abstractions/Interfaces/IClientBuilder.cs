@@ -3,8 +3,12 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Net.WebSockets;
 using System.Threading.RateLimiting;
+using System.Threading.Tasks;
 
 namespace Hubcon.Client.Abstractions.Interfaces
 {

@@ -1,7 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Microsoft.AspNetCore.Authorization;

@@ -1,6 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using System.ComponentModel;
-using System.Text.Json;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
@@ -15,7 +14,7 @@ namespace Hubcon.Shared.Abstractions.Models
         {
             OperationName = operationName;
             ContractName = contractName;
-            Arguments = arguments ?? [];
+            Arguments = arguments ?? new Dictionary<string, object>();
         }
 
         public override bool Equals(object? obj)

@@ -1,8 +1,4 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Routing.Registries;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Attributes;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
 using System.Text.Json;
@@ -32,7 +28,7 @@ namespace Hubcon.Server.Core.Entrypoint
             var requestHandler = scope.ServiceProvider.GetRequiredService<IRequestHandler>();
             return requestHandler.GetStream(request, null, cancellationToken);
         }
-        
+
         public Task<IOperationResponse<IAsyncEnumerable<object?>?>> HandleSubscription(IOperationRequest request, CancellationToken cancellationToken = default)
         {
             using var scope = ServiceProvider.CreateScope();
@@ -46,7 +42,7 @@ namespace Hubcon.Server.Core.Entrypoint
             var requestHandler = scope.ServiceProvider.GetRequiredService<IRequestHandler>();
             return requestHandler.HandleIngest(request, sources, null, cancellationToken);
         }
-     
+
         public void Build()
         {
         }

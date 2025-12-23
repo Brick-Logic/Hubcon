@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.RateLimiting;
-using System.Threading.Tasks;
+﻿using System.Threading.RateLimiting;
 
 namespace Hubcon.Server.Abstractions.CustomAttributes
 {
@@ -70,7 +65,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
             int rateTokenLimit = 1000,
             QueueProcessingOrder queueProcessingOrder = QueueProcessingOrder.OldestFirst,
             int millisecondsToReplenish = 1000)
-        { 
+        {
             var replenishmentPeriod = (millisecondsToReplenish <= 0)
                 ? TimeSpan.FromSeconds(1)
                 : TimeSpan.FromMilliseconds(millisecondsToReplenish);

@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
-using System;
 using System.Reflection;
 
 namespace Hubcon.Server.Core.Helpers
@@ -23,7 +22,7 @@ namespace Hubcon.Server.Core.Helpers
             public static bool EnableAutoFallbacks { get; set; } = true;
 
             public static List<Type> ExcludedTypes = [
-            
+
                 typeof(HttpContext),
                 typeof(HttpRequest),
                 typeof(HttpResponse),
@@ -91,7 +90,7 @@ namespace Hubcon.Server.Core.Helpers
                 return apiExplorer.GroupName;
 
             // 3. Por nombre de clase
-            var className = methodInfo.DeclaringType?.Name ?? null;          
+            var className = methodInfo.DeclaringType?.Name ?? null;
             RemoveInterfacePrefix(className!);
 
             return className ?? Defaults.DefaultGroupName;

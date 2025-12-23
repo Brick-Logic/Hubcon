@@ -1,14 +1,10 @@
 ﻿using Hubcon.Shared.Core.Websockets.Messages.Generic;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Token
 {
-    public record class TokenUpdateResponseMessage : BaseMessage
+    public class TokenUpdateResponseMessage : BaseMessage
     {
         private bool? _result;
         private string? _message;

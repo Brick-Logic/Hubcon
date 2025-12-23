@@ -6,7 +6,7 @@ namespace ExampleMicroservice3.ContractHandlers
 {
     [UseMiddleware(typeof(ExceptionMiddleware))]
     public class ExampleMicroservice3ContractHandler(
-        IExampleMicroservice1Contract microservice1, 
+        IExampleMicroservice1Contract microservice1,
         ILogger<ExampleMicroservice3ContractHandler> logger) : IExampleMicroservice3Contract
     {
         public async Task ProcessMessage(string message)

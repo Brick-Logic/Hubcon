@@ -12,7 +12,7 @@ namespace Hubcon.Shared.Core.Tools
             var setMethod = prop.GetSetMethod(true);
             if (setMethod != null)
             {
-                setMethod.Invoke(instance, [value]);
+                setMethod.Invoke(instance, new object[] { value });
             }
             else
             {

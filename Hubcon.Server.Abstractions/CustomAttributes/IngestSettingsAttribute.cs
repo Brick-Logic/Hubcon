@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using System.Threading.RateLimiting;
-using System.Threading.Tasks;
 
 namespace Hubcon.Server.Abstractions.CustomAttributes
 {
@@ -21,7 +16,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
             int queueLimit = 1000,
             QueueProcessingOrder queueProcessingOrder = QueueProcessingOrder.OldestFirst,
             TimeSpan? rateReplenishmentPeriod = null,
-            int channelCapacity = 1000, 
+            int channelCapacity = 1000,
             BoundedChannelFullMode? channelFullMode = BoundedChannelFullMode.Wait)
         {
             ChannelCapacity = channelCapacity;
@@ -93,12 +88,12 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
                 : TimeSpan.FromMilliseconds(millisecondsToReplenish);
 
             Factory = () => new IngestSettings(
-                rateTokensPerPeriod, 
-                rateTokenLimit, 
-                1, 
+                rateTokensPerPeriod,
+                rateTokenLimit,
+                1,
                 queueProcessingOrder,
-                replenishmentPeriod, 
-                channelCapacity, 
+                replenishmentPeriod,
+                channelCapacity,
                 channelFullMode
             );
 

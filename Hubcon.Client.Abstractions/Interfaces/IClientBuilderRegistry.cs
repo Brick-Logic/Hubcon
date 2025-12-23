@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 
 namespace Hubcon.Client.Abstractions.Interfaces
 {

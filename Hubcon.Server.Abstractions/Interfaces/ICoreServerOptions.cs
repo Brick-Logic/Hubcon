@@ -1,8 +1,5 @@
 ﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 using System.Security.Claims;
-using System.Threading.Channels;
 using System.Threading.RateLimiting;
 
 namespace Hubcon.Server.Core.Configuration
@@ -378,7 +375,7 @@ namespace Hubcon.Server.Core.Configuration
         /// Default rate limiter options for streaming messages in the websocket channel.
         /// </summary>
         Func<TokenBucketRateLimiterOptions> WebsocketStreamingRateLimiter { get; }
-        
+
         /// <summary>
         /// Rate limiter options for websocket token updates.
         /// </summary>

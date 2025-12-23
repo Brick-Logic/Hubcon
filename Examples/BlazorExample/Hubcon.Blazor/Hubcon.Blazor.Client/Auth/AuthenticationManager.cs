@@ -64,7 +64,7 @@ namespace Hubcon.Blazor.Client.Auth
 
         protected async override Task SaveSessionAsync()
         {
-            
+
         }
     }
 }

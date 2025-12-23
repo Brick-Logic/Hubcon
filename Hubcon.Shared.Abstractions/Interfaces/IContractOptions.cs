@@ -3,10 +3,7 @@ using Hubcon.Shared.Abstractions.Models;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Interfaces
@@ -16,7 +13,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         public bool WebsocketMethodsEnabled { get; }
         public Type ContractType { get; }
         ConcurrentDictionary<string, IOperationOptions> OperationOptions { get; }
-        IReadOnlyDictionary<HookType, Func<InvocationContext, Task>> Hooks { get; } 
+        IReadOnlyDictionary<HookType, Func<InvocationContext, Task>> Hooks { get; }
         bool RemoteCancellationIsAllowed { get; }
         bool HttpAuthIsEnabled { get; }
         Task CallHook(HookType hookType, InvocationContext context);

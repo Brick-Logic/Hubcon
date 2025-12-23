@@ -1,10 +1,6 @@
-﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 
 namespace Hubcon.Analyzers
 {
@@ -50,7 +46,7 @@ namespace Hubcon.Analyzers
             // Verifica si retorna Task o Task<T>
             var returnType = methodSymbol.ReturnType;
 
-            if(IsAsyncEnumerable(returnType))
+            if (IsAsyncEnumerable(returnType))
                 return;
 
             if (!IsTaskType(returnType))

@@ -1,15 +1,22 @@
-﻿using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
-    public sealed record class RequestValidationContext(
-        IServiceProvider Services,
-        IOperationRequest Request,
-        CancellationToken CancellationToken);
+    public sealed class RequestValidationContext
+    {
+        public RequestValidationContext(
+            IServiceProvider Services,
+            IOperationRequest Request,
+            CancellationToken CancellationToken)
+        {
+            this.Services = Services;
+            this.Request = Request;
+            this.CancellationToken = CancellationToken;
+        }
+
+        public IServiceProvider Services { get; }
+        public IOperationRequest Request { get; }
+        public CancellationToken CancellationToken { get; }
+    }
 }

@@ -2,25 +2,28 @@
 using Hubcon.Client.Core.Configurations;
 using Hubcon.Client.Core.Proxies;
 using Hubcon.Client.Core.Subscriptions;
-using Hubcon.Client.Interceptors;
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Threading.RateLimiting;
+using System.Threading.Tasks;
 
 namespace Hubcon.Client.Builder
 {
-    internal sealed class ClientBuilder(IProxyRegistry proxyRegistry, string name) : IClientBuilder, IClientOptions
+    internal sealed class ClientBuilder : IClientBuilder, IClientOptions
     {
         public Uri? BaseUri { get; set; }
-        public List<Type> Contracts { get; set; } = new();
+        public List<Type> Contracts { get; set; } = new List<Type>();
         public Type? AuthenticationManagerType { get; set; }
         public string? HttpPrefix { get; set; }
         public string? WebsocketPrefix { get; set; }
@@ -33,13 +36,13 @@ namespace Hubcon.Client.Builder
         public TimeSpan WebsocketTimeout { get; set; } = TimeSpan.FromSeconds(30);
         public TimeSpan HttpTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
-        public string ServerModuleName { get; } = name;
+        public string ServerModuleName { get; }
 
-        private ConcurrentDictionary<Type, Type> _subTypesCache { get; } = new();
-        private ConcurrentDictionary<Type, IEnumerable<PropertyInfo>> _propTypesCache { get; } = new();
-        private ConcurrentDictionary<Type, IContractOptions> _contractOptions { get; } = new();
-        private ConcurrentDictionary<InterceptorType, Func<InvocationContext, Task>> _interceptors = new();
-        private Dictionary<Type, object> _clients { get; } = new();
+        private ConcurrentDictionary<Type, Type> _subTypesCache { get; } = new ConcurrentDictionary<Type, Type>();
+        private ConcurrentDictionary<Type, IEnumerable<PropertyInfo>> _propTypesCache { get; } = new ConcurrentDictionary<Type, IEnumerable<PropertyInfo>>();
+        private ConcurrentDictionary<Type, IContractOptions> _contractOptions { get; } = new ConcurrentDictionary<Type, IContractOptions>();
+        private ConcurrentDictionary<InterceptorType, Func<InvocationContext, Task>> _interceptors = new ConcurrentDictionary<InterceptorType, Func<InvocationContext, Task>>();
+        private Dictionary<Type, object> _clients { get; } = new Dictionary<Type, object>();
         public bool AutoReconnect { get; set; } = true;
         public bool ReconnectStreams { get; set; } = false;
         public bool ReconnectSubscriptions { get; set; } = true;
@@ -144,9 +147,17 @@ namespace Hubcon.Client.Builder
         public RateLimiter? WebsocketFireAndForgetRateBucket => _websocketFireAndForgetRateBucket ??= WebsocketFireAndForgetLimiterOptions != null ? new TokenBucketRateLimiter(WebsocketFireAndForgetLimiterOptions) : null;
 
         private RateLimiter? _httpFireAndForgetRateBucket;
+        private readonly IProxyRegistry proxyRegistry;
+
+        public ClientBuilder(IProxyRegistry proxyRegistry, string name)
+        {
+            this.proxyRegistry = proxyRegistry;
+            ServerModuleName = name;
+        }
+
         public RateLimiter? HttpFireAndForgetRateBucket => _httpFireAndForgetRateBucket ??= HttpFireAndForgetLimiterOptions != null ? new TokenBucketRateLimiter(HttpFireAndForgetLimiterOptions) : null;
 
-        public bool LoggingEnabled {  get; set; }
+        public bool LoggingEnabled { get; set; }
         public bool DebuggingMethodSignaturesEnabled { get; set; }
         public bool HttpAuthIsEnabled { get; set; } = true;
 
@@ -176,7 +187,7 @@ namespace Hubcon.Client.Builder
 
             var props = _propTypesCache.GetOrAdd(
                 proxyType,
-                x => x.GetProperties().Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription))));
+                x => x.GetProperties().Where(x => typeof(ISubscription).IsAssignableFrom(x.PropertyType)));
 
             foreach (var subscriptionProp in props)
             {
@@ -184,7 +195,7 @@ namespace Hubcon.Client.Builder
                 if (value == null)
                 {
                     var genericType = _subTypesCache.GetOrAdd(
-                        subscriptionProp.PropertyType.GenericTypeArguments[0], 
+                        subscriptionProp.PropertyType.GenericTypeArguments[0],
                         x => typeof(ClientSubscriptionHandler<>).MakeGenericType(x));
 
                     var propss = contractType.GetProperties().Where(x => x.Name == subscriptionProp.Name).FirstOrDefault();
@@ -201,7 +212,7 @@ namespace Hubcon.Client.Builder
                 }
             }
 
-            if(useCached) _clients.Add(contractType, newClient!);
+            if (useCached) _clients.Add(contractType, newClient!);
 
             return newClient!;
         }

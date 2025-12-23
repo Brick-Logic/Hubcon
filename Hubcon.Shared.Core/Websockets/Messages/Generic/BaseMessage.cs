@@ -1,5 +1,4 @@
-﻿using Hubcon.Shared.Core.Tools;
-using System;
+﻿using System;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -33,7 +32,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
         public static T Create(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) => _ctor(buffer, id, type);
     }
 
-    public record class BaseMessage
+    public class BaseMessage
     {
         private readonly ReadOnlyMemory<byte>? _buffer;
         private Guid? _id;
@@ -62,7 +61,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             _buffer = buffer;
         }
 
-        protected T? Extract<T>(string propertyName, bool isBinaryPayload = false)
+        protected T Extract<T>(string propertyName, bool isBinaryPayload = false)
         {
             if (_buffer is null)
                 return default;
@@ -102,8 +101,8 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
                         Type t when t == typeof(Guid[]) => Cast<T, Guid[]>(ReadGuidArray(ref reader)),
                         Type t when t == typeof(bool) => Cast<T, bool>(reader.GetBoolean()),
                         Type t when t == typeof(string) => Cast<T, string?>(reader.GetString()),
-                        Type t when t == typeof(MessageType) => Enum.TryParse(reader.GetString(), ignoreCase: true, out MessageType result) 
-                                                                    ? Cast<T, MessageType>(result) 
+                        Type t when t == typeof(MessageType) => Enum.TryParse(reader.GetString(), ignoreCase: true, out MessageType result)
+                                                                    ? Cast<T, MessageType>(result)
                                                                     : default,
                         Type t when t == typeof(JsonElement) => Cast<T, JsonElement>(JsonDocument.ParseValue(ref reader).RootElement),
                         _ => default
@@ -122,7 +121,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             if (_buffer == null)
                 return default!;
 
-            return MessageFactory<T>.Create((ReadOnlyMemory<byte>)_buffer!, _id, _type);    
+            return MessageFactory<T>.Create((ReadOnlyMemory<byte>)_buffer!, _id, _type);
         }
 
         protected static Guid[] ReadGuidArray(ref Utf8JsonReader reader)

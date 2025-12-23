@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Streams
 {
-    public record class StreamInitMessage : BaseMessage
+    public class StreamInitMessage : BaseMessage
     {
         private JsonElement? _payload;
 

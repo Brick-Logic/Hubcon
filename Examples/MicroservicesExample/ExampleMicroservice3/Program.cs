@@ -1,9 +1,9 @@
 using ExampleMicroservice3.ContractHandlers;
 using ExampleMicroservice3.ServerModules;
-using ExampleMicroservicesDomain.Middlewares;
-using Hubcon.Server.Injection;
-using Hubcon.Client;
 using ExampleMicroservicesDomain;
+using ExampleMicroservicesDomain.Middlewares;
+using Hubcon.Client;
+using Hubcon.Server.Injection;
 using Scalar.AspNetCore;
 
 namespace ExampleMicroservice3
@@ -54,7 +54,7 @@ namespace ExampleMicroservice3
                     await microservice1.ProcessMessage("My custom message.");
                 }
             });
-                     
+
             app.Run();
         }
     }

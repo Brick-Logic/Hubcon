@@ -1,4 +1,6 @@
-﻿namespace Hubcon.Shared.Abstractions.Interfaces
+﻿using System;
+
+namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface ISettingsManager
     {

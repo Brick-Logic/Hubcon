@@ -1,5 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
-using System.Text.Json;
+using System;
+using System.Collections.Generic;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
@@ -11,7 +12,7 @@ namespace Hubcon.Shared.Abstractions.Models
 
         public OperationRequest()
         {
-            
+
         }
 
         public OperationRequest(string operationName, string contractName)

@@ -3,7 +3,6 @@ using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
-using System.Linq;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 {
@@ -84,13 +83,13 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         private List<Type> GetMiddlewares()
         {
-            if(BuiltMiddlewares.Count > 0)
+            if (BuiltMiddlewares.Count > 0)
                 return BuiltMiddlewares;
 
             var middlewares = new List<Type>();
 
             middlewares.Add(GlobalInternalExceptionMiddleware);
-          
+
             if (GlobalMiddlewaresFirst)
             {
                 middlewares.Add(GlobalExceptionMiddleware);
@@ -144,7 +143,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             var result = middlewares.Where(x => x != null);
 
-            if(result.Any() && BuiltMiddlewares.Count == 0)
+            if (result.Any() && BuiltMiddlewares.Count == 0)
                 BuiltMiddlewares.AddRange(result);
 
             return BuiltMiddlewares;

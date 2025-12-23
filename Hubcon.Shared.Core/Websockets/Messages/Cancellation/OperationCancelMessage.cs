@@ -1,9 +1,10 @@
 ﻿using Hubcon.Shared.Core.Websockets.Messages.Generic;
+using System;
 using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Cancellation
 {
-    public sealed record class CancelMessage : BaseMessage
+    public sealed class CancelMessage : BaseMessage
     {
         public CancelMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {

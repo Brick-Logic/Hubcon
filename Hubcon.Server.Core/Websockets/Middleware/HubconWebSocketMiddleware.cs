@@ -2,7 +2,6 @@
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Entrypoint;
-using Hubcon.Server.Core.Supervisor;
 using Hubcon.Server.Core.Websockets.Helpers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
@@ -19,7 +18,6 @@ using Hubcon.Shared.Core.Websockets.Messages.Streams;
 using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Hubcon.Shared.Core.Websockets.Messages.Token;
 using Hubcon.Shared.Core.Websockets.Models;
-using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -178,7 +176,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 {
                     context.Request.Headers.Authorization = Guid.NewGuid().ToString("N");
                 }
-               
+
                 var lastPingId = Guid.Empty;
 
                 _heartbeatWatcher = new HeartbeatWatcher(timeoutSeconds, () =>
@@ -193,7 +191,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 _ingestHandlers = new();
                 _ackChannels = new();
                 _tasks = new();
-              
+
                 while (webSocket.State == WebSocketState.Open)
                 {
                     TrimmedMemoryOwner? tmo;
@@ -268,9 +266,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await HandleNotAllowed(message.Id, "Websocket subscriptions are disabled.", "", sender);
                                 break;
                             }
-                            
+
                             _ = HandleUnsubscribe(
-                                _subscriptions, 
+                                _subscriptions,
                                 context,
                                 entrypoint,
                                 new SubscriptionCompleteMessage(tmo.Memory, message.Id, message.Type));
@@ -288,12 +286,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             }
 
                             _ = HandleStream(
-                                context, 
-                                _streams, 
-                                _ackChannels, 
-                                sender, 
-                                new StreamInitMessage(tmo.Memory, message.Id, message.Type), 
-                                webSocket, 
+                                context,
+                                _streams,
+                                _ackChannels,
+                                sender,
+                                new StreamInitMessage(tmo.Memory, message.Id, message.Type),
+                                webSocket,
                                 rateLimiterManager,
                                 entrypoint,
                                 cts.Token);
@@ -311,7 +309,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             }
 
                             _ = HandleUnsubscribe(
-                                _subscriptions, 
+                                _subscriptions,
                                 context,
                                 entrypoint,
                                 new SubscriptionCompleteMessage(tmo.Memory, message.Id, message.Type));
@@ -327,9 +325,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await HandleNotAllowed(message.Id, "Message ack is disabled.", "", sender);
                                 break;
                             }
-                            
+
                             _ = HandleAck(
-                                _ackChannels, 
+                                _ackChannels,
                                 new AckMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
@@ -343,12 +341,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await HandleNotAllowed(message.Id, "Websocket methods are disabled.", "", sender);
                                 break;
                             }
-                            
+
                             _ = HandleOperationInvoke(
-                                context, 
-                                sender, 
-                                new OperationInvokeMessage(tmo.Memory, message.Id, message.Type), 
-                                _tasks, 
+                                context,
+                                sender,
+                                new OperationInvokeMessage(tmo.Memory, message.Id, message.Type),
+                                _tasks,
                                 webSocket,
                                 entrypoint,
                                 cts.Token);
@@ -366,8 +364,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             }
 
                             _ = HandleOperationCall(
-                                context, 
-                                new OperationCallMessage(tmo.Memory, message.Id, message.Type), 
+                                context,
+                                new OperationCallMessage(tmo.Memory, message.Id, message.Type),
                                 _tasks,
                                 entrypoint,
                                 cts.Token);
@@ -385,10 +383,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             }
 
                             _ = HandleIngestInit(
-                                sender, 
-                                new IngestInitMessage(tmo.Memory, message.Id, message.Type), 
-                                _ingestHandlers, 
-                                _ingestRouters, 
+                                sender,
+                                new IngestInitMessage(tmo.Memory, message.Id, message.Type),
+                                _ingestHandlers,
+                                _ingestRouters,
                                 settingsManager,
                                 operationConfigRegistry,
                                 rateLimiterManager,
@@ -406,7 +404,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await HandleNotAllowed(message.Id, "Websocket ingest is disabled.", "", sender);
                                 break;
                             }
-                            
+
                             _ = HandleIngestData(_ingestRouters, new IngestDataMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
@@ -434,7 +432,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await HandleNotAllowed(message.Id, "Websocket ingest is disabled.", "", sender);
                                 break;
                             }
-                            
+
                             _ = HandleIngestComplete(_ingestRouters, new IngestCompleteMessage(tmo.Memory, message.Id, message.Type));
 
                             break;
@@ -455,12 +453,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await rateLimiterManager.TryAcquireAsync(MessageType.token_update, message.Id);
 
                             _ = HandleTokenRefresh(
-                                context, 
-                                sender, 
-                                connectionId, 
+                                context,
+                                sender,
+                                connectionId,
                                 _tasks,
-                                new TokenUpdateMessage(tmo.Memory, message.Id, message.Type), 
-                                webSocket, 
+                                new TokenUpdateMessage(tmo.Memory, message.Id, message.Type),
+                                webSocket,
                                 cts.Token);
 
                             break;
@@ -475,7 +473,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 await connectionSupervisor.UnregisterAsync(connectionId);
 
-                if(_heartbeatWatcher != null)
+                if (_heartbeatWatcher != null)
                     await _heartbeatWatcher.DisposeAsync();
 
                 if (_subscriptions != null)
@@ -609,14 +607,14 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         }
 
         private async Task HandleIngestInit(
-            WebSocketMessageSender sender, 
-            IngestInitMessage ingestInitMessage, 
+            WebSocketMessageSender sender,
+            IngestInitMessage ingestInitMessage,
             ConcurrentDictionary<Guid, (CancellationTokenSource, CancellationTokenRegistration)> _ingestHandlers,
             ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingestRouters,
             ISettingsManager settingsManager,
             IOperationConfigRegistry operationConfigRegistry,
             IRateLimiterManager rateLimiterManager,
-            DefaultEntrypoint entrypoint, 
+            DefaultEntrypoint entrypoint,
             CancellationToken cancellationToken)
         {
             Dictionary<Guid, object> sources = new();
@@ -758,7 +756,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 if (localCts.IsCancellationRequested)
                     result = new BaseOperationResponse<JsonElement>(false, default, "Request aborted.");
-                
+
                 logger.LogInformation("Task aborted.");
             }
             catch (Exception ex)
@@ -783,8 +781,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         }
 
         private async Task HandleOperationCall(
-            HttpContext context, 
-            OperationCallMessage operationCallMessage, 
+            HttpContext context,
+            OperationCallMessage operationCallMessage,
             ConcurrentDictionary<Guid, CancellationTokenSource> tasks,
             DefaultEntrypoint entrypoint,
             CancellationToken cancellationToken)
@@ -1023,11 +1021,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 _streams.TryRemove(streamInitMessage.Id, out _);
                 await localCts.CancelAsync();
 
-                if(webSocket.State == WebSocketState.Open)
+                if (webSocket.State == WebSocketState.Open)
                 {
                     await sender.SendAsync(new StreamCompleteMessage(streamInitMessage.Id));
                 }
-            };
+            }
+            ;
         }
 
         private async Task HandleTokenRefresh(

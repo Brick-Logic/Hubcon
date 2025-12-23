@@ -1,11 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Models;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.Shared.Abstractions.Interfaces
 {

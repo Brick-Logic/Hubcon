@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Channels;
-using System.Threading.RateLimiting;
-using System.Threading.Tasks;
+﻿using System.Threading.RateLimiting;
 
 namespace Hubcon.Server.Abstractions.CustomAttributes
 {
@@ -13,7 +7,7 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
         public override TokenBucketRateLimiter RateBucket { get; }
 
         public MethodSettings(
-            int rateTokensPerPeriod = 1000, 
+            int rateTokensPerPeriod = 1000,
             int rateTokenLimit = 1000,
             int queueLimit = 1000,
             QueueProcessingOrder queueProcessingOrder = QueueProcessingOrder.OldestFirst,

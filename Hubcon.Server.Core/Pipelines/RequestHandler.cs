@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
 using System.Text.Json;
-using System.Threading;
 
 namespace Hubcon.Server.Core.Pipelines
 {
@@ -65,7 +64,7 @@ namespace Hubcon.Server.Core.Pipelines
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint)
                 && blueprint?.Kind == OperationKind.Method))
             {
-                return new BaseJsonResponse(false, default, null);
+                return new BaseJsonResponse<JsonElement>(false, default, null);
             }
 
             IOperationContext context = BuildContext(request, blueprint, wrappedRequest, cancellationToken);
@@ -187,7 +186,7 @@ namespace Hubcon.Server.Core.Pipelines
             var pipeline = blueprint.PipelineBuilder.Build(request, context, WithResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
 
-            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeToElement(pipelineResult.Result.Data), pipelineResult.Result.Error);
+            return new BaseJsonResponse<JsonElement>(pipelineResult.Result!.Success, _converter.SerializeToElement(pipelineResult.Result.Data), pipelineResult.Result.Error);
         }
 
         public async Task<IOperationResponse<JsonElement>> HandleIngest(IOperationRequest request, Dictionary<Guid, object> sources, object? wrappedRequest, CancellationToken cancellationToken = default)
@@ -207,7 +206,7 @@ namespace Hubcon.Server.Core.Pipelines
             }
 
             var arguments = new List<object?>();
-            
+
             foreach (var parameterType in blueprint!.ParameterTypes)
             {
                 object? arg = null;
@@ -234,7 +233,7 @@ namespace Hubcon.Server.Core.Pipelines
             var pipeline = blueprint.PipelineBuilder.Build(request, context, WithResultHandler, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
 
-            return new BaseJsonResponse(pipelineResult.Result!.Success, _converter.SerializeToElement(pipelineResult.Result.Data), pipelineResult.Result.Error);
+            return new BaseJsonResponse<JsonElement>(pipelineResult.Result!.Success, _converter.SerializeToElement(pipelineResult.Result.Data), pipelineResult.Result.Error);
         }
 
         private IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint, object? wrappedRequest, CancellationToken cancellationToken = default)

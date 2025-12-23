@@ -25,7 +25,7 @@ namespace HubconTest.Middlewares
 
             bool allowed = true;
 
-            if(context.Blueprint.RequiresAuthorization)
+            if (context.Blueprint.RequiresAuthorization)
             {
                 var localCache = new Dictionary<string, bool>();
 

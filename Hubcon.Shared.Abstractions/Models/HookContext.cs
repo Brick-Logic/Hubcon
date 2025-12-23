@@ -1,9 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Models
@@ -20,7 +16,7 @@ namespace Hubcon.Shared.Abstractions.Models
         public Func<string, Task<IOperationResponse<bool>>> TryRefreshToken { get; }
     }
 
-    public sealed record class InvocationContext : IInvocationContext
+    public sealed class InvocationContext : IInvocationContext
     {
         public IServiceProvider Services { get; set; }
         public IOperationRequest Request { get; set; }

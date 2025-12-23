@@ -1,6 +1,4 @@
-﻿using HubconTestDomain;
-
-namespace HubconTest.RestControllers
+﻿namespace HubconTest.RestControllers
 {
     //public class TestRestController : CarterModule, ITestRestController
     //{

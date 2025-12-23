@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Hubcon.Shared.Abstractions.Enums
+﻿namespace Hubcon.Shared.Abstractions.Enums
 {
     /// <summary>
     /// Represents the types of interceptors that can be triggered on a all operations.

@@ -1,7 +1,4 @@
-﻿using Hubcon.Blazor.Client.Auth;
-using Hubcon.Client.Core.MessageHandlers;
-
-namespace Hubcon.Blazor.Client.Modules
+﻿namespace Hubcon.Blazor.Client.Modules
 {
     //public class HubconHttpClient : HttpClient
     //{

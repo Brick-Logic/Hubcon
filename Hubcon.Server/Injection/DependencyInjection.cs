@@ -1,18 +1,14 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.EndpointDocumentation;
 using Hubcon.Server.Core.Entrypoint;
-using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Server.Core.Websockets.Middleware;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Hubcon.Server.Injection
@@ -75,7 +71,7 @@ namespace Hubcon.Server.Injection
             ServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
             {
                 container.AddScoped<DefaultEntrypoint>();
-                container.AddTransient(typeof(ISubscription<>), typeof(ServerSubscriptionHandler<>));        
+                container.AddTransient(typeof(ISubscription<>), typeof(ServerSubscriptionHandler<>));
             });
 
             return builder;

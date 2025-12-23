@@ -29,7 +29,7 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
 
         private async Task RunAsync(CancellationToken token)
         {
-            if(_timeoutSeconds <= TimeSpan.Zero)
+            if (_timeoutSeconds <= TimeSpan.Zero)
             {
                 await Task.Delay(Timeout.Infinite, token);
                 return;
@@ -41,7 +41,7 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
 
                 var elapsed = (DateTime.UtcNow - _lastHeartbeat).TotalSeconds;
                 if (TimeSpan.FromSeconds(elapsed) > _timeoutSeconds)
-                
+
                 {
                     if (!timeoutExecuted)
                     {
@@ -64,7 +64,7 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
                 }
 
                 timeoutExecuted = true;
-                
+
                 try { await _onTimeout(); } catch { /* swallow */ }
             }
 

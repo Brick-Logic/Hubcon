@@ -34,7 +34,7 @@ namespace Hubcon.Server
         }
 
         private ServerBuilder()
-        {              
+        {
         }
 
         internal ServerBuilder AddHubconServer(
@@ -42,7 +42,7 @@ namespace Hubcon.Server
             params Action<IServiceCollection>?[] additionalServices)
         {
             Services = builder.Services;
-           
+
             Services.AddSingleton<IInternalServerOptions>(ServerOptions);
             Services.AddSingleton(OperationRegistry);
             Services.AddSingleton(SubscriptionRegistry);
@@ -57,9 +57,9 @@ namespace Hubcon.Server
 
             foreach (var services in additionalServices)
                 services?.Invoke(Services);
-            
-            AddGlobalMiddleware<InternalRoutingMiddleware>(); 
-            AddGlobalMiddleware<InternalExceptionMiddleware>(); 
+
+            AddGlobalMiddleware<InternalRoutingMiddleware>();
+            AddGlobalMiddleware<InternalExceptionMiddleware>();
 
             builder.Services.AddHttpContextAccessor();
 
@@ -92,7 +92,7 @@ namespace Hubcon.Server
         //    return container.RegisterWithInjector(x => x.RegisterType(hubconEntrypointType));
         //}
 
-        internal WebApplicationBuilder AddHubconController<T>(WebApplicationBuilder builder, Action<IControllerOptions>? options = null) 
+        internal WebApplicationBuilder AddHubconController<T>(WebApplicationBuilder builder, Action<IControllerOptions>? options = null)
             where T : class, IControllerContract
         {
             return AddHubconController(builder, typeof(T), options);
@@ -125,8 +125,8 @@ namespace Hubcon.Server
             }
 
             OperationRegistry.RegisterOperations(controllerType, options, ServerOptions, out var services);
-            
-            foreach(var service in services)
+
+            foreach (var service in services)
                 service.Invoke(Services);
 
             return builder;

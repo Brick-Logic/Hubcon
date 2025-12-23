@@ -1,7 +1,4 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
-
-namespace Hubcon.Server.Core.Pipelines
+﻿namespace Hubcon.Server.Core.Pipelines
 {
     //internal class Pipeline : IPipeline
     //{

@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
+		<TargetFramework>netstandard2.1</TargetFramework>
 		<Nullable>enable</Nullable>
+		<LangVersion>10.0</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
 
 		<AssemblyName>Hubcon.Client</AssemblyName>
 		<RootNamespace>Hubcon.Client</RootNamespace>

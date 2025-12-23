@@ -75,7 +75,7 @@ namespace Hubcon.Client.Core.Configurations
             }
 
             // Caso 2: Acceso directo a propiedad o campo
-            if (body is MemberExpression memberExpr && memberExpr.Member is PropertyInfo or FieldInfo)
+            if (body is MemberExpression memberExpr && (memberExpr.Member is PropertyInfo || memberExpr.Member is FieldInfo))
             {
                 return memberExpr.Member;
             }

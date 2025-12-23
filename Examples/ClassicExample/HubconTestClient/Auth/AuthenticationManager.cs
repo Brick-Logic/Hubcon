@@ -64,7 +64,7 @@ namespace HubconTestClient.Auth
 
         protected async override Task SaveSessionAsync()
         {
-            
+
         }
     }
 }

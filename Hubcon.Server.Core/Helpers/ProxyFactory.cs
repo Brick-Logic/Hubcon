@@ -1,13 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hubcon.Server.Core.Helpers
 {

@@ -1,9 +1,12 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Channels;
+using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Websockets.Events
 {
@@ -16,18 +19,24 @@ namespace Hubcon.Shared.Core.Websockets.Events
     }
 
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class ChannelAsyncObserver<T>(IDynamicConverter converter, BoundedChannelOptions? options = null) : IAsyncObserver<T>, IObserver<T>
+    public sealed class ChannelAsyncObserver<T> : IAsyncObserver<T>, IObserver<T>
     {
-        private readonly Channel<T?> _channel = Channel.CreateBounded<T?>(options ?? new BoundedChannelOptions(5000)
-        {
-            SingleReader = true,
-            SingleWriter = false,
-            FullMode = BoundedChannelFullMode.Wait,
-        });
-
+        private readonly Channel<T> _channel;
+        private readonly IDynamicConverter converter;
         private TaskCompletionSource<bool> _completed = new TaskCompletionSource<bool>();
 
-        public async Task<bool> WriteToChannelAsync(T? item)
+        public ChannelAsyncObserver(IDynamicConverter converter, BoundedChannelOptions? options = null)
+        {
+            this.converter = converter;
+            _channel = Channel.CreateBounded<T>(options ?? new BoundedChannelOptions(5000)
+            {
+                SingleReader = true,
+                SingleWriter = false,
+                FullMode = BoundedChannelFullMode.Wait,
+            });
+        }
+
+        public async Task<bool> WriteToChannelAsync(T item)
         {
             try
             {
@@ -43,7 +52,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
                 // El canal ya fue completado/cerrado
                 return false;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 OnError(ex);
                 return false;
@@ -60,7 +69,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
             return converter.DeserializeData<T>(item)!;
         }
 
-        public IAsyncEnumerable<T?> GetAsyncEnumerable(CancellationToken cancellationToken)
+        public IAsyncEnumerable<T> GetAsyncEnumerable(CancellationToken cancellationToken)
         {
             try
             {
@@ -73,7 +82,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
             }
         }
 
-        private async IAsyncEnumerable<T?> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+        private async IAsyncEnumerable<T> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken)
         {
             try
             {
@@ -87,7 +96,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
             }
         }
 
-        public async Task<T?> ReadItemAsync(CancellationToken cancellationToken = default)
+        public async Task<T> ReadItemAsync(CancellationToken cancellationToken = default)
         {
             try
             {

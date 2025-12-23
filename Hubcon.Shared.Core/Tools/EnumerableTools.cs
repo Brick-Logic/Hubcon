@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -109,7 +108,7 @@ namespace Hubcon.Shared.Core.Tools
                 .MakeGenericMethod(targetType.GetGenericArguments()[0]);
 
             var enumerable = method.Invoke(null, new object[] { source, converter });
-            return enumerable;    
+            return enumerable;
         }
 
 

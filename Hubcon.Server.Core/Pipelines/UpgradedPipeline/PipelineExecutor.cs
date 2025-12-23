@@ -8,6 +8,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public Task<IOperationContext> Execute()
         {
             return pipelineReference();
-        }      
+        }
     }
 }

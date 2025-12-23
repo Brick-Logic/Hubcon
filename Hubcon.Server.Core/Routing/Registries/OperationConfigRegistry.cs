@@ -1,13 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
-using Hubcon.Shared.Abstractions.Interfaces;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hubcon.Server.Core.Routing.Registries
 {

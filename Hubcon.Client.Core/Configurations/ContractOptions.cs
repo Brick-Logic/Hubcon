@@ -2,14 +2,11 @@
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Core.Websockets.Interfaces;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Configurations
@@ -47,7 +44,7 @@ namespace Hubcon.Client.Core.Configurations
         }
 
         public bool IsWebsocketOperation(string operationName)
-        {           
+        {
             if (OperationOptions.TryGetValue(operationName, out IOperationOptions? operationOptions))
             {
                 return operationOptions.TransportType switch
@@ -59,7 +56,7 @@ namespace Hubcon.Client.Core.Configurations
                 };
             }
 
-            return false;        
+            return false;
         }
 
         public IContractConfigurator<T> ConfigureOperations(Action<Shared.Abstractions.Interfaces.IOperationSelector<T>> configure)

@@ -1,16 +1,4 @@
-﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Extensions;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Core.Cache;
-using Hubcon.Shared.Core.Tools;
-using Hubcon.Shared.Core.Websockets.Interfaces;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text.Json;
-
-namespace Hubcon.Client.Interceptors
+﻿namespace Hubcon.Client.Interceptors
 {
     //internal sealed class ClientProxyInterceptor(IDynamicConverter converter) : IClientProxyInterceptor
     //{

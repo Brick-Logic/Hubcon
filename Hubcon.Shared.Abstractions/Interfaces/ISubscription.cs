@@ -1,11 +1,12 @@
 ﻿using Hubcon.Shared.Abstractions.Enums;
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Interfaces
 {
     //public delegate Task HubconEventHandler(object? eventValue);
-    public delegate Task HubconEventHandler<in T>(T? eventValue);
+    public delegate Task HubconEventHandler<in T>(T eventValue);
 
     public interface ISubscription
     {
@@ -42,7 +43,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
 
         public void AddHandler(HubconEventHandler<T> handler);
         public void RemoveHandler(HubconEventHandler<T> handler);
-        public void Emit(T? eventValue);
+        public void Emit(T eventValue);
 
         public static ISubscription<T> operator +(ISubscription<T> handler, HubconEventHandler<T> hubconEventHandler)
         {

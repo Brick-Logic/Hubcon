@@ -3,9 +3,7 @@ using Hubcon.Shared.Core.Serialization;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Net.WebSockets;
-using System.Text;
 using System.Text.Json;
-using System.Threading;
 
 namespace Hubcon.Server.Core.Websockets.Helpers
 {

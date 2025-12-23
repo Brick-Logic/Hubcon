@@ -1,13 +1,9 @@
 using Hubcon.Server.Injection;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Diagnostics;
-using System.Reflection;
-using System.Reflection.Emit;
 using System.Text;
 using System.Threading.RateLimiting;
 
@@ -173,7 +169,7 @@ namespace HubconTest
 
                 serverOptions.AutoRegisterControllers();
             });
-           
+
             var app = builder.Build();
 
             app.UseCors();

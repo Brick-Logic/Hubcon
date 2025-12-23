@@ -1,10 +1,6 @@
-using ExampleMicroservice1.ContractHandlers;
-using ExampleMicroservicesDomain.Middlewares;
-using Hubcon.Server.Injection;
-using Hubcon.Client;
 using ExampleMicroservice1.ServerModules;
-using Hubcon.Server.Abstractions.Interfaces;
-using Scalar;
+using Hubcon.Client;
+using Hubcon.Server.Injection;
 using Scalar.AspNetCore;
 
 namespace ExampleMicroservice1

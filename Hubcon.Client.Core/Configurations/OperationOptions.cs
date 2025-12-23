@@ -1,28 +1,20 @@
-﻿using Hubcon.Client.Core.Authentication;
-using Hubcon.Shared.Abstractions.Enums;
+﻿using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Configurations
 {
-    public class OperationOptions(MemberInfo memberInfo) : IOperationConfigurator, IOperationOptions
+    public class OperationOptions : IOperationConfigurator, IOperationOptions
     {
-        public MemberInfo MemberInfo { get; } = memberInfo;
+        public MemberInfo MemberInfo { get; }
 
-        public MemberType MemberType { get; } = memberInfo switch
-        {
-            MethodInfo => MemberType.Method,
-            PropertyInfo => MemberType.Property,
-            _ => throw new ArgumentException("Unsupported member type", nameof(memberInfo))
-        };
+        public MemberType MemberType { get; }
 
         public TransportType TransportType { get; private set; } = TransportType.Default;
         public TokenBucketRateLimiterOptions? RateBucketOptions { get; private set; }
@@ -34,8 +26,20 @@ namespace Hubcon.Client.Core.Configurations
 
         private RateLimiter? _rateBucket;
         public RateLimiter? RateBucket => _rateBucket ??= RateBucketOptions != null ? new TokenBucketRateLimiter(RateBucketOptions) : null;
-        
-        private Func<RequestValidationContext, Task>? _validationHook;   
+
+        private Func<RequestValidationContext, Task>? _validationHook;
+
+        public OperationOptions(MemberInfo memberInfo)
+        {
+            MemberInfo = memberInfo;
+            MemberType = memberInfo switch
+        {
+            MethodInfo => MemberType.Method,
+            PropertyInfo => MemberType.Property,
+            _ => throw new ArgumentException("Unsupported member type", nameof(memberInfo))
+        };
+        }
+
         public bool? RemoteCancellationIsAllowed { get; private set; }
 
         public bool? HttpAuthIsEnabled { get; private set; }
@@ -54,7 +58,7 @@ namespace Hubcon.Client.Core.Configurations
                 ReplenishmentPeriod = TimeSpan.FromSeconds(1),
                 TokenLimit = requestsPerSec,
                 TokensPerPeriod = requestsPerSec
-            };           
+            };
 
             return this;
         }

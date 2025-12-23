@@ -9,7 +9,7 @@ namespace Hubcon.Shared.Core.Tools
     {
         public static string? GetUserId(string? jwtToken)
         {
-            if(jwtToken == null) return null;
+            if (jwtToken == null) return null;
 
             var jwtHandler = new JwtSecurityTokenHandler();
 

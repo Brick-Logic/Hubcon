@@ -3,9 +3,6 @@ using Hubcon.Client.Builder;
 using Hubcon.Shared.Abstractions.Enums;
 using HubconTestClient.Auth;
 using HubconTestDomain;
-using Newtonsoft.Json.Linq;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 
 namespace HubconTestClient.Modules
 {
@@ -96,7 +93,7 @@ namespace HubconTestClient.Modules
 
             configuration.UseAuthenticationManager<AuthenticationManager>();
 
-            configuration.AddInterceptor(InterceptorType.OnPing, async ctx => 
+            configuration.AddInterceptor(InterceptorType.OnPing, async ctx =>
             {
                 var item = ctx.Services.GetRequiredService<AuthenticationManager>();
 

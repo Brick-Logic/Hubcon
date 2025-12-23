@@ -3,9 +3,8 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Net.Http;
 using System.Net.WebSockets;
-using System.Text;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 
@@ -33,7 +32,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         RateLimiter? RateBucket { get; }
         TokenBucketRateLimiterOptions? RateBucketOptions { get; }
         bool LimitersDisabled { get; }
-        public string ServerModuleName  { get; }
+        public string ServerModuleName { get; }
 
         public TokenBucketRateLimiterOptions? IngestLimiterOptions { get; }
         public TokenBucketRateLimiterOptions? SubscriptionLimiterOptions { get; }

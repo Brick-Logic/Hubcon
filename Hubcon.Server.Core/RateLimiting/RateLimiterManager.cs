@@ -82,7 +82,7 @@ namespace Hubcon.Server.Core.RateLimiting
                 if (messageId != Guid.Empty)
                 {
                     linkedSettings.TryGetValue(messageId, out IOperationEndpoint? operationEndpoint);
-                    
+
                     if (operationEndpoint != null)
                     {
                         var settings = operationSettings.GetOrAdd(operationEndpoint, x => GetLinkedSettings(type, messageId)!);

@@ -1,14 +1,7 @@
-﻿using Hubcon.Server.Core.Middlewares;
-using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Attributes;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using HubconTestDomain;
+﻿using HubconTestDomain;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.CodeAnalysis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;

@@ -1,7 +1,4 @@
-﻿using System.Reflection;
-using System.Text.Json;
-
-namespace Hubcon.Shared.Abstractions.Interfaces
+﻿namespace Hubcon.Shared.Abstractions.Interfaces
 {
     //public interface ICommunicationHandler
     //{

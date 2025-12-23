@@ -1,9 +1,7 @@
 ﻿using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Core.Websockets.Models;
-using Microsoft.Extensions.Options;
 using System.Buffers;
 using System.Net.WebSockets;
-using System.Text;
 
 namespace Hubcon.Server.Core.Websockets.Helpers
 {

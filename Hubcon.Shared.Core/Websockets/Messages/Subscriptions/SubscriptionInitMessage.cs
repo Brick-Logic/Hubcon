@@ -1,11 +1,10 @@
-﻿using Hubcon.Shared.Core.Websockets;
-using Hubcon.Shared.Core.Websockets.Messages.Generic;
+﻿using Hubcon.Shared.Core.Websockets.Messages.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
 {
-    public record class SubscriptionInitMessage : BaseMessage
+    public class SubscriptionInitMessage : BaseMessage
     {
         private JsonElement? _payload;
 

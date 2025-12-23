@@ -60,7 +60,7 @@ namespace Hubcon.Server.Injection
             var assembly = Assembly.GetCallingAssembly();
             var foundControllers = ControllerContractHelper.FindImplementations(assembly, [typeof(BaseContractProxy)]);
 
-            foreach(var controller in  foundControllers)
+            foreach (var controller in foundControllers)
             {
                 HubconServerBuilder.AddHubconController(Builder, controller);
             }
@@ -85,7 +85,7 @@ namespace Hubcon.Server.Injection
                     await context.HttpContext.Response.WriteAsJsonAsync(response, token);
 
                     if (previous != null)
-                        await previous(context, token);                                
+                        await previous(context, token);
                 };
 
 

@@ -41,9 +41,9 @@ namespace Hubcon.Shared.Core.Websockets.Events
 
         public GenericObservable(
             IUnsubscriber client,
-            Guid id, 
-            JsonElement request, 
-            RequestType type, 
+            Guid id,
+            JsonElement request,
+            RequestType type,
             IDynamicConverter converter,
             Action? onCancelCallback = null,
             bool shouldReconnect = false) : base(client, new RequestData(id, request, type), shouldReconnect)
@@ -106,7 +106,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
                 try { o.OnError(ex); } catch { /* Ignorar errores */ }
             }
 
-            onCancelCallback?.Invoke();           
+            onCancelCallback?.Invoke();
         }
 
         public override void OnCompleted()
@@ -119,7 +119,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
 
             _observers.Clear();
 
-            onCancelCallback?.Invoke();           
+            onCancelCallback?.Invoke();
         }
 
         private void UnsubscribeObserver(IObserver<TMessage> observer)

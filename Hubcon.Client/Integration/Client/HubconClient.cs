@@ -6,33 +6,38 @@ using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Channels;
-using Hubcon.Shared.Abstractions.Standard.Extensions;
+using System.Threading.Tasks;
 
 namespace Hubcon.Client.Integration.Client
 {
-    internal sealed class HubconClient(IDynamicConverter converter, IHttpClientFactory clientFactory) : IHubconClient
+    internal sealed class HubconClient : IHubconClient
     {
         private string _restHttpUrl = "";
         private string _websocketUrl = "";
 
         Func<IAuthenticationManager?>? authenticationManagerFactory;
-        
+
         IAuthenticationManager? _authenticationManager;
-        IAuthenticationManager AuthenticationManager => _authenticationManager 
-            ??= authenticationManagerFactory?.Invoke() 
+        IAuthenticationManager AuthenticationManager => _authenticationManager
+            ??= authenticationManagerFactory?.Invoke()
             ?? throw new InvalidOperationException($"Authentication Manager not defined for server module '{ClientOptions.ServerModuleName}'.");
-        
+
         HubconWebSocketClient client = null!;
 
         HttpClient? _httpClient;
@@ -58,11 +63,19 @@ namespace Hubcon.Client.Integration.Client
 
         //private IDictionary<Type, IContractOptions> ContractOptionsDict { get; set; } = null!;
 
-        private ConcurrentDictionary<MethodInfo, bool> NeedsAuth = new();
+        private ConcurrentDictionary<MethodInfo, bool> NeedsAuth = new ConcurrentDictionary<MethodInfo, bool>();
 
-        private ConcurrentDictionary<MethodInfo, HttpMethod> MethodVerb = new();
+        private ConcurrentDictionary<MethodInfo, HttpMethod> MethodVerb = new ConcurrentDictionary<MethodInfo, HttpMethod>();
 
-        private ConcurrentDictionary<MethodInfo, bool> ShouldUseBody = new();
+        private ConcurrentDictionary<MethodInfo, bool> ShouldUseBody = new ConcurrentDictionary<MethodInfo, bool>();
+        private readonly IDynamicConverter converter;
+        private readonly IHttpClientFactory clientFactory;
+
+        public HubconClient(IDynamicConverter converter, IHttpClientFactory clientFactory)
+        {
+            this.converter = converter;
+            this.clientFactory = clientFactory;
+        }
 
         public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
@@ -244,7 +257,7 @@ namespace Hubcon.Client.Integration.Client
                 if (isWebsocketOperation)
                 {
                     await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.WebsocketFireAndForgetRateBucket, operationOptions.RateBucket);
-                   
+
                     await operationOptions.CallHook(HookType.OnSend, context);
                     await contractOptions.CallHook(HookType.OnSend, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
@@ -296,7 +309,7 @@ namespace Hubcon.Client.Integration.Client
                     url += methodInfo.GetRoute(ClientOptions.UseHttpEndpointOverloading).FullRoute;
                     var httpRequest = new HttpRequestMessage(httpMethod, url);
 
-                    if(content != null) 
+                    if (content != null)
                         httpRequest.Content = content;
 
                     bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
@@ -400,10 +413,10 @@ namespace Hubcon.Client.Integration.Client
             using (observable.Subscribe(observer))
             {
                 var enumerator = observer.GetAsyncEnumerable(cancellationToken).GetAsyncEnumerator(cancellationToken);
-                
+
                 await operationOptions.CallHook(HookType.OnSubscribed, context);
                 await contractOptions.CallHook(HookType.OnSubscribed, context);
-                await ClientOptions.CallInterceptor(InterceptorType.OnSubscribed, context);              
+                await ClientOptions.CallInterceptor(InterceptorType.OnSubscribed, context);
 
                 while (true)
                 {
@@ -464,7 +477,7 @@ namespace Hubcon.Client.Integration.Client
 
             await operationOptions.CallValidationHook(ServiceProvider, request, cancellationToken);
 
-            try 
+            try
             {
                 await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.IngestRateBucket, operationOptions.RateBucket);
 
@@ -550,10 +563,10 @@ namespace Hubcon.Client.Integration.Client
 
         private async IAsyncEnumerable<JsonElement> HandleSubscription(
             IOperationRequest request,
-            bool remoteCancellation, 
-            MemberInfo method, 
+            bool remoteCancellation,
+            MemberInfo method,
             IContractOptions contractOptions,
-            IOperationOptions operationOptions, 
+            IOperationOptions operationOptions,
             InvocationContext context,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
@@ -686,7 +699,7 @@ namespace Hubcon.Client.Integration.Client
             bool useSecureConnection = true)
         {
             if (IsBuilt) return;
-            
+
             var baseUri = options.BaseUri;
             var httpEndpoint = options.HttpPrefix;
             var websocketEndpoint = options.WebsocketPrefix;
@@ -708,8 +721,8 @@ namespace Hubcon.Client.Integration.Client
 
             _restHttpUrl = useSecureConnection ? $"https://{baseRestHttpUrl}" : $"http://{baseRestHttpUrl}";
             _websocketUrl = useSecureConnection ? $"wss://{baseRestWebsocketUrl}" : $"ws://{baseRestWebsocketUrl}";
-            
-            if (authenticationManagerType is not null)
+
+            if (authenticationManagerType != null)
             {
                 var lazyAuthType = typeof(Lazy<>).MakeGenericType(authenticationManagerType);
                 authenticationManagerFactory = () => (IAuthenticationManager)((dynamic)serviceProvider.GetRequiredService(lazyAuthType)).Value;

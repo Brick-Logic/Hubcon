@@ -1,29 +1,23 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
-using Hubcon.Server.Core.Extensions;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
-using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileSystemGlobbing.Internal;
 using Microsoft.Extensions.Primitives;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.Serialization;
-using Hubcon.Shared.Abstractions.Standard.Extensions;
 
 namespace Hubcon.Server.Core.Routing
 {
@@ -179,17 +173,17 @@ namespace Hubcon.Server.Core.Routing
                             return new BaseOperationResponse(false, "Request too large.");
                         }
 
-                        var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType); 
+                        var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType);
 
-                        if(wrapper == null)
+                        if (wrapper == null)
                         {
                             await BadRequest(context);
                             return new BaseOperationResponse(false, "Invalid request payload.");
                         }
-                      
+
                         var args = new Dictionary<string, object>();
 
-                        foreach(var prop in wrapperProps)
+                        foreach (var prop in wrapperProps)
                         {
                             var value = prop.GetValue(wrapper);
                             args[prop.Name!] = value!;
@@ -263,7 +257,7 @@ namespace Hubcon.Server.Core.Routing
                     builder.WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);
                 }
-                else 
+                else
                 {
                     var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, false);
                     builder = endpointGroup.MapPost(route, endpointDelegate);
@@ -430,7 +424,7 @@ namespace Hubcon.Server.Core.Routing
             }
             else
             {
-                paramTypes = [..parameters.Select(x => x.ParameterType)];
+                paramTypes = [.. parameters.Select(x => x.ParameterType)];
             }
 
             var (Instance, Method) = ProxyFactory.CreateProxyInstance(methodInfo, wrapperType, isGet);
@@ -492,8 +486,8 @@ namespace Hubcon.Server.Core.Routing
                     _ => throw new NotSupportedException()
                 };
             }
-        
-            return Delegate.CreateDelegate(delegateType, Instance, Method);        
+
+            return Delegate.CreateDelegate(delegateType, Instance, Method);
         }
 
         public static Delegate CreateHandler(MethodInfo methodInfo, Type wrapperType)

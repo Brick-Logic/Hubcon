@@ -1,7 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Attributes;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestDomain;
-using Microsoft.AspNetCore.Authorization;
 
 namespace BlazorTestServer.Controllers
 {
@@ -163,6 +161,11 @@ namespace BlazorTestServer.Controllers
         }
 
         public Task IngestMessages(IAsyncEnumerable<string> source, int? count, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        Task<TestInputClass> IUserContract.GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
