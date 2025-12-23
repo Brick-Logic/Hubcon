@@ -12,10 +12,10 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class InternalExceptionMiddleware(IInternalServerOptions options, ILogger<InternalExceptionMiddleware> logger) : IInternalExceptionMiddleware
     {
+        Exception? exception = null;
+
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
-            Exception? exception = null;
-
             try
             {
                 await next();
@@ -28,7 +28,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 exception = new OperationCanceledException();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (RecordDiagnostics(ex))
             {
                 exception = ex;
             }
@@ -121,6 +121,12 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                     context.Result = response;
                 }
+            }
+
+            bool RecordDiagnostics(Exception ex)
+            {
+                exception = ex;
+                return true;
             }
         }
     }

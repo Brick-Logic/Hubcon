@@ -120,7 +120,22 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     return;
                 }
 
-                object? result = await Task.Run(() => context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper));
+                static bool RecordDiagnostics(Exception ex, IOperationContext context)
+                {
+                    context.Exception = ex;
+                    return true;
+                }
+
+                object? result = null;
+
+                try
+                {
+                    result = await Task.Run(() => context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper));             
+                }
+                catch(Exception ex) when (RecordDiagnostics(ex, context)) 
+                {
+                }
+
                 context.Result = await resultHandler.Invoke(result);
                 await next();
             }
