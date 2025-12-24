@@ -8,6 +8,7 @@ using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Server.Core.Supervisor;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Core.Injection;
 using Hubcon.Shared.Core.Serialization;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
@@ -50,6 +51,7 @@ namespace Hubcon.Server
             Services.AddSingleton<IConnectionSupervisor, ConnectionSupervisor>();
             Services.AddSingleton<IDynamicConverter, DynamicConverter>();
             Services.AddSingleton(OperationRegistry);
+            Services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
             Services.AddScoped<ISettingsManager, SettingsManager>();
             Services.AddScoped<IOperationConfigRegistry, OperationConfigRegistry>();
             Services.AddScoped<IRateLimiterManager, RateLimiterManager>();

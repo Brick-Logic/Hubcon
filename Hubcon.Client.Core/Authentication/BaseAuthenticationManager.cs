@@ -16,12 +16,10 @@ namespace Hubcon.Client.Core.Authentication
         public bool IsSessionActive => !string.IsNullOrEmpty(AccessToken);
 
         public string Username { get; protected set; } = string.Empty;
-        public string Password { get; protected set; } = string.Empty;
 
         public async Task<IHubconResult> LoginAsync(string username, string password)
         {
             Username = username;
-            Password = password;
 
             var auth = await AuthenticateAsync(username, password);
 
@@ -38,6 +36,26 @@ namespace Hubcon.Client.Core.Authentication
             await SaveSessionAsync();
             OnSessionIsActive?.Invoke();
 
+
+            return Result.Success();
+        }
+
+        public async Task<IHubconResult> LoginWithTokenAsync(string token, string type)
+        {
+            var auth = await AuthenticateWithTokenAsync(token, type);
+
+            if (auth.IsFailure)
+            {
+                OnSessionIsInactive?.Invoke();
+                return Result.Failure(auth.ErrorMessage);
+            }
+
+            AccessToken = auth.AccessToken;
+            RefreshToken = auth.RefreshToken;
+            AccessTokenExpiresAt = DateTime.UtcNow.AddSeconds(auth.ExpiresInSeconds);
+
+            await SaveSessionAsync();
+            OnSessionIsActive?.Invoke();
 
             return Result.Success();
         }
@@ -93,6 +111,7 @@ namespace Hubcon.Client.Core.Authentication
         }
 
         protected abstract Task<IAuthResult> AuthenticateAsync(string username, string password);
+        protected abstract Task<IAuthResult> AuthenticateWithTokenAsync(string token, string type);
         protected abstract Task<IAuthResult> RefreshSessionAsync(string refreshToken);
         protected abstract Task SaveSessionAsync();
         protected abstract Task ClearSessionAsync();

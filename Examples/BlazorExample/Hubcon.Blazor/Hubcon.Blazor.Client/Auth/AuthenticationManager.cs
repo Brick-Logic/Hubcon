@@ -23,6 +23,11 @@ namespace Hubcon.Blazor.Client.Auth
             return AuthResult.Success(token, "", 100000);
         }
 
+        protected override Task<IAuthResult> AuthenticateWithTokenAsync(string token, string type)
+        {
+            throw new NotImplementedException();
+        }
+
         protected override Task ClearSessionAsync()
         {
             TokenType = "";

@@ -15,5 +15,6 @@
         Task<IHubconResult> LoginAsync(string username, string password);
         Task LogoutAsync();
         Task<IHubconResult> TryRefreshSessionAsync();
+        Task<IHubconResult> LoginWithTokenAsync(string token, string type);
     }
 }
