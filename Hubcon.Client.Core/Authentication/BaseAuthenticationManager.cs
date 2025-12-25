@@ -31,7 +31,7 @@ namespace Hubcon.Client.Core.Authentication
 
             AccessToken = auth.AccessToken;
             RefreshToken = auth.RefreshToken;
-            AccessTokenExpiresAt = DateTime.UtcNow.AddSeconds(auth.ExpiresInSeconds);
+            AccessTokenExpiresAt = auth.ExpiresInSeconds;
 
             await SaveSessionAsync();
             OnSessionIsActive?.Invoke();
@@ -52,7 +52,7 @@ namespace Hubcon.Client.Core.Authentication
 
             AccessToken = auth.AccessToken;
             RefreshToken = auth.RefreshToken;
-            AccessTokenExpiresAt = DateTime.UtcNow.AddSeconds(auth.ExpiresInSeconds);
+            AccessTokenExpiresAt = auth.ExpiresInSeconds;
 
             await SaveSessionAsync();
             OnSessionIsActive?.Invoke();
@@ -76,7 +76,7 @@ namespace Hubcon.Client.Core.Authentication
 
             AccessToken = refresh.AccessToken;
             RefreshToken = refresh.RefreshToken;
-            AccessTokenExpiresAt = DateTime.UtcNow.AddSeconds(refresh.ExpiresInSeconds);
+            AccessTokenExpiresAt = refresh.ExpiresInSeconds;
 
             await SaveSessionAsync();
             OnSessionIsActive?.Invoke();
@@ -134,10 +134,10 @@ namespace Hubcon.Client.Core.Authentication
         public bool IsFailure => !IsSuccess;
         public string? AccessToken { get; private set; }
         public string? RefreshToken { get; private set; }
-        public int ExpiresInSeconds { get; private set; }
+        public DateTime ExpiresInSeconds { get; private set; }
         public string? ErrorMessage { get; private set; }
 
-        public static IAuthResult Success(string accessToken, string refreshToken, int expiresInSeconds) =>
+        public static IAuthResult Success(string accessToken, string refreshToken, DateTime expiresInSeconds) =>
             new AuthResult() { IsSuccess = true, AccessToken = accessToken, RefreshToken = refreshToken, ExpiresInSeconds = expiresInSeconds };
 
         public static IAuthResult Failure(string? errorMessage) =>

@@ -4,7 +4,7 @@
     {
         string? AccessToken { get; }
         string? ErrorMessage { get; }
-        int ExpiresInSeconds { get; }
+        DateTime ExpiresInSeconds { get; }
         bool IsFailure { get; }
         bool IsSuccess { get; set; }
         string? RefreshToken { get; }

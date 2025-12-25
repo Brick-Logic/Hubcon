@@ -1106,7 +1106,6 @@ namespace Hubcon.Client.Core.Websockets
             try
             {
                 await SendMessageAsync(request, CancellationToken.None);
-
                 response = await TimeoutHelper.WaitWithTimeoutAsync(tcs.Task.WaitAsync, options.WebsocketTimeout);
             }
             catch (Exception ex)
