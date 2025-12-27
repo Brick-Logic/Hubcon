@@ -36,7 +36,6 @@ namespace Hubcon.Client.Core.Authentication
             await SaveSessionAsync();
             OnSessionIsActive?.Invoke();
 
-
             return Result.Success();
         }
 
@@ -62,8 +61,8 @@ namespace Hubcon.Client.Core.Authentication
 
         public async Task<IHubconResult> TryRefreshSessionAsync()
         {
-            //if (string.IsNullOrEmpty(RefreshToken))
-            //    return Result.Failure("No refresh token available.");
+            if (string.IsNullOrWhiteSpace(RefreshToken))
+                return Result.Failure("No refresh token available.");
 
             var refresh = await RefreshSessionAsync(RefreshToken!);
 

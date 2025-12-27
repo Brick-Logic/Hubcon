@@ -31,10 +31,9 @@ using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
-using System.Threading.Tasks;
+using System.Timers;
 
 namespace Hubcon.Client.Core.Websockets
 {
@@ -88,8 +87,8 @@ namespace Hubcon.Client.Core.Websockets
 
         public IClientOptions ClientOptions { get; set; }
 
-        private Task? _pingTask;
-        private Task? _timeoutTask;
+        private System.Timers.Timer? _pingTimer;
+        private System.Timers.Timer? _timeoutTimer;
         private List<Task?> _processingTasks;
         private Task? _receiveTask;
         private Task? _sendTask;
@@ -668,15 +667,21 @@ namespace Hubcon.Client.Core.Websockets
                         _receiveLoopCts?.Dispose();
                         _receiveLoopCts = null;
 
-                        _pingLoopCts?.Cancel();
-                        _pingLoopCts?.Dispose();
-                        _pingLoopCts = null;
+                        //_pingLoopCts?.Cancel();
+                        //_pingLoopCts?.Dispose();
+                        //_pingLoopCts = null;
 
                         _sendLoopCts?.Cancel();
                         _sendLoopCts?.Dispose();
                         _sendLoopCts = null;
                         _sendLoopCts = new CancellationTokenSource();
-                        _sendTask = Task.Run(() => SendLoopAsync(_webSocket, _sendLoopCts.Token));
+                        _sendTask = Task.Factory.StartNew(
+                                    async () => await SendLoopAsync(_webSocket, _sendLoopCts.Token),
+                                    _sendLoopCts.Token,
+                                    TaskCreationOptions.LongRunning,
+                                    TaskScheduler.Default).Unwrap();
+
+
 
                         if (_heartbeatWatcher != null)
                         {
@@ -705,7 +710,7 @@ namespace Hubcon.Client.Core.Websockets
 
                         await SendMessageAsync(new ConnectionInitMessage(Guid.NewGuid()));
 
-                        var buffer = new byte[16384];
+                        var buffer = new byte[4096];
 
                         var receiveTask = _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
 
@@ -732,12 +737,15 @@ namespace Hubcon.Client.Core.Websockets
                             logger?.LogInformation("Confirmación recibida, iniciando loop de respuesta...");
 
                         _websocketCts = new CancellationTokenSource();
-                        _pingLoopCts = new CancellationTokenSource();
                         _receiveLoopCts = new CancellationTokenSource();
 
-                        if (options.AutoReconnect)
+                        if (options.AutoReconnect && _timeoutTimer == null)
                         {
-                            _timeoutTask ??= ReconnectLoop();
+                            _timeoutTimer ??= new System.Timers.Timer(5000);
+                            _timeoutTimer.Elapsed += ReconnectLoop;
+                            _timeoutTimer.AutoReset = true;
+                            _timeoutTimer.Enabled = true;
+                            _timeoutTimer.Start();                   
                         }
 
                         if(_processingTasks == null)
@@ -747,15 +755,27 @@ namespace Hubcon.Client.Core.Websockets
                             {
                                 _processingTasks.Add(Task.Factory.StartNew(
                                     async () => await HandleIncomingMessage(),
-                                    CancellationToken.None,
+                                    _cts.Token,
                                     TaskCreationOptions.LongRunning,
                                     TaskScheduler.Default).Unwrap());
                             }
                         }
 
-                        _pingTask = PingMessageLoop(_pingLoopCts.Token);
+                        if(_pingTimer == null)
+                        {
+                            _pingTimer ??= new System.Timers.Timer();
+                            _pingTimer.Elapsed += PingMessageLoop;
+                            _pingTimer.Interval = options.WebsocketPingInterval.TotalMilliseconds;
+                            _pingTimer.Enabled = true;
+                            _pingTimer.AutoReset = true;
+                            _pingTimer.Start();
+                        }
 
-                        _receiveTask = ReceiveLoopAsync(_receiveLoopCts.Token);
+                        _receiveTask = Task.Factory.StartNew(
+                                    async () => await ReceiveLoopAsync(_receiveLoopCts.Token),
+                                    _receiveLoopCts.Token,
+                                    TaskCreationOptions.LongRunning,
+                                    TaskScheduler.Default).Unwrap();
 
                         if (options.WebsocketRequiresPong)
                         {
@@ -809,15 +829,9 @@ namespace Hubcon.Client.Core.Websockets
                         await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
 
                         _errorStream.OnNext(ex);
+
                         if (LoggingEnabled)
                             logger?.LogError(ex.Message);
-
-                        int delay = Math.Min(1 * ++attempt, 30);
-
-                        if (LoggingEnabled)
-                            logger?.LogInformation($"Reconectando en {delay} segundos...");
-
-                        await Task.Delay(delay * 1000, _cts.Token);
 
                         foreach (var item in _ingests)
                         {
@@ -837,6 +851,13 @@ namespace Hubcon.Client.Core.Websockets
                             _ingestDataAck.TryRemove(item.Key, out _);
                             item.Value.TrySetCanceled();
                         }
+
+                        int delay = Math.Min(1 * ++attempt, 30);
+
+                        if (LoggingEnabled)
+                            logger?.LogInformation($"Reconectando en {delay} segundos...");
+
+                        await Task.Delay(delay * 1000, _cts.Token);
                     }
                 }
             }
@@ -864,44 +885,34 @@ namespace Hubcon.Client.Core.Websockets
             await _sendChannel.Writer.WriteAsync(bytes, cancellationToken);
         }
 
-        private async Task PingMessageLoop(CancellationToken cancellationToken)
+        private async void PingMessageLoop(object sender, ElapsedEventArgs e)
         {
-            if (options.WebsocketPingInterval <= TimeSpan.Zero)
-            {
-                if (LoggingEnabled)
-                    logger?.LogInformation(
-                        "PingMessageLoop no iniciado porque WebsocketPingInterval es menor o igual a cero.");
-
-                return;
-            }
-
             var context = new InvocationContext();
             context.Services = serviceProvider;
             context.CancellationToken = _cts.Token;
             context.TryRefreshToken = TryRefreshToken;
 
-            while (!cancellationToken.IsCancellationRequested)
+            try
             {
-                try
+                if (LoggingEnabled)
+                    logger?.LogError($"Ping invocado...");
+
+                if (_webSocket?.State == WebSocketState.Open)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (_webSocket?.State == WebSocketState.Open && IsReady == true)
-                    {
-                        await SendMessageAsync(new PingMessage(Guid.NewGuid()));
-                        await ClientOptions.CallInterceptor(InterceptorType.OnPing, context);
-                    }
-
-                    await Task.Delay(options.WebsocketPingInterval, cancellationToken);
+                    await SendMessageAsync(new PingMessage(Guid.NewGuid()));
                 }
-                catch (Exception ex)
-                {
-                    await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnPing, context);
 
-                    if (LoggingEnabled)
-                        logger?.LogError($"Error en PingMessageLoop: {ex.Message}");
-                }
+                if (LoggingEnabled)
+                    logger?.LogError($"Ping enviado.");
             }
+            catch (Exception ex)
+            {
+                await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
+
+                if (LoggingEnabled)
+                    logger?.LogError($"Error en PingMessageLoop: {ex.Message}");
+            }       
         }
 
         int cantidad = 0;
@@ -1027,27 +1038,22 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        private async Task ReconnectLoop()
+        private async void ReconnectLoop(object sender, ElapsedEventArgs e)
         {
-            while (!_cts.IsCancellationRequested)
+            try
             {
-                try
-                {
-                    await Task.Delay(5000);
-
-                    if (_webSocket?.State != WebSocketState.Open && _webSocket?.State != WebSocketState.Connecting)
-                    {
-                        if (LoggingEnabled)
-                            logger?.LogInformation("WebSocket no está abierto. Reconectando...");
-
-                        await EnsureConnectedAsync();
-                    }
-                }
-                catch (Exception ex)
+                if (_webSocket?.State != WebSocketState.Open && _webSocket?.State != WebSocketState.Connecting)
                 {
                     if (LoggingEnabled)
-                        logger?.LogError($"Error en ReconnectLoop: {ex.Message}");
+                        logger?.LogInformation("WebSocket no está abierto. Reconectando...");
+
+                    await EnsureConnectedAsync();
                 }
+            }
+            catch (Exception ex)
+            {
+                if (LoggingEnabled)
+                    logger?.LogError($"Error en ReconnectLoop: {ex.Message}");
             }
         }
 
@@ -1085,7 +1091,11 @@ namespace Hubcon.Client.Core.Websockets
                 _receiveLoopCts?.Cancel();
                 _receiveLoopCts?.Dispose();
 
-                await Task.WhenAll(_pingTask ?? Task.CompletedTask, _timeoutTask ?? Task.CompletedTask);
+                _pingTimer?.Stop();
+                _pingTimer?.Dispose();
+
+                _timeoutTimer?.Stop();
+                _timeoutTimer?.Dispose();
             }
             finally
             {
