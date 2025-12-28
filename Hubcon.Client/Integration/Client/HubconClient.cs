@@ -34,9 +34,22 @@ namespace Hubcon.Client.Integration.Client
         Func<IAuthenticationManager?>? authenticationManagerFactory;
 
         IAuthenticationManager? _authenticationManager;
-        IAuthenticationManager AuthenticationManager => _authenticationManager
-            ??= authenticationManagerFactory?.Invoke()
-            ?? throw new InvalidOperationException($"Authentication Manager not defined for server module '{ClientOptions.ServerModuleName}'.");
+        IAuthenticationManager AuthenticationManager
+        {
+            get
+            {
+                var manager = _authenticationManager 
+                    ??= authenticationManagerFactory?.Invoke() 
+                    ?? throw new InvalidOperationException($"Authentication Manager not defined for server module '{ClientOptions.ServerModuleName}'.");
+
+                manager.OnSessionIsInactive += async () =>
+                {
+                    await client.Disconnect();
+                };
+                
+                return manager!;
+            }
+        }
 
         HubconWebSocketClient client = null!;
 

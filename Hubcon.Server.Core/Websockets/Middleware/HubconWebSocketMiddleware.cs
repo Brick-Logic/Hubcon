@@ -129,7 +129,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return;
                 }
 
-                await sender.SendAsync(new ConnectionAckMessage(Guid.NewGuid()));
+                await sender.SendAsync(new ConnectionAckMessage(initMessage.Id));
 
 
                 if (options.WebsocketRequiresAuthorization)
