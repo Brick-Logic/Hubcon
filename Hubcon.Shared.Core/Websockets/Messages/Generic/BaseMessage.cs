@@ -61,38 +61,46 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             _buffer = buffer;
         }
 
-        protected T Extract<T>(string propertyName, bool isBinaryPayload = false)
+        protected T? Extract<T>(string propertyName, bool isBinaryPayload = false)
         {
             if (_buffer is null)
                 return default;
 
-            var span = ((ReadOnlyMemory<byte>)_buffer).Span;
+            var span = _buffer.Value.Span;
             var reader = new Utf8JsonReader(span, isFinalBlock: true, state: default);
+
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+                return default;
 
             if (isBinaryPayload && typeof(T) == typeof(byte[]))
             {
                 int depth = 0;
-                while (reader.Read())
+                var binaryReader = new Utf8JsonReader(span, isFinalBlock: true, state: default);
+                while (binaryReader.Read())
                 {
-                    if (reader.TokenType == JsonTokenType.StartObject)
-                        depth++;
-                    else if (reader.TokenType == JsonTokenType.EndObject)
-                        depth--;
+                    if (binaryReader.TokenType == JsonTokenType.StartObject) depth++;
+                    else if (binaryReader.TokenType == JsonTokenType.EndObject) depth--;
 
                     if (depth == 0)
                     {
-                        int payloadOffset = (int)reader.BytesConsumed;
-                        var payloadSpan = span.Slice(payloadOffset);
-                        return (T)(object)payloadSpan.ToArray();
+                        int payloadOffset = (int)binaryReader.BytesConsumed;
+                        return (T)(object)span.Slice(payloadOffset).ToArray();
                     }
                 }
-
                 return default;
             }
 
             while (reader.Read())
             {
-                if (reader.TokenType == JsonTokenType.PropertyName && reader.ValueTextEquals(propertyName))
+                if (reader.TokenType == JsonTokenType.StartObject || reader.TokenType == JsonTokenType.StartArray)
+                {
+                    reader.Skip();
+                    continue;
+                }
+
+                if (reader.CurrentDepth == 1 &&
+                    reader.TokenType == JsonTokenType.PropertyName &&
+                    reader.ValueTextEquals(propertyName))
                 {
                     reader.Read();
                     return typeof(T) switch
@@ -101,16 +109,22 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
                         Type t when t == typeof(Guid[]) => Cast<T, Guid[]>(ReadGuidArray(ref reader)),
                         Type t when t == typeof(bool) => Cast<T, bool>(reader.GetBoolean()),
                         Type t when t == typeof(string) => Cast<T, string?>(reader.GetString()),
-                        Type t when t == typeof(MessageType) => Enum.TryParse(reader.GetString(), ignoreCase: true, out MessageType result)
-                                                                    ? Cast<T, MessageType>(result)
-                                                                    : default,
+                        Type t when t == typeof(MessageType) => Enum.TryParse(
+                            reader.GetString(), 
+                            ignoreCase: true, 
+                            out MessageType result) 
+                        && Enum.IsDefined(typeof(MessageType), result)? Cast<T, MessageType>(result) : default,
                         Type t when t == typeof(JsonElement) => Cast<T, JsonElement>(JsonDocument.ParseValue(ref reader).RootElement),
+                        Type t when t == typeof(object) => Cast<T, object>(JsonDocument.ParseValue(ref reader).RootElement),
                         _ => default
                     };
                 }
+
+                if (reader.TokenType == JsonTokenType.EndObject && reader.CurrentDepth == 0)
+                    break;
             }
 
-            return default;
+            return default!;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
