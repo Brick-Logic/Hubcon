@@ -125,7 +125,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 try
                 {
-                    result = await Task.Run(() => context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper));
+                    result = context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper);
                 }
                 catch (Exception ex) when (RecordDiagnostics(ex, context))
                 {
