@@ -471,148 +471,162 @@ namespace Hubcon.Client.Core.Websockets
             {
                 while (!_cts.IsCancellationRequested)
                 {
-                    if (_webSocket?.State != WebSocketState.Open)
-                        await EnsureConnectedAsync();
-
-                    TrimmedMemoryOwner? tmo = await _messageChannel.Reader.ReadAsync();
-
-                    var message = new BaseMessage(tmo.Memory);
-
-                    if (message.Id == Guid.Empty)
-                        continue;
-
-                    switch (message.Type)
+                    try
                     {
-                        case MessageType.pong:
-                            if (!options.WebsocketRequiresPong)
+                        if (_webSocket?.State != WebSocketState.Open)
+                            await EnsureConnectedAsync();
+
+                        TrimmedMemoryOwner? tmo = await _messageChannel.Reader.ReadAsync();
+
+                        var message = new BaseMessage(tmo.Memory);
+
+                        if (message.Id == Guid.Empty)
+                            continue;
+
+                        switch (message.Type)
+                        {
+                            case MessageType.pong:
+                                if (!options.WebsocketRequiresPong)
+                                    break;
+
+                                var pongMessage = new PongMessage(tmo.Memory, message.Id, message.Type);
+
+                                if (_lastPongId == pongMessage.Id)
+                                {
+                                    await _webSocket!.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "Pong error",
+                                        default);
+                                    return;
+                                }
+
+                                _lastPongId = pongMessage.Id;
+                                _lastPongTime = DateTime.UtcNow;
+                                _heartbeatWatcher?.NotifyHeartbeat();
+                                _pongStream.OnNext(pongMessage);
+                                await ClientOptions.CallInterceptor(InterceptorType.OnPong, GeneralContext);
                                 break;
 
-                            var pongMessage = new PongMessage(tmo.Memory, message.Id, message.Type);
+                            case MessageType.subscription_data:
+                                var eventData = new SubscriptionDataMessage(tmo.Memory, message.Id, message.Type);
+                                if (eventData?.Id != null &&
+                                    _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
+                                {
+                                    sub.OnNextElement(eventData.Data);
+                                }
 
-                            if (_lastPongId == pongMessage.Id)
-                            {
-                                await _webSocket!.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "Pong error",
-                                    default);
-                                return;
-                            }
+                                break;
 
-                            _lastPongId = pongMessage.Id;
-                            _lastPongTime = DateTime.UtcNow;
-                            _heartbeatWatcher?.NotifyHeartbeat();
-                            _pongStream.OnNext(pongMessage);
-                            await ClientOptions.CallInterceptor(InterceptorType.OnPong, GeneralContext);
-                            break;
+                            case MessageType.stream_data:
+                                var streamData = new StreamDataMessage(tmo.Memory, message.Id, message.Type);
 
-                        case MessageType.subscription_data:
-                            var eventData = new SubscriptionDataMessage(tmo.Memory, message.Id, message.Type);
-                            if (eventData?.Id != null &&
-                                _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
-                            {
-                                sub.OnNextElement(eventData.Data);
-                            }
+                                if (streamData?.Id != null && _streams.TryGetValue(streamData.Id, out var stream))
+                                {
+                                    stream.Item1.OnNextElement(streamData.Data);
+                                    stream.Item3.NotifyHeartbeat();
+                                }
 
-                            break;
+                                break;
 
-                        case MessageType.stream_data:
-                            var streamData = new StreamDataMessage(tmo.Memory, message.Id, message.Type);
+                            case MessageType.stream_complete:
+                                var streamComplete = new StreamCompleteMessage(tmo.Memory, message.Id, message.Type);
 
-                            if (streamData?.Id != null && _streams.TryGetValue(streamData.Id, out var stream))
-                            {
-                                stream.Item1.OnNextElement(streamData.Data);
-                                stream.Item3.NotifyHeartbeat();
-                            }
+                                if (streamComplete?.Id != null &&
+                                    _streams.TryGetValue(streamComplete.Id, out var streamCompleteInfo))
+                                {
+                                    streamCompleteInfo.Item1.OnCompleted();
+                                }
 
-                            break;
+                                break;
 
-                        case MessageType.stream_complete:
-                            var streamComplete = new StreamCompleteMessage(tmo.Memory, message.Id, message.Type);
+                            case MessageType.error:
+                                var errorData = new ErrorMessage(tmo.Memory, message.Id, message.Type);
+                                if (errorData?.Id != null && _subscriptions.TryGetValue(errorData.Id, out var subToError))
+                                {
+                                    subToError.OnError(new Exception(errorData.Error));
+                                }
 
-                            if (streamComplete?.Id != null &&
-                                _streams.TryGetValue(streamComplete.Id, out var streamCompleteInfo))
-                            {
-                                streamCompleteInfo.Item1.OnCompleted();
-                            }
+                                break;
 
-                            break;
+                            case MessageType.ingest_init_ack:
+                                var ingestInitAckMessage = new IngestInitAckMessage(tmo.Memory, message.Id, message.Type);
 
-                        case MessageType.error:
-                            var errorData = new ErrorMessage(tmo.Memory, message.Id, message.Type);
-                            if (errorData?.Id != null && _subscriptions.TryGetValue(errorData.Id, out var subToError))
-                            {
-                                subToError.OnError(new Exception(errorData.Error));
-                            }
+                                if (ingestInitAckMessage == null) break;
 
-                            break;
+                                if (_ingestAck.TryGetValue(ingestInitAckMessage.Id, out var ingestInitAckTcs))
+                                {
+                                    ingestInitAckTcs.TrySetResult(ingestInitAckMessage);
+                                }
 
-                        case MessageType.ingest_init_ack:
-                            var ingestInitAckMessage = new IngestInitAckMessage(tmo.Memory, message.Id, message.Type);
+                                break;
 
-                            if (ingestInitAckMessage == null) break;
+                            case MessageType.ingest_result:
+                                var ingestResultMessage = new IngestResultMessage(tmo.Memory, message.Id, message.Type);
 
-                            if (_ingestAck.TryGetValue(ingestInitAckMessage.Id, out var ingestInitAckTcs))
-                            {
-                                ingestInitAckTcs.TrySetResult(ingestInitAckMessage);
-                            }
+                                if (ingestResultMessage == null) break;
 
-                            break;
+                                if (_ingests.TryGetValue(ingestResultMessage.Id, out var ingestResultMessageTcs))
+                                {
+                                    ingestResultMessageTcs.Item1.TrySetResult(ingestResultMessage);
+                                }
 
-                        case MessageType.ingest_result:
-                            var ingestResultMessage = new IngestResultMessage(tmo.Memory, message.Id, message.Type);
+                                break;
 
-                            if (ingestResultMessage == null) break;
+                            case MessageType.token_update:
+                                var tokenUpdateResponseMessage = new TokenUpdateResponseMessage(tmo.Memory, message.Id, message.Type);
 
-                            if (_ingests.TryGetValue(ingestResultMessage.Id, out var ingestResultMessageTcs))
-                            {
-                                ingestResultMessageTcs.Item1.TrySetResult(ingestResultMessage);
-                            }
+                                if (tokenUpdateResponseMessage == null) break;
 
-                            break;
+                                if (_tokenUpdateTcs.TryGetValue(tokenUpdateResponseMessage.Id, out var tokenUpdateResponseTcs))
+                                {
+                                    tokenUpdateResponseTcs.TrySetResult(tokenUpdateResponseMessage);
+                                }
 
-                        case MessageType.token_update:
-                            var tokenUpdateResponseMessage = new TokenUpdateResponseMessage(tmo.Memory, message.Id, message.Type);
+                                break;
 
-                            if (tokenUpdateResponseMessage == null) break;
+                            case MessageType.ingest_data_ack:
+                                var ingestDataAckMessage = new IngestDataAckMessage(tmo.Memory, message.Id, message.Type);
 
-                            if (_tokenUpdateTcs.TryGetValue(tokenUpdateResponseMessage.Id, out var tokenUpdateResponseTcs))
-                            {
-                                tokenUpdateResponseTcs.TrySetResult(tokenUpdateResponseMessage);
-                            }
+                                if (ingestDataAckMessage == null) break;
 
-                            break;
+                                if (_ingestDataAck.TryGetValue(ingestDataAckMessage.Id, out var ingestDataAckTcs))
+                                {
+                                    ingestDataAckTcs.TrySetResult(ingestDataAckMessage);
+                                }
 
-                        case MessageType.ingest_data_ack:
-                            var ingestDataAckMessage = new IngestDataAckMessage(tmo.Memory, message.Id, message.Type);
+                                break;
 
-                            if (ingestDataAckMessage == null) break;
+                            case MessageType.operation_response:
+                                var operationResponseMessage =
+                                    new OperationResponseMessage(tmo.Memory, message.Id, message.Type);
 
-                            if (_ingestDataAck.TryGetValue(ingestDataAckMessage.Id, out var ingestDataAckTcs))
-                            {
-                                ingestDataAckTcs.TrySetResult(ingestDataAckMessage);
-                            }
+                                if (operationResponseMessage == null) break;
 
-                            break;
+                                if (_operationTcs.TryGetValue(operationResponseMessage.Id, out var ormTcs))
+                                {
+                                    ormTcs.TrySetResult(operationResponseMessage);
+                                }
 
-                        case MessageType.operation_response:
-                            var operationResponseMessage =
-                                new OperationResponseMessage(tmo.Memory, message.Id, message.Type);
+                                break;
 
-                            if (operationResponseMessage == null) break;
+                            default:
+                                var msg = $"Tipo de mensaje no soportado. Tipo recibido: {message.Type.ToString()}";
+                                _errorStream.OnNext(new HubconGenericException(msg));
 
-                            if (_operationTcs.TryGetValue(operationResponseMessage.Id, out var ormTcs))
-                            {
-                                ormTcs.TrySetResult(operationResponseMessage);
-                            }
+                                if (LoggingEnabled)
+                                    logger?.LogError(msg);
 
-                            break;
+                                break;
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (LoggingEnabled)
+                            logger?.LogError($"Error en HandleIncomingMessage: {ex.Message}");
 
-                        default:
-                            var msg = $"Tipo de mensaje no soportado. Tipo recibido: {message.Type.ToString()}";
-                            _errorStream.OnNext(new HubconGenericException(msg));
-
-                            if (LoggingEnabled)
-                                logger?.LogError(msg);
-
-                            break;
+                        _errorStream.OnNext(ex);
                     }
                 }
             }
@@ -753,13 +767,13 @@ namespace Hubcon.Client.Core.Websockets
                             _timeoutTimer.Elapsed += ReconnectLoop;
                             _timeoutTimer.AutoReset = true;
                             _timeoutTimer.Enabled = true;
-                            _timeoutTimer.Start();                   
+                            _timeoutTimer.Start();
                         }
 
-                        if(_processingTasks == null)
+                        if (_processingTasks == null)
                         {
                             _processingTasks = new List<Task?>();
-                            foreach(var number in Enumerable.Range(0, options.MessageProcessorsCount))
+                            foreach (var number in Enumerable.Range(0, options.MessageProcessorsCount))
                             {
                                 _processingTasks.Add(Task.Factory.StartNew(
                                     async () => await HandleIncomingMessage(),
@@ -769,7 +783,7 @@ namespace Hubcon.Client.Core.Websockets
                             }
                         }
 
-                        if(_pingTimer == null)
+                        if (_pingTimer == null)
                         {
                             _pingTimer ??= new System.Timers.Timer();
                             _pingTimer.Elapsed += PingMessageLoop;
@@ -895,7 +909,7 @@ namespace Hubcon.Client.Core.Websockets
 
         private async void PingMessageLoop(object sender, ElapsedEventArgs e)
         {
-            if(!IsReady) return;
+            if (!IsReady) return;
 
             var context = new InvocationContext();
             context.Services = serviceProvider;
@@ -915,7 +929,7 @@ namespace Hubcon.Client.Core.Websockets
                         logger?.LogError($"Ping enviado.");
                 }
 
-                if(_webSocket != null)
+                if (_webSocket != null)
                 {
                     await ClientOptions.CallInterceptor(InterceptorType.OnPing, context);
                 }
@@ -926,7 +940,7 @@ namespace Hubcon.Client.Core.Websockets
 
                 if (LoggingEnabled)
                     logger?.LogError($"Error en PingMessageLoop: {ex.Message}");
-            }       
+            }
         }
 
         int cantidad = 0;
@@ -1160,11 +1174,11 @@ namespace Hubcon.Client.Core.Websockets
         public async Task Disconnect()
         {
             IsReady = false;
-            if(_webSocket != null)
+            if (_webSocket != null)
             {
                 await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "User disconnected.", CancellationToken.None);
                 _webSocket?.Dispose();
-                _websocketCts?.Cancel();            
+                _websocketCts?.Cancel();
             }
         }
     }
