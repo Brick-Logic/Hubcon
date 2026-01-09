@@ -1,5 +1,16 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Core.Websockets;
+using Hubcon.Shared.Core.Websockets.Messages.Cancellation;
+using Hubcon.Shared.Core.Websockets.Messages.Connection;
+using Hubcon.Shared.Core.Websockets.Messages.Generic;
+using Hubcon.Shared.Core.Websockets.Messages.Ingest;
+using Hubcon.Shared.Core.Websockets.Messages.Operation;
+using Hubcon.Shared.Core.Websockets.Messages.Ping;
+using Hubcon.Shared.Core.Websockets.Messages.Streams;
+using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
+using Hubcon.Shared.Core.Websockets.Messages.Token;
+using Hubcon.Shared.Core.Websockets.Resilience;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
 using System.Collections.Concurrent;
@@ -14,10 +25,42 @@ namespace Hubcon.Shared.Core.Serialization
 {
     [JsonSerializable(typeof(JsonElement))]
     [JsonSerializable(typeof(IReadOnlyDictionary<string, object>))]
+    [JsonSerializable(typeof(IOperationRequest))]
+    [JsonSerializable(typeof(OperationRequest))]
+    [JsonSerializable(typeof(SubscriptionRequest))]
     [JsonSerializable(typeof(Dictionary<string, object>))]
     [JsonSerializable(typeof(JsonObject))]
     [JsonSerializable(typeof(JsonArray))]
     [JsonSerializable(typeof(BaseOperationResponse<string>))]
+    [JsonSerializable(typeof(BaseOperationResponse<bool>))]
+    [JsonSerializable(typeof(BaseOperationResponse<int>))]
+    [JsonSerializable(typeof(BaseOperationResponse<JsonElement>))]
+    [JsonSerializable(typeof(AckMessage))]
+    [JsonSerializable(typeof(BaseMessage))]
+    [JsonSerializable(typeof(ErrorMessage))]
+    [JsonSerializable(typeof(IngestCompleteMessage))]
+    [JsonSerializable(typeof(IngestDataAckMessage))]
+    [JsonSerializable(typeof(IngestDataMessage))]
+    [JsonSerializable(typeof(IngestInitAckMessage))]
+    [JsonSerializable(typeof(IngestInitMessage))]
+    [JsonSerializable(typeof(IngestResultMessage))]
+    [JsonSerializable(typeof(OperationCallMessage))]
+    [JsonSerializable(typeof(OperationInvokeMessage))]
+    [JsonSerializable(typeof(OperationResponseMessage))]
+    [JsonSerializable(typeof(PingMessage))]
+    [JsonSerializable(typeof(PongMessage))]
+    [JsonSerializable(typeof(StreamCompleteMessage))]
+    [JsonSerializable(typeof(StreamInitMessage))]
+    [JsonSerializable(typeof(SubscriptionCompleteMessage))]
+    [JsonSerializable(typeof(SubscriptionDataMessage))]
+    [JsonSerializable(typeof(SubscriptionInitMessage))]
+    [JsonSerializable(typeof(TokenUpdateMessage))]
+    [JsonSerializable(typeof(TokenUpdateResponseMessage))]
+    [JsonSerializable(typeof(ConnectionInitMessage))]
+    [JsonSerializable(typeof(ConnectionAckMessage))]
+    [JsonSerializable(typeof(CancelMessage))]
+    [JsonSerializable(typeof(Guid))]
+    [JsonSerializable(typeof(MessageType))]
     public partial class SystemTypesContext : JsonSerializerContext
     {
     }

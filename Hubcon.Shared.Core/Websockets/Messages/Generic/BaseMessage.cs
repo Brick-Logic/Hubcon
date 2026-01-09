@@ -38,7 +38,10 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
         private Guid? _id;
         private MessageType? _type;
 
+        [JsonPropertyName("id")]
         public Guid Id => _id ??= Extract<Guid>("id");
+
+        [JsonPropertyName("type")]
         public MessageType Type => _type ??= Extract<MessageType>("type");
 
         public BaseMessage()

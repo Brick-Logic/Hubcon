@@ -739,7 +739,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         {
             using var localCts = new CancellationTokenSource();
             using var registration = cancellationToken.Register(localCts.Cancel);
-
+            IOperationRequest? operationRequest = null;
             IOperationResponse<JsonElement>? result = null;
 
             try
@@ -749,7 +749,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 if (operationInvokeMessage == null) return;
 
-                IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload)!;
+                operationRequest = converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload)!;
                 result = await entrypoint.HandleMethodWithResult(operationRequest, localCts.Token);
             }
             catch (OperationCanceledException)

@@ -21,7 +21,10 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
             _payload = payload;
         }
 
+        [JsonPropertyName("streamIds")]
         public Guid[] StreamIds => _streamIds ??= Extract<Guid[]>("streamIds")!;
+
+        [JsonPropertyName("payload")]
         public JsonElement Payload => _payload ??= Extract<JsonElement>("payload")!;
     }
 }

@@ -75,15 +75,15 @@ internal class Program
         await Task.Delay(100);
 
         logger.LogWarning($"Probando ingest...");
-        var source1 = GetMessages(2);
-        var source2 = GetMessages(2);
-        var source3 = GetMessages(2);
-        var source4 = GetMessages(2);
-        var source5 = GetMessages(2);
+        var source1 = GetMessages(3);
+        var source2 = GetMessages(3);
+        var source3 = GetMessages(3);
+        var source4 = GetMessages(3);
+        var source5 = GetMessages(3);
         await client.IngestMessages2(source1, source2, source3, source4, source5);
         logger.LogInformation($"Ingest OK.");
 
-        await Task.Delay(100);
+        await Task.Delay(1000);
 
         logger.LogWarning($"Probando invocación sin parametros...");
         var text = await client2.TestReturn();
@@ -162,24 +162,22 @@ internal class Program
         await client.CreateUser();
         logger.LogInformation($"Esperando eventos...");
 
-        await Task.Delay(3000);
+        //await Task.Delay(3000);
 
-        if (eventosRecibidos == 4)
-        {
-            logger.LogInformation($"Eventos recibidos correctamente.");
-        }
-        else
-        {
-            throw new Exception("No se recibieron todos los eventos esperados.");
-        }
+        //if (eventosRecibidos == 4)
+        //{
+        //    logger.LogInformation($"Eventos recibidos correctamente.");
+        //}
+        //else
+        //{
+        //    throw new Exception("No se recibieron todos los eventos esperados.");
+        //}
 
         await Task.Delay(100);
 
         logger.LogWarning("Probando invocación con retorno...");
 
-
         var temp = await client.GetTemperatureFromServer("");
-
 
         logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
 

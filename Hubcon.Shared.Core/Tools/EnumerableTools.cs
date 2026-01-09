@@ -1,4 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Core.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,7 +71,7 @@ namespace Hubcon.Shared.Core.Tools
             await foreach (var item in source.WithCancellation(ct).ConfigureAwait(false))
             {
                 // Aquí tu lógica de conversión a JsonElement (serialización manual o JsonSerializer)
-                yield return JsonSerializer.SerializeToElement(item);
+                yield return JsonSerializer.SerializeToElement(item, DynamicConverter.JsonSerializerOptions);
             }
         }
 

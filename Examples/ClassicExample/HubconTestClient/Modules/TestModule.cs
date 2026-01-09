@@ -1,8 +1,10 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Builder;
 using Hubcon.Shared.Abstractions.Enums;
+using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestClient.Auth;
 using HubconTestDomain;
+using Microsoft.Extensions.Logging;
 
 namespace HubconTestClient.Modules
 {
@@ -95,13 +97,24 @@ namespace HubconTestClient.Modules
 
             configuration.AddInterceptor(InterceptorType.OnPing, async ctx =>
             {
-                var item = ctx.Services.GetRequiredService<AuthenticationManager>();
+                var authManager = ctx.Services.GetRequiredService<AuthenticationManager>();
+                var logger = ctx.Services.GetRequiredService<ILogger<object>>();
 
-                if (!item.AccessTokenExpiresAt.HasValue || DateTime.Now > item.AccessTokenExpiresAt.Value.AddMinutes(-1))
-                    return;
+                if (authManager.AccessTokenExpiresAt.HasValue && authManager.AccessTokenExpiresAt.Value.AddMinutes(-1) < DateTimeOffset.UtcNow.DateTime)
+                {
+                    IHubconResult? refreshedToken = null!;
+                    try
+                    {
+                        refreshedToken = await authManager.TryRefreshSessionAsync();
+                        logger.LogInformation($"Token refresh is success: {refreshedToken.IsSuccess}. Message: {refreshedToken.ErrorMessage}");
 
-                var refreshedToken = await item.TryRefreshSessionAsync();
-                await ctx.TryRefreshToken.Invoke(item.AccessToken!);
+                        await ctx.TryRefreshToken.Invoke(authManager.AccessToken!);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError($"Token refresh error: {ex.Message}.");
+                    }
+                }
             });
 
             configuration.UseInsecureConnection();

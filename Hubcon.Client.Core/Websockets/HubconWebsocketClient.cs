@@ -295,13 +295,11 @@ namespace Hubcon.Client.Core.Websockets
                                 if (generalTcs.Task.IsCompleted || cts.IsCancellationRequested)
                                     break;
 
-
-                                var message = new IngestDataMessage(source.Key, converter.SerializeToElement(item));
+                                var message = new IngestDataMessage(source.Key, item);
 
                                 try
                                 {
-                                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket,
-                                        clientOptions?.IngestRateBucket, limiter);
+                                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.IngestRateBucket, limiter);
 
                                     await SendMessageAsync(message, cts.Token);
                                 }
@@ -309,6 +307,7 @@ namespace Hubcon.Client.Core.Websockets
                                 {
                                     if (LoggingEnabled)
                                         logger?.LogError(ex, $"Error al enviar dato en ingest stream {source.Key}");
+
                                     _errorStream.OnNext(ex);
                                 }
 
@@ -355,7 +354,6 @@ namespace Hubcon.Client.Core.Websockets
                 {
                     registration.Dispose();
                 }
-
 
                 await SendMessageAsync(new IngestCompleteMessage(initialAckId, sources.Keys.ToArray()));
 

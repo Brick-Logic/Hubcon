@@ -122,7 +122,7 @@ namespace Hubcon.Client.Integration.Client
                     if (ClientOptions.UseHttpEndpointOverloading)
                         request.SetOperationName(methodInfo.GetMethodSignature(true));
 
-                    var result = await client.InvokeAsync<T>(request, remoteCancellation, cancellationToken);
+                    var result = await client.InvokeAsync<JsonElement>(request, remoteCancellation, cancellationToken);
 
                     await operationOptions.CallHook(HookType.OnAfterSend, context);
                     await contractOptions.CallHook(HookType.OnAfterSend, context);
@@ -135,7 +135,7 @@ namespace Hubcon.Client.Integration.Client
                     await contractOptions.CallHook(HookType.OnResponse, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnResponse, context);
 
-                    return result.Data!;
+                    return converter.DeserializeJsonElement<T>(result.Data!);
                 }
                 else
                 {
@@ -203,7 +203,7 @@ namespace Hubcon.Client.Integration.Client
                     if (result.ValueKind == JsonValueKind.Null)
                         throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
 
-                    var operationResponse = converter.DeserializeJsonElement<BaseOperationResponse<T>>(result)
+                    var operationResponse = converter.DeserializeJsonElement<BaseOperationResponse<JsonElement>>(result)
                         ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
 
                     context.IsSuccess = operationResponse.Success;
@@ -219,8 +219,7 @@ namespace Hubcon.Client.Integration.Client
                     await ClientOptions.CallInterceptor(InterceptorType.OnResponse, context);
 
                     content?.Dispose();
-
-                    return operationResponse.Data;
+                    return converter.DeserializeJsonElement<T>(operationResponse.Data!);
                 }
             }
             catch (Exception ex)

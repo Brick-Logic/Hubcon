@@ -19,6 +19,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Operation
             _result = result;
         }
 
+        [JsonPropertyName("result")]
         public JsonElement Result => _result ??= Extract<JsonElement>("result");
     }
 }

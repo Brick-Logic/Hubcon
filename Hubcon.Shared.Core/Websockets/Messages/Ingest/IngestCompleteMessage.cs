@@ -18,6 +18,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
             _streamIds = streamIds;
         }
 
+        [JsonPropertyName("streamIds")]
         public Guid[] StreamIds => _streamIds ??= Extract<Guid[]>("streamIds");
     }
 
