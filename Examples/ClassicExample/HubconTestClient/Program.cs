@@ -145,14 +145,14 @@ internal class Program
             evento4 = true;
         }
 
-        client.OnUserCreated!.AddHandler(handler);
-        await client.OnUserCreated.Subscribe();
-        client.OnUserCreated2!.AddHandler(handler2);
-        await client.OnUserCreated2.Subscribe();
-        client.OnUserCreated3!.AddHandler(handler3);
-        await client.OnUserCreated3.Subscribe();
-        client.OnUserCreated4!.AddHandler(handler4);
-        await client.OnUserCreated4.Subscribe();
+        //client.OnUserCreated!.AddHandler(handler);
+        //await client.OnUserCreated.Subscribe();
+        //client.OnUserCreated2!.AddHandler(handler2);
+        //await client.OnUserCreated2.Subscribe();
+        //client.OnUserCreated3!.AddHandler(handler3);
+        //await client.OnUserCreated3.Subscribe();
+        //client.OnUserCreated4!.AddHandler(handler4);
+        //await client.OnUserCreated4.Subscribe();
 
         logger.LogInformation("Eventos conectados.");
 

@@ -48,7 +48,7 @@ namespace Hubcon.Client.Builder
             services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
             services.AddSingleton<IDynamicConverter, DynamicConverter>();
             services.AddTransient<IHubconClient, HubconClient>();
-            services.AddTransient(typeof(ClientSubscriptionHandler<>));
+            //services.AddTransient(typeof(ClientSubscriptionHandler<>));
 
             return services;
         }

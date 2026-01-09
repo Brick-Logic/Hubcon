@@ -57,10 +57,10 @@ namespace HubconTestClient.Modules
                             .Configure(contract => contract.CreateUser)
                             .LimitPerSecond(1000000);
 
-                        operationSelector
-                            .Configure(contract => contract.OnUserCreated)
-                            //.AddHook(HookType.OnEventReceived, async ctx => {  /*some operation logging or notification*/ })
-                            .LimitPerSecond(1000000);
+                        //operationSelector
+                        //    .Configure(contract => contract.OnUserCreated)
+                        //    //.AddHook(HookType.OnEventReceived, async ctx => {  /*some operation logging or notification*/ })
+                        //    .LimitPerSecond(1000000);
 
                         operationSelector
                             .Configure(contract => contract.GetTemperatureFromServerWithInput)

@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -69,35 +70,35 @@ namespace Hubcon.Client.Core.Proxies
             return info;
         }
 
-        public override Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
+        public override Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             var (computedSignature, methodInfo) = GetMethod(methodSignature);
             OperationRequest request = new OperationRequest(computedSignature, SimpleContractName, arguments!);
             return _client.SendAsync<T>(request, methodInfo, cancellationToken);
         }
 
-        public override Task CallAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
+        public override Task CallAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             var (computedSignature, methodInfo) = GetMethod(methodSignature);
             OperationRequest request = new OperationRequest(computedSignature, SimpleContractName, arguments!);
             return _client!.CallAsync(request, methodInfo, cancellationToken);
         }
 
-        public override Task<T> IngestAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
+        public override Task<T> IngestAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             var (computedSignature, methodInfo) = GetMethod(methodSignature);
             OperationRequest request = new OperationRequest(computedSignature, SimpleContractName, arguments!);
             return _client!.Ingest<T>(request, methodInfo, cancellationToken);
         }
 
-        public override Task IngestAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
+        public override Task IngestAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             var (computedSignature, methodInfo) = GetMethod(methodSignature);
             OperationRequest request = new OperationRequest(computedSignature, SimpleContractName, arguments!);
             return _client!.Ingest<JsonElement>(request, methodInfo, cancellationToken);
         }
 
-        public override IAsyncEnumerable<T> StreamAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken = default)
+        public override IAsyncEnumerable<T> StreamAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             var (computedSignature, methodInfo) = GetMethod(methodSignature);
             OperationRequest request = new OperationRequest(computedSignature, SimpleContractName, arguments!);

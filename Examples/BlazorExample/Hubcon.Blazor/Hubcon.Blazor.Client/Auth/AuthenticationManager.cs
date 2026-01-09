@@ -20,7 +20,7 @@ namespace Hubcon.Blazor.Client.Auth
             RefreshToken = "";
             AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
 
-            return AuthResult.Success(token, "", 100000);
+            return AuthResult.Success(token, "", AccessTokenExpiresAt!.Value);
         }
 
         protected override Task<IAuthResult> AuthenticateWithTokenAsync(string token, string type)
@@ -64,7 +64,7 @@ namespace Hubcon.Blazor.Client.Auth
             RefreshToken = "";
             AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
 
-            return AuthResult.Success(token, "", 100000);
+            return AuthResult.Success(token, "", AccessTokenExpiresAt!.Value);
         }
 
         protected async override Task SaveSessionAsync()

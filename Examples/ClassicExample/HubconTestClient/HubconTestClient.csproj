@@ -8,6 +8,11 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
 		<ServerGarbageCollection>false</ServerGarbageCollection>
+
+		<PublishAot>true</PublishAot>
+		<IsAotCompatible>true</IsAotCompatible>
+		<TrimMode>link</TrimMode>
+		<StackTraceSupport>false</StackTraceSupport>
 	</PropertyGroup>
 
 	<ItemGroup>

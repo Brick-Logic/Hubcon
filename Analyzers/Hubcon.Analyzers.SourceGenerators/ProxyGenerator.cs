@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Standard.Interceptor;
+﻿using Hubcon.Analyzers.SourceGenerators.Extensions;
+using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using HubconAnalyzers.SourceGenerators.Extensions;
 using Microsoft.CodeAnalysis;
@@ -7,8 +8,10 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace HubconAnalyzers.SourceGenerators
@@ -60,11 +63,96 @@ namespace HubconAnalyzers.SourceGenerators
 
             context.RegisterSourceOutput(allInterfaces, (spc, interfaceList) =>
             {
-                foreach (var iface in interfaceList.Cast<INamedTypeSymbol>())
+                // 1. HashSet para evitar procesar la misma interfaz dos veces (evita el error de hintName)
+                var processedFullNames = new HashSet<string>();
+                var generatedResolverClasses = new List<string>(); // Para el Aggregator
+
+                // 1. Obtener la compilación (necesaria para buscar símbolos)
+                var firstInterface = interfaceList.OfType<INamedTypeSymbol>().FirstOrDefault();
+                if (firstInterface == null) return;
+
+                var compilation = firstInterface.ContainingAssembly.GlobalNamespace.ContainingCompilation;
+
+                foreach (var iface in interfaceList.OfType<INamedTypeSymbol>())
                 {
-                    var code = GenerateProxyClass(iface);
-                    var filename = $"{iface.Name}Proxy.g.cs";
-                    spc.AddSource(filename, SourceText.From(code, Encoding.UTF8));
+                    var fullName = iface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+                    // Si ya procesamos este nombre completo (de la interfaz), saltamos
+                    if (!processedFullNames.Add(fullName)) continue;
+
+                    // 2. Crear un hintName único basado en el nombre completo de la interfaz
+                    var safeHintName = fullName.Replace("global::", "").Replace(".", "_").Replace("<", "_").Replace(">", "_");
+
+                    // 3. Recolección RECURSIVA de tipos (Esto es lo que llena el Resolver)
+                    var typesToSerialize = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+
+                    foreach (var member in iface.GetMembers())
+                    {
+                        if (member is IMethodSymbol method && method.MethodKind == MethodKind.Ordinary)
+                        {
+                            // Extraer de Retorno (desempaqueta Task<T>)
+                            CollectTypesRecursive(method.ReturnType, typesToSerialize);
+
+                            // Extraer de Parámetros
+                            foreach (var p in method.Parameters)
+                            {
+                                CollectTypesRecursive(p.Type, typesToSerialize);
+                            }
+                        }
+                        else if (member is IPropertySymbol prop)
+                        {
+                            // Extraer de Propiedades (por si la interfaz tiene properties)
+                            CollectTypesRecursive(prop.Type, typesToSerialize);
+                        }
+                    }
+
+                    typesToSerialize.Add(iface);
+
+                    var filteredTypes = typesToSerialize
+                    .Where(t =>
+                    {
+                        // 1. Ignorar tipos con errores de compilación
+                        if (t.TypeKind == TypeKind.Error) return false;
+
+                        if (t.ToDisplayString() == "System.Text.Json.JsonElement") return true;
+
+                        // 2. Ignorar tipos básicos (int, string, bool, etc.) 
+                        // STJ ya sabe cómo manejarlos, no necesitan metadatos generados.
+                        if (t.SpecialType != SpecialType.None) return false;
+
+                        // 3. Ignorar punteros y tipos no seguros (causa del error sbyte*)
+                        if (t.TypeKind == TypeKind.Pointer || t.TypeKind == TypeKind.FunctionPointer) return false;
+
+                        var ns = t.ContainingNamespace?.ToDisplayString() ?? "";
+
+                        // 4. Filtro de Namespaces: Solo permitimos tus tipos.
+                        // Bloqueamos System por completo (ya que Task, String, etc., se filtran arriba)
+                        // Bloqueamos Microsoft y tipos internos.
+                        return !ns.StartsWith("System") &&
+                               !ns.StartsWith("Microsoft") &&
+                               !ns.StartsWith("<global namespace>") &&
+                               !string.IsNullOrWhiteSpace(ns);
+                    })
+                    .ToImmutableHashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+
+                    var resolverClassName = $"{iface.Name}ProxyMetadataResolver";
+                    generatedResolverClasses.Add($"{iface.ContainingNamespace}.{resolverClassName}");
+
+                    // 4. Generar el Resolver de Metadatos (Incluyendo el .Instance y el mapa de tipos)
+                    var resolverCode = GenerateMetadataResolver(iface, filteredTypes);
+                    spc.AddSource($"{safeHintName}MetadataResolver.g.cs", resolverCode);
+
+                    // 5. Generar el Proxy Class
+                    var proxyCode = GenerateProxyClass(iface);
+                    spc.AddSource($"{safeHintName}Proxy.g.cs", SourceText.From(proxyCode, Encoding.UTF8));
+                }
+
+                generatedResolverClasses.Add("Hubcon.Shared.Core.Serialization.SystemTypesContext");
+                // Al final, generas el archivo global
+                if (generatedResolverClasses.Any())
+                {
+                    var globalCode = GenerateGlobalResolver(generatedResolverClasses, "Hubcon.Generated");
+                    spc.AddSource("HubconGlobalSerialization.g.cs", globalCode);
                 }
             });
         }
@@ -108,7 +196,7 @@ namespace HubconAnalyzers.SourceGenerators
             var namespaceName = iface.ContainingNamespace?.ToDisplayString();
             var sb = new StringBuilder();
 
-            sb.AppendLine($"// Generated by Hubcon.Analyzers.SourceGenerators v1.0.0-rc1.");
+            sb.AppendLine($"// Generated by Hubcon.Analyzers.SourceGenerators v1.0.0-rc35");
             sb.AppendLine($"");
             sb.AppendLine($"#nullable enable");
             sb.AppendLine($"using Hubcon.Shared.Abstractions.Models;");
@@ -116,9 +204,13 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine($"using Hubcon.Shared.Abstractions.Standard.Interfaces;");
             sb.AppendLine($"using Hubcon.Shared.Core.Attributes;");
             sb.AppendLine($"using Hubcon.Client.Core.Proxies;");
+            sb.AppendLine($"using System.Collections.Generic;");
             sb.AppendLine($"using System.Diagnostics.CodeAnalysis;");
             sb.AppendLine($"using System.Reflection;");
             sb.AppendLine($"using System.ComponentModel;");
+            sb.AppendLine($"using System.Text.Json;");
+            sb.AppendLine($"using System.Text.Json.Serialization;");
+            sb.AppendLine($"using System.Text.Json.Serialization.Metadata;");
             sb.AppendLine($"using System.Runtime.CompilerServices;");
             sb.AppendLine($"");
 
@@ -137,6 +229,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine($"{baseIndent}[EditorBrowsable(EditorBrowsableState.Never)]");
             sb.AppendLine($"{baseIndent}public class {proxyName} : {"BaseContractProxy"}, {iface.ToDisplayString()}");
             sb.AppendLine($"{baseIndent}{{");
+            sb.AppendLine($"");
 
             foreach (var property in iface.GetMembers().OfType<IPropertySymbol>())
             {
@@ -198,7 +291,7 @@ namespace HubconAnalyzers.SourceGenerators
                     AllParameters += $" }}";
                 }
 
-                string cancellationTokenName = "";
+                string cancellationTokenName = ", default";
 
                 if (method.Parameters.Any(x => x.Type.Name.ToLower().Contains("CancellationToken".ToLower())))
                 {
@@ -333,6 +426,279 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine($"{baseIndent}    public static void {proxyName}Preserver() {{ }}");
             sb.AppendLine($"{baseIndent}}}");
 
+            return sb.ToString();
+        }
+
+        private static string GenerateMetadataResolver(INamedTypeSymbol iface, ImmutableHashSet<ITypeSymbol> typesToSerialize)
+        {
+            var proxyName = iface.Name + "Proxy";
+            var namespaceName = iface.ContainingNamespace?.ToDisplayString();
+            var resolverName = $"{proxyName}MetadataResolver";
+            var sb = new StringBuilder();
+
+            sb.AppendLine("using System;");
+            sb.AppendLine("using System.Text.Json;");
+            sb.AppendLine("using System.Text.Json.Serialization.Metadata;");
+            sb.AppendLine("using System.Collections.Generic;");
+            sb.AppendLine();
+
+            if (!string.IsNullOrEmpty(namespaceName) && namespaceName != "<global namespace>")
+            {
+                sb.AppendLine($"namespace {namespaceName} {{");
+            }
+
+            sb.AppendLine($"public class {resolverName} : IJsonTypeInfoResolver {{");
+
+            // AGREGAMOS LA INSTANCIA SINGLETON
+            sb.AppendLine($"    public static readonly {resolverName} Instance = new {resolverName}();");
+            sb.AppendLine();
+
+            sb.AppendLine("    public JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options) {");
+
+            // Generar el mapa de tipos
+            if (typesToSerialize.Count > 0)
+            {
+                foreach (var type in typesToSerialize)
+                {
+                    var fullName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    var safeName = GetSafeName(type);
+                    sb.AppendLine($"        if (type == typeof({fullName})) return Create_{safeName}(options);");
+                }
+            }
+
+            sb.AppendLine($"        if (type == typeof(global::System.Text.Json.JsonElement)) return Create_System_Text_Json_JsonElement(options);");
+
+            sb.AppendLine("        return null;");
+            sb.AppendLine("    }");
+
+            // Generar los métodos de soporte
+            foreach (var type in typesToSerialize)
+            {
+                GenerateTypeMetadataMethod(sb, type, optionsName: "options");
+            }
+
+            // Al final de tu generación de métodos Create_...
+            sb.AppendLine(@"
+    private JsonTypeInfo Create_System_Text_Json_JsonElement(JsonSerializerOptions options)
+    {
+        return JsonMetadataServices.CreateValueInfo<global::System.Text.Json.JsonElement>(options, JsonMetadataServices.JsonElementConverter);
+    }");
+
+            sb.AppendLine("}");
+
+            if (!string.IsNullOrEmpty(namespaceName) && namespaceName != "<global namespace>")
+            {
+                sb.AppendLine("}");
+            }
+
+            return sb.ToString();
+        }
+
+        private static void GenerateTypeMetadataMethod(StringBuilder sb, ITypeSymbol type, string optionsName)
+        {
+            // 1. ESCUDO: Si es un tipo del sistema (como string) o un puntero, NO generamos método Create_...
+            // Estos tipos ya los maneja STJ internamente.
+            if (type.SpecialType != SpecialType.None ||
+                type.ContainingNamespace?.ToDisplayString().StartsWith("System") == true)
+            {
+                return;
+            }
+
+            var fullName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var safeName = GetSafeName(type);
+
+            sb.AppendLine($"    private JsonTypeInfo Create_{safeName}(JsonSerializerOptions {optionsName}) {{");
+
+            // CASO ENUMS... (Igual que antes)
+            if (type.TypeKind == TypeKind.Enum) { /* ... */ }
+
+            // CASO COLECCIONES... (Igual que antes)
+            else if (IsCollection(type, out var elementType)) { /* ... */ }
+
+            // CASO OBJETOS
+            else
+            {
+                sb.AppendLine($"        var info = JsonMetadataServices.CreateObjectInfo<{fullName}>({optionsName}, new JsonObjectInfoValues<{fullName}> {{");
+
+                // --- LÓGICA DE CONSTRUCTOR PROTEGIDA ---
+                var namedType = type as INamedTypeSymbol;
+                var constructor = namedType?.Constructors
+                    .OrderByDescending(c => c.Parameters.Length)
+                    .FirstOrDefault(c => c.DeclaredAccessibility == Accessibility.Public);
+
+                // Si el constructor tiene punteros, lo ignoramos por completo
+                bool hasPointers = constructor?.Parameters.Any(p => p.Type.TypeKind == TypeKind.Pointer) ?? false;
+
+                if (constructor != null && constructor.Parameters.Length > 0 && !hasPointers)
+                {
+                    sb.AppendLine("            ConstructorParameterMetadataInitializer = () => new JsonParameterInfoValues[] {");
+                    foreach (var p in constructor.Parameters)
+                    {
+                        var pType = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                        sb.AppendLine($@"                new JsonParameterInfoValues {{ 
+                    Name = ""{p.Name}"", 
+                    ParameterType = typeof({pType}), 
+                    Position = {p.Ordinal} 
+                }},");
+                    }
+                    sb.AppendLine("            },");
+
+                    var args = string.Join(", ", constructor.Parameters.Select((p, i) => $"({p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)})args[{i}]"));
+                    sb.AppendLine($"            ObjectWithParameterizedConstructorCreator = (args) => new {fullName}({args}),");
+                }
+                else if (namedType != null && !namedType.IsAbstract)
+                {
+                    sb.AppendLine($"            ObjectCreator = () => new {fullName}(),");
+                }
+
+                // --- LÓGICA DE PROPIEDADES ---
+                sb.AppendLine("            PropertyMetadataInitializer = (context) => new JsonPropertyInfo[] {");
+                foreach (var prop in type.GetMembers().OfType<IPropertySymbol>().Where(p => p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic))
+                {
+                    var pType = prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+                    // Aquí está el truco: STJ usará su propio resolver para tipos básicos (string, int) 
+                    // aunque nosotros no les generemos un Create_... manual.
+                    sb.AppendLine($"                JsonMetadataServices.CreatePropertyInfo<{pType}>({optionsName}, new JsonPropertyInfoValues<{pType}> {{");
+                    sb.AppendLine($"                    PropertyName = \"{prop.Name}\",");
+                    sb.AppendLine($"                    Getter = (obj) => (({fullName})obj).{prop.Name},");
+                    sb.AppendLine($"                    PropertyTypeInfo = options.GetTypeInfo(typeof({pType})),");
+                    sb.AppendLine($"                    DeclaringType = typeof({fullName}),");
+                    sb.AppendLine($"                    JsonPropertyName = \"{prop.Name}\",");
+                    sb.AppendLine($"                    IsProperty = true,");
+                    sb.AppendLine($"                    IsPublic = true,");
+
+                    bool canSet = !prop.IsReadOnly && (prop.SetMethod == null || !prop.SetMethod.IsInitOnly);
+                    if (canSet) sb.AppendLine($"                    Setter = (obj, val) => (({fullName})obj).{prop.Name} = val,");
+
+                    sb.AppendLine("                }),");
+                }
+                sb.AppendLine("            }");
+                sb.AppendLine("        });");
+                sb.AppendLine("        return info;");
+            }
+            sb.AppendLine("    }");
+        }
+
+        private static bool IsCollection(ITypeSymbol type, out ITypeSymbol elementType)
+        {
+            elementType = null;
+
+            // Caso Array T[]
+            if (type is IArrayTypeSymbol arrayType)
+            {
+                elementType = arrayType.ElementType;
+                return true;
+            }
+
+            // Caso IEnumerable<T> o derivados (List<T>, etc.)
+            if (type is INamedTypeSymbol namedType)
+            {
+                if (namedType.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T ||
+                    namedType.AllInterfaces.Any(i => i.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T))
+                {
+                    elementType = namedType.TypeArguments.FirstOrDefault();
+                    return elementType != null;
+                }
+            }
+
+            return false;
+        }
+
+        private static string GetSafeName(ITypeSymbol type)
+        {
+            return type.ToDisplayString()
+                .Replace("global::", "")
+                .Replace(".", "_")
+                .Replace("<", "_")
+                .Replace(">", "_")
+                .Replace("[", "Array")
+                .Replace("]", "")
+                .Replace(",", "_")
+                .Replace("?", "Nullable") // Manejo de T?
+                .Replace(" ", "");
+        }
+
+        private static void CollectTypesRecursive(ITypeSymbol type, HashSet<ITypeSymbol> typesToSerialize)
+        {
+            if (type == null) return;
+
+            // 1. Filtro de seguridad: Ignorar namespaces de sistema pesados
+            var ns = type.ContainingNamespace?.ToDisplayString();
+            if (ns != null && (ns.StartsWith("System.Reflection") ||
+                               ns.StartsWith("System.Runtime") ||
+                               ns.StartsWith("Microsoft.CodeAnalysis")))
+            {
+                return;
+            }
+
+            // 2. Desempaquetar Task<T> o Nullable<T>
+            if (type is INamedTypeSymbol named && named.IsGenericType)
+            {
+                // Si es Task<T>, procesamos el T y salimos (no queremos serializar el Task en sí)
+                if (named.Name == "Task" && ns == "System.Threading.Tasks")
+                {
+                    CollectTypesRecursive(named.TypeArguments[0], typesToSerialize);
+                    return;
+                }
+            }
+
+            // 3. Evitar duplicados y recursión infinita
+            if (!typesToSerialize.Add(type)) return;
+
+            // 4. Si es colección, recolectar el tipo del elemento
+            if (IsCollection(type, out var elementType))
+            {
+                CollectTypesRecursive(elementType, typesToSerialize);
+            }
+            // 5. Si es objeto, recolectar tipos de sus propiedades
+            else if (type.TypeKind == TypeKind.Class || type.TypeKind == TypeKind.Struct)
+            {
+                foreach (var prop in type.GetMembers().OfType<IPropertySymbol>())
+                {
+                    CollectTypesRecursive(prop.Type, typesToSerialize);
+                }
+            }
+        }
+
+        private static string GenerateGlobalResolver(List<string> allResolverNames, string namespaceName)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("using System.Text.Json;");
+            sb.AppendLine("using System.Text.Json.Serialization;"); // Para JsonIgnoreCondition
+            sb.AppendLine("using System.Text.Json.Serialization.Metadata;");
+            sb.AppendLine();
+            sb.AppendLine($"namespace {namespaceName} {{");
+            sb.AppendLine("    public static class HubconSerialization");
+            sb.AppendLine("    {");
+            sb.AppendLine("        public static readonly JsonSerializerOptions DefaultOptions = new JsonSerializerOptions");
+            sb.AppendLine("        {");
+            sb.AppendLine("            TypeInfoResolver = JsonTypeInfoResolver.Combine(");
+
+            for (int i = 0; i < allResolverNames.Count; i++)
+            {
+                var separator = (i == allResolverNames.Count - 1) ? "" : ",";
+
+                if (allResolverNames[i] == "Hubcon.Shared.Core.Serialization.SystemTypesContext")
+                {
+                    sb.AppendLine($"                {allResolverNames[i]}.Default{separator}");
+                }
+                else 
+                {         
+                    sb.AppendLine($"                {allResolverNames[i]}.Instance{separator}");
+                }
+            }
+
+            sb.AppendLine("            ),");
+            //sb.AppendLine("            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,");
+            sb.AppendLine("            WriteIndented = false,");
+            //sb.AppendLine("            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,");
+            sb.AppendLine("            MaxDepth = 64,");
+            sb.AppendLine("            PropertyNameCaseInsensitive = true,");
+            sb.AppendLine("            Converters = { new JsonStringEnumConverter() }");
+            sb.AppendLine("        };");
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
             return sb.ToString();
         }
     }

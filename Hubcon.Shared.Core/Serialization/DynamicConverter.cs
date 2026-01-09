@@ -1,4 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
 using System.Collections.Concurrent;
@@ -6,25 +7,28 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Core.Serialization
 {
+    [JsonSerializable(typeof(JsonElement))]
+    [JsonSerializable(typeof(IReadOnlyDictionary<string, object>))]
+    [JsonSerializable(typeof(Dictionary<string, object>))]
+    [JsonSerializable(typeof(JsonObject))]
+    [JsonSerializable(typeof(JsonArray))]
+    [JsonSerializable(typeof(BaseOperationResponse<string>))]
+    public partial class SystemTypesContext : JsonSerializerContext
+    {
+    }
+
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class DynamicConverter : IDynamicConverter
     {
+
         public ConcurrentDictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 
-        public static JsonSerializerOptions JsonSerializerOptions { get; } = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
-            MaxDepth = 64,
-            Converters = { new JsonStringEnumConverter() },
-            PropertyNameCaseInsensitive = true,
-        };
-
+        public static JsonSerializerOptions JsonSerializerOptions { get; } = HubconJsonDefaults.Options;
 
         public IEnumerable<object?> DeserializeArgs(IEnumerable<Type> types, IEnumerable<object?> args)
         {
@@ -255,6 +259,67 @@ namespace Hubcon.Shared.Core.Serialization
             JsonSerializer.Serialize(writer, value, JsonSerializerOptions);
             writer.Flush();
             return bufferWriter.WrittenSpan;
+        }
+    }
+
+    public static class HubconJsonDefaults
+    {
+        private static readonly Lazy<JsonSerializerOptions> _options = new Lazy<JsonSerializerOptions>(() =>
+        {
+            // 1. Intentamos buscar la clase generada por el SG
+            // Usamos el nombre de espacio y clase que definimos en el generador
+            // Nota: Type.GetType requiere el nombre del ensamblado si no está en la misma DLL.
+            // Para simplificar, buscamos en el Assembly que llamó a la librería.
+            var generatedOptions = TryGetGeneratedOptions();
+
+            if (generatedOptions != null)
+            {
+                return generatedOptions;
+            }
+
+            // 2. Fallback: Si no hay código generado, usamos la configuración manual
+            // Advertencia: Esto usará reflexión en tiempo de ejecución (no ideal para AOT puro)
+            return CreateFallbackOptions();
+        });
+
+        public static JsonSerializerOptions Options => _options.Value;
+
+        private static JsonSerializerOptions? TryGetGeneratedOptions()
+        {
+            try
+            {
+                // Buscamos en todos los assemblies cargados (o podrías restringirlo)
+                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    var type = assembly.GetType("Hubcon.Generated.HubconSerialization");
+                    if (type != null)
+                    {
+                        var field = type.GetField("DefaultOptions", BindingFlags.Public | BindingFlags.Static);
+                        if (field?.GetValue(null) is JsonSerializerOptions options)
+                        {
+                            return options;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Si algo falla en la reflexión, ignoramos y vamos al fallback
+            }
+            return null;
+        }
+
+        private static JsonSerializerOptions CreateFallbackOptions()
+        {
+            return new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+                MaxDepth = 64,
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
         }
     }
 }
