@@ -17,13 +17,13 @@ namespace HubconTestClient.Modules
             configuration.EnableWebsocketAutoReconnect(true);
             configuration.GlobalLimit(20000000);
 
-            configuration.LimitIngest(100);
-            configuration.LimitSubscription(100);
-            configuration.LimitStreaming(100);
-            configuration.LimitWebsocketRoundTrip(100);
-            configuration.LimitHttpRoundTrip(100);
-            configuration.LimitWebsocketFireAndForget(100);
-            configuration.LimitHttpFireAndForget(100);
+            //configuration.LimitIngest(100);
+            //configuration.LimitSubscription(100);
+            //configuration.LimitStreaming(100);
+            //configuration.LimitWebsocketRoundTrip(100);
+            //configuration.LimitHttpRoundTrip(100);
+            //configuration.LimitWebsocketFireAndForget(100);
+            //configuration.LimitHttpFireAndForget(100);
 
             configuration.DisableAllLimiters();
 
@@ -85,7 +85,7 @@ namespace HubconTestClient.Modules
             });
 
             configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(5));
-            configuration.ScaleMessageProcessors(1);
+            configuration.ScaleMessageProcessors(4);
 
             configuration.ConfigureHttpClient((x, services) =>
             {

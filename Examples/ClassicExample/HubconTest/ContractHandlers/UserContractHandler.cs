@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace HubconTest.ContractHandlers
 {
@@ -72,7 +73,16 @@ namespace HubconTest.ContractHandlers
             }
         }
 
-        [StreamingSettings(0)]
+        //[StreamingSettings(1000)]
+        public async IAsyncEnumerable<string> GetMessages([EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            while(!cancellationToken.IsCancellationRequested)
+            {
+                yield return "hola2";
+            }
+        }
+
+        [StreamingSettings(10000000, 10000000)]
         public async IAsyncEnumerable<string> GetMessages2(CancellationToken cancellationToken)
         {
             while (true)

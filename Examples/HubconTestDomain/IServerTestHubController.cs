@@ -37,6 +37,7 @@ namespace HubconTestDomain
         Task IngestMessages(IAsyncEnumerable<string> source, int? count, CancellationToken cancellationToken = default);
         Task<string> IngestMessages(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2, IAsyncEnumerable<string> source3, IAsyncEnumerable<string> source4, IAsyncEnumerable<string> source5);
         Task IngestMessages2(IAsyncEnumerable<string> source, IAsyncEnumerable<string> source2, IAsyncEnumerable<string> source3, IAsyncEnumerable<string> source4, IAsyncEnumerable<string> source5);
+        IAsyncEnumerable<string> GetMessages(CancellationToken cancellationToken);
     }
 
     public class CreateUserCommandResponse

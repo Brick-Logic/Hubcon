@@ -27,6 +27,9 @@ namespace Hubcon.Server.Core.RateLimiting
         {
             try
             {
+                if (options.ThrottlingIsDisabled)
+                    return true;
+
                 if (_globalLimiter is not null)
                     await _globalLimiter.AcquireAsync();
 
@@ -62,6 +65,9 @@ namespace Hubcon.Server.Core.RateLimiting
         {
             try
             {
+                if (options.ThrottlingIsDisabled)
+                    return true;
+
                 if (_globalLimiter is not null)
                     await _globalLimiter.AcquireAsync();
 
@@ -141,7 +147,7 @@ namespace Hubcon.Server.Core.RateLimiting
                 or MessageType.subscription_data
                 or MessageType.subscription_data_with_ack
                 or MessageType.subscription_complete
-                    => _subscriptionLimiter ??= new TokenBucketRateLimiter(options.WebsocketRoundTripMethodRateLimiter.Invoke()),
+                    => _subscriptionLimiter ??= new TokenBucketRateLimiter(options.WebsocketSubscriptionRateLimiter.Invoke()),
 
                 // Stream group (todos comparten)
                 MessageType.stream_init
@@ -149,7 +155,7 @@ namespace Hubcon.Server.Core.RateLimiting
                 or MessageType.stream_data
                 or MessageType.stream_data_ack
                 or MessageType.stream_data_with_ack
-                    => _streamLimiter ??= new TokenBucketRateLimiter(options.WebsocketRoundTripMethodRateLimiter.Invoke()),
+                    => _streamLimiter ??= new TokenBucketRateLimiter(options.WebsocketStreamingRateLimiter.Invoke()),
 
                 // Ingest group (comparten)
                 MessageType.ingest_init

@@ -222,8 +222,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     switch (message.Type)
                     {
                         case MessageType.ping:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ping, message.Id);
+
+                            await rateLimiterManager.TryAcquireAsync(MessageType.ping, message.Id);
 
                             if (!options.WebsocketRequiresPing)
                             {
@@ -235,8 +235,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.subscription_init:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.subscription_init, message.Id);
+
+                            await rateLimiterManager.TryAcquireAsync(MessageType.subscription_init, message.Id);
 
                             if (!options.WebSocketSubscriptionIsAllowed)
                             {
@@ -258,8 +258,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.subscription_complete:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.subscription_complete, message.Id);
+
+                            await rateLimiterManager.TryAcquireAsync(MessageType.subscription_complete, message.Id);
 
                             if (!options.WebSocketSubscriptionIsAllowed)
                             {
@@ -276,8 +276,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.stream_init:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.stream_init, message.Id);
+
+                            await rateLimiterManager.TryAcquireAsync(MessageType.stream_init, message.Id);
 
                             if (!options.WebSocketSubscriptionIsAllowed)
                             {
@@ -299,8 +299,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.stream_complete:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.stream_complete, message.Id);
+
+                            await rateLimiterManager.TryAcquireAsync(MessageType.stream_complete, message.Id);
 
                             if (!options.WebSocketSubscriptionIsAllowed)
                             {
@@ -317,8 +317,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.ack:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ack, message.Id);
+
+                            await rateLimiterManager.TryAcquireAsync(MessageType.ack, message.Id);
 
                             if (!options.MessageRetryIsEnabled)
                             {
@@ -333,8 +333,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.operation_invoke:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.operation_invoke, message.Id);
+
+                            await rateLimiterManager.TryAcquireAsync(MessageType.operation_invoke, message.Id);
 
                             if (!options.WebSocketMethodsIsAllowed)
                             {
@@ -354,8 +354,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.operation_call:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.operation_call, message.Id);
+
+                            await rateLimiterManager.TryAcquireAsync(MessageType.operation_call, message.Id);
 
                             if (!options.WebSocketMethodsIsAllowed)
                             {
@@ -373,8 +373,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.ingest_init:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_init, message.Id);
+
+                            await rateLimiterManager.TryAcquireAsync(MessageType.ingest_init, message.Id);
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
@@ -396,8 +396,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.ingest_data:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data, message.Id);
+
+                            await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data, message.Id);
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
@@ -410,8 +410,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.ingest_data_with_ack:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data_with_ack, message.Id);
+                            
+                            await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data_with_ack, message.Id);
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
@@ -424,8 +424,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.ingest_complete:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.ingest_complete, message.Id);
+                            
+                            await rateLimiterManager.TryAcquireAsync(MessageType.ingest_complete, message.Id);
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
@@ -437,8 +437,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             break;
                         case MessageType.cancel:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.cancel, message.Id);
+                            
+                            await rateLimiterManager.TryAcquireAsync(MessageType.cancel, message.Id);
 
                             if (!options.RemoteCancellationIsAllowed)
                             {
@@ -449,8 +449,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             break;
                         case MessageType.token_update:
-                            if (!options.ThrottlingIsDisabled)
-                                await rateLimiterManager.TryAcquireAsync(MessageType.token_update, message.Id);
+                            
+                            await rateLimiterManager.TryAcquireAsync(MessageType.token_update, message.Id);
 
                             _ = HandleTokenRefresh(
                                 context,
@@ -912,10 +912,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         }
                     }
 
-                    if (!options.ThrottlingIsDisabled)
-                    {
-                        await rateLimiterManager.TryAcquireAsync(type, operationRequest);
-                    }
+                    await rateLimiterManager.TryAcquireAsync(type, operationRequest);         
                 }
             }
             catch (OperationCanceledException)
