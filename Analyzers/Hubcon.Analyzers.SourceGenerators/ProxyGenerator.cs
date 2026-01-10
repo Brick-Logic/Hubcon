@@ -73,6 +73,8 @@ namespace HubconAnalyzers.SourceGenerators
 
                 var compilation = firstInterface.ContainingAssembly.GlobalNamespace.ContainingCompilation;
 
+                var typesToSerialize = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+
                 foreach (var iface in interfaceList.OfType<INamedTypeSymbol>())
                 {
                     var fullName = iface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
@@ -84,7 +86,6 @@ namespace HubconAnalyzers.SourceGenerators
                     var safeHintName = fullName.Replace("global::", "").Replace(".", "_").Replace("<", "_").Replace(">", "_");
 
                     // 3. Recolección RECURSIVA de tipos (Esto es lo que llena el Resolver)
-                    var typesToSerialize = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
 
                     foreach (var member in iface.GetMembers())
                     {
@@ -108,44 +109,44 @@ namespace HubconAnalyzers.SourceGenerators
 
                     typesToSerialize.Add(iface);
 
-                    var filteredTypes = typesToSerialize
-                    .Where(t =>
-                    {
-                        // 1. Ignorar tipos con errores de compilación
-                        if (t.TypeKind == TypeKind.Error) return false;
-
-                        if (t.ToDisplayString() == "System.Text.Json.JsonElement") return true;
-
-                        // 2. Ignorar tipos básicos (int, string, bool, etc.) 
-                        // STJ ya sabe cómo manejarlos, no necesitan metadatos generados.
-                        if (t.SpecialType != SpecialType.None) return false;
-
-                        // 3. Ignorar punteros y tipos no seguros (causa del error sbyte*)
-                        if (t.TypeKind == TypeKind.Pointer || t.TypeKind == TypeKind.FunctionPointer) return false;
-
-                        var ns = t.ContainingNamespace?.ToDisplayString() ?? "";
-
-                        // 4. Filtro de Namespaces: Solo permitimos tus tipos.
-                        // Bloqueamos System por completo (ya que Task, String, etc., se filtran arriba)
-                        // Bloqueamos Microsoft y tipos internos.
-                        return !ns.StartsWith("System") &&
-                               !ns.StartsWith("Microsoft") &&
-                               !ns.StartsWith("<global namespace>") &&
-                               !string.IsNullOrWhiteSpace(ns);
-                    })
-                    .ToImmutableHashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
-
-                    var resolverClassName = $"{iface.Name}ProxyMetadataResolver";
-                    generatedResolverClasses.Add($"{iface.ContainingNamespace}.{resolverClassName}");
-
-                    // 4. Generar el Resolver de Metadatos (Incluyendo el .Instance y el mapa de tipos)
-                    var resolverCode = GenerateMetadataResolver(iface, filteredTypes);
-                    spc.AddSource($"{safeHintName}MetadataResolver.g.cs", resolverCode);
-
                     // 5. Generar el Proxy Class
                     var proxyCode = GenerateProxyClass(iface);
                     spc.AddSource($"{safeHintName}Proxy.g.cs", SourceText.From(proxyCode, Encoding.UTF8));
                 }
+
+                var filteredTypes = typesToSerialize
+                .Where(t =>
+                {
+                    // 1. Ignorar tipos con errores de compilación
+                    if (t.TypeKind == TypeKind.Error) return false;
+
+                    if (t.ToDisplayString() == "System.Text.Json.JsonElement") return true;
+
+                    // 2. Ignorar tipos básicos (int, string, bool, etc.) 
+                    // STJ ya sabe cómo manejarlos, no necesitan metadatos generados.
+                    if (t.SpecialType != SpecialType.None) return false;
+
+                    // 3. Ignorar punteros y tipos no seguros (causa del error sbyte*)
+                    if (t.TypeKind == TypeKind.Pointer || t.TypeKind == TypeKind.FunctionPointer) return false;
+
+                    var ns = t.ContainingNamespace?.ToDisplayString() ?? "";
+
+                    // 4. Filtro de Namespaces: Solo permitimos tus tipos.
+                    // Bloqueamos System por completo (ya que Task, String, etc., se filtran arriba)
+                    // Bloqueamos Microsoft y tipos internos.
+                    return !ns.StartsWith("System") &&
+                           !ns.StartsWith("Microsoft") &&
+                           !ns.StartsWith("<global namespace>") &&
+                           !string.IsNullOrWhiteSpace(ns);
+                })
+                .ToImmutableHashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+
+                var resolverClassName = $"GlobalMetadataResolver";
+                generatedResolverClasses.Add($"Hubcon.Generated.{resolverClassName}");
+
+                // 4. Generar el Resolver de Metadatos (Incluyendo el .Instance y el mapa de tipos)
+                var resolverCode = GenerateMetadataResolver(resolverClassName, filteredTypes);
+                spc.AddSource($"{resolverClassName}.g.cs", resolverCode);
 
                 generatedResolverClasses.Add("Hubcon.Shared.Core.Serialization.SystemTypesContext");
                 // Al final, generas el archivo global
@@ -429,11 +430,8 @@ namespace HubconAnalyzers.SourceGenerators
             return sb.ToString();
         }
 
-        private static string GenerateMetadataResolver(INamedTypeSymbol iface, ImmutableHashSet<ITypeSymbol> typesToSerialize)
+        private static string GenerateMetadataResolver(string resolverName, ImmutableHashSet<ITypeSymbol> typesToSerialize)
         {
-            var proxyName = iface.Name + "Proxy";
-            var namespaceName = iface.ContainingNamespace?.ToDisplayString();
-            var resolverName = $"{proxyName}MetadataResolver";
             var sb = new StringBuilder();
 
             sb.AppendLine("using System;");
@@ -441,43 +439,40 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("using System.Text.Json.Serialization.Metadata;");
             sb.AppendLine("using System.Collections.Generic;");
             sb.AppendLine();
-
-            if (!string.IsNullOrEmpty(namespaceName) && namespaceName != "<global namespace>")
-            {
-                sb.AppendLine($"namespace {namespaceName} {{");
-            }
+            sb.AppendLine($"namespace Hubcon.Generated {{");
 
             sb.AppendLine($"public class {resolverName} : IJsonTypeInfoResolver {{");
-
-            // AGREGAMOS LA INSTANCIA SINGLETON
             sb.AppendLine($"    public static readonly {resolverName} Instance = new {resolverName}();");
             sb.AppendLine();
 
             sb.AppendLine("    public JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options) {");
 
-            // Generar el mapa de tipos
-            if (typesToSerialize.Count > 0)
+            // Switch de string basado en FullName
+            sb.AppendLine("        return type.FullName switch {");
+
+            foreach (var type in typesToSerialize)
             {
-                foreach (var type in typesToSerialize)
-                {
-                    var fullName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                    var safeName = GetSafeName(type);
-                    sb.AppendLine($"        if (type == typeof({fullName})) return Create_{safeName}(options);");
-                }
+                // Usamos el FullName del símbolo (importante para el matching de runtime)
+                var fullName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                                   .Replace("global::", ""); // El FullName de runtime no lleva 'global::'
+
+                var safeName = GetSafeName(type);
+                sb.AppendLine($"            \"{fullName}\" => Create_{safeName}(options),");
             }
 
-            sb.AppendLine($"        if (type == typeof(global::System.Text.Json.JsonElement)) return Create_System_Text_Json_JsonElement(options);");
+            // Caso especial para JsonElement
+            sb.AppendLine($"            \"System.Text.Json.JsonElement\" => Create_System_Text_Json_JsonElement(options),");
 
-            sb.AppendLine("        return null;");
+            sb.AppendLine("            _ => null");
+            sb.AppendLine("        };");
             sb.AppendLine("    }");
 
-            // Generar los métodos de soporte
+            // ... (El resto de GenerateTypeMetadataMethod y Create_System_Text_Json_JsonElement sigue igual)
             foreach (var type in typesToSerialize)
             {
                 GenerateTypeMetadataMethod(sb, type, optionsName: "options");
             }
 
-            // Al final de tu generación de métodos Create_...
             sb.AppendLine(@"
     private JsonTypeInfo Create_System_Text_Json_JsonElement(JsonSerializerOptions options)
     {
@@ -485,11 +480,7 @@ namespace HubconAnalyzers.SourceGenerators
     }");
 
             sb.AppendLine("}");
-
-            if (!string.IsNullOrEmpty(namespaceName) && namespaceName != "<global namespace>")
-            {
-                sb.AppendLine("}");
-            }
+            sb.AppendLine("}");
 
             return sb.ToString();
         }
@@ -683,8 +674,8 @@ namespace HubconAnalyzers.SourceGenerators
                 {
                     sb.AppendLine($"                {allResolverNames[i]}.Default{separator}");
                 }
-                else 
-                {         
+                else
+                {
                     sb.AppendLine($"                {allResolverNames[i]}.Instance{separator}");
                 }
             }
