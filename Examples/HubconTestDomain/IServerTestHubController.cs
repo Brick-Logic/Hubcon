@@ -20,13 +20,14 @@ namespace HubconTestDomain
 
     public interface IUserContract : IControllerContract
     {
-        //ISubscription<int?>? OnUserCreated { get; }
-        //ISubscription<int?>? OnUserCreated2 { get; }
-        //ISubscription<int?>? OnUserCreated3 { get; }
-        //ISubscription<int?>? OnUserCreated4 { get; }
+        ISubscription<int?>? OnUserCreated { get; }
+        ISubscription<int?>? OnUserCreated2 { get; }
+        ISubscription<int?>? OnUserCreated3 { get; }
+        ISubscription<int?>? OnUserCreated4 { get; }
+        ISubscription<IEnumerable<int>>? OnEnumerableTest{ get; }
 
         Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken = default);
-        Task<TestInputClass> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default);
+        Task<TestInputClass?> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default);
         Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default);
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();

@@ -8,13 +8,16 @@ using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 
@@ -199,8 +202,19 @@ namespace Hubcon.Client.Builder
                         x => typeof(ClientSubscriptionHandler<>).MakeGenericType(x));
 
                     var propss = contractType.GetProperties().Where(x => x.Name == subscriptionProp.Name).FirstOrDefault();
+                    var factory = GetFactory();
 
-                    var subscriptionInstance = (ISubscription)services.GetRequiredService(genericType);
+                    if (factory == null)
+                        continue;
+
+                    var config = new ClientSubscriptionConfig<object>()
+                    {
+                        Converter = converter,
+                        Logger = services.GetRequiredService<ILogger<ClientSubscriptionHandler<object>>>()
+                    };
+
+                    var subscriptionInstance = (ISubscription)factory.Invoke(subscriptionProp.PropertyType.GenericTypeArguments[0], config);
+
                     PropertyTools.AssignProperty(newClient, subscriptionProp, subscriptionInstance);
                     PropertyTools.AssignProperty(
                         subscriptionInstance,
@@ -208,6 +222,7 @@ namespace Hubcon.Client.Builder
                         propss
                         );
                     PropertyTools.AssignProperty(subscriptionInstance, nameof(ClientSubscriptionHandler<object>.Client), hubconClient);
+
                     subscriptionInstance.Build();
                 }
             }
@@ -215,6 +230,36 @@ namespace Hubcon.Client.Builder
             if (useCached) _clients.Add(contractType, newClient!);
 
             return newClient!;
+        }
+
+        private static Func<Type, object, object>? SubscriptionFactory { get; set; }
+        private static Func<Type, object, object>? GetFactory()
+        {
+            try
+            {
+                if (SubscriptionFactory != null)
+                    return SubscriptionFactory;
+
+                // Buscamos en todos los assemblies cargados (o podrías restringirlo)
+                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    var type = assembly.GetType("Hubcon.Generated.ClientSubscriptionFactory");
+                    if (type != null)
+                    {
+                        var method = type.GetMethod("Create", BindingFlags.Public | BindingFlags.Static);
+                        if (method != null)
+                        {
+                            return (x, config) => method.Invoke(null, new object[] { x, config });
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Si algo falla en la reflexión, ignoramos y vamos al fallback
+            }
+
+            return null;
         }
 
         public void UseAuthenticationManager<T>(IServiceCollection services) where T : class, IAuthenticationManager

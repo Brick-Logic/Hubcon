@@ -17,7 +17,7 @@ namespace Hubcon.Client.Core.Subscriptions
     {
         public event HubconEventHandler<object>? OnEventReceived;
         private readonly IDynamicConverter _converter;
-        private readonly ILogger<ClientSubscriptionHandler<T>> logger;
+        private readonly ILogger<ClientSubscriptionHandler<object>> logger;
         private CancellationTokenSource _tokenSource;
 
 
@@ -29,10 +29,10 @@ namespace Hubcon.Client.Core.Subscriptions
 
         public ConcurrentDictionary<object, HubconEventHandler<object>> Handlers { get; }
 
-        public ClientSubscriptionHandler(IDynamicConverter converter, ILogger<ClientSubscriptionHandler<T>> logger)
+        public ClientSubscriptionHandler(ClientSubscriptionConfig<object> subscriptionConfig)
         {
-            _converter = converter;
-            this.logger = logger;
+            _converter = subscriptionConfig.Converter;
+            this.logger = subscriptionConfig.Logger;
             _tokenSource = new CancellationTokenSource();
             Handlers = new();
         }
@@ -89,7 +89,6 @@ namespace Hubcon.Client.Core.Subscriptions
                     {
                         IAsyncEnumerable<JsonElement> eventSource = null!;
 
-
                         eventSource = await Client.GetSubscription(request, Property, _tokenSource.Token);
 
                         _connected = SubscriptionState.Connected;
@@ -100,10 +99,10 @@ namespace Hubcon.Client.Core.Subscriptions
                         {
                             if (retry > 0) retry = 0;
 
-                            var result = _converter.DeserializeData<T>(item);
+                            var result = _converter.DeserializeJsonElement<T>(item);
 
                             if (OnEventReceived != null)
-                                await OnEventReceived.Invoke(result);
+                                await OnEventReceived.Invoke(result!);
                         }
                         ;
                     }
@@ -150,5 +149,11 @@ namespace Hubcon.Client.Core.Subscriptions
         {
             OnEventReceived?.Invoke((T?)eventValue);
         }
+    }
+
+    public class ClientSubscriptionConfig<T>
+    {
+        public IDynamicConverter Converter { get; set; } = null!;
+        public ILogger<ClientSubscriptionHandler<T>> Logger { get; set; } = null!;
     }
 }

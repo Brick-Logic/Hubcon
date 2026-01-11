@@ -25,6 +25,7 @@ namespace HubconTest.ContractHandlers
         public ISubscription<int?>? OnUserCreated2 { get; }
         public ISubscription<int?>? OnUserCreated3 { get; }
         public ISubscription<int?>? OnUserCreated4 { get; }
+        public ISubscription<IEnumerable<int>>? OnEnumerableTest { get; }
 
         [UseHttpEndpointFilter(typeof(LoggingEndpointFilter))]
         [UseMiddleware(typeof(LocalLoggingMiddleware))]
@@ -35,6 +36,7 @@ namespace HubconTest.ContractHandlers
             OnUserCreated2?.Emit(2);
             OnUserCreated3?.Emit(3);
             OnUserCreated4?.Emit(4);
+            OnEnumerableTest?.Emit([0,1,2,3,4]);
 
             return Task.CompletedTask;
         }
@@ -272,9 +274,9 @@ namespace HubconTest.ContractHandlers
         }
 
         [AllowAnonymous]
-        public Task<TestInputClass> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
+        public async Task<TestInputClass?> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(input);
+            return null;
             //return Task.FromResult(Random.Shared.Next(-10, 50));
         }
     }

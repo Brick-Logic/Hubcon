@@ -2,6 +2,7 @@
 using HubconTestClient.Auth;
 using HubconTestClient.Modules;
 using HubconTestDomain;
+using Microsoft.CodeAnalysis;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -20,6 +21,8 @@ internal class Program
     {
         Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "true");
 
+        Console.WriteLine($"¿Es Native AOT?: {System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported == false}");
+     
         var process = Process.GetCurrentProcess();
 
         long coreMask = 0;
@@ -145,14 +148,23 @@ internal class Program
             evento4 = true;
         }
 
-        //client.OnUserCreated!.AddHandler(handler);
-        //await client.OnUserCreated.Subscribe();
-        //client.OnUserCreated2!.AddHandler(handler2);
-        //await client.OnUserCreated2.Subscribe();
-        //client.OnUserCreated3!.AddHandler(handler3);
-        //await client.OnUserCreated3.Subscribe();
-        //client.OnUserCreated4!.AddHandler(handler4);
-        //await client.OnUserCreated4.Subscribe();
+        async Task handler5(IEnumerable<int> input)
+        {
+            logger.LogInformation($"Evento recibido: [{string.Join(",", input)}]");
+            Interlocked.Add(ref eventosRecibidos, 1);
+            evento4 = true;
+        }
+
+        client.OnUserCreated!.AddHandler(handler);
+        await client.OnUserCreated.Subscribe();
+        client.OnUserCreated2!.AddHandler(handler2);
+        await client.OnUserCreated2.Subscribe();
+        client.OnUserCreated3!.AddHandler(handler3);
+        await client.OnUserCreated3.Subscribe();
+        client.OnUserCreated4!.AddHandler(handler4);
+        await client.OnUserCreated4.Subscribe();
+        client.OnEnumerableTest!.AddHandler(handler5);
+        await client.OnEnumerableTest.Subscribe();
 
         logger.LogInformation("Eventos conectados.");
 
@@ -162,16 +174,16 @@ internal class Program
         await client.CreateUser();
         logger.LogInformation($"Esperando eventos...");
 
-        //await Task.Delay(3000);
+        await Task.Delay(1000);
 
-        //if (eventosRecibidos == 4)
-        //{
-        //    logger.LogInformation($"Eventos recibidos correctamente.");
-        //}
-        //else
-        //{
-        //    throw new Exception("No se recibieron todos los eventos esperados.");
-        //}
+        if (eventosRecibidos == 4)
+        {
+            logger.LogInformation($"Eventos recibidos correctamente.");
+        }
+        else
+        {
+            throw new Exception("No se recibieron todos los eventos esperados.");
+        }
 
         await Task.Delay(100);
 
