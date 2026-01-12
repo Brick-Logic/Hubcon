@@ -154,7 +154,7 @@ namespace Hubcon.Client.Core.Authentication
         public string? ErrorMessage { get; private set; }
 
         public static IAuthResult Success(string accessToken, string tokenType, string refreshToken, DateTime expiresInSeconds) =>
-            new AuthResult() { IsSuccess = true, AccessToken = accessToken, RefreshToken = refreshToken, ExpiresInSeconds = expiresInSeconds };
+            new AuthResult() { IsSuccess = true, AccessToken = accessToken, TokenType = tokenType, RefreshToken = refreshToken, ExpiresInSeconds = expiresInSeconds };
 
         public static IAuthResult Failure(string? errorMessage) =>
             new AuthResult() { IsSuccess = false, ErrorMessage = errorMessage ?? "" };

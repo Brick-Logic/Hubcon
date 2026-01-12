@@ -462,6 +462,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 cts.Token);
 
                             break;
+
+                        default:
+                            break;
                     }
                 }
             }

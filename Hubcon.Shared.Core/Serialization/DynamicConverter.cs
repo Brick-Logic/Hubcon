@@ -323,6 +323,7 @@ namespace Hubcon.Shared.Core.Serialization
 
         public static JsonSerializerOptions GetOptions()
         {
+            if (_options == null) SetupJsonSerializerOption(new JsonSerializerOptions());
             return _options!;
         }
 

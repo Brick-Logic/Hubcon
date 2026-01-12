@@ -13,7 +13,11 @@ namespace Hubcon.Shared.Core.Lazy
 
         public T1 GetValue<T1>(IServiceProvider sp)
         {
-            _lazy ??= new Lazy<T>(sp.GetRequiredService<T>);         
+            _lazy ??= new Lazy<T>(sp.GetRequiredService<T>);
+
+            if (_lazy.IsValueCreated)
+                return (T1)(object)_lazy.Value;
+
             return (T1)(object)_lazy.Value;
         }
     }

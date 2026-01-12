@@ -319,6 +319,7 @@ namespace Hubcon.Client.Core.Websockets
                         {
                             if (LoggingEnabled)
                                 logger?.LogError(ex, $"Error en ingest stream {source.Key}");
+
                             _errorStream.OnNext(ex);
                             cts.Cancel();
                         }
