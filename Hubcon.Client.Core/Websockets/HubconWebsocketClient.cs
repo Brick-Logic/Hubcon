@@ -31,6 +31,7 @@ using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
 using System.Timers;
@@ -888,12 +889,13 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
+        public static ConcurrentDictionary<Type, JsonTypeInfo> TypeInfoCache { get; private set; } = new();
         private async ValueTask SendMessageAsync<T>(T message, CancellationToken cancellationToken = default)
         {
             var pipe = new Pipe();
             var writer = new Utf8JsonWriter(pipe.Writer);
 
-            var typeInfo = DynamicConverter.JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(typeof(T), DynamicConverter.JsonSerializerOptions);
+            var typeInfo = TypeInfoCache.GetOrAdd(typeof(T), x => DynamicConverter.JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(x, DynamicConverter.JsonSerializerOptions)!) as JsonTypeInfo<T>;
             JsonSerializer.Serialize(writer, message, typeInfo!);
 
             await writer.FlushAsync(cancellationToken);

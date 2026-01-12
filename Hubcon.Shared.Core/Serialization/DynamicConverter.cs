@@ -76,6 +76,8 @@ namespace Hubcon.Shared.Core.Serialization
 
         public static JsonSerializerOptions JsonSerializerOptions { get; } = HubconJsonDefaults.Options;
 
+        public static ConcurrentDictionary<Type, JsonTypeInfo> TypeInfoCache { get; private set; } = new();
+
         public IEnumerable<object?> DeserializeArgs(IEnumerable<Type> types, IEnumerable<object?> args)
         {
             if (!types.Any() || !args.Any())
@@ -141,7 +143,7 @@ namespace Hubcon.Shared.Core.Serialization
             if (data == null)
                 return default;
 
-            var typeInfo = JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(typeof(T), JsonSerializerOptions) as JsonTypeInfo<T>;
+            var typeInfo = TypeInfoCache.GetOrAdd(typeof(T), x => JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(x, JsonSerializerOptions)!) as JsonTypeInfo<T>;
 
             if (data is JsonElement element)
             {
