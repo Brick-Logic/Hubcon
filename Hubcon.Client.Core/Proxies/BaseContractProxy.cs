@@ -29,6 +29,8 @@ namespace Hubcon.Client.Core.Proxies
         private IHubconClient _client = null!;
         private IDynamicConverter _converter = null!;
 
+        public abstract void SetPropertyValue(string propertyName, object value);
+
         public void BuildContractProxy(IHubconClient client, IDynamicConverter converter)
         {
             _client = client;

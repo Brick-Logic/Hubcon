@@ -1,8 +1,19 @@
-﻿using System;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Core.Websockets.Messages.Cancellation;
+using Hubcon.Shared.Core.Websockets.Messages.Connection;
+using Hubcon.Shared.Core.Websockets.Messages.Ingest;
+using Hubcon.Shared.Core.Websockets.Messages.Operation;
+using Hubcon.Shared.Core.Websockets.Messages.Ping;
+using Hubcon.Shared.Core.Websockets.Messages.Streams;
+using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
+using Hubcon.Shared.Core.Websockets.Messages.Token;
+using System;
 using System.Linq.Expressions;
+using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Channels;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Generic
 {
@@ -64,10 +75,75 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             _buffer = buffer;
         }
 
+        //protected T? Extract<T>(string propertyName, bool isBinaryPayload = false)
+        //{
+        //    if (_buffer is null)
+        //        return default;
+
+        //    var span = _buffer.Value.Span;
+        //    var reader = new Utf8JsonReader(span, isFinalBlock: true, state: default);
+
+        //    if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+        //        return default;
+
+        //    if (isBinaryPayload && typeof(T) == typeof(byte[]))
+        //    {
+        //        int depth = 0;
+        //        var binaryReader = new Utf8JsonReader(span, isFinalBlock: true, state: default);
+        //        while (binaryReader.Read())
+        //        {
+        //            if (binaryReader.TokenType == JsonTokenType.StartObject) depth++;
+        //            else if (binaryReader.TokenType == JsonTokenType.EndObject) depth--;
+
+        //            if (depth == 0)
+        //            {
+        //                int payloadOffset = (int)binaryReader.BytesConsumed;
+        //                return (T)(object)span.Slice(payloadOffset).ToArray();
+        //            }
+        //        }
+        //        return default;
+        //    }
+
+        //    while (reader.Read())
+        //    {
+        //        if (reader.TokenType == JsonTokenType.StartObject || reader.TokenType == JsonTokenType.StartArray)
+        //        {
+        //            reader.Skip();
+        //            continue;
+        //        }
+
+        //        if (reader.CurrentDepth == 1 &&
+        //            reader.TokenType == JsonTokenType.PropertyName &&
+        //            reader.ValueTextEquals(propertyName))
+        //        {
+        //            reader.Read();
+        //            return typeof(T) switch
+        //            {
+        //                Type t when t == typeof(Guid) => Cast<T, Guid>(reader.GetGuid()),
+        //                Type t when t == typeof(Guid[]) => Cast<T, Guid[]>(ReadGuidArray(ref reader)),
+        //                Type t when t == typeof(bool) => Cast<T, bool>(reader.GetBoolean()),
+        //                Type t when t == typeof(string) => Cast<T, string?>(reader.GetString()),
+        //                Type t when t == typeof(MessageType) => Enum.TryParse(
+        //                    reader.GetString(), 
+        //                    ignoreCase: true, 
+        //                    out MessageType result) 
+        //                && Enum.IsDefined(typeof(MessageType), result)? Cast<T, MessageType>(result) : default,
+        //                Type t when t == typeof(JsonElement) => Cast<T, JsonElement>(JsonDocument.ParseValue(ref reader).RootElement),
+        //                Type t when t == typeof(object) => Cast<T, object>(JsonDocument.ParseValue(ref reader).RootElement),
+        //                _ => default
+        //            };
+        //        }
+
+        //        if (reader.TokenType == JsonTokenType.EndObject && reader.CurrentDepth == 0)
+        //            break;
+        //    }
+
+        //    return default!;
+        //}
+
         protected T? Extract<T>(string propertyName, bool isBinaryPayload = false)
         {
-            if (_buffer is null)
-                return default;
+            if (_buffer is null) return default;
 
             var span = _buffer.Value.Span;
             var reader = new Utf8JsonReader(span, isFinalBlock: true, state: default);
@@ -75,26 +151,19 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
                 return default;
 
+            // Manejo de Binario optimizado
             if (isBinaryPayload && typeof(T) == typeof(byte[]))
             {
-                int depth = 0;
-                var binaryReader = new Utf8JsonReader(span, isFinalBlock: true, state: default);
-                while (binaryReader.Read())
-                {
-                    if (binaryReader.TokenType == JsonTokenType.StartObject) depth++;
-                    else if (binaryReader.TokenType == JsonTokenType.EndObject) depth--;
-
-                    if (depth == 0)
-                    {
-                        int payloadOffset = (int)binaryReader.BytesConsumed;
-                        return (T)(object)span.Slice(payloadOffset).ToArray();
-                    }
-                }
-                return default;
+                // En lugar de un segundo reader, podemos usar el progreso del primero
+                // pero necesitamos llegar al final del objeto JSON actual.
+                while (reader.Read()) { /* Consumir todo el JSON */ }
+                int payloadOffset = (int)reader.BytesConsumed;
+                return (T)(object)span.Slice(payloadOffset).ToArray();
             }
 
             while (reader.Read())
             {
+                // Si encontramos un objeto o array que no es el que buscamos, lo saltamos
                 if (reader.TokenType == JsonTokenType.StartObject || reader.TokenType == JsonTokenType.StartArray)
                 {
                     reader.Skip();
@@ -106,29 +175,61 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
                     reader.ValueTextEquals(propertyName))
                 {
                     reader.Read();
+
                     return typeof(T) switch
                     {
-                        Type t when t == typeof(Guid) => Cast<T, Guid>(reader.GetGuid()),
-                        Type t when t == typeof(Guid[]) => Cast<T, Guid[]>(ReadGuidArray(ref reader)),
-                        Type t when t == typeof(bool) => Cast<T, bool>(reader.GetBoolean()),
-                        Type t when t == typeof(string) => Cast<T, string?>(reader.GetString()),
-                        Type t when t == typeof(MessageType) => Enum.TryParse(
-                            reader.GetString(), 
-                            ignoreCase: true, 
-                            out MessageType result) 
-                        && Enum.IsDefined(typeof(MessageType), result)? Cast<T, MessageType>(result) : default,
-                        Type t when t == typeof(JsonElement) => Cast<T, JsonElement>(JsonDocument.ParseValue(ref reader).RootElement),
-                        Type t when t == typeof(object) => Cast<T, object>(JsonDocument.ParseValue(ref reader).RootElement),
+                        Type t when t == typeof(Guid) => (T)(object)reader.GetGuid(),
+                        Type t when t == typeof(Guid[]) => (T)(object)ReadGuidArray(ref reader),
+                        Type t when t == typeof(bool) => (T)(object)reader.GetBoolean(),
+                        Type t when t == typeof(string) => (T?)(object?)reader.GetString(),
+                        Type t when t == typeof(MessageType) => (T)(object)ParseMessageType(reader.GetString()),
+                        Type t when t == typeof(JsonElement) => HandleJsonElement(ref reader),
                         _ => default
                     };
+
+                    static T HandleJsonElement(ref Utf8JsonReader reader)
+                    {
+                        using var doc = JsonDocument.ParseValue(ref reader);
+                        return (T)(object)doc.RootElement.Clone();
+                    }
                 }
-
-                if (reader.TokenType == JsonTokenType.EndObject && reader.CurrentDepth == 0)
-                    break;
             }
-
-            return default!;
+            return default;
         }
+
+        // Método auxiliar AOT-Safe para evitar reflexión en Enums
+        private MessageType ParseMessageType(string? value) => value switch
+        {
+            "connection_init" => MessageType.connection_init,
+            "connection_ack" => MessageType.connection_ack,
+            "error" => MessageType.error,
+            "ack" => MessageType.ack,
+            "operation_invoke" => MessageType.operation_invoke,
+            "operation_response" => MessageType.operation_response,
+            "ping" => MessageType.ping,
+            "pong" => MessageType.pong,
+            "subscription_init" => MessageType.subscription_init,
+            "subscription_data" => MessageType.subscription_data,
+            "subscription_data_with_ack" => MessageType.subscription_data_with_ack,
+            "subscription_complete" => MessageType.subscription_complete,
+            "ingest_init" => MessageType.ingest_init,
+            "ingest_init_ack" => MessageType.ingest_init_ack,
+            "ingest_data" => MessageType.ingest_data,
+            "ingest_data_ack" => MessageType.ingest_data_ack,
+            "ingest_complete" => MessageType.ingest_complete,
+            "ingest_data_with_ack" => MessageType.ingest_data_with_ack,
+            "operation_call" => MessageType.operation_call,
+            "stream_init" => MessageType.stream_init,
+            "stream_complete" => MessageType.stream_complete,
+            "stream_data_ack" => MessageType.stream_data_ack,
+            "stream_data" => MessageType.stream_data,
+            "stream_data_with_ack" => MessageType.stream_data_with_ack,
+            "ingest_result" => MessageType.ingest_result,
+            "cancel" => MessageType.cancel,
+            "token_update" => MessageType.token_update,
+            "none" => MessageType.none,
+            _ => MessageType.none
+        };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static T Cast<T, TReal>(TReal value) => Unsafe.As<TReal, T>(ref value);

@@ -222,18 +222,13 @@ namespace Hubcon.Client.Builder
                     var config = new ClientSubscriptionConfig<object>()
                     {
                         Converter = converter,
-                        Logger = services.GetRequiredService<ILogger<ClientSubscriptionHandler<object>>>()
+                        Logger = services.GetRequiredService<ILogger<ClientSubscriptionHandler<object>>>(),
+                        Property = propss,
+                        Client = hubconClient!,
                     };
 
                     var subscriptionInstance = (ISubscription)factory.Invoke(subscriptionProp.PropertyType.GenericTypeArguments[0], config);
-
-                    PropertyTools.AssignProperty(newClient, subscriptionProp, subscriptionInstance);
-                    PropertyTools.AssignProperty(
-                        subscriptionInstance,
-                        nameof(ClientSubscriptionHandler<object>.Property),
-                        propss
-                        );
-                    PropertyTools.AssignProperty(subscriptionInstance, nameof(ClientSubscriptionHandler<object>.Client), hubconClient);
+                    newClient.SetPropertyValue(subscriptionProp.Name, subscriptionInstance);
 
                     subscriptionInstance.Build();
                 }

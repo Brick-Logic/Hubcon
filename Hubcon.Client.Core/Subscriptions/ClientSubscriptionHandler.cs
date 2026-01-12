@@ -1,4 +1,5 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Client.Core.Proxies;
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
@@ -33,6 +34,8 @@ namespace Hubcon.Client.Core.Subscriptions
         {
             _converter = subscriptionConfig.Converter;
             this.logger = subscriptionConfig.Logger;
+            this.Property = subscriptionConfig.Property;
+            this.Client = subscriptionConfig.Client;
             _tokenSource = new CancellationTokenSource();
             Handlers = new();
         }
@@ -99,7 +102,7 @@ namespace Hubcon.Client.Core.Subscriptions
                         {
                             if (retry > 0) retry = 0;
 
-                            var result = _converter.DeserializeJsonElement<T>(item);
+                            var result = _converter.DeserializeData<T>(item);
 
                             if (OnEventReceived != null)
                                 await OnEventReceived.Invoke(result!);
@@ -142,12 +145,12 @@ namespace Hubcon.Client.Core.Subscriptions
 
         public void Emit(T? eventValue)
         {
-            OnEventReceived?.Invoke(eventValue);
+            OnEventReceived?.Invoke(eventValue!);
         }
 
         public void EmitGeneric(object? eventValue)
         {
-            OnEventReceived?.Invoke((T?)eventValue);
+            OnEventReceived?.Invoke((T?)eventValue!);
         }
     }
 
@@ -155,5 +158,7 @@ namespace Hubcon.Client.Core.Subscriptions
     {
         public IDynamicConverter Converter { get; set; } = null!;
         public ILogger<ClientSubscriptionHandler<T>> Logger { get; set; } = null!;
+        public PropertyInfo Property { get; set; } = null!;
+        public IHubconClient Client { get; set; } = null!;
     }
 }

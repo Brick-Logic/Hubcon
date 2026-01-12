@@ -8,7 +8,7 @@ namespace Hubcon.Shared.Abstractions.Models
     {
         public string ContractName { get; }
         public string OperationName { get; private set; }
-        public IReadOnlyDictionary<string, object> Arguments { get; }
+        public IReadOnlyDictionary<string, object> Arguments { get; private set; }
 
         public SubscriptionRequest(string operationName, string contractName, Dictionary<string, object>? arguments)
         {
@@ -36,6 +36,11 @@ namespace Hubcon.Shared.Abstractions.Models
         public void SetOperationName(string operationName)
         {
             OperationName = operationName;
+        }
+
+        public void AssignArguments(IReadOnlyDictionary<string, object> arguments)
+        {
+            this.Arguments = arguments;
         }
     }
 }

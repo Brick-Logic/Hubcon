@@ -22,6 +22,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Hubcon.Shared.Core.Serialization
 {
@@ -140,12 +141,14 @@ namespace Hubcon.Shared.Core.Serialization
             if (data == null)
                 return default;
 
+            var typeInfo = JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(typeof(T), JsonSerializerOptions) as JsonTypeInfo<T>;
+
             if (data is JsonElement element)
             {
                 if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
                     return default;
 
-                return element.Deserialize<T>(JsonSerializerOptions);
+                return element.Deserialize<T>(typeInfo!);
             }
 
             if (data is string text)
@@ -153,14 +156,12 @@ namespace Hubcon.Shared.Core.Serialization
                 if (string.IsNullOrEmpty(text))
                     return default;
 
-                return JsonSerializer.Deserialize<T>(text, JsonSerializerOptions);
+                return JsonSerializer.Deserialize(text, typeInfo!);
             }
 
-            // Si ya es del tipo esperado, lo casteamos directamente
             if (data is T t)
                 return t;
 
-            // No sabemos cómo deserializar, devolvemos default
             return default;
         }
 

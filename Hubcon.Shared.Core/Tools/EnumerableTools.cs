@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Tools
@@ -49,29 +50,53 @@ namespace Hubcon.Shared.Core.Tools
                       ?.GetGenericArguments()[0];
         }
 
-        public static IAsyncEnumerable<JsonElement>? WrapEnumeratorAsJsonElementEnumerable(object enumeratorObj, CancellationToken ct)
+        //public static IAsyncEnumerable<JsonElement>? WrapEnumeratorAsJsonElementEnumerable(object enumeratorObj, CancellationToken ct)
+        //{
+        //    if (enumeratorObj is null) return null;
+
+        //    var t = GetAsyncEnumeratorType(enumeratorObj);
+        //    if (t == null) return null;
+
+        //    // Obtenemos el método genérico que hará el cast y aplicará el token
+        //    var method = typeof(EnumerableTools)
+        //        .GetMethod(nameof(WrapToJsonElementWithCancellation), BindingFlags.Static | BindingFlags.Public)!
+        //        .MakeGenericMethod(t);
+
+        //    // Invocamos pasando el objeto fuente Y el token
+        //    return (IAsyncEnumerable<JsonElement>)method.Invoke(null, new[] { enumeratorObj, ct })!;
+        //}
+
+        private static Func<object, Type, JsonTypeInfo, CancellationToken, IAsyncEnumerable<JsonElement>>? AsyncEnumerableWrapper;
+        public static void SetupEnumerableWrapper(Func<object, Type, JsonTypeInfo, CancellationToken, IAsyncEnumerable<JsonElement>> wrapper) 
+            => AsyncEnumerableWrapper ??= wrapper;
+        public static IAsyncEnumerable<JsonElement>? Wrap(object source, CancellationToken ct)
         {
-            if (enumeratorObj is null) return null;
+            Type t = GetAsyncEnumerableType(source)!;
+            Type i = GetAsyncEnumeratorType(source)!;
+            JsonTypeInfo info = DynamicConverter.JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(i, DynamicConverter.JsonSerializerOptions)!;
 
-            var t = GetAsyncEnumeratorType(enumeratorObj);
-            if (t == null) return null;
+            return AsyncEnumerableWrapper!.Invoke(source, i, info, ct);
+        }
+        public static async IAsyncEnumerable<JsonElement> GenericYieldWrapper<T>(IAsyncEnumerable<T> source, JsonTypeInfo typeInfo, [EnumeratorCancellation] CancellationToken ct)
+        {
+            // Casting seguro del JsonTypeInfo para evitar reflexión en el Serialize
+            var info = (JsonTypeInfo<T>)typeInfo;
 
-            // Obtenemos el método genérico que hará el cast y aplicará el token
-            var method = typeof(EnumerableTools)
-                .GetMethod(nameof(WrapToJsonElementWithCancellation), BindingFlags.Static | BindingFlags.Public)!
-                .MakeGenericMethod(t);
-
-            // Invocamos pasando el objeto fuente Y el token
-            return (IAsyncEnumerable<JsonElement>)method.Invoke(null, new[] { enumeratorObj, ct })!;
+            await foreach (var item in source.WithCancellation(ct))
+            {
+                // AOT ama esto porque T está definido en el punto de llamada
+                yield return JsonSerializer.SerializeToElement(item, info);
+            }
         }
 
         public static async IAsyncEnumerable<JsonElement> WrapToJsonElementWithCancellation<T>(IAsyncEnumerable<T> source, [EnumeratorCancellation] CancellationToken ct)
         {
+            var typeInfo = DynamicConverter.JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(typeof(T), DynamicConverter.JsonSerializerOptions);
             // Usamos WithCancellation para que el iterador interno (el ingest) se entere del cierre
             await foreach (var item in source.WithCancellation(ct).ConfigureAwait(false))
             {
                 // Aquí tu lógica de conversión a JsonElement (serialización manual o JsonSerializer)
-                yield return JsonSerializer.SerializeToElement(item, DynamicConverter.JsonSerializerOptions);
+                yield return JsonSerializer.SerializeToElement(item, typeInfo!);
             }
         }
 

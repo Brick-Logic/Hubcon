@@ -252,12 +252,12 @@ namespace Hubcon.Client.Core.Websockets
                         var obj = kvp.Value;
                         var id = Guid.NewGuid();
                         dict[kvp.Key] = id;
-                        var stream = EnumerableTools.WrapEnumeratorAsJsonElementEnumerable(obj, cts.Token);
+                        var stream = EnumerableTools.Wrap(obj, cts.Token);
                         sources.TryAdd(id, stream!);
                     }
                 }
 
-                PropertyTools.AssignProperty(operationRequest, nameof(operationRequest.Arguments), dict);
+                operationRequest.AssignArguments(dict!);
 
                 RateLimiter? sharedLimiter = null;
                 bool? useShared = null;
@@ -893,7 +893,9 @@ namespace Hubcon.Client.Core.Websockets
             var pipe = new Pipe();
             var writer = new Utf8JsonWriter(pipe.Writer);
 
-            JsonSerializer.Serialize(writer, message, DynamicConverter.JsonSerializerOptions);
+            var typeInfo = DynamicConverter.JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(typeof(T), DynamicConverter.JsonSerializerOptions);
+            JsonSerializer.Serialize(writer, message, typeInfo!);
+
             await writer.FlushAsync(cancellationToken);
             await pipe.Writer.CompleteAsync();
 

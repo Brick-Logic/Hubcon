@@ -49,5 +49,10 @@ namespace Hubcon.Shared.Abstractions.Models
         {
             OperationName = operationName;
         }
+
+        public void AssignArguments(IReadOnlyDictionary<string, object> arguments)
+        {
+            this.Arguments = arguments;
+        }
     }
 }
