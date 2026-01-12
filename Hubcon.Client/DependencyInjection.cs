@@ -1,6 +1,7 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Hubcon.Client
 {
@@ -12,14 +13,14 @@ namespace Hubcon.Client
             return services;
         }
 
-        public static IServiceCollection AddRemoteServerModule<TRemoteServerModule>(this IServiceCollection services)
+        public static IServiceCollection AddRemoteServerModule<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TRemoteServerModule>(this IServiceCollection services)
              where TRemoteServerModule : class, IRemoteServerModule, new()
         {
             HubconClientBuilder.Current.AddRemoteServerModule<TRemoteServerModule>(services, null);
             return services;
         }
 
-        public static IServiceCollection AddRemoteServerModule<TRemoteServerModule>(this IServiceCollection services, Func<TRemoteServerModule> remoteServerFactory)
+        public static IServiceCollection AddRemoteServerModule<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TRemoteServerModule>(this IServiceCollection services, Func<TRemoteServerModule> remoteServerFactory)
              where TRemoteServerModule : class, IRemoteServerModule
         {
             HubconClientBuilder.Current.AddRemoteServerModule<TRemoteServerModule>(services, remoteServerFactory);

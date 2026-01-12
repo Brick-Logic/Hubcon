@@ -6,18 +6,21 @@ using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Core.Lazy;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 
@@ -28,6 +31,7 @@ namespace Hubcon.Client.Builder
         public Uri? BaseUri { get; set; }
         public List<Type> Contracts { get; set; } = new List<Type>();
         public Type? AuthenticationManagerType { get; set; }
+        public ILazyWrapper AuthenticationManagerFactory { get; set; }
         public string? HttpPrefix { get; set; }
         public string? WebsocketPrefix { get; set; }
         public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; set; }
@@ -164,12 +168,12 @@ namespace Hubcon.Client.Builder
         public bool DebuggingMethodSignaturesEnabled { get; set; }
         public bool HttpAuthIsEnabled { get; set; } = true;
 
-        public T GetOrCreateClient<T>(IServiceProvider services, bool useCached = true) where T : IControllerContract
+        public T GetOrCreateClient<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(IServiceProvider services, bool useCached = true) where T : IControllerContract
         {
             return (T)GetOrCreateClient(typeof(T), services);
         }
 
-        public object GetOrCreateClient(Type contractType, IServiceProvider services, bool useCached = true)
+        public object GetOrCreateClient([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type contractType, IServiceProvider services, bool useCached = true)
         {
             if (useCached && _clients.ContainsKey(contractType) && _clients.TryGetValue(contractType, out object? client))
                 return client!;
@@ -188,9 +192,17 @@ namespace Hubcon.Client.Builder
 
             newClient.BuildContractProxy(hubconClient!, converter);
 
+            static IEnumerable<PropertyInfo> CheckType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type x)
+                => x.GetProperties().Where(CheckProperty);
+            
+            static bool CheckProperty([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] PropertyInfo x)
+                => typeof(ISubscription).IsAssignableFrom(x.PropertyType);
+            
+            Func<Type, IEnumerable<PropertyInfo>> typeGetter = CheckType;
+
             var props = _propTypesCache.GetOrAdd(
                 proxyType,
-                x => x.GetProperties().Where(x => typeof(ISubscription).IsAssignableFrom(x.PropertyType)));
+                typeGetter);
 
             foreach (var subscriptionProp in props)
             {
@@ -199,10 +211,10 @@ namespace Hubcon.Client.Builder
                 {
                     var genericType = _subTypesCache.GetOrAdd(
                         subscriptionProp.PropertyType.GenericTypeArguments[0],
-                        x => typeof(ClientSubscriptionHandler<>).MakeGenericType(x));
+                        x => HubconClientBuilder.GetProxyType(x)!);
 
                     var propss = contractType.GetProperties().Where(x => x.Name == subscriptionProp.Name).FirstOrDefault();
-                    var factory = GetFactory();
+                    var factory = SubscriptionFactory.GetFactory();
 
                     if (factory == null)
                         continue;
@@ -232,52 +244,23 @@ namespace Hubcon.Client.Builder
             return newClient!;
         }
 
-        private static Func<Type, object, object>? SubscriptionFactory { get; set; }
-        private static Func<Type, object, object>? GetFactory()
-        {
-            try
-            {
-                if (SubscriptionFactory != null)
-                    return SubscriptionFactory;
-
-                // Buscamos en todos los assemblies cargados (o podrías restringirlo)
-                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-                {
-                    var type = assembly.GetType("Hubcon.Generated.ClientSubscriptionFactory");
-                    if (type != null)
-                    {
-                        var method = type.GetMethod("Create", BindingFlags.Public | BindingFlags.Static);
-                        if (method != null)
-                        {
-                            return (x, config) => method.Invoke(null, new object[] { x, config });
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // Si algo falla en la reflexión, ignoramos y vamos al fallback
-            }
-
-            return null;
-        }
-
-        public void UseAuthenticationManager<T>(IServiceCollection services) where T : class, IAuthenticationManager
+        public void UseAuthenticationManager<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(IServiceCollection services) where T : class, IAuthenticationManager
         {
             if (AuthenticationManagerType != null)
                 return;
 
             AuthenticationManagerType = typeof(T);
+            AuthenticationManagerFactory = new LazyWrapper<T>();
 
             HubconClientBuilder.Current.Services.AddSingleton<T>();
         }
 
-        public void LoadContractProxy(Type contractType, IServiceCollection services)
+        public void LoadContractProxy([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type contractType, IServiceCollection services)
         {
             HubconClientBuilder.Current.LoadContractProxy(contractType, services);
         }
 
-        public void ConfigureContract<T>(Action<IContractConfigurator<T>>? configure) where T : IControllerContract
+        public void ConfigureContract<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(Action<IContractConfigurator<T>>? configure) where T : IControllerContract
         {
             if (configure == null)
                 return;
@@ -314,6 +297,21 @@ namespace Hubcon.Client.Builder
         public void EnableHttpEndpointOverloading()
         {
             UseHttpEndpointOverloading = true;
+        }
+    }
+
+    public static class SubscriptionFactory
+    {
+        private static Func<Type, object, object>? _factory;
+
+        public static Func<Type, object, object>? GetFactory()
+        {
+            return _factory!;
+        }
+
+        public static void SetupSubscriptionFactory(Func<Type, object, object> factory)
+        {
+            _factory ??= factory;
         }
     }
 }

@@ -8,10 +8,10 @@ namespace Hubcon.Client.Core.Authentication
         public event Action? OnSessionIsActive;
         public event Action? OnSessionIsInactive;
 
-        public abstract string? TokenType { get; protected set; }
-        public abstract string? AccessToken { get; protected set; }
-        public abstract string? RefreshToken { get; protected set; }
-        public abstract DateTime? AccessTokenExpiresAt { get; protected set; }
+        public string? TokenType { get; private set; }
+        public string? AccessToken { get; private set; }
+        public string? RefreshToken { get; private set; }
+        public DateTime? AccessTokenExpiresAt { get; private set; }
 
         public bool IsSessionActive => !string.IsNullOrEmpty(AccessToken);
 
@@ -29,6 +29,7 @@ namespace Hubcon.Client.Core.Authentication
                 return Result.Failure(auth.ErrorMessage);
             }
 
+            TokenType = auth.TokenType;
             AccessToken = auth.AccessToken;
             RefreshToken = auth.RefreshToken;
             AccessTokenExpiresAt = auth.ExpiresInSeconds;
@@ -73,9 +74,11 @@ namespace Hubcon.Client.Core.Authentication
                 return Result.Failure("Refresh failed");
             }
 
+            TokenType = refresh.TokenType;
             AccessToken = refresh.AccessToken;
             RefreshToken = refresh.RefreshToken;
             AccessTokenExpiresAt = refresh.ExpiresInSeconds;
+
 
             await SaveSessionAsync();
             OnSessionIsActive?.Invoke();
@@ -109,10 +112,23 @@ namespace Hubcon.Client.Core.Authentication
             return Result.Failure();
         }
 
+        private async Task SaveSessionAsync()
+        {
+            var session = new PersistedSession()
+            {
+                TokenType = TokenType!,
+                AccessToken = AccessToken!,
+                RefreshToken = RefreshToken,
+                ExpiresAt = AccessTokenExpiresAt.HasValue ? AccessTokenExpiresAt.Value : DateTime.MinValue
+            };
+
+            await SaveSessionAsync(session);
+        }
+
         protected abstract Task<IAuthResult> AuthenticateAsync(string username, string password);
         protected abstract Task<IAuthResult> AuthenticateWithTokenAsync(string token, string type);
         protected abstract Task<IAuthResult> RefreshSessionAsync(string refreshToken);
-        protected abstract Task SaveSessionAsync();
+        protected abstract Task SaveSessionAsync(PersistedSession session);
         protected abstract Task ClearSessionAsync();
         protected abstract Task<PersistedSession?> LoadPersistedSessionAsync();
     }
@@ -132,11 +148,12 @@ namespace Hubcon.Client.Core.Authentication
         public bool IsSuccess { get; set; }
         public bool IsFailure => !IsSuccess;
         public string? AccessToken { get; private set; }
+        public string? TokenType { get; private set; }
         public string? RefreshToken { get; private set; }
         public DateTime ExpiresInSeconds { get; private set; }
         public string? ErrorMessage { get; private set; }
 
-        public static IAuthResult Success(string accessToken, string refreshToken, DateTime expiresInSeconds) =>
+        public static IAuthResult Success(string accessToken, string tokenType, string refreshToken, DateTime expiresInSeconds) =>
             new AuthResult() { IsSuccess = true, AccessToken = accessToken, RefreshToken = refreshToken, ExpiresInSeconds = expiresInSeconds };
 
         public static IAuthResult Failure(string? errorMessage) =>
@@ -146,6 +163,7 @@ namespace Hubcon.Client.Core.Authentication
     public class PersistedSession : IPersistedSession
     {
         public string AccessToken { get; set; } = default!;
+        public string TokenType { get; set; } = default!;
         public string? RefreshToken { get; set; } = default!;
         public DateTime ExpiresAt { get; set; }
     }

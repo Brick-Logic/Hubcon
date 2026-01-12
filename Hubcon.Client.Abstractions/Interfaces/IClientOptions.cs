@@ -15,6 +15,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         public Uri? BaseUri { get; }
         public List<Type> Contracts { get; }
         public Type? AuthenticationManagerType { get; }
+        ILazyWrapper AuthenticationManagerFactory { get; set; }
         public string? HttpPrefix { get; }
         public string? WebsocketPrefix { get; }
         public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; }

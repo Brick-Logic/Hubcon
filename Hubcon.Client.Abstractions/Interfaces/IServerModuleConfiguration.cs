@@ -3,6 +3,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Threading.RateLimiting;
@@ -18,14 +19,14 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// <typeparam name="T">The controller contract type.</typeparam>
         /// <param name="configure">Optional configuration action for the contract.</param>
         /// <returns>The current server module configuration instance.</returns>
-        IServerModuleConfiguration Implements<T>(Action<IContractConfigurator<T>>? configure = null) where T : IControllerContract;
+        IServerModuleConfiguration Implements<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(Action<IContractConfigurator<T>>? configure = null) where T : IControllerContract;
 
         /// <summary>
         /// Specifies the authentication manager to use for the server module. The authentication manager will only be used for this module.
         /// </summary>
         /// <typeparam name="T">The authentication manager type.</typeparam>
         /// <returns>The current server module configuration instance.</returns>
-        IServerModuleConfiguration UseAuthenticationManager<T>() where T : class, IAuthenticationManager;
+        IServerModuleConfiguration UseAuthenticationManager<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>() where T : class, IAuthenticationManager;
 
         /// <summary>
         /// Sets the base URL that the contracts will use to connect to the server.

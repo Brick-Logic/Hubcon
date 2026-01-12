@@ -10,7 +10,10 @@ using Hubcon.Shared.Core.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reflection;
+using System.Text.Json;
 
 namespace Hubcon.Client.Builder
 {
@@ -48,16 +51,14 @@ namespace Hubcon.Client.Builder
             services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
             services.AddSingleton<IDynamicConverter, DynamicConverter>();
             services.AddTransient<IHubconClient, HubconClient>();
-            services.AddTransient(typeof(ClientSubscriptionHandler<>));
 
             return services;
         }
 
-        public IServiceCollection AddRemoteServerModule<TRemoteServerModule>(IServiceCollection services, Func<TRemoteServerModule>? remoteServerFactory = null)
+        public IServiceCollection AddRemoteServerModule<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TRemoteServerModule>(IServiceCollection services, Func<TRemoteServerModule>? remoteServerFactory = null)
              where TRemoteServerModule : class, IRemoteServerModule
         {
             ClientBuilders.RegisterModule<TRemoteServerModule>(services, remoteServerFactory);
-
             return services;
         }
 
@@ -75,27 +76,32 @@ namespace Hubcon.Client.Builder
             services.AddSingleton(proxy);
         }
 
-        private static Type? GetProxyType(Type interfaceType)
+        private static Func<Type, Type>? ProxyLookup;
+        public static void SetupProxyLookup(Func<Type, Type> proxyLookup) => ProxyLookup = proxyLookup;
+
+        public static Type? GetProxyType(Type contractType)
         {
-            // Construir el nombre del proxy basado en la convención
-            var proxyTypeName = $"{interfaceType.FullName}Proxy";
+            if(ProxyLookup != null)
+                return ProxyLookup.Invoke(contractType);
 
-            // Buscar en el mismo assembly primero
-            var proxyType = interfaceType.Assembly.GetType(proxyTypeName);
-
-            // Si no se encuentra, buscar en todos los assemblies cargados
-            if (proxyType == null)
+            // Buscamos en todos los assemblies cargados
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                var type = assembly.GetType("Hubcon.Generated.ProxyLookup");
+                if (type != null)
                 {
-                    proxyType = assembly.GetType(proxyTypeName);
-                    if (proxyType != null)
-                        break;
+                    var method = type.GetMethod("GetProxyType", BindingFlags.Public | BindingFlags.Static);
+                    if (method != null)
+                    {
+                        ProxyLookup = (x) => (Type)method.Invoke(null, new object[] { x });
+                        return ProxyLookup.Invoke(contractType);
+                    }
                 }
             }
 
-            return proxyType;
+            return null;
         }
+
 
         public IServiceCollection UseContractsFromAssembly(IServiceCollection services, string assemblyName)
         {

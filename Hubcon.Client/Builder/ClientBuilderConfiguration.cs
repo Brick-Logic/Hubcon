@@ -5,6 +5,7 @@ using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Threading.RateLimiting;
@@ -22,13 +23,15 @@ namespace Hubcon.Client.Builder
             this.services = services;
         }
 
-        public IServerModuleConfiguration Implements<T>(Action<IContractConfigurator<T>>? configure = null) where T : IControllerContract
+        public IServerModuleConfiguration Implements<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(Action<IContractConfigurator<T>>? configure = null) where T : IControllerContract
         {
-            if (typeof(T).IsClass || builder.Contracts.Any(x => x == typeof(T)))
+            var type = typeof(T);
+
+            if (type.IsClass || builder.Contracts.Any(x => x == type))
                 return this;
 
-            LoadContractProxy(typeof(T));
-            builder.Contracts.Add(typeof(T));
+            LoadContractProxy(type);
+            builder.Contracts.Add(type);
             builder.ConfigureContract(configure);
 
             return this;
@@ -39,7 +42,7 @@ namespace Hubcon.Client.Builder
             builder.LoadContractProxy(contractType, services);
         }
 
-        public IServerModuleConfiguration UseAuthenticationManager<T>() where T : class, IAuthenticationManager
+        public IServerModuleConfiguration UseAuthenticationManager<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, IAuthenticationManager
         {
             builder.UseAuthenticationManager<T>(services);
             return this;

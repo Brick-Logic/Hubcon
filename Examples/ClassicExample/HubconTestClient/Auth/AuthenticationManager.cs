@@ -6,21 +6,10 @@ namespace HubconTestClient.Auth
 {
     public class AuthenticationManager(ISecondTestContract secondTestContract) : BaseAuthenticationManager
     {
-        public override string? TokenType { get; protected set; } = "";
-        public override string? AccessToken { get; protected set; } = "";
-        public override string? RefreshToken { get; protected set; } = "";
-        public override DateTime? AccessTokenExpiresAt { get; protected set; } = DateTime.UtcNow.AddYears(1);
-
         protected async override Task<IAuthResult> AuthenticateAsync(string username, string password)
         {
             var token = await secondTestContract.LoginAsync(new LoginCommand(username, password, true));
-
-            TokenType = "Bearer";
-            AccessToken = token;
-            RefreshToken = "";
-            AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
-
-            return AuthResult.Success(token, "", AccessTokenExpiresAt!.Value);
+            return AuthResult.Success(token, "Bearer", RefreshToken, AccessTokenExpiresAt!.Value);
         }
 
         protected override Task<IAuthResult> AuthenticateWithTokenAsync(string token, string type)
@@ -30,10 +19,7 @@ namespace HubconTestClient.Auth
 
         protected override Task ClearSessionAsync()
         {
-            TokenType = "";
-            AccessToken = "";
-            RefreshToken = "";
-            AccessTokenExpiresAt = null;
+            
 
             return Task.CompletedTask;
         }
@@ -42,32 +28,22 @@ namespace HubconTestClient.Auth
         {
             var token = await secondTestContract.LoginAsync(new LoginCommand("username", "password", true));
 
-            TokenType = "Bearer";
-            AccessToken = token;
-            RefreshToken = "";
-            AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
-
-
             return new PersistedSession()
             {
+                TokenType = "Bearer",
                 AccessToken = token,
-                RefreshToken = ""
+                RefreshToken = "",
+                ExpiresAt = DateTime.UtcNow.AddYears(1)
             };
         }
 
         protected async override Task<IAuthResult> RefreshSessionAsync(string refreshToken)
         {
             var token = await secondTestContract.LoginAsync(new LoginCommand("username", "password", true));
-
-            TokenType = "Bearer";
-            AccessToken = token;
-            RefreshToken = "";
-            AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
-
-            return AuthResult.Success(token, "", AccessTokenExpiresAt!.Value);
+            return AuthResult.Success(token, "Bearer", "", DateTime.UtcNow.AddYears(1));
         }
 
-        protected async override Task SaveSessionAsync()
+        protected async override Task SaveSessionAsync(PersistedSession session)
         {
 
         }

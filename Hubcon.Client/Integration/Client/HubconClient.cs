@@ -8,12 +8,14 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Core.Lazy;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
@@ -90,7 +92,7 @@ namespace Hubcon.Client.Integration.Client
             this.clientFactory = clientFactory;
         }
 
-        public async Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        public async Task<T> SendAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var context = new InvocationContext()
             {
@@ -472,7 +474,7 @@ namespace Hubcon.Client.Integration.Client
 
         }
 
-        public async Task<T> Ingest<T>(IOperationRequest request, MethodInfo method, CancellationToken cancellationToken)
+        public async Task<T> Ingest<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(IOperationRequest request, MethodInfo method, CancellationToken cancellationToken)
         {
             var context = new InvocationContext()
             {
@@ -734,10 +736,9 @@ namespace Hubcon.Client.Integration.Client
             _restHttpUrl = useSecureConnection ? $"https://{baseRestHttpUrl}" : $"http://{baseRestHttpUrl}";
             _websocketUrl = useSecureConnection ? $"wss://{baseRestWebsocketUrl}" : $"ws://{baseRestWebsocketUrl}";
 
-            if (authenticationManagerType != null)
+            if (authenticationManagerType != null && options.AuthenticationManagerFactory != null)
             {
-                var lazyAuthType = typeof(Lazy<>).MakeGenericType(authenticationManagerType);
-                authenticationManagerFactory = () => (IAuthenticationManager)((dynamic)serviceProvider.GetRequiredService(lazyAuthType)).Value;
+                authenticationManagerFactory = () => options.AuthenticationManagerFactory.GetValue<IAuthenticationManager>(serviceProvider);
             }
 
             client = new HubconWebSocketClient(new Uri(_websocketUrl), converter, options, serviceProvider, serviceProvider.GetService<ILogger<HubconWebSocketClient>>());

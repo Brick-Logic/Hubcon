@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 
 namespace Hubcon.Client.Core.Registries
 {
@@ -64,11 +65,13 @@ namespace Hubcon.Client.Core.Registries
 
             var assembly = interfaceType.Assembly;
 
-            var implementation = assembly
-                .GetTypes()
-                .FirstOrDefault(t => !t.IsInterface
-                                     && typeof(IControllerContract).IsAssignableFrom(t)
-                                     && t.Name == interfaceType.Name + "Proxy");
+            //var implementation = assembly
+            //    .GetTypes()
+            //    .FirstOrDefault(t => !t.IsInterface
+            //                         && typeof(IControllerContract).IsAssignableFrom(t)
+            //                         && t.Name == interfaceType.Name + "Proxy");
+
+            var implementation = GetProxyType(interfaceType);
 
             if (implementation != null)
             {
@@ -78,6 +81,23 @@ namespace Hubcon.Client.Core.Registries
 
             return null;
         }
-    }
 
+        
+        public static Type? GetProxyType(Type interfaceType)
+        {
+            Type? result = null;
+
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType(interfaceType.FullName + "Proxy");
+
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+
+            return result;
+        }
+    }
 }

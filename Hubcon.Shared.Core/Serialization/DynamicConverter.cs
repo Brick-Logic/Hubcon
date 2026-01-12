@@ -12,6 +12,8 @@ using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Hubcon.Shared.Core.Websockets.Messages.Token;
 using Hubcon.Shared.Core.Websockets.Resilience;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.ComponentModel;
@@ -309,60 +311,35 @@ namespace Hubcon.Shared.Core.Serialization
     {
         private static readonly Lazy<JsonSerializerOptions> _options = new Lazy<JsonSerializerOptions>(() =>
         {
-            // 1. Intentamos buscar la clase generada por el SG
-            // Usamos el nombre de espacio y clase que definimos en el generador
-            // Nota: Type.GetType requiere el nombre del ensamblado si no está en la misma DLL.
-            // Para simplificar, buscamos en el Assembly que llamó a la librería.
-            var generatedOptions = TryGetGeneratedOptions();
-
-            if (generatedOptions != null)
-            {
-                return generatedOptions;
-            }
-
-            // 2. Fallback: Si no hay código generado, usamos la configuración manual
-            // Advertencia: Esto usará reflexión en tiempo de ejecución (no ideal para AOT puro)
-            return CreateFallbackOptions();
+            return HubconSerialization.GetOptions();
         });
 
-        public static JsonSerializerOptions Options => _options.Value;
+        public static JsonSerializerOptions Options => _options.Value;      
+    }
 
-        private static JsonSerializerOptions? TryGetGeneratedOptions()
+    public static class HubconSerialization
+    {
+        private static JsonSerializerOptions? _options;
+
+        public static JsonSerializerOptions GetOptions()
         {
-            try
-            {
-                // Buscamos en todos los assemblies cargados (o podrías restringirlo)
-                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-                {
-                    var type = assembly.GetType("Hubcon.Generated.HubconSerialization");
-                    if (type != null)
-                    {
-                        var field = type.GetField("DefaultOptions", BindingFlags.Public | BindingFlags.Static);
-                        if (field?.GetValue(null) is JsonSerializerOptions options)
-                        {
-                            return options;
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // Si algo falla en la reflexión, ignoramos y vamos al fallback
-            }
-            return null;
+            return _options!;
         }
 
-        private static JsonSerializerOptions CreateFallbackOptions()
-        {
-            return new JsonSerializerOptions
+        public static void SetupJsonSerializerOption(JsonSerializerOptions? options) 
+        { 
+            if(_options == null)
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = false,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
-                MaxDepth = 64,
-                PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() }
-            };
+                _options = options;
+                _options!.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                _options!.WriteIndented = false;
+                _options!.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
+                _options!.MaxDepth = 64;
+                _options!.PropertyNameCaseInsensitive = true;
+                _options!.Converters.Add(new JsonStringEnumConverter<Hubcon.Shared.Core.Websockets.MessageType>(JsonNamingPolicy.CamelCase));
+            }
         }
     }
 }
+
+

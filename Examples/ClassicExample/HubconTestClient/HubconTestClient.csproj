@@ -14,10 +14,18 @@
 		<IsAotCompatible>true</IsAotCompatible>
 		<TrimMode>link</TrimMode>
 		<StackTraceSupport>false</StackTraceSupport>
+
+		<PublishTrimmed>true</PublishTrimmed>
+		<IsTrimmable>true</IsTrimmable>
+
+		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+		<EnableAotAnalyzer>true</EnableAotAnalyzer>
+
+		<MicrosoftExtensionsDependencyInjectionVerifyOpenGenericServiceTrimmability>true</MicrosoftExtensionsDependencyInjectionVerifyOpenGenericServiceTrimmability>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.0-rc*" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.*" />
 		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="1.0.0-rc*" />
 		<ProjectReference Include="..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
 		<ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />

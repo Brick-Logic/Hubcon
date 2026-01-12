@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Hubcon.Client.Builder
 {
@@ -20,7 +21,7 @@ namespace Hubcon.Client.Builder
             useCached = bool.TryParse(envResult, out bool result) ? result : true;
         }
 
-        public void RegisterModule<TRemoteServerModule>(IServiceCollection services, Func<TRemoteServerModule>? remoteServerFactory = null)
+        public void RegisterModule<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TRemoteServerModule>(IServiceCollection services, Func<TRemoteServerModule>? remoteServerFactory = null)
             where TRemoteServerModule : class, IRemoteServerModule
         {
             var module = remoteServerFactory == null ? Activator.CreateInstance<TRemoteServerModule>() : remoteServerFactory.Invoke();

@@ -5,6 +5,7 @@ using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Threading.RateLimiting;
@@ -45,11 +46,11 @@ namespace Hubcon.Client.Abstractions.Interfaces
         bool LoggingEnabled { get; set; }
         bool HttpAuthIsEnabled { get; set; }
 
-        T GetOrCreateClient<T>(IServiceProvider services, bool useCached = true) where T : IControllerContract;
-        object GetOrCreateClient(Type contractType, IServiceProvider services, bool useCached = true);
-        void LoadContractProxy(Type contractType, IServiceCollection services);
-        void UseAuthenticationManager<T>(IServiceCollection services) where T : class, IAuthenticationManager;
-        void ConfigureContract<T>(Action<IContractConfigurator<T>>? configure) where T : IControllerContract;
+        T GetOrCreateClient<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(IServiceProvider services, bool useCached = true) where T : IControllerContract;
+        object GetOrCreateClient([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type contractType, IServiceProvider services, bool useCached = true);
+        void LoadContractProxy([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type contractType, IServiceCollection services);
+        void UseAuthenticationManager<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(IServiceCollection services) where T : class, IAuthenticationManager;
+        void ConfigureContract<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(Action<IContractConfigurator<T>>? configure) where T : IControllerContract;
         void AddInterceptor(InterceptorType interceptorType, Func<InvocationContext, Task> interceptorDelegate);
         void EnableHttpEndpointOverloading();
     }

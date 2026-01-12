@@ -6,13 +6,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Configurations
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class ContractOptions<T> : IContractOptions, IContractConfigurator<T> where T : IControllerContract
+    public sealed class ContractOptions<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T> : IContractOptions, IContractConfigurator<T> where T : IControllerContract
     {
         public Type ContractType { get; } = typeof(T);
 

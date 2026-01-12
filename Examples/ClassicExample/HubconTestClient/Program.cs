@@ -38,7 +38,7 @@ internal class Program
         process.ProcessorAffinity = (IntPtr)coreMask;
         process.PriorityClass = ProcessPriorityClass.RealTime;
 
-        var builder = WebApplication.CreateBuilder();
+        var builder = WebApplication.CreateSlimBuilder();
 
         builder.Services.AddHubconClient();
         builder.Services.AddRemoteServerModule<TestModule>(() => new TestModule(new object()));
@@ -176,7 +176,7 @@ internal class Program
 
         await Task.Delay(1000);
 
-        if (eventosRecibidos == 4)
+        if (eventosRecibidos == 5)
         {
             logger.LogInformation($"Eventos recibidos correctamente.");
         }
