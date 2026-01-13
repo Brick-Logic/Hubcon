@@ -156,12 +156,25 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             context.Request.Headers.Authorization = accessToken;
                             context.User = user.Value.Item1;
                             lastTokenExpirationDate = user.Value.expirationDate;
-                            connectionSupervisor.Register(connectionId, user.Value.expirationDate, async () => { if (webSocket.State == WebSocketState.Open) await CancelConnection(webSocket); });
+                            connectionSupervisor.Register(connectionId, user.Value.expirationDate, async () =>
+                            {
+                                static bool HandleEx(ILogger logger, Exception ex)
+                                {
+                                    logger.LogError(ex.Message);
+                                    return false;
+                                }
+
+                                try
+                                {
+                                    webSocket.Dispose();
+                                }
+                                catch (Exception ex) when(HandleEx(logger, ex))
+                                {
+                                }
+                            });
                         }
                         catch (Exception ex)
                         {
-                            await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Internal server error.", default);
-
                             logger?.LogInformation(ex, "Error while validating websocket token.");
                             return;
                         }
