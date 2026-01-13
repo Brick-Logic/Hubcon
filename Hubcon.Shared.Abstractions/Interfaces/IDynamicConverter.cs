@@ -25,5 +25,6 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         JsonElement SerializeToElement<T>(T value);
         T DeserializeFromString<T>(string? json);
         ReadOnlySpan<byte> SerializeToSpan<T>(T value, ArrayBufferWriter<byte> bufferWriter);
+        void Serialize<T>(Utf8JsonWriter writer, T? message);
     }
 }

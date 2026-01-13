@@ -889,14 +889,12 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        public static ConcurrentDictionary<Type, JsonTypeInfo> TypeInfoCache { get; private set; } = new();
         private async ValueTask SendMessageAsync<T>(T message, CancellationToken cancellationToken = default)
         {
             var pipe = new Pipe();
             var writer = new Utf8JsonWriter(pipe.Writer);
 
-            var typeInfo = TypeInfoCache.GetOrAdd(typeof(T), x => DynamicConverter.JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(x, DynamicConverter.JsonSerializerOptions)!) as JsonTypeInfo<T>;
-            JsonSerializer.Serialize(writer, message, typeInfo!);
+            converter.Serialize(writer, message);
 
             await writer.FlushAsync(cancellationToken);
             await pipe.Writer.CompleteAsync();

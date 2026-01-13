@@ -19,7 +19,7 @@ internal class Program
 
     static async Task Main()
     {
-        Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "true");
+        Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "false");
 
         Console.WriteLine($"¿Es Native AOT?: {System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported == false}");
      
@@ -27,7 +27,7 @@ internal class Program
 
         long coreMask = 0;
 
-        int? customCores = 0;
+        int? customCores = 5;
         int cores = customCores ?? Environment.ProcessorCount - 1;
 
         for (int i = 0; i <= cores; i++)
@@ -262,53 +262,110 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 96
+            MaxDegreeOfParallelism = 30000
         };
 
         int rps = 9999999;
 
-        await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
-        {
-            TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions()
-            {
-                QueueLimit = 1,
-                AutoReplenishment = true,
-                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
-                TokenLimit = rps,
-                TokensPerPeriod = rps,
-            });
+        //await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
+        //{
+        //    TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions()
+        //    {
+        //        QueueLimit = 1,
+        //        AutoReplenishment = true,
+        //        ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+        //        TokenLimit = rps,
+        //        TokensPerPeriod = rps,
+        //    });
 
-            try
-            {
-                var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-                Interlocked.Increment(ref clientCount);
-                //await foreach(var item in client.GetMessages2())
-                while (true)
+        //    try
+        //    {
+        //        var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+        //        Interlocked.Increment(ref clientCount);
+        //        //await foreach(var item in client.GetMessages2())
+        //        while (true)
+        //        {
+        //            // var swReq = Stopwatch.StartNew();
+        //            try
+        //            {
+        //                //await tokenBucketRateLimiter.AcquireAsync();
+        //                //await client.IngestMessages(GetMessages2(), default);
+        //                var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
+        //                Interlocked.Increment(ref _finishedRequestsCount);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Interlocked.Increment(ref _errors);
+        //            }
+        //            finally
+        //            {
+        //                // swReq.Stop();
+        //                // Latencies.Add(swReq.Elapsed.TotalMilliseconds);
+        //            }
+        //        }
+        //    }
+        //    finally
+        //    {
+        //        Interlocked.Decrement(ref clientCount);
+        //    }
+        //});
+
+        // En lugar de Parallel.ForEach
+        for (int i = 0; i < 40000; i++)
+        {
+            await Task.Delay(25);
+
+            _ = Task.Run(async () => {
+                TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions()
                 {
-                    // var swReq = Stopwatch.StartNew();
-                    try
+                    QueueLimit = 0,
+                    AutoReplenishment = true,
+                    ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                    TokenLimit = 1,
+                    TokensPerPeriod = 1,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                });
+
+                try
+                {
+                    var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+                    Interlocked.Increment(ref clientCount);
+                    //await foreach(var item in client.GetMessages2())
+                    while (true)
                     {
-                        //await tokenBucketRateLimiter.AcquireAsync();
-                        //await client.IngestMessages(GetMessages2(), default);
-                        var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
-                        Interlocked.Increment(ref _finishedRequestsCount);
-                    }
-                    catch (Exception ex)
-                    {
-                        Interlocked.Increment(ref _errors);
-                    }
-                    finally
-                    {
-                        // swReq.Stop();
-                        // Latencies.Add(swReq.Elapsed.TotalMilliseconds);
+                        // var swReq = Stopwatch.StartNew();
+                        try
+                        {
+                            await Task.Delay(2000);
+                            //await client.IngestMessages(GetMessages2(), default);
+                            var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass());
+                            Interlocked.Increment(ref _finishedRequestsCount);
+                        }
+                        catch (Exception ex)
+                        {
+                            Interlocked.Increment(ref _errors);
+                        }
+                        finally
+                        {
+                            // swReq.Stop();
+                            // Latencies.Add(swReq.Elapsed.TotalMilliseconds);
+                        }
                     }
                 }
-            }
-            finally
-            {
-                Interlocked.Decrement(ref clientCount);
-            }
-        });
+                finally
+                {
+                    Interlocked.Decrement(ref clientCount);
+                }
+            });
+
+            // Un pequeño respiro cada N conexiones para no aturdir al SO
+            if (i % 5000 == 0) Console.ReadKey();
+        }
+
+        Console.ReadKey();
+        Console.ReadKey();
+        Console.ReadKey();
+        Console.ReadKey();
     }
 
     static async IAsyncEnumerable<string> GetMessages(int count, [EnumeratorCancellation] CancellationToken cancellationToken = default)

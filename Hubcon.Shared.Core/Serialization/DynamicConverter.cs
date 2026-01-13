@@ -308,6 +308,12 @@ namespace Hubcon.Shared.Core.Serialization
             writer.Flush();
             return bufferWriter.WrittenSpan;
         }
+
+        public void Serialize<T>(Utf8JsonWriter writer, T? message)
+        {
+            var typeInfo = TypeInfoCache.GetOrAdd(typeof(T), x => JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(x, JsonSerializerOptions)!) as JsonTypeInfo<T>;
+            JsonSerializer.Serialize(writer, message, typeInfo!);
+        }
     }
 
     public static class HubconJsonDefaults
