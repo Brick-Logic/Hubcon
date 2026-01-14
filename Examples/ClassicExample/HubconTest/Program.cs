@@ -39,26 +39,26 @@ namespace HubconTest
             //};
             //worker.Start();
 
-            var heap = Task.Run(async () =>
-            {
-                var sw = Stopwatch.StartNew();
-                while (true)
-                {
-                    var allocated = GC.GetTotalMemory(forceFullCollection: false);
-                    Console.WriteLine($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {sw.Elapsed}");
-                    await Task.Delay(1000);
-                }
-            });
+            //var heap = Task.Run(async () =>
+            //{
+            //    var sw = Stopwatch.StartNew();
+            //    while (true)
+            //    {
+            //        var allocated = GC.GetTotalMemory(forceFullCollection: false);
+            //        Console.WriteLine($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {sw.Elapsed}");
+            //        await Task.Delay(1000);
+            //    }
+            //});
 
-            var gc = Task.Run(async () =>
-            {
-                while (true)
-                {
-                    GC.Collect(2, GCCollectionMode.Forced, blocking: false);
-                    GC.WaitForPendingFinalizers();
-                    await Task.Delay(60000);
-                }
-            });
+            //var gc = Task.Run(async () =>
+            //{
+            //    while (true)
+            //    {
+            //        GC.Collect(2, GCCollectionMode.Forced, blocking: false);
+            //        GC.WaitForPendingFinalizers();
+            //        await Task.Delay(60000);
+            //    }
+            //});
         }
     }
 
@@ -69,6 +69,18 @@ namespace HubconTest
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            ThreadPool.SetMinThreads(2000, 2000);
+
+            builder.WebHost.ConfigureKestrel(options => {
+                options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
+            });
+
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.Limits.MaxConcurrentConnections = null;
+                options.Limits.MaxConcurrentUpgradedConnections = null;
+            });
 
             builder.Services.AddCors(options =>
             {

@@ -9,7 +9,7 @@
         "HUBCON_OPNAME_DEBUG_ENABLED" : "false"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:5000"
+      "applicationUrl": "http://0.0.0.0:5000"
     },
     "Container (Dockerfile)": {
       "commandName": "Docker",

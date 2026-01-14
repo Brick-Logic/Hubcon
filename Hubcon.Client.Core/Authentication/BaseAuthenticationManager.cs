@@ -62,9 +62,6 @@ namespace Hubcon.Client.Core.Authentication
 
         public async Task<IHubconResult> TryRefreshSessionAsync()
         {
-            if (string.IsNullOrWhiteSpace(RefreshToken))
-                return Result.Failure("No refresh token available.");
-
             var refresh = await RefreshSessionAsync(RefreshToken!);
 
             if (refresh.IsFailure)

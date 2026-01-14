@@ -31,6 +31,7 @@
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.20" />
 	  <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.4" />
+	  <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.2" />
 	</ItemGroup>
 
 	<!-- Development -->

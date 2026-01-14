@@ -12,7 +12,7 @@ namespace HubconTestClient.Modules
     {
         public override void Configure(IServerModuleConfiguration configuration)
         {
-            configuration.WithBaseUrl("http://localhost:5000");
+            configuration.WithBaseUrl("http://192.168.0.13:5000");
 
             configuration.EnableWebsocketAutoReconnect(true);
             configuration.GlobalLimit(20000000);
@@ -100,14 +100,13 @@ namespace HubconTestClient.Modules
                 var authManager = ctx.Services.GetRequiredService<AuthenticationManager>();
                 var logger = ctx.Services.GetRequiredService<ILogger<object>>();
 
-                if (authManager.AccessTokenExpiresAt.HasValue && authManager.AccessTokenExpiresAt.Value.AddMinutes(-1) < DateTimeOffset.UtcNow.DateTime)
+                var time = DateTimeOffset.UtcNow.AddMinutes(-1).DateTime;
+                if (authManager.AccessTokenExpiresAt.HasValue && time < DateTimeOffset.UtcNow.DateTime)
                 {
                     IHubconResult? refreshedToken = null!;
                     try
                     {
                         refreshedToken = await authManager.TryRefreshSessionAsync();
-                        logger.LogInformation($"Token refresh is success: {refreshedToken.IsSuccess}. Message: {refreshedToken.ErrorMessage}");
-
                         await ctx.TryRefreshToken.Invoke(authManager.AccessToken!);
                     }
                     catch (Exception ex)

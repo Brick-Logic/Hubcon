@@ -21,8 +21,10 @@ using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading.Channels;
@@ -66,10 +68,32 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 worker.Interval = 1000;
                 worker.Elapsed += (sender, eventArgs) =>
                 {
-                    logger.LogInformation("Connected clients: {0}", clientCount);
+                    UpdateCpuTitle();
                 };
                 worker.Start();
             }
+        }
+
+        private DateTime _lastCheckTime = DateTime.UtcNow;
+        private TimeSpan _lastProcessorTime = TimeSpan.Zero;
+        private readonly Process _currentProcess = Process.GetCurrentProcess();
+
+        // Dentro de tu Timer de 1 segundo:
+        public void UpdateCpuTitle()
+        {
+            var currentTime = DateTime.UtcNow;
+            var currentProcessorTime = _currentProcess.TotalProcessorTime;
+            var allocated = GC.GetTotalMemory(forceFullCollection: false);
+
+            // Calculamos cuánto tiempo de CPU se usó en este intervalo de 1 segundo
+            double cpuUsage = (currentProcessorTime - _lastProcessorTime).TotalMilliseconds /
+                              (currentTime - _lastCheckTime).TotalMilliseconds /
+                              Environment.ProcessorCount * 100;
+
+            _lastCheckTime = currentTime;
+            _lastProcessorTime = currentProcessorTime;
+
+            Console.Title = $"Clientes: {clientCount} | CPU: {cpuUsage:0.0}% | Heap Size: {allocated / 1024.0 / 1024.0:N2} MB | Threads: {ThreadPool.ThreadCount}";
         }
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
@@ -168,7 +192,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 {
                                     webSocket.Dispose();
                                 }
-                                catch (Exception ex) when(HandleEx(logger, ex))
+                                catch (Exception ex) when (HandleEx(logger, ex))
                                 {
                                 }
                             });
@@ -423,7 +447,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.ingest_data_with_ack:
-                            
+
                             await rateLimiterManager.TryAcquireAsync(MessageType.ingest_data_with_ack, message.Id);
 
                             if (!options.WebSocketIngestIsAllowed)
@@ -437,7 +461,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.ingest_complete:
-                            
+
                             await rateLimiterManager.TryAcquireAsync(MessageType.ingest_complete, message.Id);
 
                             if (!options.WebSocketIngestIsAllowed)
@@ -450,7 +474,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             break;
                         case MessageType.cancel:
-                            
+
                             await rateLimiterManager.TryAcquireAsync(MessageType.cancel, message.Id);
 
                             if (!options.RemoteCancellationIsAllowed)
@@ -462,7 +486,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             break;
                         case MessageType.token_update:
-                            
+
                             await rateLimiterManager.TryAcquireAsync(MessageType.token_update, message.Id);
 
                             _ = HandleTokenRefresh(
@@ -928,7 +952,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         }
                     }
 
-                    await rateLimiterManager.TryAcquireAsync(type, operationRequest);         
+                    await rateLimiterManager.TryAcquireAsync(type, operationRequest);
                 }
             }
             catch (OperationCanceledException)
