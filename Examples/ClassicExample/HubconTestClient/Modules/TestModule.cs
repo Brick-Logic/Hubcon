@@ -12,10 +12,10 @@ namespace HubconTestClient.Modules
     {
         public override void Configure(IServerModuleConfiguration configuration)
         {
-            configuration.WithBaseUrl("http://192.168.0.13:5000");
+            configuration.WithBaseUrl("http://192.168.0.130:5000");
 
             configuration.EnableWebsocketAutoReconnect(true);
-            configuration.GlobalLimit(20000000);
+            configuration.GlobalLimit(200000000);
 
             //configuration.LimitIngest(100);
             //configuration.LimitSubscription(100);
@@ -84,7 +84,7 @@ namespace HubconTestClient.Modules
                 x.SetBuffer(4 * 1024, 4 * 1024);
             });
 
-            configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(5));
+            configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(15));
             configuration.ScaleMessageProcessors(4);
 
             configuration.ConfigureHttpClient((x, services) =>
@@ -100,8 +100,10 @@ namespace HubconTestClient.Modules
                 var authManager = ctx.Services.GetRequiredService<AuthenticationManager>();
                 var logger = ctx.Services.GetRequiredService<ILogger<object>>();
 
-                var time = DateTimeOffset.UtcNow.AddMinutes(-1).DateTime;
-                if (authManager.AccessTokenExpiresAt.HasValue && time < DateTimeOffset.UtcNow.DateTime)
+                var currentTime = DateTimeOffset.UtcNow.DateTime;
+                var lowerTime = authManager.AccessTokenExpiresAt.HasValue ? authManager.AccessTokenExpiresAt.Value.AddMinutes(-1) : DateTime.MaxValue;
+
+                if (currentTime > lowerTime)
                 {
                     IHubconResult? refreshedToken = null!;
                     try

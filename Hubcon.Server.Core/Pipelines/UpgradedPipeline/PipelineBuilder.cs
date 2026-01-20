@@ -13,6 +13,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         private static Type GlobalInternalExceptionMiddleware { get; set; }
         private static Type GlobalExceptionMiddleware { get; set; }
+        private static List<Type> GlobalTelemetryMiddlewares { get; } = new();
         private static List<Type> GlobalLoggingMiddlewares { get; } = new();
         private static List<Type> GlobalAuthenticationMiddlewares { get; } = new();
         private static List<Type> GlobalAuthorizationMiddlewares { get; } = new();
@@ -37,6 +38,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         {
             if (typeof(IExceptionMiddleware).IsAssignableFrom(middlewareType))
                 ExceptionMiddleware = middlewareType;
+            else if (typeof(ITelemetryMiddleware).IsAssignableFrom(middlewareType))
+                GlobalTelemetryMiddlewares.Add(middlewareType);
             else if (typeof(ILoggingMiddleware).IsAssignableFrom(middlewareType))
                 LoggingMiddlewares.Add(middlewareType);
             else if (typeof(IAuthenticationMiddleware).IsAssignableFrom(middlewareType))
@@ -60,6 +63,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 GlobalInternalExceptionMiddleware ??= middlewareType;
             else if (typeof(IExceptionMiddleware).IsAssignableFrom(middlewareType))
                 GlobalExceptionMiddleware ??= middlewareType;
+            else if (typeof(ITelemetryMiddleware).IsAssignableFrom(middlewareType))
+                GlobalTelemetryMiddlewares.Add(middlewareType);
             else if (typeof(IInternalRoutingMiddleware).IsAssignableFrom(middlewareType))
                 GlobalRoutingMiddleware ??= middlewareType;
             else if (typeof(ILoggingMiddleware).IsAssignableFrom(middlewareType))
@@ -95,6 +100,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 middlewares.Add(GlobalExceptionMiddleware);
                 middlewares.Add(ExceptionMiddleware);
 
+                middlewares.AddRange(GlobalTelemetryMiddlewares);
+
                 middlewares.AddRange(GlobalLoggingMiddlewares);
                 middlewares.AddRange(LoggingMiddlewares);
 
@@ -119,6 +126,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             {
                 middlewares.Add(ExceptionMiddleware);
                 middlewares.Add(GlobalExceptionMiddleware);
+
+                middlewares.AddRange(GlobalTelemetryMiddlewares);
 
                 middlewares.AddRange(LoggingMiddlewares);
                 middlewares.AddRange(GlobalLoggingMiddlewares);

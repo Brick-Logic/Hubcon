@@ -30,8 +30,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IResponse> HandleWithoutResultAsync(IOperationRequest request, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint)
-                && blueprint?.Kind == OperationKind.Method))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.CallMethod))
             {
                 return new BaseOperationResponse(false);
             }
@@ -62,7 +61,7 @@ namespace Hubcon.Server.Core.Pipelines
         public async Task<IOperationResponse<JsonElement>> HandleSynchronousResult(IOperationRequest request, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint)
-                && blueprint?.Kind == OperationKind.Method))
+                && blueprint?.Kind == OperationKind.InvokeMethod))
             {
                 return new BaseJsonResponse<JsonElement>(false, default, null);
             }
@@ -88,8 +87,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IResponse> HandleSynchronous(IOperationRequest request, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint)
-                && blueprint?.Kind == OperationKind.Method))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.CallMethod))
                 return new BaseOperationResponse(false);
 
             IOperationContext context = BuildContext(request, blueprint, wrappedRequest, cancellationToken);
@@ -178,8 +176,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IOperationResponse<JsonElement>> HandleWithResultAsync(IOperationRequest request, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint)
-                && blueprint?.Kind == OperationKind.Method))
+            if (!(_operationRegistry.GetOperationBlueprint(request, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.InvokeMethod))
                 return null!;
 
             var context = BuildContext(request, blueprint, wrappedRequest, cancellationToken);

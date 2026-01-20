@@ -1,6 +1,5 @@
 ﻿using Hubcon.Client.Core.Proxies;
 using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Shared.Abstractions.Interfaces;
@@ -55,6 +54,11 @@ namespace Hubcon.Server.Injection
             HubconServerBuilder.AddGlobalMiddleware<AuthenticationMiddleware>();
         }
 
+        public void AddTelemetry()
+        {
+            HubconServerBuilder.AddGlobalMiddleware<InternalTelemetryMiddleware>((x, y) => x.AddSingleton(y));
+        }
+
         public void AutoRegisterControllers()
         {
             var assembly = Assembly.GetCallingAssembly();
@@ -87,8 +91,6 @@ namespace Hubcon.Server.Injection
                     if (previous != null)
                         await previous(context, token);
                 };
-
-
             };
 
             Builder.Services.AddRateLimiter(hubconOptions);

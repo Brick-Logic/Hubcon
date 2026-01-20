@@ -1,4 +1,5 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Server.Core.Pipelines;
@@ -6,12 +7,14 @@ using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Server.Core.RateLimiting;
 using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Server.Core.Supervisor;
+using Hubcon.Server.Core.Telemetry;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Injection;
 using Hubcon.Shared.Core.Serialization;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Server
@@ -43,6 +46,8 @@ namespace Hubcon.Server
             params Action<IServiceCollection>?[] additionalServices)
         {
             Services = builder.Services;
+
+            builder.AddServerCore();
 
             Services.AddSingleton<IInternalServerOptions>(ServerOptions);
             Services.AddSingleton(OperationRegistry);
@@ -134,14 +139,32 @@ namespace Hubcon.Server
             return builder;
         }
 
-        internal void AddGlobalMiddleware<TMiddleware>() => AddGlobalMiddleware(typeof(TMiddleware));
-        internal void AddGlobalMiddleware(Type middlewareType)
+        internal void AddGlobalMiddleware<TMiddleware>(Action<IServiceCollection, Type>? registerer = null)
+        {
+            var middlewareType = typeof(TMiddleware);
+
+            if (!middlewareType.IsAssignableTo(typeof(Abstractions.Interfaces.IMiddleware)))
+                throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(Abstractions.Interfaces.IMiddleware)}");
+
+            PipelineBuilder.AddGlobalMiddleware(middlewareType);
+
+            if (registerer == null)
+                Services.AddScoped(middlewareType);
+            else
+                registerer.Invoke(Services, middlewareType);
+        }
+
+        internal void AddGlobalMiddleware(Type middlewareType, Action<IServiceCollection, Type>? registerer = null)
         {
             if (!middlewareType.IsAssignableTo(typeof(Abstractions.Interfaces.IMiddleware)))
                 throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(Abstractions.Interfaces.IMiddleware)}");
 
             PipelineBuilder.AddGlobalMiddleware(middlewareType);
-            Services.AddScoped(middlewareType);
+
+            if (registerer == null)
+                Services.AddScoped(middlewareType);
+            else
+                registerer.Invoke(Services, middlewareType);
         }
 
         internal void ConfigureCore(Action<ICoreServerOptions> coreServerOptions)

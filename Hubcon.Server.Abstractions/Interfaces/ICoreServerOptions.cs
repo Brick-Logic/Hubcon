@@ -2,7 +2,7 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 
-namespace Hubcon.Server.Core.Configuration
+namespace Hubcon.Server.Abstractions.Interfaces
 {
     public interface ICoreServerOptions
     {

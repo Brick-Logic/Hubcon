@@ -14,7 +14,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         string ControllerName { get; }
         Type ControllerType { get; }
         bool HasReturnType { get; }
-        string HttpEndpointGroupName { get; }
+        string? HttpEndpointGroupName { get; }
         MemberInfo? OperationInfo { get; }
         string OperationName { get; }
         OperationKind Kind { get; }
@@ -25,7 +25,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         Func<object?, object, object?>? InvokeDelegate { get; }
         IPipelineBuilder PipelineBuilder { get; }
         Type? CallWrapperType { get; }
-        string Route { get; }
+        string? HttpRoute { get; }
         ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         IEnumerable<Attribute> Attributes { get; }
         HashSet<string> PrecomputedRoles { get; }

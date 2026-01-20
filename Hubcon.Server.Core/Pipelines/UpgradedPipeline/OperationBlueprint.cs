@@ -1,7 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Extensions;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
@@ -40,9 +39,9 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         public Func<object?, object, object?>? InvokeDelegate { get; }
         public IPipelineBuilder PipelineBuilder { get; }
-        public string Route { get; }
 
-        public string HttpEndpointGroupName { get; }
+        public string? HttpRoute { get; }
+        public string? HttpEndpointGroupName { get; }
 
         public Type? CallWrapperType { get; }
         public Action<IDictionary<string, object>, object, CancellationToken>? WrapperMapper { get; }
@@ -110,7 +109,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                        : methodInfo.ReturnType;
 
                 var combinedRoute = methodInfo.GetRoute(options.MethodOverloadingIsEnabled);
-                Route = options.HttpPathPrefix + combinedRoute.Endpoint;
+                HttpRoute = options.HttpPathPrefix + combinedRoute.Endpoint;
                 HttpEndpointGroupName = combinedRoute.EndpointGroup;
 
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
@@ -168,7 +167,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             PrecomputedRoles = AuthorizationAttributes
                     .Where(a => !string.IsNullOrWhiteSpace(a.Roles))
-                    .SelectMany(a => a.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    .SelectMany(a => a.Roles?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [])
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             PrecomputedPolicies = AuthorizationAttributes
@@ -192,7 +191,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 {
                     return x is IngestSettingsAttribute;
                 }
-                else if (Kind == OperationKind.Method)
+                else if (Kind == OperationKind.CallMethod || Kind == OperationKind.InvokeMethod)
                 {
                     return x is MethodSettingsAttribute;
                 }
@@ -211,7 +210,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 else if (Kind == OperationKind.Ingest && x is IngestSettingsAttribute ingestSettings)
                     ConfigurationAttributes.TryAdd(typeof(IngestSettingsAttribute), ingestSettings);
 
-                else if (Kind == OperationKind.Method && x is MethodSettingsAttribute methodSettings)
+                else if ((Kind == OperationKind.CallMethod || Kind == OperationKind.InvokeMethod) && x is MethodSettingsAttribute methodSettings)
                     ConfigurationAttributes.TryAdd(typeof(MethodSettingsAttribute), methodSettings);
             });
 

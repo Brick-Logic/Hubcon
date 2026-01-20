@@ -2,7 +2,6 @@
 using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Tools;
@@ -27,7 +26,8 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, PipelineDelegate next)
         {
-            if (context.Blueprint.Kind == OperationKind.Method
+            if (context.Blueprint.Kind == OperationKind.CallMethod
+                || context.Blueprint.Kind == OperationKind.InvokeMethod
                 || context.Blueprint.Kind == OperationKind.Stream
                 || context.Blueprint.Kind == OperationKind.Ingest)
             {

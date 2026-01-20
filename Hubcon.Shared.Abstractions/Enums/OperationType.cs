@@ -2,7 +2,8 @@
 {
     public enum OperationKind
     {
-        Method,
+        CallMethod,
+        InvokeMethod,
         Subscription,
         Stream,
         Ingest

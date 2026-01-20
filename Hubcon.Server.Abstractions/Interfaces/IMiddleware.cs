@@ -16,6 +16,10 @@ namespace Hubcon.Server.Abstractions.Interfaces
     {
     }
 
+    public interface ITelemetryMiddleware : IExecutableMiddleware
+    {
+    }
+
     public interface IInternalExceptionMiddleware : IExecutableMiddleware
     {
     }

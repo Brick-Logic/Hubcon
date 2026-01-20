@@ -1,7 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
@@ -91,14 +90,16 @@ namespace Hubcon.Server.Core.Routing.Registries
                     if (isStream && isIngest)
                         throw new InvalidOperationException($"Method '{method.Name}': Returning IAsyncEnumerable<T> and also using IAsyncEnumerable<T> parameters is not supported.");
 
-                    OperationKind kind = isStream ? OperationKind.Stream :
-                                         isIngest ? OperationKind.Ingest :
-                                         OperationKind.Method;
+                    var hasReturnType = returnType != typeof(void) && returnType != typeof(Task);
+
+                    OperationKind kind = isStream ? OperationKind.Stream
+                                        : isIngest ? OperationKind.Ingest
+                                        : !hasReturnType ? OperationKind.CallMethod : OperationKind.InvokeMethod;
 
                     if (method.IsStatic)
                         continue;
 
-                    if (!serverOptions.WebSocketMethodsIsAllowed && kind == OperationKind.Method)
+                    if (!serverOptions.WebSocketMethodsIsAllowed && (kind == OperationKind.CallMethod || kind == OperationKind.InvokeMethod))
                         continue;
 
                     if (!serverOptions.WebSocketIngestIsAllowed && kind == OperationKind.Ingest)
@@ -253,7 +254,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             {
                 foreach (var operation in operationskvp.Value)
                 {
-                    if (operation.Value.Kind != OperationKind.Method)
+                    if (operation.Value.Kind != OperationKind.CallMethod && operation.Value.Kind != OperationKind.InvokeMethod)
                         continue;
 
                     if (operation.Value.OperationInfo is MethodInfo)

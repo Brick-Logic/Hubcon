@@ -1,6 +1,5 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Websockets;
 using System.Collections.Concurrent;

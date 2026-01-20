@@ -1,4 +1,4 @@
-﻿using Hubcon.Server.Core.Configuration;
+﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Websockets.Models;
 using System.Buffers;
 using System.Net.WebSockets;

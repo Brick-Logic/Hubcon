@@ -65,7 +65,7 @@ namespace HubconTest.ContractHandlers
                     issuer: "clave",
                     audience: "clave",
                     claims: claims,
-                    expires: DateTime.Now.AddMinutes(30),
+                    expires: DateTimeOffset.UtcNow.AddMinutes(30).DateTime,
                     signingCredentials: creds);
 
                 return new JwtSecurityTokenHandler().WriteToken(token);

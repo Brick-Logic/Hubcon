@@ -43,6 +43,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
         System.Timers.Timer? worker;
         int clientCount = 0;
+        int activeSubscriptionCount = 0;
+        int activeIngestCount = 0;
+        int activeStreamingsCount = 0;
+        int activeRequestsCount = 0;
+        int activeCallRequestsCount = 0;
+        int activeRoundTripRequestsCount = 0;
 
         static Task CancelConnection(WebSocket webSocket) => webSocket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "TOKEN_EXPIRED: Provided authentication token is expired.", CancellationToken.None);
 
@@ -52,7 +58,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             IOperationRegistry operationRegistry,
             ILogger<HubconWebSocketMiddleware> logger,
             IConnectionSupervisor connectionSupervisor,
-            IInternalServerOptions options)
+            IInternalServerOptions options, 
+            ITelemetryProvider telemetryProvider)
         {
             this.next = next;
             this.converter = converter;
@@ -61,39 +68,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             this.connectionSupervisor = connectionSupervisor;
             this.options = options;
 
-
-            if (options.WebsocketLoggingEnabled)
-            {
-                worker = new System.Timers.Timer();
-                worker.Interval = 1000;
-                worker.Elapsed += (sender, eventArgs) =>
-                {
-                    UpdateCpuTitle();
-                };
-                worker.Start();
-            }
-        }
-
-        private DateTime _lastCheckTime = DateTime.UtcNow;
-        private TimeSpan _lastProcessorTime = TimeSpan.Zero;
-        private readonly Process _currentProcess = Process.GetCurrentProcess();
-
-        // Dentro de tu Timer de 1 segundo:
-        public void UpdateCpuTitle()
-        {
-            var currentTime = DateTime.UtcNow;
-            var currentProcessorTime = _currentProcess.TotalProcessorTime;
-            var allocated = GC.GetTotalMemory(forceFullCollection: false);
-
-            // Calculamos cuánto tiempo de CPU se usó en este intervalo de 1 segundo
-            double cpuUsage = (currentProcessorTime - _lastProcessorTime).TotalMilliseconds /
-                              (currentTime - _lastCheckTime).TotalMilliseconds /
-                              Environment.ProcessorCount * 100;
-
-            _lastCheckTime = currentTime;
-            _lastProcessorTime = currentProcessorTime;
-
-            Console.Title = $"Clientes: {clientCount} | CPU: {cpuUsage:0.0}% | Heap Size: {allocated / 1024.0 / 1024.0:N2} MB | Threads: {ThreadPool.ThreadCount}";
+            telemetryProvider.RegisterProvider(x => x.GetCurrentWebsocketClients, () => clientCount);
         }
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)

@@ -21,7 +21,7 @@ namespace Hubcon.Server.Injection
             {
                 schema.Nullable = false;
                 schema.Example = new OpenApiString("ejemplo");
-            }
+            }          
 
             if (schema.Properties != null)
             {

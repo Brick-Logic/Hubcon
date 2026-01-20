@@ -1,6 +1,5 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Shared.Abstractions.Interfaces;
@@ -44,7 +43,7 @@ namespace Hubcon.Server.Core.Routing
             IOperationBlueprint blueprint)
         {
             IEndpointConventionBuilder builder = null!;
-            var route = blueprint.Route;
+            var route = blueprint.HttpRoute;
             var operationName = blueprint.OperationName;
             var simpleContractName = NamingHelper.GetCleanName(blueprint.ContractName);
             var options = app.Services.GetRequiredService<IInternalServerOptions>();

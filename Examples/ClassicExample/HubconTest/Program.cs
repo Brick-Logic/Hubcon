@@ -1,3 +1,4 @@
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Injection;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -22,7 +23,7 @@ namespace HubconTest
             int? customCores = null;
             int cores = customCores ?? Environment.ProcessorCount - 1;
 
-            for (int i = 6; i <= cores; i++)
+            for (int i = 0; i <= cores; i++)
             {
                 coreMask |= 1L << i;
             }
@@ -87,7 +88,7 @@ namespace HubconTest
                 options.AddDefaultPolicy(policy =>
                 {
                     policy
-                        .AllowAnyOrigin() // Solo para desarrollo
+                        .AllowAnyOrigin()
                         .AllowAnyHeader()
                         .AllowAnyMethod();
                 });
@@ -117,7 +118,9 @@ namespace HubconTest
             builder.AddHubconServer();
             builder.ConfigureHubconServer(serverOptions =>
             {
-                //serverOptions.AddAuthentication();
+                serverOptions.AddAuthentication();
+                serverOptions.AddTelemetry();
+
                 serverOptions.AddHttpRateLimiter(options =>
                 {
                     options.AddPolicy("contract", httpContext =>
@@ -203,6 +206,14 @@ namespace HubconTest
             var logger = app.Services.GetService<ILogger<object>>();
 
             Watcher.Start(logger!);
+
+
+            var telemetry = app.Services.GetRequiredService<ITelemetryService>();
+
+            telemetry.OnRequestsPerSecondUpdated += (telemetry, rps) =>
+            {
+                Console.Title = $"CPU: {telemetry.CurrentCPU} | Threads: {telemetry.CurrentThreads} | RPS: {rps.RequestsPerSecond} | WS req/s: {rps.WebSocketsRequestsPerSecond} | HTTP req/s: {rps.HttpRequestsPerSecond}"; 
+            };
 
             app.Run();
         }

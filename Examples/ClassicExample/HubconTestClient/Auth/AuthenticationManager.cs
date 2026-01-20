@@ -9,7 +9,7 @@ namespace HubconTestClient.Auth
         protected async override Task<IAuthResult> AuthenticateAsync(string username, string password)
         {
             var token = await secondTestContract.LoginAsync(new LoginCommand(username, password, true));
-            return AuthResult.Success(token, "Bearer", RefreshToken!, DateTime.Now.AddDays(3));
+            return AuthResult.Success(token, "Bearer", RefreshToken!, DateTimeOffset.UtcNow.AddMinutes(30).DateTime);
         }
 
         protected override Task<IAuthResult> AuthenticateWithTokenAsync(string token, string type)
@@ -33,13 +33,13 @@ namespace HubconTestClient.Auth
                 TokenType = "Bearer",
                 AccessToken = token,
                 RefreshToken = "",
-                ExpiresAt = DateTime.Now.AddDays(3)
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(30).DateTime
             };
         }
 
         protected async override Task<IAuthResult> RefreshSessionAsync(string refreshToken)
         {
-            var token = await secondTestContract.LoginAsync(new LoginCommand("username", "password", true));
+            var token = await secondTestContract.LoginAsync(new LoginCommand("refresh", "password", true));
             return AuthResult.Success(token, "Bearer", RefreshToken!, DateTimeOffset.UtcNow.AddMinutes(30).DateTime);
         }
 
