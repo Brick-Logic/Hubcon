@@ -21,7 +21,7 @@
         public string Object { get; set; }
 
         [JsonPropertyName("created_at")]
-        public long CreatedAt { get; set; }
+        public long? CreatedAt { get; set; }
 
         [JsonPropertyName("status")]
         public string Status { get; set; }
@@ -33,7 +33,7 @@
         public BillingInfo Billing { get; set; }
 
         [JsonPropertyName("completed_at")]
-        public long CompletedAt { get; set; }
+        public long? CompletedAt { get; set; }
 
         [JsonPropertyName("error")]
         public object Error { get; set; }
@@ -93,19 +93,19 @@
     public class UsageInfo
     {
         [JsonPropertyName("input_tokens")]
-        public long InputTokens { get; set; }
+        public long? InputTokens { get; set; }
 
         [JsonPropertyName("output_tokens")]
-        public long OutputTokens { get; set; }
+        public long? OutputTokens { get; set; }
 
         [JsonPropertyName("total_tokens")]
-        public long TotalTokens { get; set; }
+        public long? TotalTokens { get; set; }
 
         [JsonPropertyName("input_tokens_details")]
-        public Dictionary<string, long> InputTokensDetails { get; set; }
+        public Dictionary<string, long?> InputTokensDetails { get; set; }
 
         [JsonPropertyName("output_tokens_details")]
-        public Dictionary<string, long> OutputTokensDetails { get; set; }
+        public Dictionary<string, long?> OutputTokensDetails { get; set; }
     }
 
     public class ReasoningInfo

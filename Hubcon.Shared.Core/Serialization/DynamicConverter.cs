@@ -372,7 +372,7 @@ namespace Hubcon.Shared.Core.Serialization
                 _options = options;
                 _options!.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 _options!.WriteIndented = false;
-                _options!.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
+                _options!.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
                 _options!.MaxDepth = 64;
                 _options!.PropertyNameCaseInsensitive = true;
                 _options!.Converters.Add(new JsonStringEnumConverter<Hubcon.Shared.Core.Websockets.MessageType>(JsonNamingPolicy.CamelCase));

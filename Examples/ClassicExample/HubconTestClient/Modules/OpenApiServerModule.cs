@@ -5,22 +5,26 @@ using System.Net.Http.Headers;
 
 namespace HubconTestClient.Modules
 {
-    public sealed class OpenApiServerModule : RemoteServerModule
+    public sealed class OpenAIServerModule : RemoteServerModule
     {
         public override void Configure(IServerModuleConfiguration configuration)
         {
             configuration.WithBaseUrl("https://api.openai.com/");
 
+            // Indica que el servidor no es hubcon
             configuration.NonHubconServer();
 
+            // Evita el uso de AuthenticationManager
             configuration.DisableHttpAuthentication();
 
             configuration.ConfigureHttpClient((x, y) =>
             {
+                // Autenticacion manual
                 x.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
             });
 
-            configuration.Implements<IOpenApiContract>();
+            // Contrato que va a usar esta config
+            configuration.Implements<IOpenAIContract>();
         }
     }
 }

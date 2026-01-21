@@ -45,7 +45,7 @@ internal class Program
 
         builder.Services.AddHubconClient();
         builder.Services.AddRemoteServerModule<TestModule>(() => new TestModule(new object()));
-        builder.Services.AddRemoteServerModule<OpenApiServerModule>();
+        builder.Services.AddRemoteServerModule<OpenAIServerModule>();
 
         builder.Logging.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
         builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
@@ -57,7 +57,9 @@ internal class Program
         var authManager = scope.ServiceProvider.GetRequiredService<AuthenticationManager>();
         var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserContract>>();
-        //var openApi = scope.ServiceProvider.GetRequiredService<IOpenApiContract>();
+
+
+        var openAi = scope.ServiceProvider.GetRequiredService<IOpenAIContract>();
 
         //var command = new CreateResponseCommand()
         //{
@@ -65,7 +67,25 @@ internal class Program
         //    Input = "Tell me a three sentence bedtime story about a unicorn."
         //};
 
-        //var response = await openApi.CreateModelResponse(command);
+        //var response = await openAi.CreateModelResponse(command);
+
+        var request = new OpenAIStreamRequest()
+        {
+            Model = "gpt-5-nano",
+            Input = "Hablame sobre las ultimas novedades de .NET 10 en un parrafo de aprox 500 palabras.",
+        };
+
+        var finalText = "";
+        await foreach(var item in openAi.GetResponseStream(request))
+        {
+            logger.LogInformation($"Event received: {item.Delta}");
+            finalText += item.Delta;
+        }
+
+        logger.LogInformation($"Final text: {finalText}");
+        Console.ReadKey();
+        Console.ReadKey();
+        Console.ReadKey();
 
         //var response2 = await openApi.GetModelResponseInputs(response.Id);
 

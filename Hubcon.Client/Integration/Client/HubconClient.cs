@@ -10,15 +10,20 @@ using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Lazy;
 using Hubcon.Shared.Core.Websockets.Events;
+using Hubcon.Shared.Core.Websockets.Heartbeat;
+using Hubcon.Shared.Core.Websockets.Interfaces;
+using Hubcon.Shared.Core.Websockets.Messages.Streams;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.WebSockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -41,15 +46,15 @@ namespace Hubcon.Client.Integration.Client
         {
             get
             {
-                var manager = _authenticationManager 
-                    ??= authenticationManagerFactory?.Invoke() 
+                var manager = _authenticationManager
+                    ??= authenticationManagerFactory?.Invoke()
                     ?? throw new InvalidOperationException($"Authentication Manager not defined for server module '{ClientOptions.ServerModuleName}'.");
 
                 manager.OnSessionIsInactive += async () =>
                 {
                     await client.Disconnect();
                 };
-                
+
                 return manager!;
             }
         }
@@ -446,110 +451,14 @@ namespace Hubcon.Client.Integration.Client
                 {
                     await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                    // 1. Mapeo de Atributos a Verbos HTTP
-                    HttpMethod httpMethod = MethodVerb.GetOrAdd(methodInfo, method =>
-                    {
-                        if (method.GetCustomAttribute<HttpGetAttribute>() != null) return HttpMethod.Get;
-                        if (method.GetCustomAttribute<HttpPostAttribute>() != null) return HttpMethod.Post;
-                        if (method.GetCustomAttribute<HttpPutAttribute>() != null) return HttpMethod.Put;
-                        if (method.GetCustomAttribute<HttpDeleteAttribute>() != null) return HttpMethod.Delete;
-
-                        // Fallback basado en argumentos como tenías antes
-                        return request.Arguments.Count > 0 ? HttpMethod.Post : HttpMethod.Get;
-                    });
-
-                    var finalRoute = MethodRoute.GetOrAdd(methodInfo, method =>
-                    {
-                        if (method.GetCustomAttribute<HttpGetAttribute>() != null) return method.GetCustomAttribute<HttpGetAttribute>().Template;
-                        if (method.GetCustomAttribute<HttpPostAttribute>() != null) return method.GetCustomAttribute<HttpPostAttribute>().Template;
-                        if (method.GetCustomAttribute<HttpPutAttribute>() != null) return method.GetCustomAttribute<HttpPutAttribute>().Template;
-                        if (method.GetCustomAttribute<HttpDeleteAttribute>() != null) return method.GetCustomAttribute<HttpDeleteAttribute>().Template;
-
-                        return "/";
-                    });
-
-                    // 2. Lógica de Reemplazo en URL (Path Parameters)
-                    // Copiamos los argumentos a una lista de trabajo para saber cuáles sobran (y van al Body o Query)
-                    var remainingArguments = request.Arguments.ToDictionary(k => k.Key, v => v.Value);
-
-                    foreach (var arg in request.Arguments)
-                    {
-                        string placeholder = $"{{{arg.Key}}}";
-                        if (finalRoute.Contains(placeholder))
-                        {
-                            finalRoute = finalRoute.Replace(placeholder, Uri.EscapeDataString(arg.Value?.ToString() ?? ""));
-                            remainingArguments.Remove(arg.Key); // Ya se usó en el Path, lo quitamos
-                        }
-                    }
+                    HttpMethod httpMethod = GetHttpMethod(request, methodInfo);
+                    string finalRoute = GetFinalRoute(methodInfo);
+                    Dictionary<string, object> remainingArguments = GetRemainingArguments(request, ref finalRoute);
 
                     StringContent? content = null;
                     string url;
 
-                    // 3. Construcción de Body o QueryString según el Verbo
-                    if (httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Put)
-                    {
-                        object? bodyData = null;
-
-                        // Intentamos obtener el nombre del parámetro marcado con [Body]
-                        var bodyParamName = BodyParameterName.GetOrAdd(methodInfo, method =>
-                            method.GetParameters()
-                                  .FirstOrDefault(p => p.GetCustomAttribute<AsBodyAttribute>() != null)?.Name);
-
-                        // Si existe un parámetro [Body] y está en los argumentos, lo extraemos (Aplanamiento)
-                        if (bodyParamName != null && request.Arguments.TryGetValue(bodyParamName, out var explicitBody))
-                        {
-                            bodyData = explicitBody;
-                        }
-                        else
-                        {
-                            // Lógica original: Solo enviamos en el Body lo que NO se usó en la URL
-                            // Si queda solo un argumento llamado "value", lo desempaquetamos.
-                            // Si no, enviamos el diccionario con lo restante.
-                            bodyData = remainingArguments.Count == 1 && remainingArguments.ContainsKey("value")
-                                        ? remainingArguments["value"]
-                                        : remainingArguments;
-                        }
-
-                        var jsonBody = converter.Serialize(bodyData);
-                        content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-                        url = _restHttpUrl.TrimEnd('/') + "/" + finalRoute.TrimStart('/');
-                    }
-                    else // GET o DELETE
-                    {
-                        var builder = new UriBuilder(_restHttpUrl);
-                        builder.Path = (builder.Path.TrimEnd('/') + "/" + finalRoute.TrimStart('/')).Replace("//", "/");
-                        var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
-
-                        // Intentamos obtener el nombre del parámetro marcado con [AsQuery]
-                        var queryParamName = QueryParameterName.GetOrAdd(methodInfo, method =>
-                            method.GetParameters()
-                                  .FirstOrDefault(p => p.GetCustomAttribute<AsQueryAttribute>() != null)?.Name);
-
-                        // Si hay un objeto [AsQuery], lo aplanamos
-                        if (queryParamName != null && remainingArguments.TryGetValue(queryParamName, out var queryObj) && queryObj != null)
-                        {
-                            // Usamos reflexión (o podrías usar el converter si tiene un ToDictionary) 
-                            // para extraer las propiedades del objeto a la QueryString
-                            var props = queryObj.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                            foreach (var prop in props)
-                            {
-                                var val = prop.GetValue(queryObj);
-                                if (val != null) query[prop.Name] = val.ToString();
-                            }
-
-                            // Removemos el objeto original de los restantes para que no se duplique
-                            remainingArguments.Remove(queryParamName);
-                        }
-
-                        // El resto de argumentos sobrantes van como parámetros normales
-                        foreach (var arg in remainingArguments)
-                        {
-                            query[arg.Key] = arg.Value?.ToString() ?? "";
-                        }
-
-                        builder.Query = query.ToString();
-                        url = builder.ToString();
-                    }
+                    url = BuildBodyAndFinalUrl(request, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
 
                     var httpRequest = new HttpRequestMessage(httpMethod, url);
 
@@ -664,7 +573,128 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, MethodInfo method, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        private string BuildBodyAndFinalUrl(IOperationRequest request, MethodInfo methodInfo, HttpMethod httpMethod, string finalRoute, Dictionary<string, object> remainingArguments, ref StringContent? content)
+        {
+            string url;
+            // 3. Construcción de Body o QueryString según el Verbo
+            if (httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Put)
+            {
+                object? bodyData = null;
+
+                // Intentamos obtener el nombre del parámetro marcado con [Body]
+                var bodyParamName = BodyParameterName.GetOrAdd(methodInfo, method =>
+                    method.GetParameters()
+                          .FirstOrDefault(p => p.GetCustomAttribute<AsBodyAttribute>() != null)?.Name);
+
+                // Si existe un parámetro [Body] y está en los argumentos, lo extraemos (Aplanamiento)
+                if (bodyParamName != null && request.Arguments.TryGetValue(bodyParamName, out var explicitBody))
+                {
+                    bodyData = explicitBody;
+                }
+                else
+                {
+                    // Lógica original: Solo enviamos en el Body lo que NO se usó en la URL
+                    // Si queda solo un argumento llamado "value", lo desempaquetamos.
+                    // Si no, enviamos el diccionario con lo restante.
+                    bodyData = remainingArguments.Count == 1 && remainingArguments.ContainsKey("value")
+                                ? remainingArguments["value"]
+                                : remainingArguments;
+                }
+
+                var jsonBody = converter.Serialize(bodyData);
+                content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+                url = _restHttpUrl.TrimEnd('/') + "/" + finalRoute.TrimStart('/');
+            }
+            else // GET o DELETE
+            {
+                var builder = new UriBuilder(_restHttpUrl);
+                builder.Path = (builder.Path.TrimEnd('/') + "/" + finalRoute.TrimStart('/')).Replace("//", "/");
+                var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+
+                // Intentamos obtener el nombre del parámetro marcado con [AsQuery]
+                var queryParamName = QueryParameterName.GetOrAdd(methodInfo, method =>
+                    method.GetParameters()
+                          .FirstOrDefault(p => p.GetCustomAttribute<AsQueryAttribute>() != null)?.Name);
+
+                // Si hay un objeto [AsQuery], lo aplanamos
+                if (queryParamName != null && remainingArguments.TryGetValue(queryParamName, out var queryObj) && queryObj != null)
+                {
+                    // Usamos reflexión (o podrías usar el converter si tiene un ToDictionary) 
+                    // para extraer las propiedades del objeto a la QueryString
+                    var props = queryObj.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                    foreach (var prop in props)
+                    {
+                        var val = prop.GetValue(queryObj);
+                        if (val != null) query[prop.Name] = val.ToString();
+                    }
+
+                    // Removemos el objeto original de los restantes para que no se duplique
+                    remainingArguments.Remove(queryParamName);
+                }
+
+                // El resto de argumentos sobrantes van como parámetros normales
+                foreach (var arg in remainingArguments)
+                {
+                    query[arg.Key] = arg.Value?.ToString() ?? "";
+                }
+
+                builder.Query = query.ToString();
+                url = builder.ToString();
+            }
+
+            return url;
+        }
+
+        private static Dictionary<string, object> GetRemainingArguments(IOperationRequest request, ref string finalRoute)
+        {
+
+            // 2. Lógica de Reemplazo en URL (Path Parameters)
+            // Copiamos los argumentos a una lista de trabajo para saber cuáles sobran (y van al Body o Query)
+            var remainingArguments = request.Arguments.ToDictionary(k => k.Key, v => v.Value);
+
+            foreach (var arg in request.Arguments)
+            {
+                string placeholder = $"{{{arg.Key}}}";
+                if (finalRoute.Contains(placeholder))
+                {
+                    finalRoute = finalRoute.Replace(placeholder, Uri.EscapeDataString(arg.Value?.ToString() ?? ""));
+                    remainingArguments.Remove(arg.Key); // Ya se usó en el Path, lo quitamos
+                }
+            }
+
+            return remainingArguments;
+        }
+
+        private string GetFinalRoute(MethodInfo methodInfo)
+        {
+            return MethodRoute.GetOrAdd(methodInfo, method =>
+            {
+                if (method.GetCustomAttribute<HttpGetAttribute>() != null) return method.GetCustomAttribute<HttpGetAttribute>().Template;
+                if (method.GetCustomAttribute<HttpPostAttribute>() != null) return method.GetCustomAttribute<HttpPostAttribute>().Template;
+                if (method.GetCustomAttribute<HttpPutAttribute>() != null) return method.GetCustomAttribute<HttpPutAttribute>().Template;
+                if (method.GetCustomAttribute<HttpDeleteAttribute>() != null) return method.GetCustomAttribute<HttpDeleteAttribute>().Template;
+
+                return "/";
+            });
+        }
+
+        private HttpMethod GetHttpMethod(IOperationRequest request, MethodInfo methodInfo)
+        {
+            // 1. Mapeo de Atributos a Verbos HTTP
+            HttpMethod httpMethod = MethodVerb.GetOrAdd(methodInfo, method =>
+            {
+                if (method.GetCustomAttribute<HttpGetAttribute>() != null) return HttpMethod.Get;
+                if (method.GetCustomAttribute<HttpPostAttribute>() != null) return HttpMethod.Post;
+                if (method.GetCustomAttribute<HttpPutAttribute>() != null) return HttpMethod.Put;
+                if (method.GetCustomAttribute<HttpDeleteAttribute>() != null) return HttpMethod.Delete;
+
+                // Fallback basado en argumentos como tenías antes
+                return request.Arguments.Count > 0 ? HttpMethod.Post : HttpMethod.Get;
+            });
+            return httpMethod;
+        }
+
+        public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, MethodInfo methodInfo, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var context = new InvocationContext()
             {
@@ -674,8 +704,10 @@ namespace Hubcon.Client.Integration.Client
                 TryRefreshToken = client.TryRefreshToken
             };
 
-            IContractOptions contractOptions = ClientOptions.GetContractOptions(method.ReflectedType!);
-            IOperationOptions operationOptions = contractOptions!.GetOperationOptions(request.OperationName, method);
+            IAsyncEnumerable<JsonElement>? enumerable = null;
+
+            IContractOptions contractOptions = ClientOptions.GetContractOptions(methodInfo.ReflectedType!);
+            IOperationOptions operationOptions = contractOptions!.GetOperationOptions(request.OperationName, methodInfo);
 
             bool remoteCancellation = operationOptions.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed;
 
@@ -683,90 +715,176 @@ namespace Hubcon.Client.Integration.Client
 
             await operationOptions.CallValidationHook(ServiceProvider, request, cancellationToken);
 
-            try
+            await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.StreamingRateBucket, operationOptions.RateBucket);
+
+            await operationOptions.CallHook(HookType.OnSend, context);
+            await contractOptions.CallHook(HookType.OnSend, context);
+            await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
+
+            if (ClientOptions.IsNonHubconServer)
             {
-                await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.StreamingRateBucket, operationOptions.RateBucket);
+                await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                await operationOptions.CallHook(HookType.OnSend, context);
-                await contractOptions.CallHook(HookType.OnSend, context);
-                await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
+                HttpMethod httpMethod = GetHttpMethod(request, methodInfo);
+                string finalRoute = GetFinalRoute(methodInfo);
+                Dictionary<string, object> remainingArguments = GetRemainingArguments(request, ref finalRoute);
 
-                if (ClientOptions.UseHttpEndpointOverloading)
-                    request.SetOperationName(method.GetMethodSignature(true));
+                StringContent? content = null;
+                string url;
 
-                observable = await client.Stream<JsonElement>(request, remoteCancellation, cancellationToken);
+                url = BuildBodyAndFinalUrl(request, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
+
+                var httpRequest = new HttpRequestMessage(httpMethod, url);
+
+                if (content != null)
+                    httpRequest.Content = content;
+
+                bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
+                {
+                    return (operationOptions.HttpAuthIsEnabled ?? true)
+                        && (contractOptions.HttpAuthIsEnabled)
+                        && ClientOptions.HttpAuthIsEnabled;
+                });
+
+                if (needsAuth && AuthenticationManager.IsSessionActive)
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue(AuthenticationManager.TokenType!, AuthenticationManager.AccessToken);
+
+                ClientOptions.HttpClientOptions?.Invoke(HttpClient, ServiceProvider);
+
+                HttpResponseMessage response; 
+
+                try
+                {
+                    response = await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                    response.EnsureSuccessStatusCode();
+                }
+                catch (Exception ex)
+                {
+                    context.Exception = ex;
+                    context.IsSuccess = false;
+
+                    await operationOptions.CallHook(HookType.OnError, context);
+                    await contractOptions.CallHook(HookType.OnError, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
+
+                    if (ex is HubconRemoteException)
+                        throw;
+                    else if (ex is HubconGenericException)
+                        throw;
+                    else
+                        throw new HubconGenericException(ex.Message, ex);
+                }
 
                 await operationOptions.CallHook(HookType.OnAfterSend, context);
                 await contractOptions.CallHook(HookType.OnAfterSend, context);
                 await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
-            }
-            catch (Exception ex)
-            {
-                context.Exception = ex;
-                context.IsSuccess = false;
 
-                await operationOptions.CallHook(HookType.OnError, context);
-                await contractOptions.CallHook(HookType.OnError, context);
-                await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
+                using var stream = await response.Content.ReadAsStreamAsync();
 
-                if (ex is HubconRemoteException)
-                    throw;
-                else if (ex is HubconGenericException)
-                    throw;
-                else
-                    throw new HubconGenericException(ex.Message, ex);
-            }
+                enumerable = ParseSSEStream(stream, cancellationToken);
 
-            var observer = AsyncObserver.Create<JsonElement>(converter);
-
-            using (observable.Subscribe(observer))
-            {
-                var enumerator = observer.GetAsyncEnumerable(cancellationToken).GetAsyncEnumerator(cancellationToken);
-
-                await operationOptions.CallHook(HookType.OnSubscribed, context);
-                await contractOptions.CallHook(HookType.OnSubscribed, context);
-                await ClientOptions.CallInterceptor(InterceptorType.OnSubscribed, context);
-
-                while (true)
+                await foreach (var item in enumerable.WithCancellation(cancellationToken))
                 {
-                    JsonElement result = default;
-                    try
+                    yield return item;
+                }
+
+                content?.Dispose();
+            }
+            else
+            {
+                try
+                {             
+                    observable = await client.Stream<JsonElement>(request, remoteCancellation, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    context.Exception = ex;
+                    context.IsSuccess = false;
+
+                    await operationOptions.CallHook(HookType.OnError, context);
+                    await contractOptions.CallHook(HookType.OnError, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
+
+                    if (ex is HubconRemoteException)
+                        throw;
+                    else if (ex is HubconGenericException)
+                        throw;
+                    else
+                        throw new HubconGenericException(ex.Message, ex);
+                }
+
+                await operationOptions.CallHook(HookType.OnAfterSend, context);
+                await contractOptions.CallHook(HookType.OnAfterSend, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
+
+                var observer = AsyncObserver.Create<JsonElement>(converter);
+                enumerable = observer.GetAsyncEnumerable(cancellationToken);
+
+                using (observable.Subscribe(observer))
+                {
+                    var enumerator = enumerable.GetAsyncEnumerator(cancellationToken);
+
+                    await operationOptions.CallHook(HookType.OnSubscribed, context);
+                    await contractOptions.CallHook(HookType.OnSubscribed, context);
+                    await ClientOptions.CallInterceptor(InterceptorType.OnSubscribed, context);
+
+                    while (true)
                     {
-                        if (!await enumerator.MoveNextAsync())
-                            break;
+                        JsonElement result = default;
+                        try
+                        {
+                            if (!await enumerator.MoveNextAsync() || cancellationToken.IsCancellationRequested)
+                                break;
 
-                        await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.StreamingRateBucket, operationOptions.RateBucket);
+                            await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.StreamingRateBucket, operationOptions.RateBucket);
 
-                        result = enumerator.Current;
-                        context.IsSuccess = true;
-                        context.Result = result;
+                            result = enumerator.Current;
+                            context.IsSuccess = true;
+                            context.Result = result;
+                        }
+                        catch (Exception ex)
+                        {
+                            context.IsSuccess = false;
+                            context.Result = result;
+                            context.Exception = ex;
+
+                            await operationOptions.CallHook(HookType.OnError, context);
+                            await contractOptions.CallHook(HookType.OnError, context);
+                            await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
+
+                            if (ex is HubconRemoteException)
+                                throw;
+                            else if (ex is HubconGenericException)
+                                throw;
+                            else
+                                throw new HubconGenericException(ex.Message, ex);
+                        }
+
+                        yield return result;
                     }
-                    catch (Exception ex)
-                    {
-                        context.IsSuccess = false;
-                        context.Result = result;
-                        context.Exception = ex;
-
-                        await operationOptions.CallHook(HookType.OnError, context);
-                        await contractOptions.CallHook(HookType.OnError, context);
-                        await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
-
-                        if (ex is HubconRemoteException)
-                            throw;
-                        else if (ex is HubconGenericException)
-                            throw;
-                        else
-                            throw new HubconGenericException(ex.Message, ex);
-                    }
-
-                    yield return result;
                 }
             }
 
             await operationOptions.CallHook(HookType.OnUnsubscribed, context);
             await contractOptions.CallHook(HookType.OnUnsubscribed, context);
             await ClientOptions.CallInterceptor(InterceptorType.OnUnsubscribed, context);
+        }
 
+        public async IAsyncEnumerable<JsonElement> ParseSSEStream(Stream stream, CancellationToken cancellationToken)
+        {
+            using var reader = new StreamReader(stream);
+            while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
+            {
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: ")) continue;
+
+                string jsonData = line.Substring(6);
+                if (jsonData == "[DONE]") break;
+
+                var ev = converter.DeserializeData<JsonElement>(jsonData);
+
+                if (ev.ValueKind != JsonValueKind.Null) yield return ev;
+            }
         }
 
         public async Task<T> Ingest<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(IOperationRequest request, MethodInfo method, CancellationToken cancellationToken)

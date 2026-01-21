@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace HubconTestClient.Contracts
 {
-    public interface IOpenApiContract : IControllerContract
+    public interface IOpenAIContract : IControllerContract
     {
         [HttpPost("/v1/responses")]
         public Task<OpenAIResponse> CreateModelResponse([AsBody] CreateResponseCommand command);
@@ -17,7 +17,7 @@ namespace HubconTestClient.Contracts
         [HttpGet("/v1/responses/{id}/input_items")]
         public Task<OpenAIList<OpenAIMessage>> GetModelResponseInputs(string id);
 
-        [HttpDelete("/v1/responses/{id}")]
-        public Task<OpenAIDeleteResponse> DeleteModelResponse(string id);
+        [HttpPost("/v1/responses")]
+        public IAsyncEnumerable<OpenAIStreamEvent> GetResponseStream([AsBody] OpenAIStreamRequest request);
     }
 }

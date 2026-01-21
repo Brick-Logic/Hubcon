@@ -165,10 +165,7 @@ namespace Hubcon.Client.Core.Websockets
         public async Task<IObservable<T>> Stream<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             var request = new StreamInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
-
-
             var tcs = new CancellationTokenSource();
-
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
@@ -212,7 +209,6 @@ namespace Hubcon.Client.Core.Websockets
             await SendMessageAsync(request);
             return observable;
         }
-
 
         public async Task<IOperationResponse<T>> IngestMultiple<T>(
             IOperationRequest operationRequest,
