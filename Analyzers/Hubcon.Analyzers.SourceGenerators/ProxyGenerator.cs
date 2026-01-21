@@ -123,22 +123,33 @@ namespace HubconAnalyzers.SourceGenerators
                     // 1. Ignorar tipos con errores de compilación
                     if (t.TypeKind == TypeKind.Error) return false;
 
-                    if (t.SpecialType == SpecialType.System_Nullable_T) return true;
+                    // 2. CASO ESPECIAL: Arrays (int[], string[], etc.)
+                    if (t is IArrayTypeSymbol) return true;
 
-                    if (t.ToDisplayString() == "System.Text.Json.JsonElement") return true;
+                    // 3. CASO ESPECIAL: Nullable (int?, etc.)
+                    if (t.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T) return true;
 
-                    // 2. Ignorar tipos básicos (int, string, bool, etc.) 
-                    // STJ ya sabe cómo manejarlos, no necesitan metadatos generados.
+                    // 4. Exclusión explícita de JsonElement (se maneja manual)
+                    if (t.ToDisplayString() == "global::System.Text.Json.JsonElement") return false;
+
+                    // 5. Ignorar tipos básicos de sistema (int, string, bool, etc.)
+                    // Pero dejamos pasar si son tipos complejos (SpecialType.None)
                     if (t.SpecialType != SpecialType.None) return false;
 
-                    // 3. Ignorar punteros y tipos no seguros (causa del error sbyte*)
+                    // 6. Ignorar punteros (causa del error sbyte*)
                     if (t.TypeKind == TypeKind.Pointer || t.TypeKind == TypeKind.FunctionPointer) return false;
 
                     var ns = t.ContainingNamespace?.ToDisplayString() ?? "";
 
-                    // 4. Filtro de Namespaces: Solo permitimos tus tipos.
-                    // Bloqueamos System por completo (ya que Task, String, etc., se filtran arriba)
-                    // Bloqueamos Microsoft y tipos internos.
+                    // 7. CASO ESPECIAL: Colecciones Genéricas (List<T>, IEnumerable<T>, Dictionary<K,V>)
+                    if (ns.StartsWith("System.Collections.Generic"))
+                    {
+                        // Solo dejamos pasar si el tipo es una instancia genérica cerrada (ej: List<int>)
+                        if (t is INamedTypeSymbol named && named.IsGenericType) return true;
+                    }
+
+                    // 8. Filtro de Namespaces: Solo permitimos tus tipos.
+                    // Bloqueamos System y Microsoft, a menos que hayan pasado por los filtros de arriba.
                     return !ns.StartsWith("System") &&
                            !ns.StartsWith("Microsoft") &&
                            !ns.StartsWith("<global namespace>") &&
@@ -613,6 +624,25 @@ namespace HubconAnalyzers.SourceGenerators
         var enumConverter = new System.Text.Json.Serialization.JsonStringEnumConverter<{fullName}>();
         return JsonMetadataServices.CreateValueInfo<{fullName}>({optionsName}, enumConverter);");
                 }
+                else if (IsDictionary(type, out var keyType, out var valueType))
+                {
+                    var keyFullName = keyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    var valueFullName = valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+                    string creator = (type is INamedTypeSymbol n && !n.IsAbstract) ? $"() => new {fullName}()" : "null";
+
+                    sb.AppendLine($@"
+        var info = JsonMetadataServices.CreateIDictionaryInfo<{fullName}, {keyFullName}, {valueFullName}>(
+            {optionsName},
+            new JsonCollectionInfoValues<{fullName}> {{
+                ObjectCreator = {creator},
+                KeyInfo = {optionsName}.GetTypeInfo(typeof({keyFullName})),
+                NumberHandling = default,
+                SerializeHandler = null
+            }}
+        );
+        return info;");
+                }
                 // 3. CASO COLECCIONES (List<T>, T[], etc.)
                 else if (IsCollection(type, out var elementType))
                 {
@@ -682,21 +712,33 @@ namespace HubconAnalyzers.SourceGenerators
                     sb.AppendLine("            PropertyMetadataInitializer = (context) => new JsonPropertyInfo[] {");
                     foreach (var prop in type.GetMembers().OfType<IPropertySymbol>().Where(p => p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic))
                     {
+                        // 1. Soporte para [JsonIgnore]
+                        var isIgnored = prop.GetAttributes().Any(a =>
+                            a.AttributeClass?.ToDisplayString() == "System.Text.Json.Serialization.JsonIgnoreAttribute");
+
+                        if (isIgnored) continue;
+
+                        // 2. Soporte para [JsonPropertyName("...")]
+                        var jsonNameAttr = prop.GetAttributes().FirstOrDefault(a =>
+                            a.AttributeClass?.ToDisplayString() == "System.Text.Json.Serialization.JsonPropertyNameAttribute");
+
+                        // Si tiene el atributo usamos el valor definido, si no, el nombre de la propiedad en C#
+                        string jsonPropertyName = jsonNameAttr?.ConstructorArguments.FirstOrDefault().Value?.ToString() ?? prop.Name;
+
                         var pType = prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-                        // Aquí está el truco: STJ usará su propio resolver para tipos básicos (string, int) 
-                        // aunque nosotros no les generemos un Create_... manual.
                         sb.AppendLine($"                JsonMetadataServices.CreatePropertyInfo<{pType}>({optionsName}, new JsonPropertyInfoValues<{pType}> {{");
-                        sb.AppendLine($"                    PropertyName = \"{prop.Name}\",");
+                        sb.AppendLine($"                    PropertyName = \"{prop.Name}\","); // Nombre real en el código C#
+                        sb.AppendLine($"                    JsonPropertyName = \"{jsonPropertyName}\","); // Nombre que aparecerá en el JSON
                         sb.AppendLine($"                    Getter = (obj) => (({fullName})obj).{prop.Name},");
-                        sb.AppendLine($"                    PropertyTypeInfo = options.GetTypeInfo(typeof({pType})),");
+                        sb.AppendLine($"                    PropertyTypeInfo = {optionsName}.GetTypeInfo(typeof({pType})),");
                         sb.AppendLine($"                    DeclaringType = typeof({fullName}),");
-                        sb.AppendLine($"                    JsonPropertyName = \"{prop.Name}\",");
                         sb.AppendLine($"                    IsProperty = true,");
                         sb.AppendLine($"                    IsPublic = true,");
 
                         bool canSet = !prop.IsReadOnly && (prop.SetMethod == null || !prop.SetMethod.IsInitOnly);
-                        if (canSet) sb.AppendLine($"                    Setter = (obj, val) => (({fullName})obj).{prop.Name} = val,");
+                        if (canSet)
+                            sb.AppendLine($"                    Setter = (obj, val) => (({fullName})obj).{prop.Name} = val,");
 
                         sb.AppendLine("                }),");
                     }
@@ -706,6 +748,32 @@ namespace HubconAnalyzers.SourceGenerators
                 }
             }
             sb.AppendLine("    }");
+        }
+
+        private static bool IsDictionary(ITypeSymbol type, out ITypeSymbol keyType, out ITypeSymbol valueType)
+        {
+            keyType = null;
+            valueType = null;
+
+            if (type is INamedTypeSymbol namedType)
+            {
+                // Buscamos en el tipo mismo y en todas sus interfaces
+                var interfaceType = namedType.AllInterfaces
+                    .Concat(new[] { namedType })
+                    .FirstOrDefault(i => i.IsGenericType &&
+                        (i.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_ICollection_T || // Caso base
+                         i.OriginalDefinition.ToDisplayString().StartsWith("System.Collections.Generic.IDictionary<") ||
+                         i.OriginalDefinition.ToDisplayString().StartsWith("System.Collections.Generic.IReadOnlyDictionary<") ||
+                         i.OriginalDefinition.ToDisplayString().StartsWith("System.Collections.Generic.Dictionary<")));
+
+                if (interfaceType != null && interfaceType.TypeArguments.Length == 2)
+                {
+                    keyType = interfaceType.TypeArguments[0];
+                    valueType = interfaceType.TypeArguments[1];
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static bool IsCollection(ITypeSymbol type, out ITypeSymbol elementType)
@@ -751,43 +819,51 @@ namespace HubconAnalyzers.SourceGenerators
         {
             if (type == null || type.TypeKind == TypeKind.Error) return;
 
-            // 1. Filtros de namespaces (Igual que antes...)
+            // 1. Filtros de namespaces (Reflection, etc.)
             var ns = type.ContainingNamespace?.ToDisplayString();
             if (ns != null && (ns.StartsWith("System.Reflection") || ns.StartsWith("Microsoft.CodeAnalysis"))) return;
 
-            // 2. Si es un Array, procesar elemento y AGREGAR el array
+            // 2. Manejo de Arrays
             if (type is IArrayTypeSymbol arrayType)
             {
-                if (typesToSerialize.Add(type)) // Agregamos el array (int[])
+                if (typesToSerialize.Add(type))
                 {
-                    CollectTypesRecursive(arrayType.ElementType, typesToSerialize); // Procesamos el elemento (int)
+                    CollectTypesRecursive(arrayType.ElementType, typesToSerialize);
                 }
                 return;
             }
 
             if (type is INamedTypeSymbol named)
             {
-                // 3. Caso especial Task<T>: NO lo agregamos al HashSet, solo vamos al fondo
+                // 3. Caso especial Task<T>: Desempaquetar y salir (No queremos Task en el JSON)
                 if (named.IsGenericType && named.Name == "Task" && ns == "System.Threading.Tasks")
                 {
                     foreach (var arg in named.TypeArguments) CollectTypesRecursive(arg, typesToSerialize);
                     return;
                 }
 
-                // 4. Evitar duplicados para clases/structs/enums
+                // 4. Agregar el tipo actual (sea List<User>, User, o int?)
+                // Si ya estaba, cortamos para evitar bucles infinitos
                 if (!typesToSerialize.Add(type)) return;
 
-                // 5. Si tiene genéricos (como Nullable<T> o List<T>), recolectar los argumentos
+                // 5. Si es genérico (List<T>, Nullable<T>, Dictionary<K,V>)
                 if (named.IsGenericType)
                 {
+                    // Entramos recursivamente en los tipos de adentro
                     foreach (var arg in named.TypeArguments)
                     {
                         CollectTypesRecursive(arg, typesToSerialize);
                     }
+
+                    // Si es una colección de System, no queremos analizar sus propiedades (paso 6)
+                    // porque STJ ya sabe cómo tratar una List.
+                    if (ns != null && ns.StartsWith("System.Collections")) return;
                 }
 
-                // 6. Si es objeto con propiedades (y no es un tipo básico de System)
-                if ((type.TypeKind == TypeKind.Class || type.TypeKind == TypeKind.Struct) && type.SpecialType == SpecialType.None)
+                // 6. Si es un modelo propio (Clase/Struct que no es de sistema)
+                // Analizamos sus propiedades para seguir la cadena
+                if ((type.TypeKind == TypeKind.Class || type.TypeKind == TypeKind.Struct) &&
+                    type.SpecialType == SpecialType.None)
                 {
                     foreach (var prop in type.GetMembers().OfType<IPropertySymbol>())
                     {

@@ -1,10 +1,13 @@
 ﻿using Hubcon.Client;
 using HubconTestClient.Auth;
+using HubconTestClient.Contracts;
+using HubconTestClient.Models;
 using HubconTestClient.Modules;
 using HubconTestDomain;
 using Microsoft.CodeAnalysis;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.RateLimiting;
 
@@ -42,6 +45,8 @@ internal class Program
 
         builder.Services.AddHubconClient();
         builder.Services.AddRemoteServerModule<TestModule>(() => new TestModule(new object()));
+        builder.Services.AddRemoteServerModule<OpenApiServerModule>();
+
         builder.Logging.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
         builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
 
@@ -52,7 +57,21 @@ internal class Program
         var authManager = scope.ServiceProvider.GetRequiredService<AuthenticationManager>();
         var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserContract>>();
+        var openApi = scope.ServiceProvider.GetRequiredService<IOpenApiContract>();
 
+        var command = new CreateResponseCommand()
+        {
+            Model = "gpt-5-nano",
+            Input = "Tell me a three sentence bedtime story about a unicorn."
+        };
+
+        //var response = await openApi.CreateModelResponse(command);
+
+        //var response2 = await openApi.GetModelResponseInputs(response.Id);
+
+        //var response3 = await openApi.GetModelResponse(response.Id);
+
+        //var response4 = await openApi.DeleteModelResponse(response3.Id);
 
         logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
 
@@ -267,48 +286,48 @@ internal class Program
 
         int rps = 9999999;
 
-        await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
-        {
-            TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions()
-            {
-                QueueLimit = 1,
-                AutoReplenishment = true,
-                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
-                TokenLimit = rps,
-                TokensPerPeriod = rps,
-            });
+        //await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
+        //{
+        //    TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions()
+        //    {
+        //        QueueLimit = 1,
+        //        AutoReplenishment = true,
+        //        ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+        //        TokenLimit = rps,
+        //        TokensPerPeriod = rps,
+        //    });
 
-            try
-            {
-                var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-                Interlocked.Increment(ref clientCount);
-                //await foreach(var item in client.GetMessages2())
-                while (true)
-                {
-                    // var swReq = Stopwatch.StartNew();
-                    try
-                    {
-                        //await tokenBucketRateLimiter.AcquireAsync();
-                        //await client.IngestMessages(GetMessages2(), default);
-                        var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
-                        Interlocked.Increment(ref _finishedRequestsCount);
-                    }
-                    catch (Exception ex)
-                    {
-                        Interlocked.Increment(ref _errors);
-                    }
-                    finally
-                    {
-                        // swReq.Stop();
-                        // Latencies.Add(swReq.Elapsed.TotalMilliseconds);
-                    }
-                }
-            }
-            finally
-            {
-                Interlocked.Decrement(ref clientCount);
-            }
-        });
+        //    try
+        //    {
+        //        var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+        //        Interlocked.Increment(ref clientCount);
+        //        //await foreach(var item in client.GetMessages2())
+        //        while (true)
+        //        {
+        //            // var swReq = Stopwatch.StartNew();
+        //            try
+        //            {
+        //                //await tokenBucketRateLimiter.AcquireAsync();
+        //                //await client.IngestMessages(GetMessages2(), default);
+        //                var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
+        //                Interlocked.Increment(ref _finishedRequestsCount);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Interlocked.Increment(ref _errors);
+        //            }
+        //            finally
+        //            {
+        //                // swReq.Stop();
+        //                // Latencies.Add(swReq.Elapsed.TotalMilliseconds);
+        //            }
+        //        }
+        //    }
+        //    finally
+        //    {
+        //        Interlocked.Decrement(ref clientCount);
+        //    }
+        //});
 
         //int j = 0;
         //while (true)

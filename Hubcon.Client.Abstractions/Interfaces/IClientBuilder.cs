@@ -43,8 +43,10 @@ namespace Hubcon.Client.Abstractions.Interfaces
         public TokenBucketRateLimiterOptions? HttpRoundTripLimiterOptions { get; set; }
         public TokenBucketRateLimiterOptions? WebsocketFireAndForgetLimiterOptions { get; set; }
         public TokenBucketRateLimiterOptions? HttpFireAndForgetLimiterOptions { get; set; }
+
         bool LoggingEnabled { get; set; }
         bool HttpAuthIsEnabled { get; set; }
+        bool IsNonHubconServer { get; set; }
 
         T GetOrCreateClient<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(IServiceProvider services, bool useCached = true) where T : IControllerContract;
         object GetOrCreateClient([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type contractType, IServiceProvider services, bool useCached = true);

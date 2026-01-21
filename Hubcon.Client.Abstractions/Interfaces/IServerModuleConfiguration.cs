@@ -268,5 +268,11 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// </summary>
         /// <returns></returns>
         IServerModuleConfiguration EnableHttpEndpointOverloading();
+
+        /// <summary>
+        /// Indicates that the target server is not a Hubcon server.
+        /// </summary>
+        /// <returns></returns>
+        IServerModuleConfiguration NonHubconServer();
     }
 }

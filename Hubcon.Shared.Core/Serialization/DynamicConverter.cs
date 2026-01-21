@@ -64,6 +64,31 @@ namespace Hubcon.Shared.Core.Serialization
     [JsonSerializable(typeof(CancelMessage))]
     [JsonSerializable(typeof(Guid))]
     [JsonSerializable(typeof(MessageType))]
+    [JsonSerializable(typeof(string))]
+    // Enteros
+    [JsonSerializable(typeof(int))]
+    [JsonSerializable(typeof(int?))]
+    [JsonSerializable(typeof(long))]
+    [JsonSerializable(typeof(long?))]
+    // Decimales
+    [JsonSerializable(typeof(double))]
+    [JsonSerializable(typeof(double?))]
+    [JsonSerializable(typeof(float))]
+    [JsonSerializable(typeof(float?))]
+    [JsonSerializable(typeof(decimal))]
+    [JsonSerializable(typeof(decimal?))]
+    // Otros
+    [JsonSerializable(typeof(bool))]
+    [JsonSerializable(typeof(bool?))]
+    [JsonSerializable(typeof(DateTime))]
+    [JsonSerializable(typeof(DateTime?))]
+    [JsonSerializable(typeof(DateTimeOffset))]
+    [JsonSerializable(typeof(DateTimeOffset?))]
+    [JsonSerializable(typeof(Guid))]
+    [JsonSerializable(typeof(Guid?))]
+    // Especiales
+    [JsonSerializable(typeof(JsonElement))]
+    [JsonSerializable(typeof(object))]
     public partial class SystemTypesContext : JsonSerializerContext
     {
     }
@@ -277,7 +302,11 @@ namespace Hubcon.Shared.Core.Serialization
         {
             try
             {
-                return JsonSerializer.Serialize(value, JsonSerializerOptions);
+                if (value == null)
+                    return "";
+
+                Type type = value.GetType();
+                return JsonSerializer.Serialize(value, type, JsonSerializerOptions);
             }
             catch (Exception ex)
             {

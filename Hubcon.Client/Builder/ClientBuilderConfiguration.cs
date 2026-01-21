@@ -340,5 +340,11 @@ namespace Hubcon.Client.Builder
             builder.EnableHttpEndpointOverloading();
             return this;
         }
+
+        public IServerModuleConfiguration NonHubconServer()
+        {
+            builder.IsNonHubconServer = true;
+            return this;
+        }
     }
 }
