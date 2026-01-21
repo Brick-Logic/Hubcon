@@ -57,13 +57,13 @@ internal class Program
         var authManager = scope.ServiceProvider.GetRequiredService<AuthenticationManager>();
         var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserContract>>();
-        var openApi = scope.ServiceProvider.GetRequiredService<IOpenApiContract>();
+        //var openApi = scope.ServiceProvider.GetRequiredService<IOpenApiContract>();
 
-        var command = new CreateResponseCommand()
-        {
-            Model = "gpt-5-nano",
-            Input = "Tell me a three sentence bedtime story about a unicorn."
-        };
+        //var command = new CreateResponseCommand()
+        //{
+        //    Model = "gpt-5-nano",
+        //    Input = "Tell me a three sentence bedtime story about a unicorn."
+        //};
 
         //var response = await openApi.CreateModelResponse(command);
 

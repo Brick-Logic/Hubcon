@@ -26,8 +26,17 @@ namespace Hubcon.Server.Core.Websockets.Helpers
                     result = await _socket.ReceiveAsync(segment, cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (result.MessageType == WebSocketMessageType.Close)
+                    if (result.MessageType == WebSocketMessageType.Text)
+                    {
+                        _socket.Abort();
                         return null;
+                    }
+
+                    if (result.Count > _maxMessageSize)
+                    {
+                        _socket.Abort();
+                        return null;
+                    }
 
                     if (result.Count < segment.Length)
                         part = new TrimmedMemoryOwner(part, result.Count);
@@ -53,9 +62,11 @@ namespace Hubcon.Server.Core.Websockets.Helpers
             catch
             {
                 foreach (var part in parts)
+                {
                     part.Dispose();
+                }
 
-                return null;
+                throw;
             }
         }
     }

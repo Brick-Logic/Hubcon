@@ -18,6 +18,7 @@ using Hubcon.Shared.Core.Websockets.Messages.Streams;
 using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Hubcon.Shared.Core.Websockets.Messages.Token;
 using Hubcon.Shared.Core.Websockets.Models;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -26,6 +27,7 @@ using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Net.WebSockets;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Channels;
 
@@ -40,17 +42,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         private readonly ILogger<HubconWebSocketMiddleware> logger;
         private readonly IConnectionSupervisor connectionSupervisor;
         private readonly IInternalServerOptions options;
-
-        System.Timers.Timer? worker;
         int clientCount = 0;
-        int activeSubscriptionCount = 0;
-        int activeIngestCount = 0;
-        int activeStreamingsCount = 0;
-        int activeRequestsCount = 0;
-        int activeCallRequestsCount = 0;
-        int activeRoundTripRequestsCount = 0;
-
-        static Task CancelConnection(WebSocket webSocket) => webSocket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "TOKEN_EXPIRED: Provided authentication token is expired.", CancellationToken.None);
 
         public HubconWebSocketMiddleware(
             RequestDelegate next,
@@ -78,9 +70,53 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 await next(context);
                 return;
             }
+            var corsService = context.RequestServices.GetRequiredService<ICorsService>();
+            var corsPolicyProvider = context.RequestServices.GetRequiredService<ICorsPolicyProvider>();
+
+            var policy = await corsPolicyProvider.GetPolicyAsync(context, null);
+
+            if (policy != null)
+            {
+                var corsResult = corsService.EvaluatePolicy(context, policy);
+
+                if (!corsResult.IsOriginAllowed)
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return;
+                }
+
+                corsService.ApplyResult(corsResult, context.Response);
+            }
+
+            DateTime lastTokenExpirationDate = DateTime.MinValue;
+            string connectionId = Guid.NewGuid().ToString();
+            WebSocket webSocket = null!;
+
+            if (IsAuthorized(context, out var user, out var accessToken))
+            {
+                context.Request.Headers.Authorization = accessToken;
+                context.User = user!.Value.ClaimsPrincipal;
+                lastTokenExpirationDate = user.Value.ExpirationTime;
+                connectionSupervisor.Register(connectionId, user.Value.ExpirationTime, async () =>
+                {
+                    webSocket.Abort();
+                });
+            }
+            else
+            {
+                return;
+            }
+
+            try
+            {
+                webSocket = await context.WebSockets.AcceptWebSocketAsync();
+            }
+            catch (Exception)
+            {
+                return;
+            }
 
             Interlocked.Increment(ref clientCount);
-            DateTime lastTokenExpirationDate = DateTime.MinValue;
 
             IOperationConfigRegistry operationConfigRegistry = context.RequestServices.GetRequiredService<IOperationConfigRegistry>();
             IRateLimiterManager rateLimiterManager = context.RequestServices.GetRequiredService<IRateLimiterManager>();
@@ -95,24 +131,34 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             ConcurrentDictionary<Guid, (CancellationTokenSource, CancellationTokenRegistration)> _ingestHandlers = null!;
             ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels = null!;
             ConcurrentDictionary<Guid, CancellationTokenSource> _tasks = null!;
-            WebSocket webSocket = null!;
 
-            webSocket = await context.WebSockets.AcceptWebSocketAsync();
 
-            var settingsManager = new SettingsManager(operationRegistry, operationConfigRegistry);
-            string connectionId = Guid.NewGuid().ToString();
+            SettingsManager settingsManager = new SettingsManager(operationRegistry, operationConfigRegistry);
 
             try
             {
                 var receiver = new WebSocketMessageReceiver(webSocket, options);
                 var sender = new WebSocketMessageSender(webSocket, converter);
+                TrimmedMemoryOwner? firstMessageJson = null;
 
-                // Esperar connection_init
-                TrimmedMemoryOwner? firstMessageJson = await receiver.ReceiveAsync();
+                CancellationTokenSource fmCts = new CancellationTokenSource(5000);
+                try
+                {
+                    firstMessageJson = await receiver.ReceiveAsync(fmCts.Token);
+                }
+                catch
+                {
+                    webSocket.Abort();
+                    return;
+                }
+                finally
+                {
+                    fmCts.Dispose();
+                }
 
                 if (firstMessageJson == null || firstMessageJson.Memory.IsEmpty)
                 {
-                    await CloseWebSocketAsync(webSocket, WebSocketCloseStatus.InvalidPayloadData, "No se recibió un mensaje inicial válido.");
+                    webSocket.Abort();
                     return;
                 }
 
@@ -120,81 +166,18 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 if (initMessage == null || initMessage.Type != MessageType.connection_init)
                 {
-                    var message = $"Se esperaba un mensaje {nameof(MessageType.connection_init)}.";
-
-                    await sender.SendAsync(new ErrorMessage(initMessage?.Id ?? Guid.Empty, message, initMessage));
-
-                    await CloseWebSocketAsync(webSocket, WebSocketCloseStatus.PolicyViolation, message);
+                    webSocket.Abort();
                     return;
                 }
 
                 await sender.SendAsync(new ConnectionAckMessage(initMessage.Id));
 
-
-                if (options.WebsocketRequiresAuthorization)
-                {
-                    var accessToken = context.Request.Query["access_token"];
-
-                    if (string.IsNullOrWhiteSpace(accessToken))
-                        return;
-
-                    if (options.WebsocketTokenHandler != null)
-                    {
-                        try
-                        {
-                            var user = options.WebsocketTokenHandler.Invoke(accessToken!, context.RequestServices)!;
-
-                            if (user is null)
-                            {
-                                await webSocket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Unauthorized", default);
-
-                                logger?.LogInformation("Websocket authorization failed, user is null.");
-                                return;
-                            }
-
-                            context.Request.Headers.Authorization = accessToken;
-                            context.User = user.Value.Item1;
-                            lastTokenExpirationDate = user.Value.expirationDate;
-                            connectionSupervisor.Register(connectionId, user.Value.expirationDate, async () =>
-                            {
-                                static bool HandleEx(ILogger logger, Exception ex)
-                                {
-                                    logger.LogError(ex.Message);
-                                    return false;
-                                }
-
-                                try
-                                {
-                                    webSocket.Dispose();
-                                }
-                                catch (Exception ex) when (HandleEx(logger, ex))
-                                {
-                                }
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogInformation(ex, "Error while validating websocket token.");
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        logger?.LogInformation("Websocket requires authorization, but token handler is not configured or is invalid.");
-                        return;
-                    }
-                }
-                else
-                {
-                    context.Request.Headers.Authorization = Guid.NewGuid().ToString("N");
-                }
-
                 var lastPingId = Guid.Empty;
 
                 _heartbeatWatcher = new HeartbeatWatcher(timeoutSeconds, () =>
                 {
-                    cts.CancelAsync();
-                    return webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Socket timeout", CancellationToken.None);
+                    webSocket.Abort();
+                    return cts.CancelAsync();
                 });
 
                 _subscriptions = new();
@@ -211,15 +194,19 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     try
                     {
                         tmo = await receiver.ReceiveAsync();
+
+                        if (webSocket.State != WebSocketState.Open)
+                            break;
                     }
                     catch
                     {
+                        webSocket.Abort();
                         break;
                     }
 
                     if (options.CheckTokenExpirationOnMsgReceived && lastTokenExpirationDate != DateTime.MinValue && lastTokenExpirationDate < DateTime.Now)
                     {
-                        await CancelConnection(webSocket);
+                        webSocket.Abort();
                         break;
                     }
 
@@ -229,7 +216,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     var message = new BaseMessage(tmo.Memory);
 
                     if (message.Id == Guid.Empty)
-                        continue;
+                    {
+                        webSocket.Abort();
+                        return;
+                    }
 
                     switch (message.Type)
                     {
@@ -479,10 +469,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
                     }
                 }
-            }
-            catch (Exception ex)
+            }                
+            catch (Exception ex) when (LogException(ex, logger, webSocket))
             {
-                logger?.LogInformation(ex.Message);
             }
             finally
             {
@@ -517,9 +506,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 await value.FailedAckAsync();
                             }
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            logger?.LogError(ex.Message);
                         }
                     }
                 }
@@ -566,6 +554,61 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 webSocket.Dispose();
 
                 Interlocked.Decrement(ref clientCount);
+            }
+        }
+
+        static bool LogException(Exception ex, ILogger logger, WebSocket webSocket)
+        {
+            logger.LogError(ex, "Error crítico en el transporte Hubcon. Conexion abortada.");
+            webSocket?.Abort();
+            return false;
+        }
+
+        private bool IsAuthorized(HttpContext context, out (ClaimsPrincipal ClaimsPrincipal, DateTime ExpirationTime)? user, out string accessToken)
+        {
+            accessToken = "";
+            user = null;
+
+            if (options.WebsocketRequiresAuthorization)
+            {
+                var token = context.Request.Query["access_token"];
+
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    return false;
+                }
+
+                if (options.WebsocketTokenHandler != null)
+                {
+                    try
+                    {
+                        var claimsPrincipal = options.WebsocketTokenHandler.Invoke(token!, context.RequestServices)!;
+
+                        if (claimsPrincipal is null)
+                        {
+                            return false;
+                        }
+
+                        accessToken = token!;
+                        user = claimsPrincipal;
+
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                context.Request.Headers.Authorization = Guid.NewGuid().ToString("N");
+                user = (null!, DateTime.UtcNow.AddYears(1));
+                return true;
             }
         }
 

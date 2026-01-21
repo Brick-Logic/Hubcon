@@ -704,6 +704,8 @@ namespace Hubcon.Client.Core.Websockets
                         if (LoggingEnabled)
                             logger?.LogInformation("Intentando conectar...");
 
+                        _webSocket.Options.SetRequestHeader("Origin", "Hubcon");
+
                         WebSocketOptions?.Invoke(_webSocket.Options, serviceProvider);
 
                         var uriBuilder = new UriBuilder(_uri);

@@ -273,11 +273,10 @@ namespace HubconTest.ContractHandlers
             logger.LogInformation("Ingest terminado exitosamente");
         }
 
-        [AllowAnonymous]
-        public async Task<TestInputClass?> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
+        [Authorize(Roles = "Manager")]
+        public Task<TestInputClass> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
         {
-            return null;
-            //return Task.FromResult(Random.Shared.Next(-10, 50));
+            return Task.FromResult(input);
         }
     }
 }
