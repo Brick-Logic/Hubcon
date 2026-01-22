@@ -1,4 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -198,6 +199,12 @@ namespace Hubcon.Server.Core.Helpers
             {
                 builder.Produces(200, typeof(IResponse));
             }
+            else if(returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
+            {
+                builder
+                    .Produces(200, typeof(List<>).MakeGenericType(returnType.GenericTypeArguments[0]), "text/event-stream")
+                    .WithOpenApi(operation => SetDefaultExample(operation, Defaults.DefaultSuccessStatusCode.ToString(), returnType));
+            }
             else if (returnType == typeof(IResult) || returnType.IsAssignableTo(typeof(IResult)))
             {
                 builder.Produces(Defaults.DefaultSuccessStatusCode);
@@ -213,8 +220,13 @@ namespace Hubcon.Server.Core.Helpers
 
         private static OpenApiOperation SetDefaultExample(OpenApiOperation operation, string statusCode, Type dataType)
         {
-            if (operation.Responses.TryGetValue(statusCode, out var response) &&
-                response.Content.TryGetValue("application/json", out var content))
+            if(dataType.IsGenericType && dataType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
+            {
+                operation.Responses.TryGetValue(statusCode, out var streamResponse);
+                streamResponse.Content.TryGetValue("text/event-stream", out var streamContent);
+                streamContent.Example = CreateExampleResponse(dataType);
+            }
+            else if (operation.Responses.TryGetValue(statusCode, out var response) && response.Content.TryGetValue("application/json", out var content))
             {
                 content.Example = CreateExampleResponse(dataType);
             }
@@ -231,6 +243,16 @@ namespace Hubcon.Server.Core.Helpers
                 ["data"] = defaultDataValue,
                 ["success"] = new OpenApiBoolean(true),
                 ["message"] = new OpenApiString("")
+            };
+        }
+
+        private static IOpenApiAny CreateExampleStreamResponse(Type dataType)
+        {
+            var defaultDataValue = GetDefaultValueForType(dataType);
+
+            return new OpenApiObject
+            {
+                ["data"] = defaultDataValue
             };
         }
 

@@ -1,7 +1,9 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
+using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
+using Hubcon.Server.Core.Routing.Models;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
@@ -85,7 +87,134 @@ namespace Hubcon.Server.Core.Routing
             var wrapperType = blueprint.CallWrapperType!;
             var wrapperProps = wrapperType.GetProperties();
 
-            if (blueprint.HasReturnType)
+
+            if(blueprint.Kind == OperationKind.Stream)
+            {
+                if (verbResult == HttpMethod.Get)
+                {
+                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, true);
+                    builder = endpointGroup.MapGet(route, endpointDelegate);
+
+                    // 2. Registramos el GET con un RequestDelegate manual
+                    //builder = app.MapGet(route, async (HttpContext context) => { });
+
+                    SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
+
+                    builder.AddEndpointFilter(async (invocationContext, next) =>
+                    {
+                        var context = invocationContext.HttpContext;
+                        var services = context.RequestServices;
+                        var requestHandler = services.GetRequiredService<IRequestHandler>();
+                        var cancellationToken = context.RequestAborted;
+
+                        var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
+                        mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
+
+                        // Creamos la instancia del Wrapper (el Monstruo)
+                        var wrapper = Activator.CreateInstance(wrapperType);
+
+                        // Llenamos solo lo que sea Simple Type desde la Query
+                        foreach (var prop in wrapperType.GetProperties())
+                        {
+                            var value = context.Request.Query[prop.Name];
+                            if (value.Count > 0)
+                            {
+                                // Aquí puedes usar un TypeConverter o un simple Convert.ChangeType
+                                // Para performance extrema, esto se puede pre-compilar con IL
+                                var converted = Convert.ChangeType(value.ToString(), prop.PropertyType);
+                                prop.SetValue(wrapper, converted);
+                            }
+                        }
+
+                        // Inyectamos el CancellationToken si el Wrapper lo tiene
+                        // (Esto soluciona tu problema anterior también)
+                        var ctProp = wrapperType.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(CancellationToken));
+                        ctProp?.SetValue(wrapper, context.RequestAborted);
+
+                        var dict = context.Request.Query
+                            .Cast<KeyValuePair<string, StringValues>>()
+                            .ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString());
+
+                        var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
+                        var res = await requestHandler.GetStream(operationRequest, wrapper, cancellationToken);
+
+                        if (!res.Success)
+                        {
+                            var errorMessage = options.DetailedErrorsEnabled
+                                ? res.Error ?? "Internal error"
+                                : "Internal error";
+
+                            await InternalServerError(context);
+                            return new BaseOperationResponse(false, errorMessage);
+                        }
+
+                        return new SseResult(res.Data!);
+                    })
+                    .ApplyOpenApiFromMethod(controllerMethod!, verbResult);
+                    builder.WithRequestTimeout(options.HttpTimeout);
+                }
+                else
+                {
+                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, false);
+                    builder = endpointGroup.MapPost(route, endpointDelegate);
+
+                    SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
+
+                    builder.AddEndpointFilter(async (invocationContext, next) =>
+                    {
+                        var context = invocationContext.HttpContext;
+                        var services = context.RequestServices;
+                        var requestHandler = services.GetRequiredService<IRequestHandler>();
+                        var converter = services.GetRequiredService<IDynamicConverter>();
+                        var cancellationToken = context.RequestAborted;
+
+                        if (context.Request.ContentLength > options.MaxHttpMessageSize)
+                        {
+                            await RequestTooLarge(context);
+                            return new BaseOperationResponse(false, "Request too large.");
+                        }
+
+                        var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType);
+
+                        if (wrapper == null)
+                        {
+                            await BadRequest(context);
+                            return new BaseOperationResponse(false, "Invalid request payload.");
+                        }
+
+                        var args = new Dictionary<string, object>();
+
+                        foreach (var prop in wrapperProps)
+                        {
+                            var value = prop.GetValue(wrapper);
+                            args[prop.Name!] = value!;
+                        }
+
+                        var operationRequest = new OperationRequest(
+                            operationName,
+                            simpleContractName,
+                            args
+                        );
+
+                        var res = await requestHandler.GetStream(operationRequest, wrapper, cancellationToken);
+
+                        if (!res.Success)
+                        {
+                            var errorMessage = options.DetailedErrorsEnabled
+                                ? res.Error ?? "Internal error"
+                                : "Internal error";
+
+                            await InternalServerError(context);
+                            return new BaseOperationResponse(false, errorMessage);
+                        }
+
+                        return new SseResult(res.Data!);
+                    }).ApplyOpenApiFromMethod(controllerMethod!, verbResult);
+                    builder.WithRequestTimeout(options.HttpTimeout);
+                    options.EndpointConventions?.Invoke(builder);
+                }
+            }
+            else if (blueprint.HasReturnType)
             {
                 if (verbResult == HttpMethod.Get)
                 {

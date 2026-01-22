@@ -12,7 +12,7 @@ namespace HubconTestClient.Modules
     {
         public override void Configure(IServerModuleConfiguration configuration)
         {
-            configuration.WithBaseUrl("http://192.168.0.130:5000");
+            configuration.WithBaseUrl("http://localhost:5000");
 
             configuration.EnableWebsocketAutoReconnect(true);
             configuration.GlobalLimit(200000000);
@@ -67,6 +67,10 @@ namespace HubconTestClient.Modules
                         operationSelector
                             .Configure(contract => contract.GetTemperatureFromServerWithInput)
                             .UseTransport(TransportType.Websockets);
+
+                        operationSelector
+                            .Configure(contract => contract.GetMessages(default(int)))
+                            .UseTransport(TransportType.Http);
                     });
             });
 

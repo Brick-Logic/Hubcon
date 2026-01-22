@@ -69,31 +69,42 @@ internal class Program
 
         //var response = await openAi.CreateModelResponse(command);
 
-        var request = new OpenAIStreamRequest()
-        {
-            Model = "gpt-5-nano",
-            Input = "Hablame sobre las ultimas novedades de .NET 10 en un parrafo de aprox 500 palabras.",
-        };
+        //var request = new OpenAIStreamRequest()
+        //{
+        //    Model = "gpt-5-nano",
+        //    Input = "Hablame sobre las ultimas novedades de .NET 10 en un parrafo de aprox 500 palabras.",
+        //};
 
-        var finalText = "";
-        await foreach(var item in openAi.GetResponseStream(request))
+        //var finalText = "";
+        //await foreach(var item in openAi.GetResponseStream(request))
+        //{
+        //    logger.LogInformation($"Event received: {item.Delta}");
+        //    finalText += item.Delta;
+        //}
+
+        //logger.LogInformation($"Final text: {finalText}");
+
+        logger.LogInformation("Probando streaming por SSE, pidiendo 10 eventos...");
+
+        var eventos = 0;
+        await foreach(var item in client.GetMessages(10))
         {
-            logger.LogInformation($"Event received: {item.Delta}");
-            finalText += item.Delta;
+            logger.LogInformation($"Evento recibido: {item}");
+            eventos++;
         }
 
-        logger.LogInformation($"Final text: {finalText}");
-        Console.ReadKey();
-        Console.ReadKey();
-        Console.ReadKey();
+        if (eventos == 10)
+            logger.LogInformation("SSE OK.");
+        else
+            throw new Exception("No se recibió la cantidad de eventos SSE pedida.");
 
-        //var response2 = await openApi.GetModelResponseInputs(response.Id);
+            //var response2 = await openApi.GetModelResponseInputs(response.Id);
 
-        //var response3 = await openApi.GetModelResponse(response.Id);
+            //var response3 = await openApi.GetModelResponse(response.Id);
 
-        //var response4 = await openApi.DeleteModelResponse(response3.Id);
+            //var response4 = await openApi.DeleteModelResponse(response3.Id);
 
-        logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
+            logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
 
         Console.ReadKey();
 

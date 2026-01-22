@@ -254,7 +254,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             {
                 foreach (var operation in operationskvp.Value)
                 {
-                    if (operation.Value.Kind != OperationKind.CallMethod && operation.Value.Kind != OperationKind.InvokeMethod)
+                    if (operation.Value.Kind != OperationKind.CallMethod && operation.Value.Kind != OperationKind.InvokeMethod && operation.Value.Kind != OperationKind.Stream)
                         continue;
 
                     if (operation.Value.OperationInfo is MethodInfo)

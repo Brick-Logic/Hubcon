@@ -66,11 +66,13 @@ namespace HubconTest.ContractHandlers
             return true;
         }
 
+        [AllowAnonymous]
         [StreamingSettings(1000)]
         public async IAsyncEnumerable<string> GetMessages(int count)
         {
             for (int i = 0; i < count; i++)
             {
+                await Task.Delay(500);
                 yield return "hola2";
             }
         }

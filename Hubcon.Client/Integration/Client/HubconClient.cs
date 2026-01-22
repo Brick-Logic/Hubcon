@@ -279,8 +279,6 @@ namespace Hubcon.Client.Integration.Client
                     await contractOptions.CallHook(HookType.OnSend, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
 
-                    ClientOptions.HttpClientOptions?.Invoke(HttpClient, ServiceProvider);
-
                     HttpResponseMessage response = await HttpClient.SendAsync(httpRequest, cancellationToken);
 
                     await operationOptions.CallHook(HookType.OnAfterSend, context);
@@ -478,8 +476,6 @@ namespace Hubcon.Client.Integration.Client
                     await operationOptions.CallHook(HookType.OnSend, context);
                     await contractOptions.CallHook(HookType.OnSend, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
-
-                    ClientOptions.HttpClientOptions?.Invoke(HttpClient, ServiceProvider);
 
                     _ = await HttpClient.SendAsync(httpRequest, cancellationToken);
 
@@ -720,8 +716,9 @@ namespace Hubcon.Client.Integration.Client
             await operationOptions.CallHook(HookType.OnSend, context);
             await contractOptions.CallHook(HookType.OnSend, context);
             await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
+            bool isWebsocketOperation = contractOptions.IsWebsocketOperation(request.OperationName);
 
-            if (ClientOptions.IsNonHubconServer)
+            if (ClientOptions.IsNonHubconServer || !isWebsocketOperation)
             {
                 await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
@@ -732,7 +729,34 @@ namespace Hubcon.Client.Integration.Client
                 StringContent? content = null;
                 string url;
 
-                url = BuildBodyAndFinalUrl(request, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
+                if (!isWebsocketOperation)
+                {
+                    if (httpMethod == HttpMethod.Post)
+                    {
+                        var arguments = converter.Serialize(request.Arguments);
+                        content = new StringContent(arguments, Encoding.UTF8, "application/json");
+                        url = _restHttpUrl + methodInfo.GetRoute(ClientOptions.UseHttpEndpointOverloading).FullRoute;
+                    }
+                    else
+                    {
+                        var builder = new UriBuilder(_restHttpUrl);
+
+                        var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+
+                        foreach (var argument in request.Arguments)
+                        {
+                            query[argument.Key] = argument.Value?.ToString() ?? "";
+                        }
+
+                        builder.Path = methodInfo.GetRoute(ClientOptions.UseHttpEndpointOverloading).FullRoute;
+                        builder.Query = query.ToString();
+                        url = builder.ToString();
+                    }
+                }
+                else
+                {
+                    url = BuildBodyAndFinalUrl(request, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
+                }
 
                 var httpRequest = new HttpRequestMessage(httpMethod, url);
 
@@ -748,8 +772,6 @@ namespace Hubcon.Client.Integration.Client
 
                 if (needsAuth && AuthenticationManager.IsSessionActive)
                     httpRequest.Headers.Authorization = new AuthenticationHeaderValue(AuthenticationManager.TokenType!, AuthenticationManager.AccessToken);
-
-                ClientOptions.HttpClientOptions?.Invoke(HttpClient, ServiceProvider);
 
                 HttpResponseMessage response; 
 
