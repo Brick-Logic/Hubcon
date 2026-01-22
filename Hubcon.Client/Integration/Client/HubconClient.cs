@@ -155,110 +155,14 @@ namespace Hubcon.Client.Integration.Client
                 {
                     await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                    // 1. Mapeo de Atributos a Verbos HTTP
-                    HttpMethod httpMethod = MethodVerb.GetOrAdd(methodInfo, method =>
-                    {
-                        if (method.GetCustomAttribute<HttpGetAttribute>() != null) return HttpMethod.Get;
-                        if (method.GetCustomAttribute<HttpPostAttribute>() != null) return HttpMethod.Post;
-                        if (method.GetCustomAttribute<HttpPutAttribute>() != null) return HttpMethod.Put;
-                        if (method.GetCustomAttribute<HttpDeleteAttribute>() != null) return HttpMethod.Delete;
-
-                        // Fallback basado en argumentos como tenías antes
-                        return request.Arguments.Count > 0 ? HttpMethod.Post : HttpMethod.Get;
-                    });
-
-                    var finalRoute = MethodRoute.GetOrAdd(methodInfo, method =>
-                    {
-                        if (method.GetCustomAttribute<HttpGetAttribute>() != null) return method.GetCustomAttribute<HttpGetAttribute>().Template;
-                        if (method.GetCustomAttribute<HttpPostAttribute>() != null) return method.GetCustomAttribute<HttpPostAttribute>().Template;
-                        if (method.GetCustomAttribute<HttpPutAttribute>() != null) return method.GetCustomAttribute<HttpPutAttribute>().Template;
-                        if (method.GetCustomAttribute<HttpDeleteAttribute>() != null) return method.GetCustomAttribute<HttpDeleteAttribute>().Template;
-
-                        return "/";
-                    });
-
-                    // 2. Lógica de Reemplazo en URL (Path Parameters)
-                    // Copiamos los argumentos a una lista de trabajo para saber cuáles sobran (y van al Body o Query)
-                    var remainingArguments = request.Arguments.ToDictionary(k => k.Key, v => v.Value);
-
-                    foreach (var arg in request.Arguments)
-                    {
-                        string placeholder = $"{{{arg.Key}}}";
-                        if (finalRoute.Contains(placeholder))
-                        {
-                            finalRoute = finalRoute.Replace(placeholder, Uri.EscapeDataString(arg.Value?.ToString() ?? ""));
-                            remainingArguments.Remove(arg.Key); // Ya se usó en el Path, lo quitamos
-                        }
-                    }
+                    HttpMethod httpMethod = GetHttpMethod(request, methodInfo);
+                    string finalRoute = GetFinalRoute(methodInfo);
+                    Dictionary<string, object> remainingArguments = GetRemainingArguments(request, ref finalRoute);
 
                     StringContent? content = null;
                     string url;
 
-                    // 3. Construcción de Body o QueryString según el Verbo
-                    if (httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Put)
-                    {
-                        object? bodyData = null;
-
-                        // Intentamos obtener el nombre del parámetro marcado con [Body]
-                        var bodyParamName = BodyParameterName.GetOrAdd(methodInfo, method =>
-                            method.GetParameters()
-                                  .FirstOrDefault(p => p.GetCustomAttribute<AsBodyAttribute>() != null)?.Name);
-
-                        // Si existe un parámetro [Body] y está en los argumentos, lo extraemos (Aplanamiento)
-                        if (bodyParamName != null && request.Arguments.TryGetValue(bodyParamName, out var explicitBody))
-                        {
-                            bodyData = explicitBody;
-                        }
-                        else
-                        {
-                            // Lógica original: Solo enviamos en el Body lo que NO se usó en la URL
-                            // Si queda solo un argumento llamado "value", lo desempaquetamos.
-                            // Si no, enviamos el diccionario con lo restante.
-                            bodyData = remainingArguments.Count == 1 && remainingArguments.ContainsKey("value")
-                                        ? remainingArguments["value"]
-                                        : remainingArguments;
-                        }
-
-                        var jsonBody = converter.Serialize(bodyData);
-                        content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-                        url = _restHttpUrl.TrimEnd('/') + "/" + finalRoute.TrimStart('/');
-                    }
-                    else // GET o DELETE
-                    {
-                        var builder = new UriBuilder(_restHttpUrl);
-                        builder.Path = (builder.Path.TrimEnd('/') + "/" + finalRoute.TrimStart('/')).Replace("//", "/");
-                        var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
-
-                        // Intentamos obtener el nombre del parámetro marcado con [AsQuery]
-                        var queryParamName = QueryParameterName.GetOrAdd(methodInfo, method =>
-                            method.GetParameters()
-                                  .FirstOrDefault(p => p.GetCustomAttribute<AsQueryAttribute>() != null)?.Name);
-
-                        // Si hay un objeto [AsQuery], lo aplanamos
-                        if (queryParamName != null && remainingArguments.TryGetValue(queryParamName, out var queryObj) && queryObj != null)
-                        {
-                            // Usamos reflexión (o podrías usar el converter si tiene un ToDictionary) 
-                            // para extraer las propiedades del objeto a la QueryString
-                            var props = queryObj.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                            foreach (var prop in props)
-                            {
-                                var val = prop.GetValue(queryObj);
-                                if (val != null) query[prop.Name] = val.ToString();
-                            }
-
-                            // Removemos el objeto original de los restantes para que no se duplique
-                            remainingArguments.Remove(queryParamName);
-                        }
-
-                        // El resto de argumentos sobrantes van como parámetros normales
-                        foreach (var arg in remainingArguments)
-                        {
-                            query[arg.Key] = arg.Value?.ToString() ?? "";
-                        }
-
-                        builder.Query = query.ToString();
-                        url = builder.ToString();
-                    }
+                    url = BuildBodyAndFinalUrl(request, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
 
                     var httpRequest = new HttpRequestMessage(httpMethod, url);
 
