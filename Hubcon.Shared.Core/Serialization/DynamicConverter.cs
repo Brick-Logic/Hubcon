@@ -316,7 +316,7 @@ namespace Hubcon.Shared.Core.Serialization
 
         public JsonElement SerializeToElement<T>(T value)
         {
-            if (value == null)
+            if (value == null || (value is JsonElement element && (element.ValueKind == JsonValueKind.Undefined || element.ValueKind == JsonValueKind.Null)))
                 return default;
 
             try
@@ -372,10 +372,10 @@ namespace Hubcon.Shared.Core.Serialization
                 _options = options;
                 _options!.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 _options!.WriteIndented = false;
-                _options!.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                _options!.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault; // Maneja nulos
                 _options!.MaxDepth = 64;
                 _options!.PropertyNameCaseInsensitive = true;
-                _options!.Converters.Add(new JsonStringEnumConverter<Hubcon.Shared.Core.Websockets.MessageType>(JsonNamingPolicy.CamelCase));
+                _options!.Converters.Add(new JsonStringEnumConverter<MessageType>(JsonNamingPolicy.CamelCase));
             }
         }
     }

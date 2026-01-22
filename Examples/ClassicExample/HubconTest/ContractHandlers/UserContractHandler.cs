@@ -276,9 +276,9 @@ namespace HubconTest.ContractHandlers
         }
 
         [Authorize(Roles = "Manager")]
-        public Task<TestInputClass> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
+        public async Task<TestInputClass?> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(input);
+            return null;
         }
     }
 }
