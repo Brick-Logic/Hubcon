@@ -1,5 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Serialization;
+using System;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Net.WebSockets;

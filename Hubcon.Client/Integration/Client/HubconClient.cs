@@ -275,6 +275,7 @@ namespace Hubcon.Client.Integration.Client
                     context.IsSuccess = operationResponse.Success;
                     context.Result = operationResponse.Data;
                     context.Error = operationResponse.Error;
+                    context.StatusCode = operationResponse.StatusCode;
 
                     if (!operationResponse.Success)
                         throw new HubconRemoteException($"Ocurrió un error en el servidor. Mensaje recibido: {operationResponse.Error}");

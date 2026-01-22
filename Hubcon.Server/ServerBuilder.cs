@@ -67,6 +67,7 @@ namespace Hubcon.Server
 
             AddGlobalMiddleware<InternalRoutingMiddleware>();
             AddGlobalMiddleware<InternalExceptionMiddleware>();
+            AddGlobalMiddleware<InternalConcurrencyCheckMiddleware>((services, type) => services.AddSingleton(type));
 
             builder.Services.AddHttpContextAccessor();
 

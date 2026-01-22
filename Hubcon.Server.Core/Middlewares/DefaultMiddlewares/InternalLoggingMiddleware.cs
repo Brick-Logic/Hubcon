@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
-    internal sealed class InternalLoggingMiddleware(ILogger<InternalLoggingMiddleware> logger) : ILoggingMiddleware
+    public sealed class InternalLoggingMiddleware(ILogger<InternalLoggingMiddleware> logger) : ILoggingMiddleware
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {

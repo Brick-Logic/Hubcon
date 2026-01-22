@@ -27,6 +27,7 @@ using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Channels;
@@ -746,6 +747,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 await Task.Delay(100);
                 var result = await ingestTask;
 
+                if(result is BaseOperationResponse<string> errorResponse)
+                {
+                    await sender.SendAsync(new ErrorMessage(ingestInitMessage.Id, errorResponse.Error));
+                    return;
+                }
+
                 if (sender.State != WebSocketState.Open)
                     return;
 
@@ -809,6 +816,22 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 operationRequest = converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload)!;
                 result = await entrypoint.HandleMethodWithResult(operationRequest, localCts.Token);
+
+                //if (result is BaseOperationResponse<string> errorResponse)
+                //{
+                //    await sender.SendAsync(new ErrorMessage(operationInvokeMessage.Id, errorResponse.Error));
+                //    return;
+                //}
+
+                if (webSocket.State == WebSocketState.Open)
+                {
+                    var response = new OperationResponseMessage(
+                        operationInvokeMessage.Id,
+                        converter.SerializeToElement(result)
+                    );
+
+                    await sender.SendAsync(response);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -825,16 +848,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 _tasks.TryRemove(operationInvokeMessage.Id, out _);
                 await localCts.CancelAsync();
-
-                if (webSocket.State == WebSocketState.Open)
-                {
-                    var response = new OperationResponseMessage(
-                        operationInvokeMessage.Id,
-                        converter.SerializeToElement(result)
-                    );
-
-                    await sender.SendAsync(response);
-                }
             }
         }
 
@@ -929,6 +942,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 var streamResult = await entrypoint.HandleSubscription(operationRequest, localCts.Token);
 
+                if (streamResult is BaseOperationResponse<string> errorResponse)
+                {
+                    await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, errorResponse.Error));
+                    return;
+                }
+
                 if (streamResult == null) { return; }
 
                 if (!streamResult.Success)
@@ -1014,6 +1033,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(streamInitMessage.Payload)!;
                 var streamResult = await entrypoint.HandleMethodStream(operationRequest, localCts.Token);
 
+                if (streamResult is BaseOperationResponse<string> errorResponse)
+                {
+                    await sender.SendAsync(new ErrorMessage(streamInitMessage.Id, errorResponse.Error));
+                    return;
+                }
+
                 if (streamResult == null) { return; }
 
                 if (!streamResult.Success)
@@ -1080,8 +1105,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 {
                     await sender.SendAsync(new StreamCompleteMessage(streamInitMessage.Id));
                 }
-            }
-            ;
+            };
         }
 
         private async Task HandleTokenRefresh(

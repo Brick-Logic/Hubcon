@@ -137,9 +137,15 @@ namespace Hubcon.Server.Core.Routing
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
                         var res = await requestHandler.GetStream(operationRequest, wrapper, cancellationToken);
-
+                        
                         if (!res.Success)
                         {
+                            if(res is BaseOperationResponse<string> operationResponse)
+                            {
+                                context.Response.StatusCode = operationResponse.StatusCode;
+                                return operationResponse;
+                            }
+
                             var errorMessage = options.DetailedErrorsEnabled
                                 ? res.Error ?? "Internal error"
                                 : "Internal error";
@@ -200,6 +206,12 @@ namespace Hubcon.Server.Core.Routing
 
                         if (!res.Success)
                         {
+                            if (res is BaseOperationResponse<string> operationResponse)
+                            {
+                                context.Response.StatusCode = operationResponse.StatusCode;
+                                return operationResponse;
+                            }
+
                             var errorMessage = options.DetailedErrorsEnabled
                                 ? res.Error ?? "Internal error"
                                 : "Internal error";
@@ -266,6 +278,12 @@ namespace Hubcon.Server.Core.Routing
 
                         if (!res.Success)
                         {
+                            if (res is BaseOperationResponse<string> operationResponse)
+                            {
+                                context.Response.StatusCode = operationResponse.StatusCode;
+                                return operationResponse;
+                            }
+
                             var errorMessage = options.DetailedErrorsEnabled
                                 ? res.Error ?? "Internal error"
                                 : "Internal error";
@@ -327,6 +345,12 @@ namespace Hubcon.Server.Core.Routing
 
                         if (!res.Success)
                         {
+                            if (res is BaseOperationResponse<string> operationResponse)
+                            {
+                                context.Response.StatusCode = operationResponse.StatusCode;
+                                return operationResponse;
+                            }
+
                             var errorMessage = options.DetailedErrorsEnabled
                                 ? res.Error ?? "Internal error"
                                 : "Internal error";
@@ -371,6 +395,12 @@ namespace Hubcon.Server.Core.Routing
 
                         if (!res.Success)
                         {
+                            if (res is BaseOperationResponse<string> operationResponse)
+                            {
+                                context.Response.StatusCode = operationResponse.StatusCode;
+                                return operationResponse;
+                            }
+
                             var errorMessage = options.DetailedErrorsEnabled
                                 ? res.Error ?? "Internal error"
                                 : "Internal error";
@@ -437,6 +467,12 @@ namespace Hubcon.Server.Core.Routing
                         {
                             if (options.DetailedErrorsEnabled)
                             {
+                                if (res is BaseOperationResponse<string> operationResponse && operationResponse.StatusCode != 200)
+                                {
+                                    context.Response.StatusCode = operationResponse.StatusCode;
+                                    return operationResponse;
+                                }
+
                                 await InternalServerError(context);
                                 return new BaseOperationResponse(false, res.Error);
                             }

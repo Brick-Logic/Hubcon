@@ -1,4 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
@@ -20,7 +21,7 @@ namespace Hubcon.Shared.Abstractions.Models
         public override bool Success { get; set; }
 
         public override string Error { get; set; }
-
+        public int StatusCode { get; } = 200;
         public T Data { get; set; } = default(T)!;
 
         object IOperationResult.Data { get => this.Data!; set => Data = (T)value!; }
@@ -30,6 +31,15 @@ namespace Hubcon.Shared.Abstractions.Models
             Success = success;
             Data = data ?? default!;
             Error = error;
+        }
+
+        [JsonConstructor]
+        public BaseOperationResponse(bool success, int statusCode, T data = default!, string error = default!)
+        {
+            Success = success;
+            Data = data ?? default!;
+            Error = error;
+            StatusCode = statusCode;
         }
     }
 }

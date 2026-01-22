@@ -10,7 +10,7 @@ using System.Security.Claims;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
-    public class AuthenticationMiddleware(Lazy<IAuthorizationService> _authorizationService, ILogger<AuthenticationMiddleware> logger) : ILoggingMiddleware
+    public sealed class AuthenticationMiddleware(Lazy<IAuthorizationService> _authorizationService, ILogger<AuthenticationMiddleware> logger) : ILoggingMiddleware
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {

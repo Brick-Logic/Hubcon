@@ -141,6 +141,13 @@ namespace Hubcon.Server.Abstractions.Interfaces
         ICoreServerOptions EnableHttpLogging(bool enabled = true);
 
         /// <summary>
+        /// Defines how many operations can be processed concurrently for a single websocket client.
+        /// </summary>
+        /// <param name="enabled"></param>
+        /// <returns></returns>
+        ICoreServerOptions SetMaxConcurrentOperations(int count);
+
+        /// <summary>
         /// Configures a handler to process WebSocket token authentication.
         /// </summary>
         /// <remarks>The provided <paramref name="tokenHandler"/> is invoked to validate and extract user
@@ -395,5 +402,10 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Defines if method overloading is enabled for endpoints.
         /// </summary>
         bool MethodOverloadingIsEnabled { get; }
+
+        /// <summary>
+        /// Defines how many operations can be processed at the same time for a single client.
+        /// </summary>
+        int MaxConcurrentOperations { get; }
     }
 }

@@ -154,6 +154,8 @@ namespace HubconTest
 
                 serverOptions.ConfigureCore(config =>
                 {
+                    config.SetMaxConcurrentOperations(5000000);
+
                     config.UseWebsocketTokenHandler((token, serviceProvider) =>
                     {
                         var user = JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);

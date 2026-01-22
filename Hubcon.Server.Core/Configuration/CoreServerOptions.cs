@@ -34,7 +34,7 @@ namespace Hubcon.Server.Core.Configuration
         private bool? remoteCancellationIsAllowed;
         private bool? checkTokenExpirationOnMsgReceived;
         private bool? methodOverloadingIsEnabled;
-
+        private int? maxConcurrentOperations;
 
         private Func<TokenBucketRateLimiterOptions> websocketReaderRateLimiter = () => new TokenBucketRateLimiterOptions
         {
@@ -186,6 +186,8 @@ namespace Hubcon.Server.Core.Configuration
         public bool CheckTokenExpirationOnMsgReceived => checkTokenExpirationOnMsgReceived ?? true;
 
         public bool MethodOverloadingIsEnabled => methodOverloadingIsEnabled ?? false;
+
+        public int MaxConcurrentOperations => maxConcurrentOperations ?? 0;
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -378,6 +380,12 @@ namespace Hubcon.Server.Core.Configuration
         {
             throw new NotImplementedException("This feature is not yet implemented.");
             methodOverloadingIsEnabled = true;
+            return this;
+        }
+
+        public ICoreServerOptions SetMaxConcurrentOperations(int count)
+        {
+            maxConcurrentOperations ??= count;
             return this;
         }
     }
