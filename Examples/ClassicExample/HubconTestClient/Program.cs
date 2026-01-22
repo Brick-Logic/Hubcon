@@ -25,7 +25,7 @@ internal class Program
         Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "true");
 
         Console.WriteLine($"¿Es Native AOT?: {System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported == false}");
-     
+
         var process = Process.GetCurrentProcess();
 
         long coreMask = 0;
@@ -84,193 +84,37 @@ internal class Program
 
         //logger.LogInformation($"Final text: {finalText}");
 
-        logger.LogInformation("Probando streaming por SSE, pidiendo 10 eventos...");
 
-        var eventos = 0;
-        await foreach(var item in client.GetMessages(10))
-        {
-            logger.LogInformation($"Evento recibido: {item}");
-            eventos++;
-        }
+        //var response2 = await openApi.GetModelResponseInputs(response.Id);
 
-        if (eventos == 10)
-            logger.LogInformation("SSE OK.");
-        else
-            throw new Exception("No se recibió la cantidad de eventos SSE pedida.");
+        //var response3 = await openApi.GetModelResponse(response.Id);
 
-            //var response2 = await openApi.GetModelResponseInputs(response.Id);
+        //var response4 = await openApi.DeleteModelResponse(response3.Id);
 
-            //var response3 = await openApi.GetModelResponse(response.Id);
-
-            //var response4 = await openApi.DeleteModelResponse(response3.Id);
-
-            logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
-
+        logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
         Console.ReadKey();
 
-        logger.LogWarning($"Probando login...");
-        var result = await authManager.LoginAsync("miusuario", "");
-        logger.LogInformation("{0}", $"Login result: {result.IsSuccess}");
-        logger.LogInformation($"Login OK.");
-
+        await TestLogin(authManager, logger);
         await Task.Delay(100);
 
 
-        try
-        {
-            await client.IngestMessages(GetMessages(10), null);
-        }
-        catch (Exception ex)
-        {
-            logger.LogInformation($"Validaciones OK.");
-        }
+        //await TestValidations(client, logger);
+        //await Task.Delay(100);
+        //await TestIngest(client, logger);
+        //await Task.Delay(100);
+        //await TestOverloading(client2, logger);
+        //await Task.Delay(100);
+        //await TestInvokeNoParameters(client2, logger);
+        //await Task.Delay(100);
+        //await TestSubscriptions(client, logger);
+        //await Task.Delay(100);
+        //await TestInvokeWithParameters(client, logger);
+        //await Task.Delay(100);
+        //await TestRemoteCancellation(client, logger);
+        //await Task.Delay(100);
+        //await TestSseStreaming(client, logger);
+        //await Task.Delay(100);
 
-        await Task.Delay(100);
-
-        logger.LogWarning($"Probando ingest...");
-        var source1 = GetMessages(3);
-        var source2 = GetMessages(3);
-        var source3 = GetMessages(3);
-        var source4 = GetMessages(3);
-        var source5 = GetMessages(3);
-        await client.IngestMessages2(source1, source2, source3, source4, source5);
-        logger.LogInformation($"Ingest OK.");
-
-        await Task.Delay(1000);
-
-        logger.LogWarning($"Probando invocación sin parametros...");
-        var text = await client2.TestReturn();
-
-        logger.LogWarning($"Probando parametros sobrecargados sobre http...");
-        try
-        {
-            await client2.TestMethod();
-            await client2.TestMethod("hola");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError($"Error en invocación sobrecargada: {ex}");
-            logger.LogError($"La sobrecarga falló o no está habilitada.");
-        }
-
-
-        if (text != null)
-            logger.LogInformation($"Invocación sin parametros OK.");
-        else
-            throw new Exception("Invocación sin parametros fallida.");
-
-        await Task.Delay(100);
-
-        int eventosRecibidos = 0;
-
-        logger.LogWarning($"Comenzando prueba de suscripciones...");
-
-        bool evento1 = false;
-
-        async Task handler(int? input)
-        {
-            logger.LogInformation($"Evento recibido: {input}");
-            Interlocked.Add(ref eventosRecibidos, 1);
-            evento1 = true;
-        }
-
-        bool evento2 = false;
-        async Task handler2(int? input)
-        {
-            logger.LogInformation($"Evento recibido: {input}");
-            Interlocked.Add(ref eventosRecibidos, 1);
-            evento2 = true;
-        }
-
-        bool evento3 = false;
-        async Task handler3(int? input)
-        {
-            logger.LogInformation($"Evento recibido: {input}");
-            Interlocked.Add(ref eventosRecibidos, 1);
-            evento3 = true;
-        }
-
-        bool evento4 = false;
-        async Task handler4(int? input)
-        {
-            logger.LogInformation($"Evento recibido: {input}");
-            Interlocked.Add(ref eventosRecibidos, 1);
-            evento4 = true;
-        }
-
-        async Task handler5(IEnumerable<int> input)
-        {
-            logger.LogInformation($"Evento recibido: [{string.Join(",", input)}]");
-            Interlocked.Add(ref eventosRecibidos, 1);
-            evento4 = true;
-        }
-
-        client.OnUserCreated!.AddHandler(handler);
-        await client.OnUserCreated.Subscribe();
-        client.OnUserCreated2!.AddHandler(handler2);
-        await client.OnUserCreated2.Subscribe();
-        client.OnUserCreated3!.AddHandler(handler3);
-        await client.OnUserCreated3.Subscribe();
-        client.OnUserCreated4!.AddHandler(handler4);
-        await client.OnUserCreated4.Subscribe();
-        client.OnEnumerableTest!.AddHandler(handler5);
-        await client.OnEnumerableTest.Subscribe();
-
-        logger.LogInformation("Eventos conectados.");
-
-        await Task.Delay(100);
-
-        logger.LogWarning("Enviando request de prueba...");
-        await client.CreateUser();
-        logger.LogInformation($"Esperando eventos...");
-
-        await Task.Delay(1000);
-
-        if (eventosRecibidos == 5)
-        {
-            logger.LogInformation($"Eventos recibidos correctamente.");
-        }
-        else
-        {
-            throw new Exception("No se recibieron todos los eventos esperados.");
-        }
-
-        await Task.Delay(100);
-
-        logger.LogWarning("Probando invocación con retorno...");
-
-        var temp = await client.GetTemperatureFromServer("");
-
-        logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
-
-        await Task.Delay(100);
-
-        logger.LogWarning("Probando cancelacion remota...");
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        bool temp2 = false;
-        try
-        {
-            temp2 = await client.GetTemperatureFromServerBlocking(cts.Token);
-        }
-        catch (Exception e)
-        {
-            logger.LogInformation(e.ToString());
-        }
-
-        logger.LogInformation($"Cancelacion OK. Datos recibidos: {temp2}");
-
-        await Task.Delay(100);
-
-        logger.LogWarning("Probando streaming de 10 mensajes...");
-
-        await foreach (var item in client.GetMessages(10))
-        {
-            logger.LogInformation($"Respuesta recibida: {item}");
-        }
-
-        logger.LogInformation("Streaming OK.");
-
-        await Task.Delay(100);
 
         _sw = Stopwatch.StartNew();
         var ts = TimeSpan.FromSeconds(1);
@@ -388,6 +232,188 @@ internal class Program
         //        //Interlocked.Decrement(ref clientCount);
         //    }
         //}
+    }
+
+    private static async Task TestSseStreaming(IUserContract client, ILogger<IUserContract> logger)
+    {
+        logger.LogInformation("Probando streaming por SSE, pidiendo 10 eventos...");
+
+        var eventos = 0;
+        await foreach (var item in client.GetMessages(10))
+        {
+            logger.LogInformation($"Evento recibido: {item}");
+            eventos++;
+        }
+
+        if (eventos == 10)
+            logger.LogInformation("SSE OK.");
+        else
+            throw new Exception("No se recibió la cantidad de eventos SSE pedida.");
+    }
+
+    private static async Task TestRemoteCancellation(IUserContract client, ILogger<IUserContract> logger)
+    {
+        logger.LogWarning("Probando cancelacion remota...");
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        bool temp2 = false;
+        try
+        {
+            temp2 = await client.GetTemperatureFromServerBlocking(cts.Token);
+        }
+        catch (Exception e)
+        {
+            if (e is OperationCanceledException)
+                logger.LogInformation("Cancelacion OK.");
+            else
+            {
+                logger.LogInformation(e.ToString());
+                throw;
+            }
+        }
+    }
+
+    private static async Task TestInvokeWithParameters(IUserContract client, ILogger<IUserContract> logger)
+    {
+        logger.LogWarning("Probando invocación con retorno...");
+
+        var temp = await client.GetTemperatureFromServer("");
+
+        logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
+    }
+
+    private static async Task TestSubscriptions(IUserContract client, ILogger<IUserContract> logger)
+    {
+        int eventosRecibidos = 0;
+
+        logger.LogWarning($"Comenzando prueba de suscripciones...");
+
+        bool evento1 = false;
+
+        async Task handler(int? input)
+        {
+            logger.LogInformation($"Evento recibido: {input}");
+            Interlocked.Add(ref eventosRecibidos, 1);
+            evento1 = true;
+        }
+
+        bool evento2 = false;
+        async Task handler2(int? input)
+        {
+            logger.LogInformation($"Evento recibido: {input}");
+            Interlocked.Add(ref eventosRecibidos, 1);
+            evento2 = true;
+        }
+
+        bool evento3 = false;
+        async Task handler3(int? input)
+        {
+            logger.LogInformation($"Evento recibido: {input}");
+            Interlocked.Add(ref eventosRecibidos, 1);
+            evento3 = true;
+        }
+
+        bool evento4 = false;
+        async Task handler4(int? input)
+        {
+            logger.LogInformation($"Evento recibido: {input}");
+            Interlocked.Add(ref eventosRecibidos, 1);
+            evento4 = true;
+        }
+
+        async Task handler5(IEnumerable<int> input)
+        {
+            logger.LogInformation($"Evento recibido: [{string.Join(",", input)}]");
+            Interlocked.Add(ref eventosRecibidos, 1);
+            evento4 = true;
+        }
+
+        client.OnUserCreated!.AddHandler(handler);
+        await client.OnUserCreated.Subscribe();
+        client.OnUserCreated2!.AddHandler(handler2);
+        await client.OnUserCreated2.Subscribe();
+        client.OnUserCreated3!.AddHandler(handler3);
+        await client.OnUserCreated3.Subscribe();
+        client.OnUserCreated4!.AddHandler(handler4);
+        await client.OnUserCreated4.Subscribe();
+        client.OnEnumerableTest!.AddHandler(handler5);
+        await client.OnEnumerableTest.Subscribe();
+
+        logger.LogInformation("Eventos conectados.");
+
+        await Task.Delay(100);
+
+        logger.LogWarning("Enviando request de prueba...");
+        await client.CreateUser();
+        logger.LogInformation($"Esperando eventos...");
+
+        await Task.Delay(1000);
+
+        if (eventosRecibidos == 5)
+        {
+            logger.LogInformation($"Eventos recibidos correctamente.");
+        }
+        else
+        {
+            throw new Exception("No se recibieron todos los eventos esperados.");
+        }
+    }
+
+    private static async Task TestInvokeNoParameters(ISecondTestContract client2, ILogger<IUserContract> logger)
+    {
+        logger.LogWarning($"Probando invocación sin parametros...");
+        var text = await client2.TestReturn();
+
+        if (text != null)
+            logger.LogInformation($"Invocación sin parametros OK.");
+        else
+            throw new Exception("Invocación sin parametros fallida.");
+    }
+
+    private static async Task TestOverloading(ISecondTestContract client2, ILogger<IUserContract> logger)
+    {
+        logger.LogWarning($"Probando parametros sobrecargados sobre http...");
+        try
+        {
+            await client2.TestMethod();
+            await client2.TestMethod("hola");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error en invocación sobrecargada: {ex}");
+            logger.LogError($"La sobrecarga falló o no está habilitada.");
+        }
+    }
+
+    private static async Task TestIngest(IUserContract client, ILogger<IUserContract> logger)
+    {
+        logger.LogWarning($"Probando ingest...");
+        var source1 = GetMessages(3);
+        var source2 = GetMessages(3);
+        var source3 = GetMessages(3);
+        var source4 = GetMessages(3);
+        var source5 = GetMessages(3);
+        await client.IngestMessages2(source1, source2, source3, source4, source5);
+        logger.LogInformation($"Ingest OK.");
+    }
+
+    private static async Task TestValidations(IUserContract client, ILogger<IUserContract> logger)
+    {
+        try
+        {
+            await client.IngestMessages(GetMessages(10), null);
+        }
+        catch (Exception ex)
+        {
+            logger.LogInformation($"Validaciones OK.");
+        }
+    }
+
+    private static async Task TestLogin(AuthenticationManager authManager, ILogger<IUserContract> logger)
+    {
+        logger.LogWarning($"Probando login...");
+        var result = await authManager.LoginAsync("miusuario", "");
+        logger.LogInformation("{0}", $"Login result: {result.IsSuccess}");
+        logger.LogInformation($"Login OK.");
     }
 
     static async IAsyncEnumerable<string> GetMessages(int count, [EnumeratorCancellation] CancellationToken cancellationToken = default)
