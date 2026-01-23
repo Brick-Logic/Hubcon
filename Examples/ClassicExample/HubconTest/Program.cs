@@ -214,7 +214,7 @@ namespace HubconTest
 
             telemetry.OnRequestsPerSecondUpdated += (telemetry, rps) =>
             {
-                Console.Title = $"CPU: {telemetry.CurrentCPU} | Threads: {telemetry.CurrentThreads} | RPS: {rps.RequestsPerSecond} | WS clients: {telemetry.CurrentWebSocketClients} | WS req/s: {rps.WebSocketsRequestsPerSecond} | HTTP req/s: {rps.HttpRequestsPerSecond}"; 
+                Console.Title = $" RPS: {rps.RequestsPerSecond} | CPU: {telemetry.CurrentCPU} | Threads: {telemetry.CurrentThreads} | WS clients: {telemetry.CurrentWebSocketClients} | WS req/s: {rps.WebSocketsRequestsPerSecond} | HTTP req/s: {rps.HttpRequestsPerSecond}"; 
             };
 
             app.Run();

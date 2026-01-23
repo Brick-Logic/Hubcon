@@ -370,6 +370,10 @@ namespace Hubcon.Client.Core.Websockets
 
                 return response;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 if (LoggingEnabled)
@@ -448,6 +452,10 @@ namespace Hubcon.Client.Core.Websockets
                     throw new HubconRemoteException(converted.Error ?? "An error occurred on the server while processing the request.");
 
             }
+            //catch (OperationCanceledException)
+            //{
+            //    throw;
+            //}
             catch (Exception ex)
             {
                 if (LoggingEnabled)

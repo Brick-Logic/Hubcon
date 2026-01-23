@@ -98,22 +98,22 @@ internal class Program
         await Task.Delay(100);
 
 
-        //await TestValidations(client, logger);
-        //await Task.Delay(100);
-        //await TestIngest(client, logger);
-        //await Task.Delay(100);
-        //await TestOverloading(client2, logger);
-        //await Task.Delay(100);
-        //await TestInvokeNoParameters(client2, logger);
-        //await Task.Delay(100);
-        //await TestSubscriptions(client, logger);
-        //await Task.Delay(100);
-        //await TestInvokeWithParameters(client, logger);
-        //await Task.Delay(100);
-        //await TestRemoteCancellation(client, logger);
-        //await Task.Delay(100);
-        //await TestSseStreaming(client, logger);
-        //await Task.Delay(100);
+        await TestValidations(client, logger);
+        await Task.Delay(100);
+        await TestIngest(client, logger);
+        await Task.Delay(100);
+        await TestOverloading(client2, logger);
+        await Task.Delay(100);
+        await TestInvokeNoParameters(client2, logger);
+        await Task.Delay(100);
+        await TestSubscriptions(client, logger);
+        await Task.Delay(100);
+        await TestInvokeWithParameters(client, logger);
+        await Task.Delay(100);
+        await TestRemoteCancellation(client, logger);
+        await Task.Delay(100);
+        await TestSseStreaming(client, logger);
+        await Task.Delay(100);
 
 
         _sw = Stopwatch.StartNew();
@@ -266,8 +266,7 @@ internal class Program
                 logger.LogInformation("Cancelacion OK.");
             else
             {
-                logger.LogInformation(e.ToString());
-                throw;
+                logger.LogInformation($"FAILED: {e}");
             }
         }
     }

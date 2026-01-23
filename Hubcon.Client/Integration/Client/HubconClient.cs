@@ -197,8 +197,13 @@ namespace Hubcon.Client.Integration.Client
                     await contractOptions.CallHook(HookType.OnAfterSend, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
 
-                    if (!result.Success)
-                        throw new HubconRemoteException($"Ocurrió un error en el servidor. Mensaje recibido: {result.Error}");
+                    if (result == null || !result.Success)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                            throw new OperationCanceledException();
+
+                        throw new HubconRemoteException($"Ocurrió un error en el servidor. Mensaje recibido: {result?.Error}");
+                    }
 
                     await operationOptions.CallHook(HookType.OnResponse, context);
                     await contractOptions.CallHook(HookType.OnResponse, context);
