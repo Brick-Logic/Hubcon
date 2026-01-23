@@ -10,77 +10,63 @@ using System.Security.Claims;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
-    public sealed class AuthenticationMiddleware(Lazy<IAuthorizationService> _authorizationService, ILogger<AuthenticationMiddleware> logger) : ILoggingMiddleware
+    public sealed class AuthenticationMiddleware(IAuthorizationService _authService, ILogger<AuthenticationMiddleware> logger) : ILoggingMiddleware
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
-            var user = context.HttpContext?.User;
+            var httpContext = context.HttpContext;
+            var user = httpContext?.User;
 
-            if (context.HttpContext!.WebSockets.IsWebSocketRequest && (context.Blueprint.Kind == OperationKind.Subscription || context.Blueprint.Kind == OperationKind.Stream) && user?.Identity?.IsAuthenticated != true)
+            // 1. Fast Path: WebSocket sin autenticar
+            if (httpContext!.WebSockets.IsWebSocketRequest && user?.Identity?.IsAuthenticated != true)
             {
-                logger.LogError("Server: Subscriptions are required to be authenticated. Source IP: {0}.", context.HttpContext?.Connection.RemoteIpAddress);
-                context.Result = new BaseOperationResponse<object>(false, "Subscriptions are required to be authenticated.");
-                context.Exception = new UnauthorizedAccessException("Subscriptions are required to be authenticated.");
-                context.HttpContext?.Connection.RequestClose();
+                // Evitamos interpolación de strings en el log si no es error crítico para ahorrar RAM
+                logger.LogError("Unauthorized WebSocket request.");
+
+                context.Result = new BaseOperationResponse<object>(false, "Unauthenticated");
+                context.Exception = new UnauthorizedAccessException();
+                httpContext.Connection.RequestClose();
                 return;
             }
 
-            bool allowed = true;
-
-            if (context.Blueprint.RequiresAuthorization)
+            // 2. Si no requiere autorización, seguimos sin tocar nada
+            if (!context.Blueprint.RequiresAuthorization)
             {
-                var localCache = new Dictionary<string, bool>();
+                await next();
+                return;
+            }
 
-                foreach (var policy in context.Blueprint.PrecomputedPolicies)
+            // 3. Chequeo de Políticas (Zero-allocation loop)
+            // Usamos ReadOnlySpan o listas precomputadas del blueprint
+            var policies = context.Blueprint.PrecomputedPolicies;
+            for (int i = 0; i < policies.Length; i++)
+            {
+                var authResult = await _authService.AuthorizeAsync(user!, null, policies[i]);
+                if (!authResult.Succeeded)
                 {
-                    allowed &= await CheckPolicyCached(user, policy, localCache);
-                }
-
-                foreach (var role in context.Blueprint.PrecomputedRoles)
-                {
-                    allowed &= CheckRoleCached(user, role, localCache);
+                    SetUnauthorized(context);
+                    return;
                 }
             }
 
-            if (!allowed)
+            // 4. Chequeo de Roles (Zero-allocation loop)
+            var roles = context.Blueprint.PrecomputedRoles;
+            foreach (var role in roles)
             {
-                context.Result = new BaseOperationResponse<object>(false, "Access denied");
-                context.Exception = new UnauthorizedAccessException("Access denied");
-                return;
+                if (!user!.IsInRole(role))
+                {
+                    SetUnauthorized(context);
+                    return;
+                }
             }
 
             await next();
         }
 
-        private static readonly MemoryCache GlobalAuthCache = new MemoryCache(new MemoryCacheOptions());
-
-        private async ValueTask<bool> CheckPolicyCached(ClaimsPrincipal user, string policy, Dictionary<string, bool> localCache)
+        private static void SetUnauthorized(IOperationContext context)
         {
-            localCache.TryGetValue(policy, out bool localResult);
-
-            string key = $"{user.Identity!.Name}:{policy}";
-            bool globalResult = !GlobalAuthCache.TryGetValue(key, out bool cachedGlobal) || cachedGlobal;
-
-            bool coldResult = (localResult || globalResult) || (await _authorizationService.Value.AuthorizeAsync(user, null, policy)).Succeeded;
-
-            bool result = localResult | globalResult | coldResult;
-
-            localCache[policy] = result;
-
-            if (!(localResult || globalResult))
-                GlobalAuthCache.Set(key, result, TimeSpan.FromMinutes(1));
-
-            return result;
-        }
-
-        private static bool CheckRoleCached(ClaimsPrincipal user, string role, Dictionary<string, bool> localCache)
-        {
-            localCache.TryGetValue(role, out bool localResult);
-
-            bool result = localResult | user.IsInRole(role);
-
-            localCache[role] = result;
-            return result;
+            context.Result = new BaseOperationResponse<object>(false, "Access denied");
+            context.Exception = new UnauthorizedAccessException("Access denied");
         }
     }
 }

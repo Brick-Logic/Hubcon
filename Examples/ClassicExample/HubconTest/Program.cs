@@ -71,7 +71,7 @@ namespace HubconTest
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            ThreadPool.SetMinThreads(2000, 2000);
+            ThreadPool.SetMinThreads(200, 200);
 
             builder.WebHost.ConfigureKestrel(options => {
                 options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);

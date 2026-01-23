@@ -163,7 +163,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return;
                 }
 
-                var initMessage = new ConnectionInitMessage(firstMessageJson.Memory);
+                var initMessage = new ConnectionInitMessage(firstMessageJson);
 
                 if (initMessage == null || initMessage.Type != MessageType.connection_init)
                 {
@@ -214,7 +214,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     if (tmo == null || tmo.Memory.IsEmpty)
                         continue;
 
-                    var message = new BaseMessage(tmo.Memory);
+                    var message = new BaseMessage(tmo);
 
                     if (message.Id == Guid.Empty)
                     {
@@ -234,7 +234,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            _ = HandlePing(webSocket, sender, lastPingId, _heartbeatWatcher, new PingMessage(tmo.Memory, message.Id, message.Type));
+                            _ = HandlePing(webSocket, sender, lastPingId, _heartbeatWatcher, new PingMessage(tmo, message.Id, message.Type));
                             break;
 
                         case MessageType.subscription_init:
@@ -253,7 +253,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 _subscriptions,
                                 _ackChannels,
                                 sender,
-                                new SubscriptionInitMessage(tmo.Memory, message.Id, message.Type),
+                                new SubscriptionInitMessage(tmo, message.Id, message.Type),
                                 rateLimiterManager,
                                 entrypoint,
                                 cts.Token);
@@ -274,7 +274,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 _subscriptions,
                                 context,
                                 entrypoint,
-                                new SubscriptionCompleteMessage(tmo.Memory, message.Id, message.Type));
+                                new SubscriptionCompleteMessage(tmo, message.Id, message.Type));
 
                             break;
 
@@ -293,7 +293,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 _streams,
                                 _ackChannels,
                                 sender,
-                                new StreamInitMessage(tmo.Memory, message.Id, message.Type),
+                                new StreamInitMessage(tmo, message.Id, message.Type),
                                 webSocket,
                                 rateLimiterManager,
                                 entrypoint,
@@ -315,7 +315,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 _subscriptions,
                                 context,
                                 entrypoint,
-                                new SubscriptionCompleteMessage(tmo.Memory, message.Id, message.Type));
+                                new SubscriptionCompleteMessage(tmo, message.Id, message.Type));
 
                             break;
 
@@ -331,7 +331,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             _ = HandleAck(
                                 _ackChannels,
-                                new AckMessage(tmo.Memory, message.Id, message.Type));
+                                new AckMessage(tmo, message.Id, message.Type));
 
                             break;
 
@@ -348,7 +348,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             _ = HandleOperationInvoke(
                                 context,
                                 sender,
-                                new OperationInvokeMessage(tmo.Memory, message.Id, message.Type),
+                                new OperationInvokeMessage(tmo, message.Id, message.Type),
                                 _tasks,
                                 webSocket,
                                 entrypoint,
@@ -368,7 +368,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             _ = HandleOperationCall(
                                 context,
-                                new OperationCallMessage(tmo.Memory, message.Id, message.Type),
+                                new OperationCallMessage(tmo, message.Id, message.Type),
                                 _tasks,
                                 entrypoint,
                                 cts.Token);
@@ -387,7 +387,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             _ = HandleIngestInit(
                                 sender,
-                                new IngestInitMessage(tmo.Memory, message.Id, message.Type),
+                                new IngestInitMessage(tmo, message.Id, message.Type),
                                 _ingestHandlers,
                                 _ingestRouters,
                                 settingsManager,
@@ -408,7 +408,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            _ = HandleIngestData(_ingestRouters, new IngestDataMessage(tmo.Memory, message.Id, message.Type));
+                            _ = HandleIngestData(_ingestRouters, new IngestDataMessage(tmo, message.Id, message.Type));
 
                             break;
 
@@ -422,7 +422,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            _ = HandleIngestDataWithAck(_ingestRouters, sender, new IngestDataWithAckMessage(tmo.Memory, message.Id, message.Type));
+                            _ = HandleIngestDataWithAck(_ingestRouters, sender, new IngestDataWithAckMessage(tmo, message.Id, message.Type));
 
                             break;
 
@@ -436,7 +436,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 break;
                             }
 
-                            _ = HandleIngestComplete(_ingestRouters, new IngestCompleteMessage(tmo.Memory, message.Id, message.Type));
+                            _ = HandleIngestComplete(_ingestRouters, new IngestCompleteMessage(tmo, message.Id, message.Type));
 
                             break;
                         case MessageType.cancel:
@@ -460,7 +460,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 sender,
                                 connectionId,
                                 _tasks,
-                                new TokenUpdateMessage(tmo.Memory, message.Id, message.Type),
+                                new TokenUpdateMessage(tmo, message.Id, message.Type),
                                 webSocket,
                                 cts.Token);
 
@@ -637,7 +637,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 if (complete.Item3 != null)
                     await complete.Item3.DisposeAsync();
+
             }
+
+            ingestCompleteMessage.Dispose();
         }
 
         private async Task HandleIngestDataWithAck(
@@ -654,6 +657,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
             var ingestDataAckMessage = new IngestDataAckMessage(ingestDataWithAckMessage.Id);
             await sender.SendAsync(ingestDataAckMessage);
+            ingestDataWithAckMessage.Dispose();
         }
 
         private async Task HandleIngestData(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingests, IngestDataMessage ingestDataMessage)
@@ -663,6 +667,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
             ingest.Item3.NotifyHeartbeat();
             ingest.Item1.OnNextElement(ingestDataMessage.Data);
+            ingestDataMessage.Dispose();
         }
 
         private async Task HandleIngestInit(
@@ -783,6 +788,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 }
                 _ingestHandlers.TryRemove(ingestInitMessage.Id, out _);
                 await localCts.CancelAsync();
+                ingestInitMessage.Dispose();
             }
         }
 
@@ -848,6 +854,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 _tasks.TryRemove(operationInvokeMessage.Id, out _);
                 await localCts.CancelAsync();
+                operationInvokeMessage.Dispose();
             }
         }
 
@@ -860,7 +867,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         {
             using var localCts = new CancellationTokenSource();
             using var registration = cancellationToken.Register(localCts.Cancel);
-
 
             try
             {
@@ -878,6 +884,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 tasks.TryRemove(operationCallMessage.Id, out _);
                 await localCts.CancelAsync();
+                operationCallMessage.Dispose();
             }
         }
 
@@ -901,8 +908,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 logger?.LogError("{Message}", ex.Message);
             }
-
-            return;
+            finally
+            {
+                subscriptionCompletemessage.Dispose();
+            }
         }
 
         private static async Task HandleAck(
@@ -914,6 +923,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 await value.AckAsync();
                 _ackChannels.TryRemove(ackMessage.Id, out _);
             }
+
+            ackMessage.Dispose();
         }
 
         private async Task HandleSubscribe(
@@ -970,7 +981,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         {
                             retryable.GetPayload(out object? message);
                             var edwa = new SubscriptionDataWithAckMessage(subscribeMessage.Id, converter.SerializeToElement(message), ackId);
-                            await sender.SendAsync(converter.SerializeToElement(edwa));
+                            await sender.SendAsync(edwa);
                         }
 
                         if (_ackChannels.TryRemove(ackId, out IRetryableMessage? channel))
@@ -1005,6 +1016,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 _subscriptions.TryRemove(subscribeMessage.Id, out _);
                 await localCts.CancelAsync();
+                subscribeMessage.Dispose();
             }
         }
 
@@ -1063,7 +1075,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         {
                             retryable.GetPayload(out object? message);
                             var edwa = new StreamDataWithAckMessage(streamInitMessage.Id, converter.SerializeToElement(message), ackId);
-                            await sender.SendAsync(converter.SerializeToElement(edwa));
+                            await sender.SendAsync(edwa);
 
                             if (!options.MessageRetryIsEnabled)
                             {
@@ -1105,6 +1117,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 {
                     await sender.SendAsync(new StreamCompleteMessage(streamInitMessage.Id));
                 }
+
+                streamInitMessage.Dispose();
             };
         }
 
@@ -1158,6 +1172,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 _tasks.TryRemove(tokenUpdateMessage.Id, out _);
                 await localCts.CancelAsync();
+                tokenUpdateMessage.Dispose();
             }
         }
 
@@ -1177,6 +1192,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             heartbeatWatcher.NotifyHeartbeat();
 
             await sender.SendAsync(new PongMessage(pingMessage.Id));
+            pingMessage.Dispose();
         }
 
         private static async Task CloseWebSocketAsync(

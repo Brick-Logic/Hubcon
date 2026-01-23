@@ -417,6 +417,7 @@ namespace Hubcon.Client.Core.Websockets
             var tcs = new TaskCompletionSource<OperationResponseMessage>();
             _operationTcs.TryAdd(request.Id, tcs);
             OperationResponseMessage? response = null;
+            BaseOperationResponse<T> converted = null!;
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
@@ -434,6 +435,18 @@ namespace Hubcon.Client.Core.Websockets
                 await SendMessageAsync(request, CancellationToken.None);
 
                 response = await TimeoutHelper.WaitWithTimeoutAsync(tcs.Task.WaitAsync, options.WebsocketTimeout);
+
+                if (tcs.Task.Exception?.InnerException is OperationCanceledException)
+                    throw tcs.Task.Exception.InnerException;
+
+                if (response == null)
+                    throw new HubconGenericException("There was an unknown error or the request timed out.");
+
+                converted = converter.DeserializeJsonElement<BaseOperationResponse<T>>(response.Result)!;
+
+                if (!converted.Success)
+                    throw new HubconRemoteException(converted.Error ?? "An error occurred on the server while processing the request.");
+
             }
             catch (Exception ex)
             {
@@ -445,24 +458,16 @@ namespace Hubcon.Client.Core.Websockets
             finally
             {
                 _operationTcs.TryRemove(request.Id, out _);
+                response?.Dispose();
             }
-
-            if (tcs.Task.Exception?.InnerException is OperationCanceledException)
-                throw tcs.Task.Exception.InnerException;
-
-            if (response == null)
-                throw new HubconGenericException("There was an unknown error or the request timed out.");
-
-            var converted = converter.DeserializeJsonElement<BaseOperationResponse<T>>(response.Result)!;
-
-            if (!converted.Success)
-                throw new HubconRemoteException(converted.Error ?? "An error occurred on the server while processing the request.");
 
             return converted;
         }
 
         private async Task HandleIncomingMessage()
         {
+            TrimmedMemoryOwner tmo = null!;
+
             try
             {
                 while (!_cts.IsCancellationRequested)
@@ -472,9 +477,9 @@ namespace Hubcon.Client.Core.Websockets
                         if (_webSocket?.State != WebSocketState.Open)
                             await EnsureConnectedAsync();
 
-                        TrimmedMemoryOwner? tmo = await _messageChannel.Reader.ReadAsync();
+                        tmo = await _messageChannel.Reader.ReadAsync();
 
-                        var message = new BaseMessage(tmo.Memory);
+                        var message = new BaseMessage(tmo);
 
                         if (message.Id == Guid.Empty)
                             continue;
@@ -485,7 +490,7 @@ namespace Hubcon.Client.Core.Websockets
                                 if (!options.WebsocketRequiresPong)
                                     break;
 
-                                var pongMessage = new PongMessage(tmo.Memory, message.Id, message.Type);
+                                var pongMessage = new PongMessage(tmo, message.Id, message.Type);
 
                                 if (_lastPongId == pongMessage.Id)
                                 {
@@ -502,7 +507,7 @@ namespace Hubcon.Client.Core.Websockets
                                 break;
 
                             case MessageType.subscription_data:
-                                var eventData = new SubscriptionDataMessage(tmo.Memory, message.Id, message.Type);
+                                var eventData = new SubscriptionDataMessage(tmo, message.Id, message.Type);
                                 if (eventData?.Id != null &&
                                     _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
                                 {
@@ -512,7 +517,7 @@ namespace Hubcon.Client.Core.Websockets
                                 break;
 
                             case MessageType.stream_data:
-                                var streamData = new StreamDataMessage(tmo.Memory, message.Id, message.Type);
+                                var streamData = new StreamDataMessage(tmo, message.Id, message.Type);
 
                                 if (streamData?.Id != null && _streams.TryGetValue(streamData.Id, out var stream))
                                 {
@@ -523,7 +528,7 @@ namespace Hubcon.Client.Core.Websockets
                                 break;
 
                             case MessageType.stream_complete:
-                                var streamComplete = new StreamCompleteMessage(tmo.Memory, message.Id, message.Type);
+                                var streamComplete = new StreamCompleteMessage(tmo, message.Id, message.Type);
 
                                 if (streamComplete?.Id != null &&
                                     _streams.TryGetValue(streamComplete.Id, out var streamCompleteInfo))
@@ -534,7 +539,7 @@ namespace Hubcon.Client.Core.Websockets
                                 break;
 
                             case MessageType.error:
-                                var errorData = new ErrorMessage(tmo.Memory, message.Id, message.Type);
+                                var errorData = new ErrorMessage(tmo, message.Id, message.Type);
                                 if (errorData?.Id != null && _subscriptions.TryGetValue(errorData.Id, out var subToError))
                                 {
                                     subToError.OnError(new Exception(errorData.Error));
@@ -543,7 +548,7 @@ namespace Hubcon.Client.Core.Websockets
                                 break;
 
                             case MessageType.ingest_init_ack:
-                                var ingestInitAckMessage = new IngestInitAckMessage(tmo.Memory, message.Id, message.Type);
+                                var ingestInitAckMessage = new IngestInitAckMessage(tmo, message.Id, message.Type);
 
                                 if (ingestInitAckMessage == null) break;
 
@@ -555,7 +560,7 @@ namespace Hubcon.Client.Core.Websockets
                                 break;
 
                             case MessageType.ingest_result:
-                                var ingestResultMessage = new IngestResultMessage(tmo.Memory, message.Id, message.Type);
+                                var ingestResultMessage = new IngestResultMessage(tmo, message.Id, message.Type);
 
                                 if (ingestResultMessage == null) break;
 
@@ -567,7 +572,7 @@ namespace Hubcon.Client.Core.Websockets
                                 break;
 
                             case MessageType.token_update:
-                                var tokenUpdateResponseMessage = new TokenUpdateResponseMessage(tmo.Memory, message.Id, message.Type);
+                                var tokenUpdateResponseMessage = new TokenUpdateResponseMessage(tmo, message.Id, message.Type);
 
                                 if (tokenUpdateResponseMessage == null) break;
 
@@ -579,7 +584,7 @@ namespace Hubcon.Client.Core.Websockets
                                 break;
 
                             case MessageType.ingest_data_ack:
-                                var ingestDataAckMessage = new IngestDataAckMessage(tmo.Memory, message.Id, message.Type);
+                                var ingestDataAckMessage = new IngestDataAckMessage(tmo, message.Id, message.Type);
 
                                 if (ingestDataAckMessage == null) break;
 
@@ -592,7 +597,7 @@ namespace Hubcon.Client.Core.Websockets
 
                             case MessageType.operation_response:
                                 var operationResponseMessage =
-                                    new OperationResponseMessage(tmo.Memory, message.Id, message.Type);
+                                    new OperationResponseMessage(tmo, message.Id, message.Type);
 
                                 if (operationResponseMessage == null) break;
 
@@ -814,8 +819,7 @@ namespace Hubcon.Client.Core.Websockets
                         {
                             if (kvp.ShouldReconnect)
                             {
-                                var request =
-                                    converter.DeserializeJsonElement<SubscriptionRequest>(kvp.RequestData!.Request);
+                                var request = new SubscriptionInitMessage(kvp.RequestData!.Id, kvp.RequestData.Request);
                                 await SendMessageAsync(request!);
                             }
                             else
@@ -829,9 +833,7 @@ namespace Hubcon.Client.Core.Websockets
                         {
                             if (kvp.Item1.ShouldReconnect)
                             {
-                                var request =
-                                    converter.DeserializeJsonElement<SubscriptionRequest>(
-                                        kvp.Item1.RequestData!.Request);
+                                var request = new StreamInitMessage(kvp!.Item1.RequestData!.Id, kvp!.Item1.RequestData.Request);
                                 await SendMessageAsync(request!);
                             }
                             else
@@ -840,6 +842,7 @@ namespace Hubcon.Client.Core.Websockets
                                     "Websocket connection lost. The subscription was not configured for reconnection."));
                             }
                         }
+
                         await ClientOptions.CallInterceptor(InterceptorType.OnConnected, context);
                         return;
                     }
@@ -887,7 +890,7 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        private async ValueTask SendMessageAsync<T>(T message, CancellationToken cancellationToken = default)
+        private async ValueTask SendMessageAsync<T>(T message, CancellationToken cancellationToken = default) where T : BaseMessage
         {
             var pipe = new Pipe();
             var writer = new Utf8JsonWriter(pipe.Writer);
@@ -904,6 +907,8 @@ namespace Hubcon.Client.Core.Websockets
             await pipe.Reader.CompleteAsync();
 
             await _sendChannel.Writer.WriteAsync(bytes, cancellationToken);
+
+            message.Dispose();
         }
 
         private async void PingMessageLoop(object sender, ElapsedEventArgs e)

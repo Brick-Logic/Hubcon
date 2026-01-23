@@ -1,4 +1,5 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Enums;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Server.Core.Middlewares
@@ -14,15 +15,24 @@ namespace Hubcon.Server.Core.Middlewares
             ServicesToInject = servicesToInject;
         }
 
-        public IControllerOptions AddMiddleware<T>() where T : class, IMiddleware
+        public IControllerOptions AddMiddleware<T>(MiddlewareLifeCycle cycle = MiddlewareLifeCycle.Scoped) where T : class, IMiddleware
         {
-            return AddMiddleware(typeof(T));
+            return AddMiddleware(typeof(T), cycle);
         }
 
-        public IControllerOptions AddMiddleware(Type middlewareType)
+        public IControllerOptions AddMiddleware(Type middlewareType, MiddlewareLifeCycle cycle = MiddlewareLifeCycle.Scoped)
         {
             _builder.AddMiddleware(middlewareType);
-            ServicesToInject.Add(x => x.AddScoped(middlewareType));
+
+            Action<IServiceCollection>? action = cycle switch
+            {
+                MiddlewareLifeCycle.Scoped => x => x.AddScoped(middlewareType),
+                MiddlewareLifeCycle.Singleton => x => x.AddSingleton(middlewareType),
+                MiddlewareLifeCycle.Transient => x => x.AddTransient(middlewareType),
+                _ => null
+            };
+
+            ServicesToInject.Add(action!);
             return this;
         }
 

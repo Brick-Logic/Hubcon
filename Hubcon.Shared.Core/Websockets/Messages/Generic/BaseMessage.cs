@@ -7,6 +7,7 @@ using Hubcon.Shared.Core.Websockets.Messages.Ping;
 using Hubcon.Shared.Core.Websockets.Messages.Streams;
 using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Hubcon.Shared.Core.Websockets.Messages.Token;
+using Hubcon.Shared.Core.Websockets.Models;
 using System;
 using System.Linq.Expressions;
 using System.Net.NetworkInformation;
@@ -43,9 +44,9 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
         public static T Create(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) => _ctor(buffer, id, type);
     }
 
-    public class BaseMessage
+    public class BaseMessage : IDisposable
     {
-        private readonly ReadOnlyMemory<byte>? _buffer;
+        private readonly TrimmedMemoryOwner? _buffer;
         private Guid? _id;
         private MessageType? _type;
 
@@ -67,7 +68,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             _id = id;
         }
 
-        public BaseMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null)
+        public BaseMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null)
         {
             if (id != null) _id = id;
             if (type != null) _type = type;
@@ -145,7 +146,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
         {
             if (_buffer is null) return default;
 
-            var span = _buffer.Value.Span;
+            var span = _buffer.Memory.Span;
             var reader = new Utf8JsonReader(span, isFinalBlock: true, state: default);
 
             if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
@@ -234,14 +235,6 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static T Cast<T, TReal>(TReal value) => Unsafe.As<TReal, T>(ref value);
 
-        public T CreateMessage<T>() where T : BaseMessage
-        {
-            if (_buffer == null)
-                return default!;
-
-            return MessageFactory<T>.Create((ReadOnlyMemory<byte>)_buffer!, _id, _type);
-        }
-
         protected static Guid[] ReadGuidArray(ref Utf8JsonReader reader)
         {
             if (reader.TokenType != JsonTokenType.StartArray)
@@ -268,6 +261,11 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             }
 
             return guids.ToArray();
+        }
+
+        public void Dispose()
+        {
+            _buffer?.Dispose();
         }
     }
 }

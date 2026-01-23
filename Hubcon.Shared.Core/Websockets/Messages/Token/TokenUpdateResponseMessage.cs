@@ -1,4 +1,5 @@
 ﻿using Hubcon.Shared.Core.Websockets.Messages.Generic;
+using Hubcon.Shared.Core.Websockets.Models;
 using System;
 using System.Text.Json.Serialization;
 
@@ -9,7 +10,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Token
         private bool? _result;
         private string? _message;
 
-        public TokenUpdateResponseMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public TokenUpdateResponseMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

@@ -51,7 +51,7 @@ namespace Hubcon.Server.Injection
 
         public void AddAuthentication()
         {
-            HubconServerBuilder.AddGlobalMiddleware<AuthenticationMiddleware>();
+            HubconServerBuilder.AddGlobalMiddleware<AuthenticationMiddleware>((services, middleware) => services.AddSingleton(middleware));
         }
 
         public void AddTelemetry()

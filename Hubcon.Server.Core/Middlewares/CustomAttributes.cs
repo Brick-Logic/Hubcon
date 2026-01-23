@@ -1,18 +1,40 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Hubcon.Shared.Abstractions.Enums;
+using Microsoft.AspNetCore.Http;
 
 namespace Hubcon.Server.Core.Middlewares
 {
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Class)]
-    public sealed class UseMiddlewareAttribute(Type middlewareType) : Attribute
+    public sealed class UseMiddlewareAttribute : Attribute
     {
-        public Type MiddlewareType { get; } = typeof(Abstractions.Interfaces.IMiddleware).IsAssignableFrom(middlewareType)
-            ? middlewareType
-            : throw new ArgumentException("The type used in the UseMiddleware attribute is not a Hubcon Middleware type.");
+        public UseMiddlewareAttribute(Type middlewareType)
+        {
+            MiddlewareType = middlewareType;
+        }
+
+        public UseMiddlewareAttribute(Type middlewareType, MiddlewareLifeCycle cycle)
+        {
+            MiddlewareType = middlewareType;
+            Cycle = cycle;
+        }
+
+        public MiddlewareLifeCycle Cycle { get; } = MiddlewareLifeCycle.Scoped;
+        public Type MiddlewareType { get; }
     }
 
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Class)]
     public sealed class UseMiddlewareAttribute<T> : Attribute where T : class, Abstractions.Interfaces.IMiddleware
     {
+        public UseMiddlewareAttribute()
+        {
+            
+        }
+
+        public UseMiddlewareAttribute(MiddlewareLifeCycle cycle)
+        {
+            Cycle = cycle;
+        }
+
+        public MiddlewareLifeCycle Cycle { get; } = MiddlewareLifeCycle.Scoped;
         public Type MiddlewareType { get; } = typeof(T);
     }
 

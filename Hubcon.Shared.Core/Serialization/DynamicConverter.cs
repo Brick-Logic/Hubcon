@@ -302,13 +302,10 @@ namespace Hubcon.Shared.Core.Serialization
         {
             try
             {
-                if (value == null)
-                    return "";
-
-                Type type = value.GetType();
+                Type type = value!.GetType();
                 return JsonSerializer.Serialize(value, type, JsonSerializerOptions);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return "";
             }

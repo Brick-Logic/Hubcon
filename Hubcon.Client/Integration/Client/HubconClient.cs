@@ -26,6 +26,7 @@ using System.Net.Http.Headers;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -84,19 +85,71 @@ namespace Hubcon.Client.Integration.Client
 
         //private IDictionary<Type, IContractOptions> ContractOptionsDict { get; set; } = null!;
 
-        private ConcurrentDictionary<MethodInfo, bool> NeedsAuth = new ConcurrentDictionary<MethodInfo, bool>();
+        //private ConcurrentDictionary<MethodInfo, bool> NeedsAuth = new ConcurrentDictionary<MethodInfo, bool>();
 
-        private ConcurrentDictionary<MethodInfo, HttpMethod> MethodVerb = new ConcurrentDictionary<MethodInfo, HttpMethod>();
+        //private ConcurrentDictionary<MethodInfo, HttpMethod> MethodVerb = new ConcurrentDictionary<MethodInfo, HttpMethod>();
 
-        private ConcurrentDictionary<MethodInfo, string> MethodRoute = new ConcurrentDictionary<MethodInfo, string>();
+        //private ConcurrentDictionary<MethodInfo, string> MethodRoute = new ConcurrentDictionary<MethodInfo, string>();
 
-        private ConcurrentDictionary<MethodInfo, string?> BodyParameterName = new ConcurrentDictionary<MethodInfo, string?>();
+        //private ConcurrentDictionary<MethodInfo, string?> BodyParameterName = new ConcurrentDictionary<MethodInfo, string?>();
 
-        private ConcurrentDictionary<MethodInfo, string?> QueryParameterName = new ConcurrentDictionary<MethodInfo, string?>();
+        //private ConcurrentDictionary<MethodInfo, string?> QueryParameterName = new ConcurrentDictionary<MethodInfo, string?>();
 
-        private ConcurrentDictionary<MethodInfo, bool> ShouldUseBody = new ConcurrentDictionary<MethodInfo, bool>();
         private readonly IDynamicConverter converter;
         private readonly IHttpClientFactory clientFactory;
+
+        private readonly ConcurrentDictionary<MethodInfo, MethodCachedMetadata> _cachedMetadata = new();
+
+        [StructLayout(LayoutKind.Sequential, Pack = 8)]
+        public sealed class MethodCachedMetadata
+        {
+            // --- SECCIÓN DE REFERENCIAS (8 bytes c/u) ---
+            // Total: 24 bytes
+            public ReferenceHolder<string> MethodRouteHolder = new ReferenceHolder<string>();
+            public ReferenceHolder<string> BodyParameterNameHolder = new ReferenceHolder<string>();
+            public ReferenceHolder<string> QueryParameterNameHolder = new ReferenceHolder<string>();
+
+            // --- SECCIÓN DE VALORES (4-8 bytes c/u con padding) ---
+            // Total aproximado: 12-16 bytes
+            public ReferenceHolder<HttpMethod> MethodVerbHolder = new ReferenceHolder<HttpMethod>();
+
+            // El bool es el más pequeño, lo dejamos al final para rellenar huecos
+            public PrimitiveHolder<bool> NeedsAuthHolder = new PrimitiveHolder<bool>();
+
+            // Total estimado del objeto: ~48-56 bytes + overhead de objeto.
+            // ENTRA PERFECTO en una línea de caché de 64 bytes.
+        }
+
+        // Lo usamos para bool, int, etc.
+        public struct PrimitiveHolder<T> where T : struct
+        {
+            private T _value;
+            private bool _hasValue;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public T GetOrAdd<TState>(TState state, Func<TState, T> factory)
+            {
+                // Fast path: El CPU predice este salto casi al 100% de éxito
+                if (_hasValue) return _value;
+
+                return Init(state, factory);
+            }
+
+            [MethodImpl(MethodImplOptions.NoInlining)] // Sacamos la lógica lenta del hot path
+            private T Init<TState>(TState state, Func<TState, T> factory)
+            {
+                _value = factory(state);
+                _hasValue = true;
+                return _value;
+            }
+        }
+
+        public struct ReferenceHolder<T> where T : class
+        {
+            private T? _value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public T GetOrAdd<TState>(TState state, Func<TState, T> factory) => _value ??= factory(state);
+        }
 
         public HubconClient(IDynamicConverter converter, IHttpClientFactory clientFactory)
         {
@@ -106,6 +159,8 @@ namespace Hubcon.Client.Integration.Client
 
         public async Task<T> SendAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
+            var metadata = _cachedMetadata.GetOrAdd(methodInfo, static _ => new MethodCachedMetadata());
+
             var context = new InvocationContext()
             {
                 Services = ServiceProvider,
@@ -155,21 +210,22 @@ namespace Hubcon.Client.Integration.Client
                 {
                     await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                    HttpMethod httpMethod = GetHttpMethod(request, methodInfo);
-                    string finalRoute = GetFinalRoute(methodInfo);
+                    HttpMethod httpMethod = GetHttpMethod(request, metadata, methodInfo);
+                    string finalRoute = GetFinalRoute(methodInfo, metadata);
+
                     Dictionary<string, object> remainingArguments = GetRemainingArguments(request, ref finalRoute);
 
                     StringContent? content = null;
                     string url;
 
-                    url = BuildBodyAndFinalUrl(request, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
+                    url = BuildBodyAndFinalUrl(request, metadata, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
 
                     var httpRequest = new HttpRequestMessage(httpMethod, url);
 
                     if (content != null)
                         httpRequest.Content = content;
 
-                    bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
+                    bool needsAuth = metadata.NeedsAuthHolder.GetOrAdd(methodInfo, _ =>
                     {
                         return (operationOptions.HttpAuthIsEnabled ?? true)
                             && (contractOptions.HttpAuthIsEnabled)
@@ -207,7 +263,7 @@ namespace Hubcon.Client.Integration.Client
                 {
                     await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                    HttpMethod httpMethod = MethodVerb.GetOrAdd(methodInfo, method =>
+                    HttpMethod httpMethod = metadata.MethodVerbHolder.GetOrAdd(methodInfo, method =>
                     {
                         GetMethodAttribute? verb = method.GetCustomAttribute<GetMethodAttribute>();
                         return verb != null ? HttpMethod.Get : (request.Arguments.Count > 0 ? HttpMethod.Post : HttpMethod.Get);
@@ -243,7 +299,7 @@ namespace Hubcon.Client.Integration.Client
                     if (content != null)
                         httpRequest.Content = content;
 
-                    bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
+                    bool needsAuth = metadata.NeedsAuthHolder.GetOrAdd(methodInfo, _ =>
                     {
                         return (operationOptions.HttpAuthIsEnabled ?? true)
                             && (contractOptions.HttpAuthIsEnabled)
@@ -314,6 +370,8 @@ namespace Hubcon.Client.Integration.Client
             if (!IsBuilt)
                 throw new InvalidOperationException("El cliente no ha sido construido. Asegúrese de llamar a 'Build()' antes de usar este método.");
 
+            var metadata = _cachedMetadata.GetOrAdd(methodInfo, static _ => new MethodCachedMetadata());
+
             var context = new InvocationContext()
             {
                 Services = ServiceProvider,
@@ -354,21 +412,21 @@ namespace Hubcon.Client.Integration.Client
                 {
                     await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                    HttpMethod httpMethod = GetHttpMethod(request, methodInfo);
-                    string finalRoute = GetFinalRoute(methodInfo);
+                    HttpMethod httpMethod = GetHttpMethod(request, metadata, methodInfo);
+                    string finalRoute = GetFinalRoute(methodInfo, metadata);
                     Dictionary<string, object> remainingArguments = GetRemainingArguments(request, ref finalRoute);
 
                     StringContent? content = null;
                     string url;
 
-                    url = BuildBodyAndFinalUrl(request, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
+                    url = BuildBodyAndFinalUrl(request, metadata, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
 
                     var httpRequest = new HttpRequestMessage(httpMethod, url);
 
                     if (content != null)
                         httpRequest.Content = content;
 
-                    bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
+                    bool needsAuth = metadata.NeedsAuthHolder.GetOrAdd(methodInfo, _ =>
                     {
                         return (operationOptions.HttpAuthIsEnabled ?? true)
                             && (contractOptions.HttpAuthIsEnabled)
@@ -394,7 +452,7 @@ namespace Hubcon.Client.Integration.Client
                 {
                     await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                    HttpMethod httpMethod = MethodVerb.GetOrAdd(methodInfo, method =>
+                    HttpMethod httpMethod = metadata.MethodVerbHolder.GetOrAdd(methodInfo, method =>
                     {
                         GetMethodAttribute? verb = method.GetCustomAttribute<GetMethodAttribute>();
                         return verb != null ? HttpMethod.Get : (request.Arguments.Count > 0 ? HttpMethod.Post : HttpMethod.Get);
@@ -431,7 +489,7 @@ namespace Hubcon.Client.Integration.Client
                     if (content != null)
                         httpRequest.Content = content;
 
-                    bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
+                    bool needsAuth = metadata.NeedsAuthHolder.GetOrAdd(methodInfo, _ =>
                     {
                         return (operationOptions.HttpAuthIsEnabled ?? true)
                             && contractOptions.HttpAuthIsEnabled
@@ -474,7 +532,7 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        private string BuildBodyAndFinalUrl(IOperationRequest request, MethodInfo methodInfo, HttpMethod httpMethod, string finalRoute, Dictionary<string, object> remainingArguments, ref StringContent? content)
+        private string BuildBodyAndFinalUrl(IOperationRequest request, MethodCachedMetadata metadata, MethodInfo methodInfo, HttpMethod httpMethod, string finalRoute, Dictionary<string, object> remainingArguments, ref StringContent? content)
         {
             string url;
             // 3. Construcción de Body o QueryString según el Verbo
@@ -483,7 +541,7 @@ namespace Hubcon.Client.Integration.Client
                 object? bodyData = null;
 
                 // Intentamos obtener el nombre del parámetro marcado con [Body]
-                var bodyParamName = BodyParameterName.GetOrAdd(methodInfo, method =>
+                var bodyParamName = metadata.BodyParameterNameHolder.GetOrAdd(methodInfo, method =>
                     method.GetParameters()
                           .FirstOrDefault(p => p.GetCustomAttribute<AsBodyAttribute>() != null)?.Name);
 
@@ -513,7 +571,7 @@ namespace Hubcon.Client.Integration.Client
                 var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
 
                 // Intentamos obtener el nombre del parámetro marcado con [AsQuery]
-                var queryParamName = QueryParameterName.GetOrAdd(methodInfo, method =>
+                var queryParamName = metadata.QueryParameterNameHolder.GetOrAdd(methodInfo, method =>
                     method.GetParameters()
                           .FirstOrDefault(p => p.GetCustomAttribute<AsQueryAttribute>() != null)?.Name);
 
@@ -566,9 +624,9 @@ namespace Hubcon.Client.Integration.Client
             return remainingArguments;
         }
 
-        private string GetFinalRoute(MethodInfo methodInfo)
+        private string GetFinalRoute(MethodInfo methodInfo, MethodCachedMetadata metadata)
         {
-            return MethodRoute.GetOrAdd(methodInfo, method =>
+            return metadata.MethodRouteHolder.GetOrAdd(methodInfo, method =>
             {
                 if (method.GetCustomAttribute<HttpGetAttribute>() != null) return method.GetCustomAttribute<HttpGetAttribute>().Template;
                 if (method.GetCustomAttribute<HttpPostAttribute>() != null) return method.GetCustomAttribute<HttpPostAttribute>().Template;
@@ -579,10 +637,10 @@ namespace Hubcon.Client.Integration.Client
             });
         }
 
-        private HttpMethod GetHttpMethod(IOperationRequest request, MethodInfo methodInfo)
+        private HttpMethod GetHttpMethod(IOperationRequest request, MethodCachedMetadata metadata, MethodInfo methodInfo)
         {
             // 1. Mapeo de Atributos a Verbos HTTP
-            HttpMethod httpMethod = MethodVerb.GetOrAdd(methodInfo, method =>
+            HttpMethod httpMethod = metadata.MethodVerbHolder.GetOrAdd(methodInfo, method =>
             {
                 if (method.GetCustomAttribute<HttpGetAttribute>() != null) return HttpMethod.Get;
                 if (method.GetCustomAttribute<HttpPostAttribute>() != null) return HttpMethod.Post;
@@ -597,6 +655,8 @@ namespace Hubcon.Client.Integration.Client
 
         public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, MethodInfo methodInfo, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            var metadata = _cachedMetadata.GetOrAdd(methodInfo, static _ => new MethodCachedMetadata());
+
             var context = new InvocationContext()
             {
                 Services = ServiceProvider,
@@ -627,8 +687,8 @@ namespace Hubcon.Client.Integration.Client
             {
                 await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                HttpMethod httpMethod = GetHttpMethod(request, methodInfo);
-                string finalRoute = GetFinalRoute(methodInfo);
+                HttpMethod httpMethod = GetHttpMethod(request, metadata, methodInfo);
+                string finalRoute = GetFinalRoute(methodInfo, metadata);
                 Dictionary<string, object> remainingArguments = GetRemainingArguments(request, ref finalRoute);
 
                 StringContent? content = null;
@@ -660,7 +720,7 @@ namespace Hubcon.Client.Integration.Client
                 }
                 else
                 {
-                    url = BuildBodyAndFinalUrl(request, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
+                    url = BuildBodyAndFinalUrl(request, metadata, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
                 }
 
                 var httpRequest = new HttpRequestMessage(httpMethod, url);
@@ -668,7 +728,7 @@ namespace Hubcon.Client.Integration.Client
                 if (content != null)
                     httpRequest.Content = content;
 
-                bool needsAuth = NeedsAuth.GetOrAdd(methodInfo, _ =>
+                bool needsAuth = metadata.NeedsAuthHolder.GetOrAdd(methodInfo, _ =>
                 {
                     return (operationOptions.HttpAuthIsEnabled ?? true)
                         && (contractOptions.HttpAuthIsEnabled)

@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Hubcon.Shared.Core.Websockets.Models;
+using System;
 using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Generic
 {
     public class AckMessage : BaseMessage
     {
-        public AckMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public AckMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

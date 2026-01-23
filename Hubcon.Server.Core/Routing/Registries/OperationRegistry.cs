@@ -153,18 +153,18 @@ namespace Hubcon.Server.Core.Routing.Registries
                     if (orderToUse is UseOperationMiddlewaresFirst)
                     {
                         foreach (var middleware in methodAttributes)
-                            middlewareOptions.AddMiddleware(middleware.MiddlewareType);
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, middleware.Cycle);
 
                         foreach (var middleware in classFilters)
-                            middlewareOptions.AddMiddleware(middleware.MiddlewareType);
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, middleware.Cycle);
                     }
                     else
                     {
                         foreach (var middleware in classFilters)
-                            middlewareOptions.AddMiddleware(middleware.MiddlewareType);
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, middleware.Cycle);
 
                         foreach (var middleware in methodAttributes)
-                            middlewareOptions.AddMiddleware(middleware.MiddlewareType);
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, middleware.Cycle);
                     }
 
                     var descriptor = new OperationBlueprint(

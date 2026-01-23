@@ -1,6 +1,7 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
+using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTest.Filters;
 using HubconTest.Middlewares;
@@ -15,7 +16,6 @@ namespace HubconTest.ContractHandlers
 {
     //[UseHttpEndpointFilter(typeof(ClassLoggingEndpointFilter))]
     //[UseMiddleware(typeof(ClassLoggingMiddleware))]
-    [UseMiddleware<AuthenticationMiddleware>]
     [Authorize(Roles = "Manager")]
     [UseHttpRateLimiter("contract")]
     public class UserController(ILogger<UserController> logger) : IUserContract
@@ -276,9 +276,9 @@ namespace HubconTest.ContractHandlers
         }
 
         [Authorize(Roles = "Manager")]
-        public async Task<TestInputClass?> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
+        public async Task<TestInputClass> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
         {
-            return null;
+            return input;
         }
     }
 }

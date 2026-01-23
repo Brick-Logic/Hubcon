@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hubcon.Shared.Core.Websockets.Models;
+using System;
 using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Generic
@@ -8,7 +9,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
         private string? _error;
         private object? _payload;
 
-        public ErrorMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public ErrorMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 

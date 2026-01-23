@@ -1,4 +1,5 @@
 ﻿using Hubcon.Shared.Core.Websockets.Messages.Generic;
+using Hubcon.Shared.Core.Websockets.Models;
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -19,7 +20,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
             _data = data;
         }
 
-        public SubscriptionDataMessage(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public SubscriptionDataMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 
