@@ -21,6 +21,7 @@
 		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
 		<EnableAotAnalyzer>true</EnableAotAnalyzer>
 
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 		<MicrosoftExtensionsDependencyInjectionVerifyOpenGenericServiceTrimmability>true</MicrosoftExtensionsDependencyInjectionVerifyOpenGenericServiceTrimmability>
 	</PropertyGroup>
 

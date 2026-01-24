@@ -45,7 +45,7 @@ namespace HubconAnalyzers.SourceGenerators
                 {
                     var interfaces = new List<INamedTypeSymbol>();
 
-                    if(hubconResponseBaseSymbol == null)
+                    if (hubconResponseBaseSymbol == null)
                         hubconResponseBaseSymbol = compilation.GetTypeByMetadataName("Hubcon.Shared.Abstractions.Standard.Models.HubconResponse`1");
 
                     // Recorremos todos los assemblies referenciados
@@ -491,6 +491,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine($"{baseIndent}    {{");
             sb.AppendLine($"{baseIndent}        {proxyName}Preserver();");
 
+            sb.AppendLine($"{baseIndent}        Console.WriteLine(\"Modulo preserver ({fullProxyName}) cargado.\");");
             sb.AppendLine($"{baseIndent}        if (System.Guid.NewGuid().ToString() == \"preserver\")");
             sb.AppendLine($"{baseIndent}        {{");
 
@@ -685,7 +686,9 @@ namespace HubconAnalyzers.SourceGenerators
 
                     var constructor = namedType?.Constructors
                         .OrderByDescending(c => c.Parameters.Length)
-                        .FirstOrDefault(c => c.DeclaredAccessibility == Accessibility.Public && c.GetAttributes().OfType<JsonConstructorAttribute>().Any());
+                        .FirstOrDefault(c => 
+                        c.DeclaredAccessibility == Accessibility.Public 
+                        && c.GetAttributes().Any(a => a.AttributeClass?.ToDisplayString() == "System.Text.Json.Serialization.JsonConstructorAttribute"));
 
                     if(constructor == null )
                     {
@@ -859,9 +862,9 @@ namespace HubconAnalyzers.SourceGenerators
 
                 // --- NUEVO: Generar HubconResponse<T> ---
                 // Solo si el tipo actual NO es ya un HubconResponse y no es un tipo primitivo de sistema basura
-                if (type.SpecialType != SpecialType.System_Void 
-                    && type.SpecialType != SpecialType.System_Object 
-                    && hubconResponseBaseSymbol != null 
+                if (type.SpecialType != SpecialType.System_Void
+                    && type.SpecialType != SpecialType.System_Object
+                    && hubconResponseBaseSymbol != null
                     && !SymbolEqualityComparer.Default.Equals(named.OriginalDefinition, hubconResponseBaseSymbol))
                 {
                     // Fabricamos HubconResponse<TipoActual>
