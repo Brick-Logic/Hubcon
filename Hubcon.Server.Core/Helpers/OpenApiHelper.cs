@@ -1,5 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -212,7 +214,7 @@ namespace Hubcon.Server.Core.Helpers
             else
             {
                 // Tipo específico
-                var responseType = typeof(IOperationResponse<>).MakeGenericType(returnType);
+                var responseType = typeof(IHubconResponse<>).MakeGenericType(returnType);
                 builder.Produces(Defaults.DefaultSuccessStatusCode, responseType)
                        .WithOpenApi(operation => SetDefaultExample(operation, Defaults.DefaultSuccessStatusCode.ToString(), returnType));
             }

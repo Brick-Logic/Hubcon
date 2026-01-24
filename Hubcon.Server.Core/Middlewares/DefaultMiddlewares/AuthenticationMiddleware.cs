@@ -1,12 +1,10 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
-using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Models;
+
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using System.Security.Claims;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
@@ -22,10 +20,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 // Evitamos interpolación de strings en el log si no es error crítico para ahorrar RAM
                 logger.LogError("Unauthorized WebSocket request.");
-
-                context.Result = new BaseOperationResponse<object>(false, "Unauthenticated");
-                context.Exception = new UnauthorizedAccessException();
-                httpContext.Connection.RequestClose();
+                context.Response = HubconResponse.Unauthorized();
                 return;
             }
 
@@ -65,8 +60,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
         private static void SetUnauthorized(IOperationContext context)
         {
-            context.Result = new BaseOperationResponse<object>(false, "Access denied");
-            context.Exception = new UnauthorizedAccessException("Access denied");
+            context.Response = HubconResponse.Unauthorized();
         }
     }
 }

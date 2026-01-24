@@ -1,6 +1,9 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Models;
+
 using System.ComponentModel;
 using System.Threading.Channels;
 
@@ -17,7 +20,7 @@ namespace Hubcon.Server.Core.Routing.MethodHandling
             _converter = converter;
         }
 
-        public async Task<IResponse> NotifyStream(string code, ChannelReader<object> reader)
+        public async Task<IHubconResponse> NotifyStream(string code, ChannelReader<object> reader)
         {
             while (await reader.WaitToReadAsync())
             {
@@ -32,7 +35,7 @@ namespace Hubcon.Server.Core.Routing.MethodHandling
                 value.GetCurrentEvent()?.DynamicInvoke(reader);
             }
 
-            return new BaseOperationResponse(true);
+            return HubconResponse.Ok();
         }
 
         public Task<IAsyncEnumerable<T>> WaitStreamAsync<T>(string code)

@@ -1,5 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
@@ -13,10 +14,10 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public ClaimsPrincipal? User { get; init; }
         public IDictionary<string, object> Items { get; } = new Dictionary<string, object>();
         public IOperationRequest Request { get; init; }
-        public IOperationResult? Result { get; set; }
         public HttpContext? HttpContext { get; init; }
         public Exception? Exception { get; set; }
         public CancellationToken RequestAborted { get; init; }
         public object? WrappedRequest { get; init; }
+        public IHubconResponse Response { get; set; }
     }
 }

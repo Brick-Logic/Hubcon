@@ -1,5 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Models;
 using Hubcon.Shared.Core.Websockets;
 using Hubcon.Shared.Core.Websockets.Messages.Cancellation;
 using Hubcon.Shared.Core.Websockets.Messages.Connection;
@@ -10,10 +11,7 @@ using Hubcon.Shared.Core.Websockets.Messages.Ping;
 using Hubcon.Shared.Core.Websockets.Messages.Streams;
 using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Hubcon.Shared.Core.Websockets.Messages.Token;
-using Hubcon.Shared.Core.Websockets.Resilience;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.ComponentModel;
@@ -34,10 +32,10 @@ namespace Hubcon.Shared.Core.Serialization
     [JsonSerializable(typeof(Dictionary<string, object>))]
     [JsonSerializable(typeof(JsonObject))]
     [JsonSerializable(typeof(JsonArray))]
-    [JsonSerializable(typeof(BaseOperationResponse<string>))]
-    [JsonSerializable(typeof(BaseOperationResponse<bool>))]
-    [JsonSerializable(typeof(BaseOperationResponse<int>))]
-    [JsonSerializable(typeof(BaseOperationResponse<JsonElement>))]
+    [JsonSerializable(typeof(HubconResponse<string>))]
+    [JsonSerializable(typeof(HubconResponse<bool>))]
+    [JsonSerializable(typeof(HubconResponse<int>))]
+    [JsonSerializable(typeof(HubconResponse<JsonElement>))]
     [JsonSerializable(typeof(AckMessage))]
     [JsonSerializable(typeof(BaseMessage))]
     [JsonSerializable(typeof(ErrorMessage))]

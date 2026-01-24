@@ -1,6 +1,6 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.Server.Abstractions.Delegates
 {
-    public delegate Task<IOperationResult> ResultHandlerDelegate(object? result);
+    public delegate Task<IHubconResponse> ResultHandlerDelegate(object? result);
 }

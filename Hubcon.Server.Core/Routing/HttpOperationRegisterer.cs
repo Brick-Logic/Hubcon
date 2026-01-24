@@ -1,12 +1,15 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
-using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Routing.Models;
+using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Models;
+
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -45,7 +48,7 @@ namespace Hubcon.Server.Core.Routing
             IOperationBlueprint blueprint)
         {
             IEndpointConventionBuilder builder = null!;
-            var route = blueprint.HttpRoute;
+            var route = blueprint.HttpRoute!;
             var operationName = blueprint.OperationName;
             var simpleContractName = NamingHelper.GetCleanName(blueprint.ContractName);
             var options = app.Services.GetRequiredService<IInternalServerOptions>();
@@ -56,8 +59,6 @@ namespace Hubcon.Server.Core.Routing
             var controllerMethod = blueprint.ControllerType.GetMethod(
                 method.Name,
                 method.GetParameters().Select(x => x.ParameterType).ToArray());
-
-            var returnType = typeof(IOperationResponse<>).MakeGenericType(blueprint.ReturnType);
 
             var filters = controllerMethod!.GetCustomAttributes()
                 .Where(x => x is UseHttpEndpointFilterAttribute)
@@ -138,23 +139,12 @@ namespace Hubcon.Server.Core.Routing
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
                         var res = await requestHandler.GetStream(operationRequest, wrapper, cancellationToken);
                         
-                        if (!res.Success)
+                        if (res.Failure)
                         {
-                            if(res is BaseOperationResponse<string> operationResponse)
-                            {
-                                context.Response.StatusCode = operationResponse.StatusCode;
-                                return operationResponse;
-                            }
-
-                            var errorMessage = options.DetailedErrorsEnabled
-                                ? res.Error ?? "Internal error"
-                                : "Internal error";
-
-                            await InternalServerError(context);
-                            return new BaseOperationResponse(false, errorMessage);
+                            return ProcessResponse(res, context);
                         }
 
-                        return new SseResult(res.Data!);
+                        return new SseResult((res.Data as IAsyncEnumerable<object?>)!);
                     })
                     .ApplyOpenApiFromMethod(controllerMethod!, verbResult);
                     builder.WithRequestTimeout(options.HttpTimeout);
@@ -176,16 +166,16 @@ namespace Hubcon.Server.Core.Routing
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
-                            await RequestTooLarge(context);
-                            return new BaseOperationResponse(false, "Request too large.");
+                            var response = HubconResponse.RequestTooLarge();
+                            return ProcessResponse(response, context);
                         }
 
                         var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType);
 
                         if (wrapper == null)
                         {
-                            await BadRequest(context);
-                            return new BaseOperationResponse(false, "Invalid request payload.");
+                            var response = HubconResponse.BadRequest();
+                            return ProcessResponse(response, context);
                         }
 
                         var args = new Dictionary<string, object>();
@@ -204,23 +194,12 @@ namespace Hubcon.Server.Core.Routing
 
                         var res = await requestHandler.GetStream(operationRequest, wrapper, cancellationToken);
 
-                        if (!res.Success)
+                        if (res.Failure)
                         {
-                            if (res is BaseOperationResponse<string> operationResponse)
-                            {
-                                context.Response.StatusCode = operationResponse.StatusCode;
-                                return operationResponse;
-                            }
-
-                            var errorMessage = options.DetailedErrorsEnabled
-                                ? res.Error ?? "Internal error"
-                                : "Internal error";
-
-                            await InternalServerError(context);
-                            return new BaseOperationResponse(false, errorMessage);
+                            return ProcessResponse(res, context);
                         }
 
-                        return new SseResult(res.Data!);
+                        return new SseResult((res.Data! as IAsyncEnumerable<object?>)!);
                     }).ApplyOpenApiFromMethod(controllerMethod!, verbResult);
                     builder.WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);
@@ -275,24 +254,6 @@ namespace Hubcon.Server.Core.Routing
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
                         var res = await requestHandler.HandleWithResultAsync(operationRequest, wrapper, context.RequestAborted);
-
-                        if (!res.Success)
-                        {
-                            if (res is BaseOperationResponse<string> operationResponse)
-                            {
-                                context.Response.StatusCode = operationResponse.StatusCode;
-                                return operationResponse;
-                            }
-
-                            var errorMessage = options.DetailedErrorsEnabled
-                                ? res.Error ?? "Internal error"
-                                : "Internal error";
-
-                            await InternalServerError(context);
-                            return new BaseOperationResponse(false, errorMessage);
-                        }
-
-                        await Ok(context);
                         return res;
                     })
                     .ApplyOpenApiFromMethod(controllerMethod!, verbResult);
@@ -315,16 +276,16 @@ namespace Hubcon.Server.Core.Routing
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
-                            await RequestTooLarge(context);
-                            return new BaseOperationResponse(false, "Request too large.");
+                            var response = HubconResponse.RequestTooLarge();
+                            return ProcessResponse(response, context);
                         }
 
                         var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType);
 
                         if (wrapper == null)
                         {
-                            await BadRequest(context);
-                            return new BaseOperationResponse(false, "Invalid request payload.");
+                            var response = HubconResponse.BadRequest();
+                            return ProcessResponse(response, context);
                         }
 
                         var args = new Dictionary<string, object>();
@@ -342,24 +303,6 @@ namespace Hubcon.Server.Core.Routing
                         );
 
                         var res = await requestHandler.HandleWithResultAsync(operationRequest, wrapper, cancellationToken);
-
-                        if (!res.Success)
-                        {
-                            if (res is BaseOperationResponse<string> operationResponse)
-                            {
-                                context.Response.StatusCode = operationResponse.StatusCode;
-                                return operationResponse;
-                            }
-
-                            var errorMessage = options.DetailedErrorsEnabled
-                                ? res.Error ?? "Internal error"
-                                : "Internal error";
-
-                            await InternalServerError(context);
-                            return new BaseOperationResponse(false, errorMessage);
-                        }
-
-                        await Ok(context);
                         return res;
                     }).ApplyOpenApiFromMethod(controllerMethod!, verbResult);
                     builder.WithRequestTimeout(options.HttpTimeout);
@@ -392,24 +335,6 @@ namespace Hubcon.Server.Core.Routing
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
 
                         var res = await requestHandler.HandleWithoutResultAsync(operationRequest, null, cancellationToken);
-
-                        if (!res.Success)
-                        {
-                            if (res is BaseOperationResponse<string> operationResponse)
-                            {
-                                context.Response.StatusCode = operationResponse.StatusCode;
-                                return operationResponse;
-                            }
-
-                            var errorMessage = options.DetailedErrorsEnabled
-                                ? res.Error ?? "Internal error"
-                                : "Internal error";
-
-                            await InternalServerError(context);
-                            return new BaseOperationResponse(false, errorMessage);
-                        }
-
-                        await Ok(context);
                         return res;
                     }).ApplyOpenApiFromMethod(controllerMethod!, verbResult).WithMetadata(new AsParametersAttribute());
                     builder.WithRequestTimeout(options.HttpTimeout);
@@ -435,16 +360,16 @@ namespace Hubcon.Server.Core.Routing
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
-                            await RequestTooLarge(context);
-                            return new BaseOperationResponse(false, "Request too large.");
+                            var response = HubconResponse.RequestTooLarge();
+                            return ProcessResponse(response, context);
                         }
 
                         var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType);
 
                         if (wrapper == null)
                         {
-                            await BadRequest(context);
-                            return new BaseOperationResponse(false, "Invalid request payload.");
+                            var response = HubconResponse.BadRequest();
+                            return ProcessResponse(response, context);
                         }
 
                         var args = new Dictionary<string, object>();
@@ -462,28 +387,6 @@ namespace Hubcon.Server.Core.Routing
                         );
 
                         var res = await requestHandler.HandleWithoutResultAsync(operationRequest, wrapper, cancellationToken);
-
-                        if (!res.Success)
-                        {
-                            if (options.DetailedErrorsEnabled)
-                            {
-                                if (res is BaseOperationResponse<string> operationResponse && operationResponse.StatusCode != 200)
-                                {
-                                    context.Response.StatusCode = operationResponse.StatusCode;
-                                    return operationResponse;
-                                }
-
-                                await InternalServerError(context);
-                                return new BaseOperationResponse(false, res.Error);
-                            }
-                            else
-                            {
-                                await InternalServerError(context);
-                                return new BaseOperationResponse(false, "Internal error");
-                            }
-                        }
-
-                        await Ok(context);
                         return res;
                     })
                     .ApplyOpenApiFromMethod(controllerMethod!, verbResult);
@@ -551,28 +454,12 @@ namespace Hubcon.Server.Core.Routing
             options.RouteHandlerBuilderConfig?.Invoke((builder as RouteHandlerBuilder)!);
         }
 
-        private static async Task Ok(HttpContext context)
-        {
-            context.Response.StatusCode = 200;
-            context.Response.ContentType = "application/json";
-        }
 
-        private static async Task BadRequest(HttpContext context)
+        private static IHubconResponse<T> ProcessResponse<T>(IHubconResponse<T> hubconResponse, HttpContext context)
         {
-            context.Response.StatusCode = 400;
+            context.Response.StatusCode = hubconResponse.StatusCode;
             context.Response.ContentType = "application/json";
-        }
-
-        private static async Task InternalServerError(HttpContext context)
-        {
-            context.Response.StatusCode = 500;
-            context.Response.ContentType = "application/json";
-        }
-
-        private static async Task RequestTooLarge(HttpContext context)
-        {
-            context.Response.StatusCode = 413;
-            context.Response.ContentType = "application/json";
+            return hubconResponse;
         }
 
         public static Delegate CreateDelegate(MethodInfo methodInfo, Type wrapperType, bool isGet = false)

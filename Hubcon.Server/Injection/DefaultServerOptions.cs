@@ -5,6 +5,8 @@ using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Models;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
@@ -84,7 +86,7 @@ namespace Hubcon.Server.Injection
                     context.HttpContext.Response.StatusCode = 429;
                     context.HttpContext.Response.ContentType = "application/json";
 
-                    var response = converter.SerializeToElement(new BaseOperationResponse<string>(false, error: "Too many requests."));
+                    var response = converter.SerializeToElement(HubconResponse.TooManyRequests());
 
                     await context.HttpContext.Response.WriteAsJsonAsync(response, token);
 

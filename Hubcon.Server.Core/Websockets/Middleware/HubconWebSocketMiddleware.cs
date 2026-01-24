@@ -5,6 +5,8 @@ using Hubcon.Server.Core.Entrypoint;
 using Hubcon.Server.Core.Websockets.Helpers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Models;
+
 using Hubcon.Shared.Core.Websockets;
 using Hubcon.Shared.Core.Websockets.Events;
 using Hubcon.Shared.Core.Websockets.Heartbeat;
@@ -51,7 +53,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             IOperationRegistry operationRegistry,
             ILogger<HubconWebSocketMiddleware> logger,
             IConnectionSupervisor connectionSupervisor,
-            IInternalServerOptions options, 
+            IInternalServerOptions options,
             ITelemetryProvider telemetryProvider)
         {
             this.next = next;
@@ -470,7 +472,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
                     }
                 }
-            }                
+            }
             catch (Exception ex) when (LogException(ex, logger, webSocket))
             {
             }
@@ -622,7 +624,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
         private async Task HandleNotAllowed(Guid id, string messageJson, object? payload, WebSocketMessageSender sender)
         {
-            await sender.SendAsync(new ErrorMessage(id, messageJson, payload));
+            await sender.SendAsync(new ErrorMessage(id, converter.SerializeToElement(HubconResponse.Unauthorized())));
         }
 
         private async Task HandleIngestComplete(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingests, IngestCompleteMessage ingestCompleteMessage)
@@ -752,9 +754,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 await Task.Delay(100);
                 var result = await ingestTask;
 
-                if(result is BaseOperationResponse<string> errorResponse)
+                if (result.Failure)
                 {
-                    await sender.SendAsync(new ErrorMessage(ingestInitMessage.Id, errorResponse.Error));
+                    await sender.SendAsync(new IngestResultMessage(ingestInitMessage.Id, converter.SerializeToElement(result)));
                     return;
                 }
 
@@ -811,7 +813,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             using var localCts = new CancellationTokenSource();
             using var registration = cancellationToken.Register(localCts.Cancel);
             IOperationRequest? operationRequest = null;
-            IOperationResponse<JsonElement>? result = null;
 
             try
             {
@@ -821,34 +822,17 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 if (operationInvokeMessage == null) return;
 
                 operationRequest = converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload)!;
-                result = await entrypoint.HandleMethodWithResult(operationRequest, localCts.Token);
-
-                //if (result is BaseOperationResponse<string> errorResponse)
-                //{
-                //    await sender.SendAsync(new ErrorMessage(operationInvokeMessage.Id, errorResponse.Error));
-                //    return;
-                //}
+                var response = await entrypoint.HandleMethodWithResult(operationRequest, localCts.Token);
 
                 if (webSocket.State == WebSocketState.Open)
                 {
-                    var response = new OperationResponseMessage(
+                    var message = new OperationResponseMessage(
                         operationInvokeMessage.Id,
-                        converter.SerializeToElement(result)
+                        converter.SerializeToElement(response)
                     );
 
-                    await sender.SendAsync(response);
+                    await sender.SendAsync(message);
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                if (localCts.IsCancellationRequested)
-                    result = new BaseOperationResponse<JsonElement>(false, default, "Request aborted.");
-
-                logger.LogInformation("Task aborted.");
-            }
-            catch (Exception ex)
-            {
-                logger?.LogError(ex.Message);
             }
             finally
             {
@@ -953,21 +937,13 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 var streamResult = await entrypoint.HandleSubscription(operationRequest, localCts.Token);
 
-                if (streamResult is BaseOperationResponse<string> errorResponse)
+                if (streamResult.Failure)
                 {
-                    await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, errorResponse.Error));
+                    await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, converter.SerializeToElement(streamResult)));
                     return;
                 }
 
-                if (streamResult == null) { return; }
-
-                if (!streamResult.Success)
-                {
-                    await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, string.IsNullOrWhiteSpace(streamResult.Error) ? "Unknown error" : streamResult.Error));
-                    return;
-                }
-
-                var stream = streamResult.Data!;
+                var stream = streamResult.Data! as IAsyncEnumerable<object?>;
 
                 await foreach (var item in stream.WithCancellation(localCts.Token))
                 {
@@ -1007,10 +983,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 // Cancelado normalmente
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // TODO: Revisar
-                await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, ex.Message));
+                await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, converter.SerializeToElement(HubconResponse.InternalError())));
             }
             finally
             {
@@ -1045,23 +1021,15 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(streamInitMessage.Payload)!;
                 var streamResult = await entrypoint.HandleMethodStream(operationRequest, localCts.Token);
 
-                if (streamResult is BaseOperationResponse<string> errorResponse)
+                if (streamResult.Failure)
                 {
-                    await sender.SendAsync(new ErrorMessage(streamInitMessage.Id, errorResponse.Error));
+                    await sender.SendAsync(new ErrorMessage(streamInitMessage.Id, converter.SerializeToElement(streamResult)));
                     return;
                 }
 
-                if (streamResult == null) { return; }
+                var stream = streamResult.Data! as IAsyncEnumerable<object?>;
 
-                if (!streamResult.Success)
-                {
-                    await sender.SendAsync(new ErrorMessage(streamInitMessage.Id, string.IsNullOrWhiteSpace(streamResult.Error) ? "Unknown error" : streamResult.Error));
-                    return;
-                }
-
-                var stream = streamResult.Data!;
-
-                await foreach (var item in stream.WithCancellation(localCts.Token))
+                await foreach (var item in stream!.WithCancellation(localCts.Token))
                 {
                     await rateLimiterManager.TryAcquireAsync(MessageType.stream_init, streamInitMessage.Id);
 
@@ -1104,9 +1072,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 // Cancelado normalmente
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                await sender.SendAsync(new ErrorMessage(streamInitMessage.Id, ex.Message));
+                await sender.SendAsync(new ErrorMessage(streamInitMessage.Id, converter.SerializeToElement(HubconResponse.InternalError())));
             }
             finally
             {
@@ -1119,7 +1087,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 }
 
                 streamInitMessage.Dispose();
-            };
+            }
+            ;
         }
 
         private async Task HandleTokenRefresh(

@@ -1,17 +1,9 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
-using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Telemetry;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {

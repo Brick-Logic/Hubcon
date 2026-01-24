@@ -1,9 +1,11 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Abstractions.Delegates;
-using Hubcon.Server.Abstractions.Enums;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Models;
+
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -111,7 +113,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         v => new[] { v.ErrorMessage ?? "Invalid value" }
                     );
 
-                    context.Result = new BaseOperationResponse<object>(false, errors, "Validation errors detected.");
+                    context.Response = HubconResponse.BadRequest(errors, null, "Validation errors detected.");
                     return;
                 }
 
@@ -131,7 +133,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 {
                 }
 
-                context.Result = await resultHandler.Invoke(result);
+                context.Response = await resultHandler.Invoke(result);
                 await next();
             }
             else if (context.Blueprint.Kind == OperationKind.Subscription)
@@ -140,7 +142,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 if (context.Blueprint.OperationInfo == null)
                 {
-                    context.Result = new BaseOperationResponse<object>(false, null!, "Suscripcion no encontrada");
+                    context.Response = HubconResponse.NotFound(error: "Suscripcion no encontrada");
                     return;
                 }
 
@@ -163,7 +165,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                     if (options.WebsocketRequiresAuthorization && context.HttpContext?.User == null)
                     {
-                        context.Result = new BaseOperationResponse<object>(false, null!, "Unauthorized");
+                        context.Response = HubconResponse.Unauthorized();
                         return;
                     }
 
@@ -178,7 +180,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                         if (subscription is null)
                         {
-                            context.Result = new BaseOperationResponse<object>(false, "No se encontró un servicio que implemente la interfaz ISubscription.");
+                            context.Response = HubconResponse.InternalError();
                             return;
                         }
 
@@ -230,10 +232,9 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
                     }
                     ;
-                }
-                ;
+                };
 
-                context.Result = new BaseOperationResponse<object>(true, SubDelegate());
+                context.Response = HubconResponse.Ok(SubDelegate());
                 await next();
             }
         }

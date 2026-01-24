@@ -14,6 +14,7 @@ using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace HubconAnalyzers.SourceGenerators
@@ -21,6 +22,8 @@ namespace HubconAnalyzers.SourceGenerators
     [Generator]
     public class CommunicationProxyGenerator : IIncrementalGenerator
     {
+        private static INamedTypeSymbol hubconResponseBaseSymbol;
+
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
             // Capturamos interfaces del proyecto actual
@@ -41,6 +44,9 @@ namespace HubconAnalyzers.SourceGenerators
                 .Select((compilation, _) =>
                 {
                     var interfaces = new List<INamedTypeSymbol>();
+
+                    if(hubconResponseBaseSymbol == null)
+                        hubconResponseBaseSymbol = compilation.GetTypeByMetadataName("Hubcon.Shared.Abstractions.Standard.Models.HubconResponse`1");
 
                     // Recorremos todos los assemblies referenciados
                     foreach (var reference in compilation.References)
@@ -72,8 +78,6 @@ namespace HubconAnalyzers.SourceGenerators
                 // 1. Obtener la compilación (necesaria para buscar símbolos)
                 var firstInterface = interfaceList.OfType<INamedTypeSymbol>().FirstOrDefault();
                 if (firstInterface == null) return;
-
-                var compilation = firstInterface.ContainingAssembly.GlobalNamespace.ContainingCompilation;
 
                 var typesToSerialize = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
                 var interfaces = interfaceList.OfType<INamedTypeSymbol>();
@@ -115,7 +119,6 @@ namespace HubconAnalyzers.SourceGenerators
 
                 var enumerableWrapperCode = GenerateEnumerableWrapper(interfaces);
                 spc.AddSource($"AsyncEnumerableWrapper.g.cs", SourceText.From(enumerableWrapperCode, Encoding.UTF8));
-
 
                 var semiFilteredTypes = typesToSerialize
                 .Where(t =>
@@ -679,9 +682,17 @@ namespace HubconAnalyzers.SourceGenerators
 
                     // --- LÓGICA DE CONSTRUCTOR PROTEGIDA ---
                     var namedType = type as INamedTypeSymbol;
+
                     var constructor = namedType?.Constructors
                         .OrderByDescending(c => c.Parameters.Length)
+                        .FirstOrDefault(c => c.DeclaredAccessibility == Accessibility.Public && c.GetAttributes().OfType<JsonConstructorAttribute>().Any());
+
+                    if(constructor == null )
+                    {
+                        constructor = namedType?.Constructors
+                        .OrderByDescending(c => c.Parameters.Length)
                         .FirstOrDefault(c => c.DeclaredAccessibility == Accessibility.Public);
+                    }
 
                     // Si el constructor tiene punteros, lo ignoramos por completo
                     bool hasPointers = constructor?.Parameters.Any(p => p.Type.TypeKind == TypeKind.Pointer) ?? false;
@@ -845,6 +856,18 @@ namespace HubconAnalyzers.SourceGenerators
                 // 4. Agregar el tipo actual (sea List<User>, User, o int?)
                 // Si ya estaba, cortamos para evitar bucles infinitos
                 if (!typesToSerialize.Add(type)) return;
+
+                // --- NUEVO: Generar HubconResponse<T> ---
+                // Solo si el tipo actual NO es ya un HubconResponse y no es un tipo primitivo de sistema basura
+                if (type.SpecialType != SpecialType.System_Void 
+                    && type.SpecialType != SpecialType.System_Object 
+                    && hubconResponseBaseSymbol != null 
+                    && !SymbolEqualityComparer.Default.Equals(named.OriginalDefinition, hubconResponseBaseSymbol))
+                {
+                    // Fabricamos HubconResponse<TipoActual>
+                    var wrappedType = hubconResponseBaseSymbol.Construct(type);
+                    typesToSerialize.Add(wrappedType);
+                }
 
                 // 5. Si es genérico (List<T>, Nullable<T>, Dictionary<K,V>)
                 if (named.IsGenericType)

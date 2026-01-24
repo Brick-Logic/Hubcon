@@ -13,6 +13,8 @@ namespace BlazorTestServer.Controllers
 
         public ISubscription<int?>? OnUserCreated4 { get; }
 
+        public ISubscription<IEnumerable<int>>? OnEnumerableTest => throw new NotImplementedException();
+
         public async Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
             => await Task.Run(() => new Random().Next(-10, 50));
 
@@ -166,6 +168,11 @@ namespace BlazorTestServer.Controllers
         }
 
         Task<TestInputClass> IUserContract.GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IAsyncEnumerable<string> GetMessages(CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

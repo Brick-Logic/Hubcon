@@ -1,7 +1,8 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Models;
+
 
 namespace BlazorTestServer.Middlewares
 {
@@ -15,7 +16,7 @@ namespace BlazorTestServer.Middlewares
             }
             catch (Exception ex)
             {
-                context.Result = new BaseOperationResponse<object>(false, default!, ex.Message);
+                context.Response = HubconResponse.InternalError(ex, ex.Message);
                 context.Exception = ex;
                 logger.LogInformation(ex.ToString());
                 return;

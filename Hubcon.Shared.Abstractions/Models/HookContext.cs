@@ -1,5 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Models
@@ -14,9 +16,10 @@ namespace Hubcon.Shared.Abstractions.Models
         public string Error { get; }
         public int StatusCode { get; }
         public Exception? Exception { get; }
-        public Func<string, Task<IOperationResponse<bool>>> TryRefreshToken { get; }
+        public Func<string, Task<IHubconResponse<bool>>> TryRefreshToken { get; }
     }
 
+    [StructLayout(LayoutKind.Sequential, Size = 8)]
     public sealed class InvocationContext : IInvocationContext
     {
         public IServiceProvider Services { get; set; }
@@ -26,7 +29,7 @@ namespace Hubcon.Shared.Abstractions.Models
         public bool IsSuccess { get; set; }
         public string Error { get; set; } = string.Empty;
         public Exception? Exception { get; set; }
-        public Func<string, Task<IOperationResponse<bool>>> TryRefreshToken { get; set; }
+        public Func<string, Task<IHubconResponse<bool>>> TryRefreshToken { get; set; }
         public int StatusCode { get; set; }
     }
 }

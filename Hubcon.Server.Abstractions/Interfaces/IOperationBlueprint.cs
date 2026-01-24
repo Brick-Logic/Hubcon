@@ -1,4 +1,4 @@
-﻿using Hubcon.Server.Abstractions.Enums;
+﻿using Hubcon.Shared.Abstractions.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;

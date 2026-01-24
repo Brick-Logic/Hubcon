@@ -1,0 +1,125 @@
+﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Text.Json.Serialization;
+
+namespace Hubcon.Shared.Abstractions.Standard.Models
+{
+    public class HubconResponse : HubconResponse<object?>, IHubconResponse
+    {
+        public HubconResponse(bool success, bool failure, string message, string error, int statusCode, object? data = null, Exception? exception = null) : base(success, failure, message, error, statusCode, data, exception)
+        {
+        }
+
+        public static IHubconResponse Ok(string message = "Success")
+        => new HubconResponse(true, false, message, null!, 200);
+
+        public static IHubconResponse Ok(object? data, string message = "Success")
+        => new HubconResponse(true, false, message, null!, 200, data);
+
+        public static IHubconResponse Fail(string error, object? data = null, Exception? exception = null, int statusCode = 400)
+            => new HubconResponse(false, true, null!, error, statusCode, data, exception);
+
+        public static IHubconResponse Cancelled(Exception? exception = null, string error = "Operation cancelled by the user")
+            => new HubconResponse(false, true, null!, error, 499, null, exception);
+
+        public static IHubconResponse NotFound(Exception? exception = null, string error = "Resource not found")
+            => new HubconResponse(false, true, null!, error, 404, null, exception);
+
+        public static IHubconResponse RequestTooLarge(Exception? exception = null, string error = "Request too large")
+            => new HubconResponse(false, true, null!, error, 413, null, exception);
+
+        public static IHubconResponse TooManyRequests(Exception? exception = null, string error = "Too many requests")
+            => new HubconResponse(false, true, null!, error, 429, null, exception);
+
+        public static IHubconResponse BadRequest(object? data = null, Exception? exception = null, string error = "Bad request")
+            => new HubconResponse(false, true, null!, error, 413, data, exception);
+
+        public static IHubconResponse Unauthorized(Exception? exception = null, string error = "Unauthorized access")
+            => new HubconResponse(false, true, null!, error, 401, null, exception);
+
+        public static IHubconResponse Forbidden(Exception? exception = null, string error = "Forbidden access")
+            => new HubconResponse(false, true, null!, error, 403, null, exception);
+
+        public static IHubconResponse InternalError(Exception? exception = null, string error = "Internal server error")
+            => new HubconResponse(false, true, null!, error, 500, null, exception);
+
+
+        public static IHubconResponse<T?> OkT<T>(T? data = default, string message = "Success")
+            => new HubconResponse<T?>(true, false, message, null!, 200, data);
+
+        public static IHubconResponse<T?> Created<T>(T? data, string message = "Created")
+            => new HubconResponse<T?>(true, false, message, null!, 201, data);
+
+        public static IHubconResponse<T?> Fail<T>(string error, Exception? exception = null, int statusCode = 400, T? data = default)
+            => new HubconResponse<T?>(false, true, null!, error, statusCode, data, exception);
+
+        public static IHubconResponse<T?> Cancelled<T>(Exception? exception = null, string error = "Operation cancelled by the user")
+            => new HubconResponse<T?>(false, true, null!, error, 499, default!, exception);
+
+        public static IHubconResponse<T?> NotFound<T>(Exception? exception = null, string error = "Resource not found")
+            => new HubconResponse<T?>(false, true, null!, error, 404, default!, exception);
+
+        public static IHubconResponse<T?> RequestTooLarge<T>(Exception? exception = null, string error = "Request too large")
+            => new HubconResponse<T?>(false, true, null!, error, 413, default!, exception);
+
+        public static IHubconResponse<T?> TooManyRequests<T>(Exception? exception = null, string error = "Too many requests")
+            => new HubconResponse<T?>(false, true, null!, error, 429, default!, exception);
+
+        public static IHubconResponse<T?> Unauthorized<T>(Exception? exception = null, string error = "Unauthorized access")
+            => new HubconResponse<T?>(false, true, null!, error, 401, default!, exception);
+
+        public static IHubconResponse<T?> Forbidden<T>(Exception? exception = null, string error = "Forbidden access")
+            => new HubconResponse<T?>(false, true, null!, error, 403, default!, exception);
+
+        public static IHubconResponse<T?> InternalError<T>(Exception? exception = null, string error = "Internal server error")
+            => new HubconResponse<T?>(false, true, null!, error, 500, default!, exception);
+    }
+
+    public class HubconResponse<T> : IHubconResponse<T?>
+    {
+        [JsonConstructor]
+        public HubconResponse(bool success, bool failure, string message, string error, int statusCode, T data)
+        {
+            Success = success;
+            Failure = failure;
+            Message = message;
+            Error = error;
+            StatusCode = statusCode;
+            Data = data;
+        }
+
+        internal HubconResponse(bool success, bool failure, string message, string error, int statusCode, T? data, Exception? exception)
+        {
+            Success = success;
+            Failure = failure;
+            Message = message;
+            Error = error;
+            StatusCode = statusCode;
+            Exception = exception;
+            Data = data;
+        }
+
+        [JsonPropertyName("success")]
+        public bool Success { get; set; }
+
+        [JsonPropertyName("failure")]
+        public bool Failure { get; set; }
+
+        [JsonPropertyName("message")]
+        public string Message { get; set; }
+
+        [JsonPropertyName("error")]
+        public string Error { get; set; }
+
+        [JsonPropertyName("statusCode")]
+        public int StatusCode { get; set; }
+
+        [JsonIgnore]
+        public Exception? Exception { get; }
+
+        [JsonPropertyName("data")]
+        public T? Data { get; set; }
+    }
+}

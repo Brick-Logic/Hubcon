@@ -1,9 +1,11 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace Hubcon.Shared.Abstractions.Models
 {
+    [StructLayout(LayoutKind.Sequential, Size = 8)]
     public sealed class OperationRequest : IOperationRequest
     {
         public string ContractName { get; set; }

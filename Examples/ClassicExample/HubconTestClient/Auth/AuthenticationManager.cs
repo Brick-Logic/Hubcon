@@ -1,6 +1,7 @@
 ﻿using Hubcon.Client.Core.Authentication;
 using Hubcon.Shared.Abstractions.Interfaces;
 using HubconTestDomain;
+using Hubcon.Client;
 
 namespace HubconTestClient.Auth
 {
@@ -8,8 +9,8 @@ namespace HubconTestClient.Auth
     {
         protected async override Task<IAuthResult> AuthenticateAsync(string username, string password)
         {
-            var token = await secondTestContract.LoginAsync(new LoginCommand(username, password, true));
-            return AuthResult.Success(token, "Bearer", RefreshToken!, DateTimeOffset.UtcNow.AddMinutes(30).DateTime);
+            var token = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand(username, password, true)));
+            return AuthResult.Success(token.Data!, "Bearer", RefreshToken!, DateTimeOffset.UtcNow.AddMinutes(30).DateTime);
         }
 
         protected override Task<IAuthResult> AuthenticateWithTokenAsync(string token, string type)

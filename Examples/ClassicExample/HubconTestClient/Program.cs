@@ -98,6 +98,18 @@ internal class Program
         await Task.Delay(100);
 
 
+        var response = await client.Execute(x => x.GetTemperatureFromServer("test"));
+
+        if (!response.Success || response.StatusCode != 200)
+        {
+            // Hacer algo
+        }
+        else
+        {
+            var data = response.Data;
+            // Hago algo con data
+        }
+
         await TestValidations(client, logger);
         await Task.Delay(100);
         await TestIngest(client, logger);
@@ -156,7 +168,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 96
+            MaxDegreeOfParallelism = 128
         };
 
         int rps = 9999999;
@@ -180,22 +192,11 @@ internal class Program
                 while (true)
                 {
                     // var swReq = Stopwatch.StartNew();
-                    try
-                    {
-                        //await tokenBucketRateLimiter.AcquireAsync();
-                        //await client.IngestMessages(GetMessages2(), default);
-                        var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
-                        Interlocked.Increment(ref _finishedRequestsCount);
-                    }
-                    catch (Exception ex)
-                    {
-                        Interlocked.Increment(ref _errors);
-                    }
-                    finally
-                    {
-                        // swReq.Stop();
-                        // Latencies.Add(swReq.Elapsed.TotalMilliseconds);
-                    }
+                    //await tokenBucketRateLimiter.AcquireAsync();
+                    //await client.IngestMessages(GetMessages2(), default);
+                    //var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
+                    var item = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), ct));
+                    //Interlocked.Increment(ref _finishedRequestsCount);
                 }
             }
             finally
@@ -239,7 +240,8 @@ internal class Program
         logger.LogInformation("Probando streaming por SSE, pidiendo 10 eventos...");
 
         var eventos = 0;
-        await foreach (var item in client.GetMessages(10))
+        var stream = await client.Execute(x => x.GetMessages(10));
+        await foreach (var item in stream.Data!)
         {
             logger.LogInformation($"Evento recibido: {item}");
             eventos++;
@@ -258,7 +260,8 @@ internal class Program
         bool temp2 = false;
         try
         {
-            temp2 = await client.GetTemperatureFromServerBlocking(cts.Token);
+            var result = await client.Execute(x => x.GetTemperatureFromServerBlocking(cts.Token));
+            temp2 = result.Data;
         }
         catch (Exception e)
         {
@@ -275,7 +278,7 @@ internal class Program
     {
         logger.LogWarning("Probando invocación con retorno...");
 
-        var temp = await client.GetTemperatureFromServer("");
+        var temp = await client.Execute(x => x.GetTemperatureFromServer(""));
 
         logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
     }
@@ -342,7 +345,7 @@ internal class Program
         await Task.Delay(100);
 
         logger.LogWarning("Enviando request de prueba...");
-        await client.CreateUser();
+        var result = await client.Execute(x => x.CreateUser());
         logger.LogInformation($"Esperando eventos...");
 
         await Task.Delay(1000);
@@ -360,9 +363,9 @@ internal class Program
     private static async Task TestInvokeNoParameters(ISecondTestContract client2, ILogger<IUserContract> logger)
     {
         logger.LogWarning($"Probando invocación sin parametros...");
-        var text = await client2.TestReturn();
+        var result = await client2.Execute(x => x.TestReturn());
 
-        if (text != null)
+        if (result.Success)
             logger.LogInformation($"Invocación sin parametros OK.");
         else
             throw new Exception("Invocación sin parametros fallida.");
@@ -373,8 +376,8 @@ internal class Program
         logger.LogWarning($"Probando parametros sobrecargados sobre http...");
         try
         {
-            await client2.TestMethod();
-            await client2.TestMethod("hola");
+            var result1 = await client2.Execute(x => x.TestMethod());
+            var result2 = await client2.Execute(x => x.TestMethod("test"));
         }
         catch (Exception ex)
         {
@@ -391,20 +394,22 @@ internal class Program
         var source3 = GetMessages(3);
         var source4 = GetMessages(3);
         var source5 = GetMessages(3);
-        await client.IngestMessages2(source1, source2, source3, source4, source5);
-        logger.LogInformation($"Ingest OK.");
+        var result = await client.Execute(x => x.IngestMessages2(source1, source2, source3, source4, source5));
+
+        if (result.Failure)
+            logger.LogInformation($"Ingest FAILED.");
+        else
+            logger.LogInformation($"Ingest OK.");
     }
 
     private static async Task TestValidations(IUserContract client, ILogger<IUserContract> logger)
     {
-        try
-        {
-            await client.IngestMessages(GetMessages(10), null);
-        }
-        catch (Exception ex)
-        {
+        var response = await client.Execute(x => x.IngestMessages(GetMessages(10), null));
+
+        if (response.Failure)
             logger.LogInformation($"Validaciones OK.");
-        }
+        else
+            logger.LogInformation($"Error de validaciones: {response.Error}");
     }
 
     private static async Task TestLogin(AuthenticationManager authManager, ILogger<IUserContract> logger)

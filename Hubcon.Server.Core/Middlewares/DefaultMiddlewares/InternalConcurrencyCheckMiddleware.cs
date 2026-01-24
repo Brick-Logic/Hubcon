@@ -2,6 +2,8 @@
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Models;
+
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using System;
 using System.Collections.Concurrent;
@@ -61,7 +63,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 if (!allowed)
                 {
-                    context.Result = new BaseOperationResponse<string>(false, 429, null!, "Too many requests.");
+                    context.Response = HubconResponse.TooManyRequests();
                     return;
                 }
 

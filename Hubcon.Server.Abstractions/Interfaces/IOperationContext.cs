@@ -1,4 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
+
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
@@ -15,7 +17,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         object? WrappedRequest { get; init; }
         CancellationToken RequestAborted { get; init; }
         IServiceProvider RequestServices { get; init; }
-        IOperationResult? Result { get; set; }
+        IHubconResponse Response { get; set; }
         ClaimsPrincipal? User { get; init; }
     }
 }

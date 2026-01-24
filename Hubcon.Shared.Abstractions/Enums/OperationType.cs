@@ -1,4 +1,4 @@
-﻿namespace Hubcon.Server.Abstractions.Enums
+﻿namespace Hubcon.Shared.Abstractions.Enums
 {
     public enum OperationKind
     {

@@ -1,9 +1,9 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.Server.Abstractions.Interfaces
 {
     public interface IPipeline
     {
-        public Task<IObjectOperationResponse> Execute();
+        public Task<IHubconResponse> Execute();
     }
 }

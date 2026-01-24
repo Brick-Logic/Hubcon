@@ -2,6 +2,8 @@
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Models;
+
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
 using System.Text;
@@ -37,19 +39,19 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 StringBuilder? logMsg = null;
                 StringBuilder? responseMsg = null;
 
-                if (context.Result != null && !context.Result.Success)
+                if (context.Response != null && !context.Response.Success)
                 {
                     isError ??= true;
 
                     logMsg ??= new StringBuilder();
 
-                    if (!string.IsNullOrWhiteSpace(context.Result.Error))
-                        logMsg.AppendLine(context.Result.Error);
+                    if (!string.IsNullOrWhiteSpace(context.Response.Error))
+                        logMsg.AppendLine(context.Response.Error);
 
                     responseMsg ??= new StringBuilder();
 
-                    if (!string.IsNullOrWhiteSpace(context.Result.Error))
-                        responseMsg.AppendLine(context.Result.Error);
+                    if (!string.IsNullOrWhiteSpace(context.Response.Error))
+                        responseMsg.AppendLine(context.Response.Error);
                 }
 
                 if (context.Exception != null)
@@ -109,16 +111,11 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     var createdLogMessage = logMsg!.ToString();
                     var createdResponseMsg = responseMsg!.ToString();
 
-                    var response = new BaseOperationResponse<object>(
-                        false,
-                        null!,
-                        options.DetailedErrorsEnabled ? createdResponseMsg : "Internal server error");
-
-                    var result = context.Result;
+                    var response = HubconResponse.InternalError(exception, options.DetailedErrorsEnabled ? createdResponseMsg : "Internal server error");
+                    var result = context.Response;
 
                     logger?.LogError("{createdLogMessage}\n{request}\n{result}", createdLogMessage, request, result);
-
-                    context.Result = response;
+                    context.Response = response;
                 }
             }
 

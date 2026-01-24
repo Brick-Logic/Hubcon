@@ -2,9 +2,13 @@
 using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.Extensions;
 using Hubcon.Client.Core.Helpers;
+using Hubcon.Client.Core.HubconInvocationContext;
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Models;
+
 using Hubcon.Shared.Core.Serialization;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets;
@@ -210,7 +214,7 @@ namespace Hubcon.Client.Core.Websockets
             return observable;
         }
 
-        public async Task<IOperationResponse<T>> IngestMultiple<T>(
+        public async Task<IHubconResponse<T>> IngestMultiple<T>(
             IOperationRequest operationRequest,
             bool remoteCancelEnabled,
             IClientOptions? clientOptions = null,
@@ -362,11 +366,11 @@ namespace Hubcon.Client.Core.Websockets
 
                 if (result == null) throw new HubconRemoteException("Received an empty response.");
 
-                var response = converter.DeserializeJsonElement<BaseOperationResponse<T>>(result.Data)
+                var response = converter.DeserializeJsonElement<HubconResponse<T>>(result.Data)
                                ?? throw new HubconRemoteException("Received an empty response.");
 
-                if (!response.Success)
-                    throw new HubconRemoteException(response.Error);
+                if(HubconContext.Current.IsWrapped == true)
+                    HubconContext.Current.Response = response;
 
                 return response;
             }
@@ -380,6 +384,10 @@ namespace Hubcon.Client.Core.Websockets
                     logger?.LogError(ex, "Error general en IngestMultiple");
 
                 _errorStream.OnNext(ex);
+
+                if (HubconContext.Current.IsWrapped)
+                    return default!;
+
                 throw new HubconGenericException(ex.Message, ex);
             }
             finally
@@ -415,13 +423,13 @@ namespace Hubcon.Client.Core.Websockets
             await SendMessageAsync(request, cancellationToken);
         }
 
-        public async Task<IOperationResponse<T>> InvokeAsync<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
+        public async Task<IHubconResponse<T>> InvokeAsync<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             var request = new OperationInvokeMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
             var tcs = new TaskCompletionSource<OperationResponseMessage>();
             _operationTcs.TryAdd(request.Id, tcs);
             OperationResponseMessage? response = null;
-            BaseOperationResponse<T> converted = null!;
+            HubconResponse<T> converted = null!;
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
@@ -446,7 +454,10 @@ namespace Hubcon.Client.Core.Websockets
                 if (response == null)
                     throw new HubconGenericException("There was an unknown error or the request timed out.");
 
-                converted = converter.DeserializeJsonElement<BaseOperationResponse<T>>(response.Result)!;
+                converted = converter.DeserializeJsonElement<HubconResponse<T>>(response.Result)!;
+
+                if (HubconContext.Current.IsWrapped == true)
+                    HubconContext.Current.Response = converted;
 
                 if (!converted.Success)
                     throw new HubconRemoteException(converted.Error ?? "An error occurred on the server while processing the request.");
@@ -1145,7 +1156,7 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        public async Task<IOperationResponse<bool>> TryRefreshToken(string token)
+        public async Task<IHubconResponse<bool>> TryRefreshToken(string token)
         {
             var request = new TokenUpdateMessage(Guid.NewGuid(), token);
             var tcs = new TaskCompletionSource<TokenUpdateResponseMessage>();
@@ -1178,7 +1189,7 @@ namespace Hubcon.Client.Core.Websockets
             if (response == null)
                 throw new HubconGenericException("There was an unknown error or the request timed out.");
 
-            var converted = new BaseOperationResponse<bool>(response.Result, default, response.Message);
+            var converted = HubconResponse.OkT(response.Result, response.Message);
 
             return converted;
         }

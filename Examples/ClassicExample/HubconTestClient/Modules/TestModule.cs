@@ -16,6 +16,7 @@ namespace HubconTestClient.Modules
 
             configuration.EnableWebsocketAutoReconnect(true);
             configuration.GlobalLimit(200000000);
+            configuration.EnableLogging();
 
             //configuration.LimitIngest(100);
             //configuration.LimitSubscription(100);
