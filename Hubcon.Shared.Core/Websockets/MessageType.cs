@@ -29,6 +29,7 @@
         ingest_result,
         cancel,
         none,
-        token_update
+        token_update,
+        disconnect
     }
 }

@@ -28,6 +28,7 @@ using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Security.Claims;
@@ -198,23 +199,22 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     {
                         tmo = await receiver.ReceiveAsync();
 
-                        if (webSocket.State != WebSocketState.Open)
-                            break;
+                        if (tmo == null || tmo.Memory.IsEmpty)
+                        {
+                            return;
+                        }
                     }
                     catch
                     {
                         webSocket.Abort();
-                        break;
+                        return;
                     }
 
                     if (options.CheckTokenExpirationOnMsgReceived && lastTokenExpirationDate != DateTime.MinValue && lastTokenExpirationDate < DateTime.Now)
                     {
                         webSocket.Abort();
-                        break;
+                        return;
                     }
-
-                    if (tmo == null || tmo.Memory.IsEmpty)
-                        continue;
 
                     var message = new BaseMessage(tmo);
 
@@ -478,6 +478,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             finally
             {
+                if(webSocket.State == WebSocketState.Open)
+                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
+
                 await connectionSupervisor.UnregisterAsync(connectionId);
 
                 if (_heartbeatWatcher != null)
@@ -1162,17 +1165,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
             await sender.SendAsync(new PongMessage(pingMessage.Id));
             pingMessage.Dispose();
-        }
-
-        private static async Task CloseWebSocketAsync(
-            WebSocket webSocket,
-            WebSocketCloseStatus status,
-            string description)
-        {
-            if (webSocket.State == WebSocketState.Open || webSocket.State == WebSocketState.CloseReceived)
-            {
-                await webSocket.CloseAsync(status, description, CancellationToken.None);
-            }
         }
     }
 }

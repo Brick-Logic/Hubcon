@@ -75,7 +75,6 @@ namespace Hubcon.Client.Core.Websockets
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private CancellationTokenSource? _websocketCts = new CancellationTokenSource();
         private CancellationTokenSource? _receiveLoopCts;
-        private CancellationTokenSource? _pingLoopCts;
         private CancellationTokenSource? _sendLoopCts;
 
         private bool _disposed = false;
@@ -369,7 +368,7 @@ namespace Hubcon.Client.Core.Websockets
                 var response = converter.DeserializeJsonElement<HubconResponse<T>>(result.Data)
                                ?? throw new HubconRemoteException("Received an empty response.");
 
-                if(HubconContext.Current.IsWrapped == true)
+                if (HubconContext.Current.IsWrapped == true)
                     HubconContext.Current.Response = response;
 
                 return response;
@@ -500,9 +499,6 @@ namespace Hubcon.Client.Core.Websockets
 
                         var message = new BaseMessage(tmo);
 
-                        if (message.Id == Guid.Empty)
-                            continue;
-
                         switch (message.Type)
                         {
                             case MessageType.pong:
@@ -527,8 +523,8 @@ namespace Hubcon.Client.Core.Websockets
 
                             case MessageType.subscription_data:
                                 var eventData = new SubscriptionDataMessage(tmo, message.Id, message.Type);
-                                if (eventData?.Id != null &&
-                                    _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
+
+                                if (eventData?.Id != null && _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
                                 {
                                     sub.OnNextElement(eventData.Data);
                                 }
@@ -559,6 +555,7 @@ namespace Hubcon.Client.Core.Websockets
 
                             case MessageType.error:
                                 var errorData = new ErrorMessage(tmo, message.Id, message.Type);
+
                                 if (errorData?.Id != null && _subscriptions.TryGetValue(errorData.Id, out var subToError))
                                 {
                                     subToError.OnError(new Exception(errorData.Error));
@@ -568,8 +565,6 @@ namespace Hubcon.Client.Core.Websockets
 
                             case MessageType.ingest_init_ack:
                                 var ingestInitAckMessage = new IngestInitAckMessage(tmo, message.Id, message.Type);
-
-                                if (ingestInitAckMessage == null) break;
 
                                 if (_ingestAck.TryGetValue(ingestInitAckMessage.Id, out var ingestInitAckTcs))
                                 {
@@ -581,8 +576,6 @@ namespace Hubcon.Client.Core.Websockets
                             case MessageType.ingest_result:
                                 var ingestResultMessage = new IngestResultMessage(tmo, message.Id, message.Type);
 
-                                if (ingestResultMessage == null) break;
-
                                 if (_ingests.TryGetValue(ingestResultMessage.Id, out var ingestResultMessageTcs))
                                 {
                                     ingestResultMessageTcs.Item1.TrySetResult(ingestResultMessage);
@@ -592,8 +585,6 @@ namespace Hubcon.Client.Core.Websockets
 
                             case MessageType.token_update:
                                 var tokenUpdateResponseMessage = new TokenUpdateResponseMessage(tmo, message.Id, message.Type);
-
-                                if (tokenUpdateResponseMessage == null) break;
 
                                 if (_tokenUpdateTcs.TryGetValue(tokenUpdateResponseMessage.Id, out var tokenUpdateResponseTcs))
                                 {
@@ -605,8 +596,6 @@ namespace Hubcon.Client.Core.Websockets
                             case MessageType.ingest_data_ack:
                                 var ingestDataAckMessage = new IngestDataAckMessage(tmo, message.Id, message.Type);
 
-                                if (ingestDataAckMessage == null) break;
-
                                 if (_ingestDataAck.TryGetValue(ingestDataAckMessage.Id, out var ingestDataAckTcs))
                                 {
                                     ingestDataAckTcs.TrySetResult(ingestDataAckMessage);
@@ -615,10 +604,7 @@ namespace Hubcon.Client.Core.Websockets
                                 break;
 
                             case MessageType.operation_response:
-                                var operationResponseMessage =
-                                    new OperationResponseMessage(tmo, message.Id, message.Type);
-
-                                if (operationResponseMessage == null) break;
+                                var operationResponseMessage = new OperationResponseMessage(tmo, message.Id, message.Type);
 
                                 if (_operationTcs.TryGetValue(operationResponseMessage.Id, out var ormTcs))
                                 {
@@ -676,7 +662,6 @@ namespace Hubcon.Client.Core.Websockets
                     || _webSocket?.State is WebSocketState.CloseReceived
                     || _webSocket?.State is WebSocketState.CloseSent)
                 {
-                    await ClientOptions.CallInterceptor(InterceptorType.OnDisconnected, GeneralContext);
                     await ClientOptions.CallInterceptor(InterceptorType.OnReconnect, GeneralContext);
                 }
 
@@ -693,21 +678,8 @@ namespace Hubcon.Client.Core.Websockets
 
                         _webSocket = new ClientWebSocket();
 
-                        _websocketCts?.Cancel();
-                        _websocketCts?.Dispose();
-                        _websocketCts = null;
+                        CancelAll();
 
-                        _receiveLoopCts?.Cancel();
-                        _receiveLoopCts?.Dispose();
-                        _receiveLoopCts = null;
-
-                        //_pingLoopCts?.Cancel();
-                        //_pingLoopCts?.Dispose();
-                        //_pingLoopCts = null;
-
-                        _sendLoopCts?.Cancel();
-                        _sendLoopCts?.Dispose();
-                        _sendLoopCts = null;
                         _sendLoopCts = new CancellationTokenSource();
                         _sendTask = Task.Factory.StartNew(
                                     async () => await SendLoopAsync(_webSocket, _sendLoopCts.Token),
@@ -909,6 +881,21 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
+        private void CancelAll()
+        {
+            _websocketCts?.Cancel();
+            _websocketCts?.Dispose();
+            _websocketCts = null;
+
+            _receiveLoopCts?.Cancel();
+            _receiveLoopCts?.Dispose();
+            _receiveLoopCts = null;
+
+            _sendLoopCts?.Cancel();
+            _sendLoopCts?.Dispose();
+            _sendLoopCts = null;
+        }
+
         private async ValueTask SendMessageAsync<T>(T message, CancellationToken cancellationToken = default) where T : BaseMessage
         {
             var pipe = new Pipe();
@@ -971,10 +958,10 @@ namespace Hubcon.Client.Core.Websockets
         private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
         {
             if (LoggingEnabled)
+            {
                 Interlocked.Increment(ref cantidad);
-
-            if (LoggingEnabled)
                 logger?.LogInformation($"ReceiveLoop iniciado. Cantidad: {Volatile.Read(ref cantidad)}");
+            }
 
             try
             {
@@ -997,11 +984,16 @@ namespace Hubcon.Client.Core.Websockets
                             result = await _webSocket.ReceiveAsync(segment, cancellationToken);
                             cancellationToken.ThrowIfCancellationRequested();
 
-                            if (result.MessageType == WebSocketMessageType.Close)
+                            if (result.MessageType != WebSocketMessageType.Binary)
                             {
-                                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server closed",
-                                    CancellationToken.None);
-                                throw new OperationCanceledException();
+                                if (result.MessageType == WebSocketMessageType.Close)
+                                {
+                                    await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
+                                    CancelAll();
+                                    return;
+                                }
+
+                                continue;
                             }
 
                             if (result.Count < segment.Length)
@@ -1197,11 +1189,10 @@ namespace Hubcon.Client.Core.Websockets
         public async Task Disconnect()
         {
             IsReady = false;
-            if (_webSocket != null)
+            if (_webSocket != null && _webSocket.State == WebSocketState.Open)
             {
-                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "User disconnected.", CancellationToken.None);
-                _webSocket?.Dispose();
-                _websocketCts?.Cancel();
+                await _webSocket!.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
+                CancelAll();
             }
         }
     }
