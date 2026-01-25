@@ -12,7 +12,7 @@ namespace Hubcon.Shared.Abstractions.Standard.Interfaces
         string Error { get; }
 
         [JsonIgnore]
-        Exception? Exception { get; }
+        Exception Exception { get; set; }
 
         [JsonPropertyName("failure")]
         bool Failure { get; }
@@ -27,6 +27,6 @@ namespace Hubcon.Shared.Abstractions.Standard.Interfaces
         bool Success { get; }
 
         [JsonPropertyName("data")]
-        T? Data { get; }
+        T Data { get; }
     }
 }

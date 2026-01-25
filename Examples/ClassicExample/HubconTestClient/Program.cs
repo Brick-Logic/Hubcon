@@ -30,7 +30,7 @@ internal class Program
 
         long coreMask = 0;
 
-        int? customCores = 0;
+        int? customCores = 3;
         int cores = customCores ?? Environment.ProcessorCount - 1;
 
         for (int i = 0; i <= cores; i++)
@@ -98,34 +98,34 @@ internal class Program
         await Task.Delay(100);
 
 
-        var response = await client.Execute(x => x.GetTemperatureFromServer("test"));
+        //var response = await client.Execute(x => x.GetTemperatureFromServer("test"));
 
-        if (!response.Success || response.StatusCode != 200)
-        {
-            // Hacer algo
-        }
-        else
-        {
-            var data = response.Data;
-            // Hago algo con data
-        }
+        //if (!response.Success || response.StatusCode != 200)
+        //{
+        //    // Hacer algo
+        //}
+        //else
+        //{
+        //    var data = response.Data;
+        //    // Hago algo con data
+        //}
 
-        await TestValidations(client, logger);
-        await Task.Delay(100);
-        await TestIngest(client, logger);
-        await Task.Delay(100);
-        await TestOverloading(client2, logger);
-        await Task.Delay(100);
-        await TestInvokeNoParameters(client2, logger);
-        await Task.Delay(100);
-        await TestSubscriptions(client, logger);
-        await Task.Delay(100);
-        await TestInvokeWithParameters(client, logger);
-        await Task.Delay(100);
-        await TestRemoteCancellation(client, logger);
-        await Task.Delay(100);
-        await TestSseStreaming(client, logger);
-        await Task.Delay(100);
+        //await TestValidations(client, logger);
+        //await Task.Delay(100);
+        //await TestIngest(client, logger);
+        //await Task.Delay(100);
+        //await TestOverloading(client2, logger);
+        //await Task.Delay(100);
+        //await TestInvokeNoParameters(client2, logger);
+        //await Task.Delay(100);
+        //await TestSubscriptions(client, logger);
+        //await Task.Delay(100);
+        //await TestInvokeWithParameters(client, logger);
+        //await Task.Delay(100);
+        //await TestRemoteCancellation(client, logger);
+        //await Task.Delay(100);
+        //await TestSseStreaming(client, logger);
+        //await Task.Delay(100);
 
 
         _sw = Stopwatch.StartNew();
@@ -168,7 +168,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 128
+            MaxDegreeOfParallelism = 24
         };
 
         int rps = 9999999;
@@ -195,6 +195,7 @@ internal class Program
                     //await tokenBucketRateLimiter.AcquireAsync();
                     //await client.IngestMessages(GetMessages2(), default);
                     //var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
+                    //await paralellClient.Execute(x => x.ShowTextOnServer());
                     var item = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), ct));
                     //Interlocked.Increment(ref _finishedRequestsCount);
                 }

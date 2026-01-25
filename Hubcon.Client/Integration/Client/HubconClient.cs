@@ -39,9 +39,12 @@ namespace Hubcon.Client.Integration.Client
         {
             get
             {
-                var manager = _authenticationManager
-                    ??= authenticationManagerFactory?.Invoke()
-                    ?? throw new InvalidOperationException($"Authentication Manager not defined for server module '{ClientOptions.ServerModuleName}'.");
+                if(_authenticationManager != null)
+                    return _authenticationManager;
+
+                var manager = authenticationManagerFactory?.Invoke() ?? throw new InvalidOperationException($"Authentication Manager not defined for server module '{ClientOptions.ServerModuleName}'.");
+
+                _authenticationManager = manager;
 
                 manager.OnSessionIsInactive += async () =>
                 {
@@ -245,12 +248,14 @@ namespace Hubcon.Client.Integration.Client
                     await operationOptions.CallHook(HookType.OnResponse, context);
                     await contractOptions.CallHook(HookType.OnResponse, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnResponse, context);
-
-                    content?.Dispose();
+                   
                     var res = converter.DeserializeJsonElement<HubconResponse<T>>(result) ?? default!;
 
-                    if (HubconContext.Current.IsWrapped == true)
-                        HubconContext.Current.Response = res;
+                    HubconContext.Current.Response = res;
+
+                    content?.Dispose();
+                    httpRequest.Dispose();
+                    response.Dispose();
 
                     return res.Data!;
                 }
@@ -323,8 +328,7 @@ namespace Hubcon.Client.Integration.Client
                     var operationResponse = converter.DeserializeJsonElement<HubconResponse<T>>(result)
                         ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
 
-                    if (HubconContext.Current.IsWrapped == true)
-                        HubconContext.Current.Response = operationResponse;
+                    HubconContext.Current.Response = operationResponse;
 
                     context.IsSuccess = operationResponse.Success;
                     context.Result = operationResponse.Data;
@@ -336,6 +340,8 @@ namespace Hubcon.Client.Integration.Client
                     await ClientOptions.CallInterceptor(InterceptorType.OnResponse, context);
 
                     content?.Dispose();
+                    httpRequest.Dispose();
+                    response.Dispose();
                     return operationResponse.Data!;
                 }
             }
@@ -355,7 +361,6 @@ namespace Hubcon.Client.Integration.Client
                     return default!;
                 }
                 
-
                 throw;
             }
         }
@@ -435,13 +440,15 @@ namespace Hubcon.Client.Integration.Client
                     await contractOptions.CallHook(HookType.OnSend, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
 
-                    _ = await HttpClient.SendAsync(httpRequest, cancellationToken);
+                    var response = await HttpClient.SendAsync(httpRequest, cancellationToken);
 
                     await operationOptions.CallHook(HookType.OnAfterSend, context);
                     await contractOptions.CallHook(HookType.OnAfterSend, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
 
                     content?.Dispose();
+                    httpRequest.Dispose();
+                    response.Dispose();
                 }
                 else
                 {
@@ -498,13 +505,15 @@ namespace Hubcon.Client.Integration.Client
                     await contractOptions.CallHook(HookType.OnSend, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnSend, context);
 
-                    _ = await HttpClient.SendAsync(httpRequest, cancellationToken);
+                    var response = await HttpClient.SendAsync(httpRequest, cancellationToken);
 
                     await operationOptions.CallHook(HookType.OnAfterSend, context);
                     await contractOptions.CallHook(HookType.OnAfterSend, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
 
                     content?.Dispose();
+                    httpRequest.Dispose();
+                    response.Dispose();
                 }
             }
             catch (Exception ex)
@@ -772,6 +781,8 @@ namespace Hubcon.Client.Integration.Client
                 }
 
                 content?.Dispose();
+                httpRequest.Dispose();
+                response.Dispose();
             }
             else
             {

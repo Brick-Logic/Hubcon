@@ -72,7 +72,6 @@ namespace HubconTest.ContractHandlers
         {
             for (int i = 0; i < count; i++)
             {
-                await Task.Delay(500);
                 yield return "hola2";
             }
         }
@@ -101,10 +100,10 @@ namespace HubconTest.ContractHandlers
             await Task.CompletedTask;
         }
 
-        public Task ShowTextOnServer()
+        [Authorize(Roles = "Manager")]
+        public async Task ShowTextOnServer()
         {
-            logger.LogInformation("Mostrando texto");
-            return Task.CompletedTask;
+            
         }
 
         [IngestSettings(5000, 5)]
