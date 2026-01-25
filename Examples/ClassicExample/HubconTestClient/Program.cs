@@ -30,7 +30,7 @@ internal class Program
 
         long coreMask = 0;
 
-        int? customCores = 3;
+        int? customCores = 0;
         int cores = customCores ?? Environment.ProcessorCount - 1;
 
         for (int i = 0; i <= cores; i++)
@@ -168,7 +168,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 24
+            MaxDegreeOfParallelism = 128
         };
 
         int rps = 9999999;
