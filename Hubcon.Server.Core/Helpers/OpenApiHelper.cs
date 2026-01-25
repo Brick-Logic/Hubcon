@@ -188,8 +188,8 @@ namespace Hubcon.Server.Core.Helpers
             // Agregar respuestas de error comunes si está habilitado
             if (Defaults.AddCommonErrorResponses && !produces.Any(p => p.StatusCode >= 400))
             {
-                builder.Produces(400, typeof(IResponse)); // Bad Request
-                builder.Produces(500, typeof(IResponse)); // Internal Server Error
+                builder.Produces(400, typeof(IHubconResponse)); // Bad Request
+                builder.Produces(500, typeof(IHubconResponse)); // Internal Server Error
             }
         }
 
@@ -199,7 +199,7 @@ namespace Hubcon.Server.Core.Helpers
 
             if (returnType == typeof(void) || returnType == typeof(Task) || returnType == typeof(ValueTask))
             {
-                builder.Produces(200, typeof(IResponse));
+                builder.Produces(200, typeof(IHubconResponse));
             }
             else if(returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
             {
@@ -410,7 +410,7 @@ namespace Hubcon.Server.Core.Helpers
                 TypeCode.Boolean => new Microsoft.OpenApi.Any.OpenApiBoolean(true),
                 TypeCode.Double => new Microsoft.OpenApi.Any.OpenApiDouble(12.34),
                 TypeCode.Decimal => new Microsoft.OpenApi.Any.OpenApiDouble(56.78),
-                TypeCode.DateTime => new Microsoft.OpenApi.Any.OpenApiString(DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")),
+                TypeCode.DateTime => new Microsoft.OpenApi.Any.OpenApiString(DateTime.MinValue.ToString("yyyy-MM-ddTHH:mm:ssZ")),
                 _ when type == typeof(Guid) => new Microsoft.OpenApi.Any.OpenApiString(Guid.Empty.ToString()),
                 _ when type.IsEnum => new Microsoft.OpenApi.Any.OpenApiString(Enum.GetNames(type).FirstOrDefault() ?? "Value"),
                 _ => new Microsoft.OpenApi.Any.OpenApiNull()
@@ -536,7 +536,7 @@ namespace Hubcon.Server.Core.Helpers
             if (type == typeof(bool)) return new OpenApiBoolean(false);
             if (type == typeof(double) || type == typeof(float) || type == typeof(decimal)) return new OpenApiDouble(0.0);
             if (type == typeof(Guid)) return new OpenApiString(Guid.Empty.ToString());
-            if (type == typeof(DateTime)) return new OpenApiString(DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+            if (type == typeof(DateTime)) return new OpenApiString(DateTime.MinValue.ToString("yyyy-MM-ddTHH:mm:ssZ"));
             if (type.IsEnum) return new OpenApiString(Enum.GetNames(type).FirstOrDefault() ?? "");
             return new OpenApiString("string");
         }
