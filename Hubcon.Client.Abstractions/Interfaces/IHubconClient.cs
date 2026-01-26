@@ -10,6 +10,8 @@ namespace Hubcon.Client.Abstractions.Interfaces
 {
     public interface IHubconClient
     {
+        IAuthenticationManager AuthenticationManager { get; }
+
         Task<T> SendAsync<T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken);
         Task CallAsync(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken);
         IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, MethodInfo method, CancellationToken cancellationToken = default);

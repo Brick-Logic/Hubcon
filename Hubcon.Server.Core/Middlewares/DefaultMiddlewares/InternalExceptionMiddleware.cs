@@ -2,6 +2,7 @@
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Models;
 
 using Microsoft.Extensions.Logging;
@@ -111,11 +112,11 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     var createdLogMessage = logMsg!.ToString();
                     var createdResponseMsg = responseMsg!.ToString();
 
-                    var response = HubconResponse.InternalError(exception, options.DetailedErrorsEnabled ? createdResponseMsg : "Internal server error");
-                    var result = context.Response;
+                    HubconResponse result = (context.Response as HubconResponse)!;
 
+                    result.Error = options.DetailedErrorsEnabled ? createdResponseMsg : result.Error;
+                    context.Response = result;
                     logger?.LogError("{createdLogMessage}\n{request}\n{result}", createdLogMessage, request, result);
-                    context.Response = response;
                 }
             }
 

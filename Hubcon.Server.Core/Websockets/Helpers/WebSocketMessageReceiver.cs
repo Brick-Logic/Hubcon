@@ -20,7 +20,7 @@ namespace Hubcon.Server.Core.Websockets.Helpers
 
                 if ((result.MessageType != WebSocketMessageType.Binary) | (result.Count > _maxMessageSize))
                 {
-                    if (result.MessageType == WebSocketMessageType.Close)
+                    if (result.MessageType == WebSocketMessageType.Close && _socket.State == WebSocketState.CloseReceived)
                         await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
                     else
                         _socket.Abort();

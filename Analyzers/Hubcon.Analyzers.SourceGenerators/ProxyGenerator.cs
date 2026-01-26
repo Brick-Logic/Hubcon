@@ -583,9 +583,17 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("        };");
             sb.AppendLine("    }");
 
+            List<string> methodNames = new List<string>();
+
             // Generar los métodos Create_{SafeName}
             foreach (var type in typesToSerialize)
             {
+                var name = GetSafeName(type);
+
+                if (methodNames.Any(x => x.ToLower() == name.ToLower()))
+                    continue;
+
+                methodNames.Add(name);
                 GenerateTypeMetadataMethod(sb, type, optionsName: "options");
             }
 

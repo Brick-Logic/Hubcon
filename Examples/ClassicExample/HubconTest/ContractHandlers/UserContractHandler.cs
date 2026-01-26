@@ -3,6 +3,8 @@ using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Models;
 using HubconTest.Filters;
 using HubconTest.Middlewares;
 using HubconTestDomain;
@@ -275,9 +277,10 @@ namespace HubconTest.ContractHandlers
         }
 
         [Authorize(Roles = "Manager")]
-        public async Task<TestInputClass> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
+        public async Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
         {
-            return input;
+            var response = HubconResponse.OkT(input) as HubconResponse<TestInputClass>;
+            return response;
         }
     }
 }

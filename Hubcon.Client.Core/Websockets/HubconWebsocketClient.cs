@@ -51,6 +51,8 @@ namespace Hubcon.Client.Core.Websockets
         private readonly ILogger<HubconWebSocketClient>? logger;
         private ClientWebSocket? _webSocket;
 
+        public bool CloseSent = false;
+
         public bool LoggingEnabled { get; set; } = true;
 
         public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; set; }
@@ -454,18 +456,7 @@ namespace Hubcon.Client.Core.Websockets
                     throw new HubconGenericException("There was an unknown error or the request timed out.");
 
                 converted = converter.DeserializeJsonElement<HubconResponse<T>>(response.Result)!;
-
-                if (HubconContext.Current.IsWrapped == true)
-                    HubconContext.Current.Response = converted;
-
-                if (!converted.Success)
-                    throw new HubconRemoteException(converted.Error ?? "An error occurred on the server while processing the request.");
-
             }
-            //catch (OperationCanceledException)
-            //{
-            //    throw;
-            //}
             catch (Exception ex)
             {
                 if (LoggingEnabled)
@@ -675,11 +666,10 @@ namespace Hubcon.Client.Core.Websockets
                     try
                     {
                         IsReady = false;
-
-                        _webSocket = new ClientWebSocket();
-
+                        CloseSent = false;
                         CancelAll();
 
+                        _webSocket = new ClientWebSocket();
                         _sendLoopCts = new CancellationTokenSource();
                         _sendTask = Task.Factory.StartNew(
                                     async () => await SendLoopAsync(_webSocket, _sendLoopCts.Token),
@@ -725,13 +715,13 @@ namespace Hubcon.Client.Core.Websockets
 
                         if (connectionResult == null || connectionResult.GetType() != typeof(WebSocketReceiveResult))
                         {
-                            await _webSocket.CloseAsync(WebSocketCloseStatus.ProtocolError, "", CancellationToken.None);
+                            _webSocket.Abort();
                             throw new TimeoutException("Connection failed.");
                         }
 
                         if (connectionResult.MessageType == WebSocketMessageType.Close)
                         {
-                            await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server closed", CancellationToken.None);
+                            _webSocket.Abort();
                             return;
                         }
 
@@ -740,13 +730,13 @@ namespace Hubcon.Client.Core.Websockets
 
                         if (ackMessage?.Type != MessageType.connection_ack)
                         {
-                            await _webSocket.CloseAsync(WebSocketCloseStatus.ProtocolError, "", CancellationToken.None);
+                            _webSocket.Abort();
                             throw new Exception("No se recibió el connection_ack del servidor.");
                         }
 
                         if (ackMessage.Id != msgId)
                         {
-                            await _webSocket.CloseAsync(WebSocketCloseStatus.ProtocolError, "", CancellationToken.None);
+                            _webSocket.Abort();
                             throw new Exception("Se recibió una confirmación, pero el ID no es correcto. Rechazando conexión...");
                         }
 
@@ -803,8 +793,6 @@ namespace Hubcon.Client.Core.Websockets
                                     logger?.LogInformation("Socket timed out.");
                             });
                         }
-
-                        IsReady = true;
 
                         foreach (var kvp in _subscriptions.Values)
                         {
@@ -872,11 +860,15 @@ namespace Hubcon.Client.Core.Websockets
                             logger?.LogInformation($"Reconectando en {delay} segundos...");
 
                         await Task.Delay(delay * 1000, _cts.Token);
+
+                        if (_webSocket?.State != WebSocketState.None)
+                            _webSocket?.Dispose();
                     }
                 }
             }
             finally
             {
+                IsReady = true;
                 _reconnectLock.Release();
             }
         }
@@ -963,13 +955,15 @@ namespace Hubcon.Client.Core.Websockets
                 logger?.LogInformation($"ReceiveLoop iniciado. Cantidad: {Volatile.Read(ref cantidad)}");
             }
 
+            var socket = _webSocket;
+
             try
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
-                        if (_webSocket == null) break;
+                        if (socket == null) break;
 
                         var parts = new List<IMemoryOwner<byte>>();
                         int totalBytes = 0;
@@ -981,15 +975,19 @@ namespace Hubcon.Client.Core.Websockets
                             var part = MemoryPool<byte>.Shared.Rent(4096);
                             var segment = part.Memory;
 
-                            result = await _webSocket.ReceiveAsync(segment, cancellationToken);
+                            result = await socket.ReceiveAsync(segment, cancellationToken);
                             cancellationToken.ThrowIfCancellationRequested();
 
                             if (result.MessageType != WebSocketMessageType.Binary)
                             {
                                 if (result.MessageType == WebSocketMessageType.Close)
                                 {
-                                    await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
-                                    CancelAll();
+                                    if (!CloseSent)
+                                    {
+                                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
+                                        CancelAll();
+                                    }
+
                                     return;
                                 }
 
@@ -1057,8 +1055,8 @@ namespace Hubcon.Client.Core.Websockets
                     {
                         while (_sendChannel.Reader.TryRead(out var buffer))
                         {
-                            if (_webSocket?.State != WebSocketState.Open)
-                                await EnsureConnectedAsync();
+                            if (_webSocket?.State == WebSocketState.Closed)
+                                return;
 
                             var segment = new ArraySegment<byte>(buffer);
                             await _webSocket!.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
@@ -1087,7 +1085,7 @@ namespace Hubcon.Client.Core.Websockets
 
             try
             {
-                if (_webSocket?.State != WebSocketState.Open && _webSocket?.State != WebSocketState.Connecting)
+                if (_webSocket?.State != WebSocketState.Open && _webSocket?.State != WebSocketState.Connecting && CloseSent == false)
                 {
                     if (LoggingEnabled)
                         logger?.LogInformation("WebSocket no está abierto. Reconectando...");
@@ -1188,10 +1186,12 @@ namespace Hubcon.Client.Core.Websockets
 
         public async Task Disconnect()
         {
-            IsReady = false;
-            if (_webSocket != null && _webSocket.State == WebSocketState.Open)
+            var socket = _webSocket;
+            if (IsReady == true && CloseSent == false && socket != null && socket.State == WebSocketState.Open)
             {
-                await _webSocket!.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
+                IsReady = false;
+                CloseSent = true;
+                await socket!.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
                 CancelAll();
             }
         }

@@ -1,4 +1,5 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Client.Core.Authentication;
 using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.HubconInvocationContext;
 using Hubcon.Shared.Abstractions.Attributes;
@@ -21,7 +22,12 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Proxies
 {
-    public abstract class BaseContractProxy : BaseProxy
+    public interface IContractDataAccessor
+    {
+        IAuthenticationManager AuthenticationManager { get; }
+    }
+
+    public abstract class BaseContractProxy : BaseProxy, IContractDataAccessor
     {
         private readonly ImmutableCache<string, (string computedSignature, MethodInfo methodInfo)> Methods = new ImmutableCache<string, (string computedSignature, MethodInfo methodInfo)>();
         private string SimpleContractName { get; set; } = string.Empty;
@@ -108,5 +114,8 @@ namespace Hubcon.Client.Core.Proxies
             IAsyncEnumerable<JsonElement> stream = _client.GetStream(request, methodInfo, cancellationToken);
             return _converter.ConvertStream<T>(stream, cancellationToken);
         }
+
+        // Accessor
+        public IAuthenticationManager AuthenticationManager => _client.AuthenticationManager;
     }
 }

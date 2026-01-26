@@ -1,5 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Models;
 
 namespace HubconTestDomain
 {
@@ -27,7 +28,7 @@ namespace HubconTestDomain
         ISubscription<IEnumerable<int>>? OnEnumerableTest{ get; }
 
         Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken = default);
-        Task<TestInputClass> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default);
+        Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default);
         Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default);
         IAsyncEnumerable<string> GetMessages(int count);
         Task ShowTextOnServer();

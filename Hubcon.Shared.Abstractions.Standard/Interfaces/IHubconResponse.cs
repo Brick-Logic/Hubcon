@@ -2,7 +2,7 @@
 
 namespace Hubcon.Shared.Abstractions.Standard.Interfaces
 {
-    public interface IHubconResponse : IHubconResponse<object?>
+    public interface IHubconResponse : IHubconResponse<object>
     {
     }
 

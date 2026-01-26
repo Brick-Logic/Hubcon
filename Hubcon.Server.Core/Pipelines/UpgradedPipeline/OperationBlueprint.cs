@@ -3,6 +3,8 @@ using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Extensions;
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Models;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Authorization;
@@ -49,6 +51,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public IReadOnlyList<(PropertyInfo PropInfo, Action<object, object?> FastSetter)> SubscriptionProperties { get; }
         public bool HasSubscriptions { get; }
         public ObjectFactory ControllerFactory { get; }
+        public bool ReturnsHubconResponse { get; }
 
         public OperationBlueprint(
             string operationName,
@@ -141,6 +144,9 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             {
                 throw new NotSupportedException($"The type {memberInfo.GetType()} is not supported as an operation type. Use PropertyInfo o MethodInfo instead.");
             }
+
+            ReturnsHubconResponse = ReturnType.IsGenericType
+                && (ReturnType.GetGenericTypeDefinition() == typeof(IHubconResponse<>) || ReturnType.GetGenericTypeDefinition() == typeof(HubconResponse<>));
 
             var classAttributes = controllerType
                 .GetCustomAttributes()

@@ -149,6 +149,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 try
                 {
                     firstMessageJson = await receiver.ReceiveAsync(fmCts.Token);
+
+                    if (firstMessageJson == null || firstMessageJson.Memory.IsEmpty)
+                    {
+                        webSocket.Abort();
+                        return;
+                    }
                 }
                 catch
                 {
@@ -160,11 +166,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     fmCts.Dispose();
                 }
 
-                if (firstMessageJson == null || firstMessageJson.Memory.IsEmpty)
-                {
-                    webSocket.Abort();
-                    return;
-                }
 
                 var initMessage = new ConnectionInitMessage(firstMessageJson);
 
@@ -557,6 +558,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 await rateLimiterManager.DisposeAsync();
 
+
+                await Task.Delay(500);
                 webSocket.Dispose();
 
                 Interlocked.Decrement(ref clientCount);

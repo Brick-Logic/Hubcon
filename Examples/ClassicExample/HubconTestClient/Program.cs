@@ -196,6 +196,7 @@ internal class Program
                     //await client.IngestMessages(GetMessages2(), default);
                     //var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
                     //await paralellClient.Execute(x => x.ShowTextOnServer());
+
                     var item = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), ct));
                     //Interlocked.Increment(ref _finishedRequestsCount);
                 }
@@ -205,6 +206,29 @@ internal class Program
                 Interlocked.Decrement(ref clientCount);
             }
         });
+
+        //Console.ReadKey();
+
+        //var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+
+        //while (true)
+        //{
+        //    if (paralellClient.TryGetAuthenticationManager(out var authenticationManager))
+        //    {
+        //        logger.LogInformation("Loggeando...");
+        //        var result = await authenticationManager.LoginAsync("usuario", "");
+        //        logger.LogInformation("Login: {IsSuccess}", result.IsSuccess);
+        //        var request = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass()));
+        //        logger.LogInformation("Request: {Data}", request.Data);
+        //        await Task.Delay(1000);
+        //        await authenticationManager.LogoutAsync();
+        //        logger.LogInformation("Logged out.");
+        //    }
+
+        //    await Task.Delay(2000);
+        //}
+
+        //Console.ReadKey();
 
         //int j = 0;
         //while (true)

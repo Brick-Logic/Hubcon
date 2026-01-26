@@ -35,7 +35,7 @@ namespace Hubcon.Client.Integration.Client
         Func<IAuthenticationManager?>? authenticationManagerFactory;
 
         IAuthenticationManager? _authenticationManager;
-        IAuthenticationManager AuthenticationManager
+        public IAuthenticationManager AuthenticationManager
         {
             get
             {
