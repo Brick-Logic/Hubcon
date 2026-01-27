@@ -1,11 +1,10 @@
 using BlazorTestServer.Controllers;
 using BlazorTestServer.Middlewares;
-using Hubcon.Server.Injection;
-using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Text;
+using Hubcon;
 
 namespace BlazorTestServer
 {

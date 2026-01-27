@@ -1,6 +1,4 @@
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Injection;
-using Hubcon.Shared.Core.Tools;
+using Hubcon;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;

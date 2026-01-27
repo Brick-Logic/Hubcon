@@ -3,7 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace Hubcon.Shared.Core.Tools
+namespace Hubcon
 {
     public static class JwtHelper
     {
@@ -20,7 +20,7 @@ namespace Hubcon.Shared.Core.Tools
             var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub");
 
             if (userIdClaim?.Value is null)
-                throw new UnauthorizedAccessException("No se encontró el ID de usuario en el token.");
+                return null;
 
             return userIdClaim?.Value;
         }

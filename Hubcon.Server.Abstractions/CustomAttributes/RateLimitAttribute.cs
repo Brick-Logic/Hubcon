@@ -1,4 +1,4 @@
-﻿namespace Hubcon.Server.Abstractions.CustomAttributes
+﻿namespace Hubcon
 {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class UseHttpRateLimiterAttribute(string Policy) : Attribute

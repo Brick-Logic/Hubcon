@@ -1,10 +1,11 @@
-﻿using Hubcon.Shared.Abstractions.Enums;
+﻿using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Reflection;
 
-namespace Hubcon.Server.Abstractions.Interfaces
+namespace Hubcon
 {
     public interface IOperationBlueprint
     {

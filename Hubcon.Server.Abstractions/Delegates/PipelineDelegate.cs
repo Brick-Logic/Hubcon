@@ -1,6 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 
-namespace Hubcon.Server.Abstractions.Delegates
+namespace Hubcon
 {
     public delegate Task<IOperationContext> PipelineExecutionDelegate();
     public delegate Task PipelineDelegate();

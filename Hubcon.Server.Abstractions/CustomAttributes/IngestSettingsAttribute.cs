@@ -1,7 +1,8 @@
-﻿using System.Threading.Channels;
+﻿using Hubcon.Server.Abstractions.CustomAttributes;
+using System.Threading.Channels;
 using System.Threading.RateLimiting;
 
-namespace Hubcon.Server.Abstractions.CustomAttributes
+namespace Hubcon
 {
     public sealed class IngestSettings : HubconSettings
     {

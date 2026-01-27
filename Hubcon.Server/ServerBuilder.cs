@@ -144,8 +144,8 @@ namespace Hubcon.Server
         {
             var middlewareType = typeof(TMiddleware);
 
-            if (!middlewareType.IsAssignableTo(typeof(Abstractions.Interfaces.IMiddleware)))
-                throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(Abstractions.Interfaces.IMiddleware)}");
+            if (!middlewareType.IsAssignableTo(typeof(IMiddleware)))
+                throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(IMiddleware)}");
 
             PipelineBuilder.AddGlobalMiddleware(middlewareType);
 
@@ -157,8 +157,8 @@ namespace Hubcon.Server
 
         internal void AddGlobalMiddleware(Type middlewareType, Action<IServiceCollection, Type>? registerer = null)
         {
-            if (!middlewareType.IsAssignableTo(typeof(Abstractions.Interfaces.IMiddleware)))
-                throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(Abstractions.Interfaces.IMiddleware)}");
+            if (!middlewareType.IsAssignableTo(typeof(IMiddleware)))
+                throw new ArgumentException($"El tipo {middlewareType.Name} no implementa la interfaz {nameof(IMiddleware)}");
 
             PipelineBuilder.AddGlobalMiddleware(middlewareType);
 

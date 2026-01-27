@@ -1,9 +1,10 @@
-﻿using System;
+﻿using Hubcon.Server.Abstractions.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
-namespace Hubcon.Server.Abstractions.Interfaces
+namespace Hubcon
 {
     public interface ITelemetryService
     {

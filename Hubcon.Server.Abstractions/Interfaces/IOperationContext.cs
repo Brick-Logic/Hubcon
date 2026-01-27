@@ -1,10 +1,7 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
-
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
-namespace Hubcon.Server.Abstractions.Interfaces
+namespace Hubcon
 {
     public interface IOperationContext
     {

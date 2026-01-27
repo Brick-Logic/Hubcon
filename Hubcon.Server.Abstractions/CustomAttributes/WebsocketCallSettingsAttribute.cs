@@ -1,6 +1,7 @@
-﻿using System.Threading.RateLimiting;
+﻿using Hubcon.Server.Abstractions.CustomAttributes;
+using System.Threading.RateLimiting;
 
-namespace Hubcon.Server.Abstractions.CustomAttributes
+namespace Hubcon
 {
     public sealed class WebsocketCallSettings : HubconSettings
     {

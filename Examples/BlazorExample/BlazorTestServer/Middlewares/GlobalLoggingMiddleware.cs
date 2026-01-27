@@ -1,6 +1,4 @@
-﻿using Hubcon.Server.Abstractions.Delegates;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon;
 
 namespace BlazorTestServer.Middlewares
 {

@@ -1,8 +1,4 @@
 ﻿using Hubcon;
-using Hubcon.Server.Abstractions.Delegates;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Memory;
 using System.Security.Claims;

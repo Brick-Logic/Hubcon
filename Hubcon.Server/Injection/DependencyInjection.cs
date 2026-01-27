@@ -1,8 +1,10 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Server;
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.EndpointDocumentation;
 using Hubcon.Server.Core.Entrypoint;
 using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Server.Core.Websockets.Middleware;
+using Hubcon.Server.Injection;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +13,7 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Text.Json.Serialization;
 
-namespace Hubcon.Server.Injection
+namespace Hubcon
 {
     internal sealed class RemoveNullableSchemaFilter : ISchemaFilter
     {

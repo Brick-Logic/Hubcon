@@ -1,7 +1,8 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 
-namespace Hubcon.Server.Abstractions.Interfaces
+namespace Hubcon
 {
     public interface IMiddleware
     {

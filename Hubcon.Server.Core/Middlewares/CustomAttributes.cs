@@ -1,7 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Enums;
 using Microsoft.AspNetCore.Http;
 
-namespace Hubcon.Server.Core.Middlewares
+namespace Hubcon
 {
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Class)]
     public sealed class UseMiddlewareAttribute : Attribute
@@ -22,7 +22,7 @@ namespace Hubcon.Server.Core.Middlewares
     }
 
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Class)]
-    public sealed class UseMiddlewareAttribute<T> : Attribute where T : class, Abstractions.Interfaces.IMiddleware
+    public sealed class UseMiddlewareAttribute<T> : Attribute where T : class, IMiddleware
     {
         public UseMiddlewareAttribute()
         {

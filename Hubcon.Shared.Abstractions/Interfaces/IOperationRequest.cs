@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using System.Collections.Generic;
 
-namespace Hubcon.Shared.Abstractions.Interfaces
+namespace Hubcon
 {
     public interface IOperationRequest : IOperationEndpoint
     {
