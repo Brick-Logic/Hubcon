@@ -3,7 +3,7 @@ using Hubcon.Client.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Hubcon.Client
+namespace Hubcon
 {
     public static class DependencyInjection
     {

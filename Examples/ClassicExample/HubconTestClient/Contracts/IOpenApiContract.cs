@@ -1,8 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Attributes;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
+﻿using Hubcon;
 using HubconTestClient.Models;
-using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
 
 namespace HubconTestClient.Contracts
 {
@@ -16,6 +13,9 @@ namespace HubconTestClient.Contracts
 
         [HttpGet("/v1/responses/{id}/input_items")]
         public Task<OpenAIList<OpenAIMessage>> GetModelResponseInputs(string id);
+
+        [HttpDelete("/v1/responses/{id}")]
+        public Task<OpenAIResponse> DeleteModelResponse(string id);
 
         [HttpPost("/v1/responses")]
         public IAsyncEnumerable<OpenAIStreamEvent> GetResponseStream([AsBody] OpenAIStreamRequest request);

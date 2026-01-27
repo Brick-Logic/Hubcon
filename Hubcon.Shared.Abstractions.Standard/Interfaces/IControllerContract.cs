@@ -1,6 +1,5 @@
-﻿namespace Hubcon.Shared.Abstractions.Standard.Interfaces
+﻿namespace Hubcon;
+
+public interface IControllerContract
 {
-    public interface IControllerContract
-    {
-    }
 }

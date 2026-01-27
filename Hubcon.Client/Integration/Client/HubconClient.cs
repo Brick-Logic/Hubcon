@@ -4,15 +4,12 @@ using Hubcon.Client.Core.Helpers;
 using Hubcon.Client.Core.HubconInvocationContext;
 using Hubcon.Client.Core.Websockets;
 using Hubcon.Shared.Abstractions.Attributes;
-using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
-using Hubcon.Shared.Abstractions.Standard.Models;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 
 using Hubcon.Shared.Core.Websockets.Events;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -21,6 +18,7 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
@@ -39,7 +37,7 @@ namespace Hubcon.Client.Integration.Client
         {
             get
             {
-                if(_authenticationManager != null)
+                if (_authenticationManager != null)
                     return _authenticationManager;
 
                 var manager = authenticationManagerFactory?.Invoke() ?? throw new InvalidOperationException($"Authentication Manager not defined for server module '{ClientOptions.ServerModuleName}'.");
@@ -65,7 +63,7 @@ namespace Hubcon.Client.Integration.Client
                 if (_httpClient != null)
                     return _httpClient;
 
-                _httpClient ??= clientFactory.CreateClient();
+                _httpClient ??= clientFactory.Invoke(ServiceProvider);
                 ClientOptions.HttpClientOptions?.Invoke(_httpClient, ServiceProvider);
 
                 return _httpClient;
@@ -78,20 +76,8 @@ namespace Hubcon.Client.Integration.Client
 
         private bool IsBuilt { get; set; }
 
-        //private IDictionary<Type, IContractOptions> ContractOptionsDict { get; set; } = null!;
-
-        //private ConcurrentDictionary<MethodInfo, bool> NeedsAuth = new ConcurrentDictionary<MethodInfo, bool>();
-
-        //private ConcurrentDictionary<MethodInfo, HttpMethod> MethodVerb = new ConcurrentDictionary<MethodInfo, HttpMethod>();
-
-        //private ConcurrentDictionary<MethodInfo, string> MethodRoute = new ConcurrentDictionary<MethodInfo, string>();
-
-        //private ConcurrentDictionary<MethodInfo, string?> BodyParameterName = new ConcurrentDictionary<MethodInfo, string?>();
-
-        //private ConcurrentDictionary<MethodInfo, string?> QueryParameterName = new ConcurrentDictionary<MethodInfo, string?>();
-
         private readonly IDynamicConverter converter;
-        private readonly IHttpClientFactory clientFactory;
+        private Func<IServiceProvider, HttpClient> clientFactory;
 
         private readonly ConcurrentDictionary<MethodInfo, MethodCachedMetadata> _cachedMetadata = new();
 
@@ -106,7 +92,7 @@ namespace Hubcon.Client.Integration.Client
 
             // --- SECCIÓN DE VALORES (4-8 bytes c/u con padding) ---
             // Total aproximado: 12-16 bytes
-            public ReferenceHolder<HttpMethod> MethodVerbHolder = new ReferenceHolder<HttpMethod>();
+            public ReferenceHolder<HttpMethodDataAttribute> MethodVerbHolder = new ReferenceHolder<HttpMethodDataAttribute>();
 
             // El bool es el más pequeño, lo dejamos al final para rellenar huecos
             public PrimitiveHolder<bool> NeedsAuthHolder = new PrimitiveHolder<bool>();
@@ -146,10 +132,9 @@ namespace Hubcon.Client.Integration.Client
             public T GetOrAdd<TState>(TState state, Func<TState, T> factory) => _value ??= factory(state);
         }
 
-        public HubconClient(IDynamicConverter converter, IHttpClientFactory clientFactory)
+        public HubconClient(IDynamicConverter converter)
         {
             this.converter = converter;
-            this.clientFactory = clientFactory;
         }
 
         public async Task<T> SendAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(IOperationRequest request, MethodInfo methodInfo, CancellationToken cancellationToken)
@@ -187,6 +172,7 @@ namespace Hubcon.Client.Integration.Client
                     //    request.SetOperationName(methodInfo.GetMethodSignature(true));
 
                     var result = await client.InvokeAsync<T>(request, remoteCancellation, cancellationToken);
+                    result ??= HubconResponse.Fail<T>("Received an empty response");
 
                     HubconContext.Current.Response = result;
 
@@ -204,17 +190,17 @@ namespace Hubcon.Client.Integration.Client
                 {
                     await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                    HttpMethod httpMethod = GetHttpMethod(request, metadata, methodInfo);
-                    string finalRoute = GetFinalRoute(methodInfo, metadata);
+                    HttpMethodDataAttribute httpMethod = GetHttpMethod(request, metadata, methodInfo);
+                    string finalRoute = httpMethod.Template;
 
                     Dictionary<string, object> remainingArguments = GetRemainingArguments(request, ref finalRoute);
 
                     StringContent? content = null;
                     string url;
 
-                    url = BuildBodyAndFinalUrl(request, metadata, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
+                    url = BuildBodyAndFinalUrl(request, metadata, methodInfo, httpMethod.HttpMethod, finalRoute, remainingArguments, ref content);
 
-                    var httpRequest = new HttpRequestMessage(httpMethod, url);
+                    var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
 
                     if (content != null)
                         httpRequest.Content = content;
@@ -242,37 +228,44 @@ namespace Hubcon.Client.Integration.Client
                     var responseBytes = await response.Content.ReadAsByteArrayAsync();
                     var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
 
-                    if (result.ValueKind == JsonValueKind.Null)
-                        return default!;
-
                     await operationOptions.CallHook(HookType.OnResponse, context);
                     await contractOptions.CallHook(HookType.OnResponse, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnResponse, context);
-                   
-                    var res = converter.DeserializeJsonElement<HubconResponse<T>>(result) ?? default!;
 
-                    HubconContext.Current.Response = res;
+                    var res = converter.DeserializeJsonElement<T>(result) ?? default!;
+
+                    IHubconResponse methodReponse = new HubconResponse(
+                        response.IsSuccessStatusCode,
+                        !response.IsSuccessStatusCode,
+                        "",
+                        "",
+                        (int)response.StatusCode,
+                        res
+                    );
+                    
+
+                    HubconContext.Current.Response = methodReponse;
 
                     content?.Dispose();
                     httpRequest.Dispose();
                     response.Dispose();
 
-                    return res.Data!;
+                    return (T)methodReponse.Data!;
                 }
                 else
                 {
                     await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                    HttpMethod httpMethod = metadata.MethodVerbHolder.GetOrAdd(methodInfo, method =>
+                    HttpMethodDataAttribute httpMethod = metadata.MethodVerbHolder.GetOrAdd(methodInfo, method =>
                     {
-                        GetMethodAttribute? verb = method.GetCustomAttribute<GetMethodAttribute>();
-                        return verb != null ? HttpMethod.Get : (request.Arguments.Count > 0 ? HttpMethod.Post : HttpMethod.Get);
+                        HttpGetAttribute? verb = method.GetCustomAttribute<HttpGetAttribute>();
+                        return verb != null ? new HttpGetAttribute() : (request.Arguments.Count > 0 ? new HttpPostAttribute() : new HttpGetAttribute());
                     });
 
                     StringContent? content = null;
                     var url = "";
 
-                    if (httpMethod == HttpMethod.Post)
+                    if (httpMethod is HttpPostAttribute)
                     {
                         var arguments = converter.Serialize(request.Arguments);
                         content = new StringContent(arguments, Encoding.UTF8, "application/json");
@@ -294,7 +287,7 @@ namespace Hubcon.Client.Integration.Client
                         url = builder.ToString();
                     }
 
-                    var httpRequest = new HttpRequestMessage(httpMethod, url);
+                    var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
 
                     if (content != null)
                         httpRequest.Content = content;
@@ -322,11 +315,7 @@ namespace Hubcon.Client.Integration.Client
                     var responseBytes = await response.Content.ReadAsByteArrayAsync();
                     var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
 
-                    if (result.ValueKind == JsonValueKind.Null)
-                        throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
-
-                    var operationResponse = converter.DeserializeJsonElement<HubconResponse<T>>(result)
-                        ?? throw new HubconGenericException("No se recibió ningun mensaje del servidor.");
+                    IHubconResponse<T> operationResponse = converter.DeserializeJsonElement<HubconResponse<T>>(result);
 
                     HubconContext.Current.Response = operationResponse;
 
@@ -345,6 +334,20 @@ namespace Hubcon.Client.Integration.Client
                     return operationResponse.Data!;
                 }
             }
+            catch (OperationCanceledException)
+            {
+                await operationOptions.CallHook(HookType.OnError, context);
+                await contractOptions.CallHook(HookType.OnError, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
+
+                if (HubconContext.Current.IsWrapped)
+                {
+                    HubconContext.Current.Response = HubconResponse.Cancelled();
+                    return default!;
+                }
+
+                throw;
+            }
             catch (Exception ex)
             {
                 context.IsSuccess = false;
@@ -360,7 +363,7 @@ namespace Hubcon.Client.Integration.Client
                     HubconContext.Current.Response = HubconResponse.InternalError<T>(ex);
                     return default!;
                 }
-                
+
                 throw;
             }
         }
@@ -412,16 +415,16 @@ namespace Hubcon.Client.Integration.Client
                 {
                     await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                    HttpMethod httpMethod = GetHttpMethod(request, metadata, methodInfo);
-                    string finalRoute = GetFinalRoute(methodInfo, metadata);
+                    HttpMethodDataAttribute httpMethod = GetHttpMethod(request, metadata, methodInfo);
+                    string finalRoute = httpMethod.Template;
                     Dictionary<string, object> remainingArguments = GetRemainingArguments(request, ref finalRoute);
 
                     StringContent? content = null;
                     string url;
 
-                    url = BuildBodyAndFinalUrl(request, metadata, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
+                    url = BuildBodyAndFinalUrl(request, metadata, methodInfo, httpMethod.HttpMethod, finalRoute, remainingArguments, ref content);
 
-                    var httpRequest = new HttpRequestMessage(httpMethod, url);
+                    var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
 
                     if (content != null)
                         httpRequest.Content = content;
@@ -446,6 +449,16 @@ namespace Hubcon.Client.Integration.Client
                     await contractOptions.CallHook(HookType.OnAfterSend, context);
                     await ClientOptions.CallInterceptor(InterceptorType.OnAfterSend, context);
 
+                    HubconResponse methodReponse = new HubconResponse(
+                        response.IsSuccessStatusCode,
+                        !response.IsSuccessStatusCode,
+                        "",
+                        "",
+                        (int)response.StatusCode
+                    );
+
+                    HubconContext.Current.Response = methodReponse;
+
                     content?.Dispose();
                     httpRequest.Dispose();
                     response.Dispose();
@@ -454,16 +467,16 @@ namespace Hubcon.Client.Integration.Client
                 {
                     await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                    HttpMethod httpMethod = metadata.MethodVerbHolder.GetOrAdd(methodInfo, method =>
+                    HttpMethodDataAttribute httpMethod = metadata.MethodVerbHolder.GetOrAdd(methodInfo, method =>
                     {
-                        GetMethodAttribute? verb = method.GetCustomAttribute<GetMethodAttribute>();
-                        return verb != null ? HttpMethod.Get : (request.Arguments.Count > 0 ? HttpMethod.Post : HttpMethod.Get);
+                        HttpGetAttribute? verb = method.GetCustomAttribute<HttpGetAttribute>();
+                        return verb != null ? new HttpGetAttribute() : (request.Arguments.Count > 0 ? new HttpPostAttribute() : new HttpGetAttribute());
                     });
 
                     StringContent? content = null;
                     var url = "";
 
-                    if (httpMethod == HttpMethod.Post)
+                    if (httpMethod is HttpPostAttribute)
                     {
                         var arguments = converter.Serialize(request.Arguments);
                         content = new StringContent(arguments, Encoding.UTF8, "application/json");
@@ -486,7 +499,7 @@ namespace Hubcon.Client.Integration.Client
                     }
 
                     url += methodInfo.GetRoute(ClientOptions.UseHttpEndpointOverloading).FullRoute;
-                    var httpRequest = new HttpRequestMessage(httpMethod, url);
+                    var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
 
                     if (content != null)
                         httpRequest.Content = content;
@@ -515,6 +528,20 @@ namespace Hubcon.Client.Integration.Client
                     httpRequest.Dispose();
                     response.Dispose();
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                await operationOptions.CallHook(HookType.OnError, context);
+                await contractOptions.CallHook(HookType.OnError, context);
+                await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
+
+                if (HubconContext.Current.IsWrapped)
+                {
+                    HubconContext.Current.Response = HubconResponse.Cancelled();
+                    return;
+                }
+
+                throw;
             }
             catch (Exception ex)
             {
@@ -628,31 +655,18 @@ namespace Hubcon.Client.Integration.Client
             return remainingArguments;
         }
 
-        private string GetFinalRoute(MethodInfo methodInfo, MethodCachedMetadata metadata)
-        {
-            return metadata.MethodRouteHolder.GetOrAdd(methodInfo, method =>
-            {
-                if (method.GetCustomAttribute<HttpGetAttribute>() != null) return method.GetCustomAttribute<HttpGetAttribute>().Template;
-                if (method.GetCustomAttribute<HttpPostAttribute>() != null) return method.GetCustomAttribute<HttpPostAttribute>().Template;
-                if (method.GetCustomAttribute<HttpPutAttribute>() != null) return method.GetCustomAttribute<HttpPutAttribute>().Template;
-                if (method.GetCustomAttribute<HttpDeleteAttribute>() != null) return method.GetCustomAttribute<HttpDeleteAttribute>().Template;
-
-                return "/";
-            });
-        }
-
-        private HttpMethod GetHttpMethod(IOperationRequest request, MethodCachedMetadata metadata, MethodInfo methodInfo)
+        private HttpMethodDataAttribute GetHttpMethod(IOperationRequest request, MethodCachedMetadata metadata, MethodInfo methodInfo)
         {
             // 1. Mapeo de Atributos a Verbos HTTP
-            HttpMethod httpMethod = metadata.MethodVerbHolder.GetOrAdd(methodInfo, method =>
+            HttpMethodDataAttribute httpMethod = metadata.MethodVerbHolder.GetOrAdd(methodInfo, method =>
             {
-                if (method.GetCustomAttribute<HttpGetAttribute>() != null) return HttpMethod.Get;
-                if (method.GetCustomAttribute<HttpPostAttribute>() != null) return HttpMethod.Post;
-                if (method.GetCustomAttribute<HttpPutAttribute>() != null) return HttpMethod.Put;
-                if (method.GetCustomAttribute<HttpDeleteAttribute>() != null) return HttpMethod.Delete;
+                if (method.GetCustomAttribute<HttpGetAttribute>() != null) return method.GetCustomAttribute<HttpGetAttribute>();
+                if (method.GetCustomAttribute<HttpPostAttribute>() != null) return method.GetCustomAttribute<HttpPostAttribute>();
+                if (method.GetCustomAttribute<HttpPutAttribute>() != null) return method.GetCustomAttribute<HttpPutAttribute>();
+                if (method.GetCustomAttribute<HttpDeleteAttribute>() != null) return method.GetCustomAttribute<HttpDeleteAttribute>();
 
                 // Fallback basado en argumentos como tenías antes
-                return request.Arguments.Count > 0 ? HttpMethod.Post : HttpMethod.Get;
+                return request.Arguments.Count > 0 ? new HttpPostAttribute() : new HttpGetAttribute();
             });
             return httpMethod;
         }
@@ -691,16 +705,20 @@ namespace Hubcon.Client.Integration.Client
             {
                 await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, operationOptions.RateBucket);
 
-                HttpMethod httpMethod = GetHttpMethod(request, metadata, methodInfo);
-                string finalRoute = GetFinalRoute(methodInfo, metadata);
+                HttpMethodDataAttribute httpMethod = GetHttpMethod(request, metadata, methodInfo);
+                string finalRoute = httpMethod.Template;
                 Dictionary<string, object> remainingArguments = GetRemainingArguments(request, ref finalRoute);
 
                 StringContent? content = null;
                 string url;
 
-                if (!isWebsocketOperation)
+                if (ClientOptions.IsNonHubconServer)
                 {
-                    if (httpMethod == HttpMethod.Post)
+                    url = BuildBodyAndFinalUrl(request, metadata, methodInfo, httpMethod.HttpMethod, finalRoute, remainingArguments, ref content);
+                }
+                else if (!ClientOptions.IsNonHubconServer && !isWebsocketOperation)
+                {
+                    if (httpMethod is HttpPostAttribute)
                     {
                         var arguments = converter.Serialize(request.Arguments);
                         content = new StringContent(arguments, Encoding.UTF8, "application/json");
@@ -724,10 +742,10 @@ namespace Hubcon.Client.Integration.Client
                 }
                 else
                 {
-                    url = BuildBodyAndFinalUrl(request, metadata, methodInfo, httpMethod, finalRoute, remainingArguments, ref content);
+                    url = BuildBodyAndFinalUrl(request, metadata, methodInfo, httpMethod.HttpMethod, finalRoute, remainingArguments, ref content);
                 }
 
-                var httpRequest = new HttpRequestMessage(httpMethod, url);
+                var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
 
                 if (content != null)
                     httpRequest.Content = content;
@@ -742,12 +760,11 @@ namespace Hubcon.Client.Integration.Client
                 if (needsAuth && AuthenticationManager.IsSessionActive)
                     httpRequest.Headers.Authorization = new AuthenticationHeaderValue(AuthenticationManager.TokenType!, AuthenticationManager.AccessToken);
 
-                HttpResponseMessage response; 
+                HttpResponseMessage response;
 
                 try
                 {
                     response = await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-                    response.EnsureSuccessStatusCode();
                 }
                 catch (Exception ex)
                 {
@@ -787,7 +804,7 @@ namespace Hubcon.Client.Integration.Client
             else
             {
                 try
-                {             
+                {
                     observable = await client.Stream<JsonElement>(request, remoteCancellation, cancellationToken);
 
                     if (HubconContext.Current.IsWrapped == true)
@@ -948,7 +965,7 @@ namespace Hubcon.Client.Integration.Client
                     HubconContext.Current.Response = HubconResponse.InternalError<T>(ex);
                     return default!;
                 }
-                
+
                 throw;
             }
         }
@@ -1181,6 +1198,8 @@ namespace Hubcon.Client.Integration.Client
             ClientOptions = options;
 
             IsBuilt = true;
+
+            clientFactory = options.HttpClientFactory;
         }
     }
 }

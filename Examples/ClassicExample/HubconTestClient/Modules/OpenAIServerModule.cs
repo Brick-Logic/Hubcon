@@ -1,7 +1,6 @@
-﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Builder;
-using HubconTestClient.Contracts;
+﻿using HubconTestClient.Contracts;
 using System.Net.Http.Headers;
+using Hubcon;
 
 namespace HubconTestClient.Modules
 {

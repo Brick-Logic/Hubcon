@@ -1,5 +1,4 @@
-﻿using Hubcon.Client;
-using HubconTestClient.Auth;
+﻿using HubconTestClient.Auth;
 using HubconTestClient.Contracts;
 using HubconTestClient.Models;
 using HubconTestClient.Modules;
@@ -10,6 +9,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.RateLimiting;
+using Hubcon;
 
 internal class Program
 {
@@ -57,18 +57,25 @@ internal class Program
         var authManager = scope.ServiceProvider.GetRequiredService<AuthenticationManager>();
         var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserContract>>();
-
-
         var openAi = scope.ServiceProvider.GetRequiredService<IOpenAIContract>();
 
+        logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
+        Console.ReadKey();
+
+        //logger.LogInformation("Probando creación de modelo de respuesta...");
         //var command = new CreateResponseCommand()
         //{
         //    Model = "gpt-5-nano",
         //    Input = "Tell me a three sentence bedtime story about a unicorn."
         //};
 
-        //var response = await openAi.CreateModelResponse(command);
+        //var response = await openAi.Execute(x => x.CreateModelResponse(command));
+        //logger.LogInformation($"Respuesta: {response.Success}");
+        //await Task.Delay(1000);
 
+
+        //logger.LogInformation($"Probando stream SSE non-hubcon...");
+        //await Task.Delay(500);
         //var request = new OpenAIStreamRequest()
         //{
         //    Model = "gpt-5-nano",
@@ -76,56 +83,66 @@ internal class Program
         //};
 
         //var finalText = "";
-        //await foreach(var item in openAi.GetResponseStream(request))
+        //var stream = await openAi.Execute(x => x.GetResponseStream(request));
+        //logger.LogInformation($"Respuesta: {stream.Success}");
+        //await foreach (var item in stream.Data)
         //{
         //    logger.LogInformation($"Event received: {item.Delta}");
         //    finalText += item.Delta;
         //}
 
         //logger.LogInformation($"Final text: {finalText}");
+        //logger.LogInformation($"Stream SSE de tokens: OK");
+        //await Task.Delay(1000);
+
+        //logger.LogInformation($"Probando obtener inputs del modelo...");
+        //var response2 = await openAi.Execute(x => x.GetModelResponseInputs(response.Data.Id));
+        //logger.LogInformation($"Respuesta: {response2.Success}");
+        //await Task.Delay(1000);
+
+        //logger.LogInformation($"Probando obtener respuesta del modelo...");
+        //var response3 = await openAi.Execute(x => x.GetModelResponse(response.Data.Id));
+        //logger.LogInformation($"Respuesta: {response3.Success}");
+        //await Task.Delay(1000);
+
+        //logger.LogInformation($"Probando eliminar respuesta del modelo...");
+        //var response4 = await openAi.Execute(x => x.DeleteModelResponse(response3.Data.Id));
+        //logger.LogInformation($"Respuesta: {response4.Success}");
+        //await Task.Delay(1000);
 
 
-        //var response2 = await openApi.GetModelResponseInputs(response.Id);
-
-        //var response3 = await openApi.GetModelResponse(response.Id);
-
-        //var response4 = await openApi.DeleteModelResponse(response3.Id);
-
-        logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
-        Console.ReadKey();
 
         await TestLogin(authManager, logger);
         await Task.Delay(100);
 
+        //var responseTemp = await client.Execute(x => x.GetTemperatureFromServer("test"));
 
-        //var response = await client.Execute(x => x.GetTemperatureFromServer("test"));
-
-        //if (!response.Success || response.StatusCode != 200)
+        //if (!responseTemp.Success || responseTemp.StatusCode != 200)
         //{
         //    // Hacer algo
         //}
         //else
         //{
-        //    var data = response.Data;
+        //    var data = responseTemp.Data;
         //    // Hago algo con data
         //}
 
-        //await TestValidations(client, logger);
-        //await Task.Delay(100);
-        //await TestIngest(client, logger);
-        //await Task.Delay(100);
-        //await TestOverloading(client2, logger);
-        //await Task.Delay(100);
-        //await TestInvokeNoParameters(client2, logger);
-        //await Task.Delay(100);
-        //await TestSubscriptions(client, logger);
-        //await Task.Delay(100);
-        //await TestInvokeWithParameters(client, logger);
-        //await Task.Delay(100);
-        //await TestRemoteCancellation(client, logger);
-        //await Task.Delay(100);
-        //await TestSseStreaming(client, logger);
-        //await Task.Delay(100);
+        await TestValidations(client, logger);
+        await Task.Delay(100);
+        await TestIngest(client, logger);
+        await Task.Delay(100);
+        await TestOverloading(client2, logger);
+        await Task.Delay(100);
+        await TestInvokeNoParameters(client2, logger);
+        await Task.Delay(100);
+        await TestSubscriptions(client, logger);
+        await Task.Delay(100);
+        await TestInvokeWithParameters(client, logger);
+        await Task.Delay(100);
+        await TestRemoteCancellation(client, logger);
+        await Task.Delay(100);
+        await TestSseStreaming(client, logger);
+        await Task.Delay(100);
 
 
         _sw = Stopwatch.StartNew();
@@ -168,7 +185,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 128
+            MaxDegreeOfParallelism = 512
         };
 
         int rps = 9999999;

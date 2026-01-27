@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json.Serialization;
 
-namespace Hubcon.Shared.Abstractions.Standard.Models
+namespace Hubcon
 {
     public class HubconResponse : HubconResponse<object>, IHubconResponse
     {

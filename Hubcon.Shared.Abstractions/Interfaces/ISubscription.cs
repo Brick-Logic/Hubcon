@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace Hubcon.Shared.Abstractions.Interfaces
+namespace Hubcon
 {
     //public delegate Task HubconEventHandler(object? eventValue);
     public delegate Task HubconEventHandler<in T>(T eventValue);

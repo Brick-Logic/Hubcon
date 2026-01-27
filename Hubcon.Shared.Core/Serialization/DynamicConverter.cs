@@ -1,6 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Models;
 using Hubcon.Shared.Core.Websockets;
 using Hubcon.Shared.Core.Websockets.Messages.Cancellation;
 using Hubcon.Shared.Core.Websockets.Messages.Connection;

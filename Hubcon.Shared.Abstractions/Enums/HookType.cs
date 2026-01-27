@@ -1,4 +1,4 @@
-﻿namespace Hubcon.Shared.Abstractions.Enums
+﻿namespace Hubcon
 {
     /// <summary>
     /// Represents the types of hooks that can be triggered during an operation.

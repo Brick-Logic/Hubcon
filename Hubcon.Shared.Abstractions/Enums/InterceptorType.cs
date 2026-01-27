@@ -1,4 +1,4 @@
-﻿namespace Hubcon.Shared.Abstractions.Enums
+﻿namespace Hubcon
 {
     /// <summary>
     /// Represents the types of interceptors that can be triggered on a all operations.

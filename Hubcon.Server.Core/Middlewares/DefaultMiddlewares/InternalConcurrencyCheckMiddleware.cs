@@ -1,17 +1,7 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Models;
-
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {

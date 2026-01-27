@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Hubcon.Shared.Abstractions.Standard.Interfaces
+namespace Hubcon
 {
     public interface IHubconResponse : IHubconResponse<object>
     {

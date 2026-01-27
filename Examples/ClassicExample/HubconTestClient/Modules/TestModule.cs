@@ -1,10 +1,6 @@
-﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Builder;
-using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon;
 using HubconTestClient.Auth;
 using HubconTestDomain;
-using Microsoft.Extensions.Logging;
 
 namespace HubconTestClient.Modules
 {

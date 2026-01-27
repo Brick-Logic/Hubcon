@@ -4,7 +4,6 @@ using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Models;
 
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Http;

@@ -1,5 +1,4 @@
-﻿using Hubcon.Shared.Abstractions.Attributes;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
+﻿using Hubcon;
 
 namespace HubconTestDomain
 {
@@ -9,7 +8,7 @@ namespace HubconTestDomain
         public Task TestMethod();
         public Task TestVoid();
 
-        [GetMethod]
+        [HttpGet]
         public Task TestMethod(string message);
         public Task<string> TestReturn(string message);
         public Task<string> TestReturn();

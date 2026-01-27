@@ -25,14 +25,22 @@ namespace Hubcon.Shared.Core.Tools
         {
             try
             {
-                if (value == null)
-                    return;
+                var type = instance.GetType();
 
-                // Si no tiene setter, usamos el campo backing
-                var field = instance.GetType().GetField($"<{propName}>k__BackingField",
-                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public |
-                    BindingFlags.FlattenHierarchy);
-                field?.SetValue(instance, value);
+                var setMethod = type.GetProperty(propName).GetSetMethod();
+                if (setMethod != null)
+                {
+                    setMethod.Invoke(instance, new object[] { value });
+                }
+                else
+                {
+
+                    // Si no tiene setter, usamos el campo backing
+                    var field = instance.GetType().GetField($"<{propName}>k__BackingField",
+                        BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public |
+                        BindingFlags.FlattenHierarchy);
+                    field?.SetValue(instance, value);
+                }
             }
             catch (Exception)
             {

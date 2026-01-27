@@ -346,5 +346,11 @@ namespace Hubcon.Client.Builder
             builder.IsNonHubconServer = true;
             return this;
         }
+
+        public IServerModuleConfiguration UseHttpClientFactory(Func<IServiceProvider, HttpClient> httpClientFactory)
+        {
+            builder.HttpClientFactory = httpClientFactory;
+            return this;
+        }
     }
 }

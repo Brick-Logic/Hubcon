@@ -1,6 +1,4 @@
-﻿using Hubcon.Client.Core.Authentication;
-using Hubcon.Shared.Abstractions.Interfaces;
-using HubconTestDomain;
+﻿using HubconTestDomain;
 
 namespace Hubcon.Blazor.Client.Auth
 {

@@ -9,7 +9,7 @@ using System.Net.WebSockets;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 
-namespace Hubcon.Client.Abstractions.Interfaces
+namespace Hubcon
 {
     public interface IServerModuleConfiguration
     {
@@ -274,5 +274,12 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// </summary>
         /// <returns></returns>
         IServerModuleConfiguration NonHubconServer();
+
+        /// <summary>
+        /// Specifies the http client factory to use. The factory must produce scoped or transient clients, otherwise contracts might overwrite other contract's http client settings.
+        /// HttpClient is requested only once per singleton contract.
+        /// </summary>
+        /// <returns></returns>
+        IServerModuleConfiguration UseHttpClientFactory(Func<IServiceProvider, HttpClient> httpClientFactory);
     }
 }

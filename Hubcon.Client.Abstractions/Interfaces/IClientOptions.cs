@@ -54,7 +54,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         bool HttpAuthIsEnabled { get; }
         bool UseHttpEndpointOverloading { get; }
         public bool IsNonHubconServer { get; }
-
+        Func<IServiceProvider, HttpClient> HttpClientFactory { get; }
 
         public IContractOptions GetContractOptions(Type type);
         Task CallInterceptor(InterceptorType interceptorType, InvocationContext context);

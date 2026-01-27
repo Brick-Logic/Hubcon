@@ -1,10 +1,6 @@
-﻿using Hubcon.Server.Abstractions.CustomAttributes;
+﻿using Hubcon;
+using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Core.Middlewares;
-using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
-using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Models;
 using HubconTest.Filters;
 using HubconTest.Middlewares;
 using HubconTestDomain;

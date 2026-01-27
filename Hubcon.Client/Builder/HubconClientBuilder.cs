@@ -45,7 +45,6 @@ namespace Hubcon.Client.Builder
         {
             Services = services;
 
-            services.AddHttpClient();
             services.AddSingleton<IProxyRegistry>(Proxies);
             services.AddSingleton<IClientBuilderRegistry>(ClientBuilders);
             services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));

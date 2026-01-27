@@ -1,6 +1,6 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 
-namespace Hubcon.Client.Builder
+namespace Hubcon
 {
     public abstract class RemoteServerModule : IRemoteServerModule
     {

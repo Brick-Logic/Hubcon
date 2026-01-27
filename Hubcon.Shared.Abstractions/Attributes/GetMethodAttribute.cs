@@ -1,13 +1,13 @@
 ﻿using System;
 
-namespace Hubcon.Shared.Abstractions.Attributes
+namespace Hubcon
 {
-    [AttributeUsage(AttributeTargets.Method)]
-    public class GetMethodAttribute : Attribute
-    {
-        public GetMethodAttribute()
-        {
-        }
-    }
+    //[AttributeUsage(AttributeTargets.Method)]
+    //public class GetMethodAttribute : Attribute
+    //{
+    //    public GetMethodAttribute()
+    //    {
+    //    }
+    //}
 }
 

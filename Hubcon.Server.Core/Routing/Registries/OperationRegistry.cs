@@ -113,7 +113,7 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                     var methodSignature = method.GetMethodSignature(useHashedNames);
 
-                    var verb = method.GetCustomAttribute<GetMethodAttribute>();
+                    var verb = method.GetCustomAttribute<HttpGetAttribute>();
 
                     if (verb != null && !method.AreParametersValid())
                     {

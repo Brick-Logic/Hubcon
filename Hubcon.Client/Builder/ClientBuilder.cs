@@ -169,6 +169,8 @@ namespace Hubcon.Client.Builder
         public bool HttpAuthIsEnabled { get; set; } = true;
         public bool IsNonHubconServer { get; set; }
 
+        public Func<IServiceProvider, HttpClient> HttpClientFactory { get; set; } = x => new HttpClient();
+
         public T GetOrCreateClient<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(IServiceProvider services, bool useCached = true) where T : IControllerContract
         {
             return (T)GetOrCreateClient(typeof(T), services);
@@ -230,7 +232,6 @@ namespace Hubcon.Client.Builder
 
                     var subscriptionInstance = (ISubscription)factory.Invoke(subscriptionProp.PropertyType.GenericTypeArguments[0], config);
                     newClient.SetPropertyValue(subscriptionProp.Name, subscriptionInstance);
-
                     subscriptionInstance.Build();
                 }
             }
@@ -254,6 +255,11 @@ namespace Hubcon.Client.Builder
         public void LoadContractProxy([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type contractType, IServiceCollection services)
         {
             HubconClientBuilder.Current.LoadContractProxy(contractType, services);
+        }
+
+        public void UseHttpClientFactory(Func<IServiceProvider, HttpClient> httpClientFactory)
+        {
+            HttpClientFactory = httpClientFactory;
         }
 
         public void ConfigureContract<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(Action<IContractConfigurator<T>>? configure) where T : IControllerContract

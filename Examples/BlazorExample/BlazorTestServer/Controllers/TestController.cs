@@ -1,4 +1,4 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon;
 using HubconTestDomain;
 
 namespace BlazorTestServer.Controllers
@@ -167,12 +167,12 @@ namespace BlazorTestServer.Controllers
             throw new NotImplementedException();
         }
 
-        Task<TestInputClass> IUserContract.GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken)
+        public IAsyncEnumerable<string> GetMessages(CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
 
-        public IAsyncEnumerable<string> GetMessages(CancellationToken cancellationToken)
+        Task<HubconResponse<TestInputClass>> IUserContract.GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

@@ -1,4 +1,4 @@
-﻿namespace Hubcon.Shared.Abstractions.Interfaces
+﻿namespace Hubcon
 {
     public interface IAuthResult
     {
