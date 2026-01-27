@@ -69,12 +69,6 @@ namespace HubconTest
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            ThreadPool.SetMinThreads(200, 200);
-
-            builder.WebHost.ConfigureKestrel(options => {
-                options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
-            });
-
             builder.WebHost.ConfigureKestrel(options =>
             {
                 options.Limits.MaxConcurrentConnections = null;
@@ -177,7 +171,6 @@ namespace HubconTest
 
                         return (user, expiration.Value);
                     })
-                    .DisableAllRateLimiters()
                     .EnableWebsocketsLogging()
                     .EnableRequestDetailedErrors();
                 });
@@ -201,12 +194,14 @@ namespace HubconTest
             app.UseAuthorization();
 
             app.UseHubconHttpEndpoints();
+
+            //var options = new WebSocketOptions();
+            //options.AllowedOrigins.Add("http://localhost:5000");
             app.UseHubconWebsocketEndpoints();
 
             var logger = app.Services.GetService<ILogger<object>>();
 
             Watcher.Start(logger!);
-
 
             var telemetry = app.Services.GetRequiredService<ITelemetryService>();
 

@@ -107,7 +107,6 @@ namespace Hubcon.Client.Core.Subscriptions
                             if (OnEventReceived != null)
                                 await OnEventReceived.Invoke(result!);
                         }
-                        ;
                     }
                     catch (Exception ex)
                     {

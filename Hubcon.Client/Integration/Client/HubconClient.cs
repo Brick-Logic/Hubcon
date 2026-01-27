@@ -8,10 +8,10 @@ using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Extensions;
-
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
@@ -25,7 +25,7 @@ using System.Threading.Channels;
 
 namespace Hubcon.Client.Integration.Client
 {
-    internal sealed class HubconClient : IHubconClient
+    public sealed class HubconClient : IHubconClient
     {
         private string _restHttpUrl = "";
         private string _websocketUrl = "";
@@ -746,6 +746,7 @@ namespace Hubcon.Client.Integration.Client
                 }
 
                 var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
+                httpRequest.SetBrowserResponseStreamingEnabled(true);
 
                 if (content != null)
                     httpRequest.Content = content;
@@ -886,20 +887,23 @@ namespace Hubcon.Client.Integration.Client
             await ClientOptions.CallInterceptor(InterceptorType.OnUnsubscribed, context);
         }
 
-        public async IAsyncEnumerable<JsonElement> ParseSSEStream(Stream stream, CancellationToken cancellationToken)
+        public async IAsyncEnumerable<JsonElement> ParseSSEStream(Stream stream, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             using var reader = new StreamReader(stream);
-            while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
+            string line = "";
+
+            while (!cancellationToken.IsCancellationRequested)
             {
-                var line = await reader.ReadLineAsync();
-                if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: ")) continue;
+                line = await reader.ReadLineAsync();
+                if (!string.IsNullOrEmpty(line) || line.StartsWith("data: "))
+                {
+                    string jsonData = line.Substring(6);
+                    if (jsonData == "[DONE]") break;
 
-                string jsonData = line.Substring(6);
-                if (jsonData == "[DONE]") break;
+                    var ev = converter.DeserializeData<JsonElement>(jsonData);
 
-                var ev = converter.DeserializeData<JsonElement>(jsonData);
-
-                if (ev.ValueKind != JsonValueKind.Null) yield return ev;
+                    if (ev.ValueKind != JsonValueKind.Null) yield return ev;
+                }
             }
         }
 

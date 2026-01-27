@@ -8,7 +8,7 @@ namespace HubconTestClient.Modules
     {
         public override void Configure(IServerModuleConfiguration configuration)
         {
-            configuration.WithBaseUrl("http://localhost:5000");
+            configuration.WithBaseUrl("localhost:5000");
 
             configuration.EnableWebsocketAutoReconnect(true);
             configuration.GlobalLimit(200000000);
@@ -83,16 +83,18 @@ namespace HubconTestClient.Modules
             configuration.ConfigureWebsocketClient((x, services) =>
             {
                 x.SetBuffer(4 * 1024, 4 * 1024);
+                x.SetRequestHeader("Origin", "Hubcon");
             });
 
             configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(15));
             configuration.ScaleMessageProcessors(4);
 
-            configuration.ConfigureHttpClient((x, services) =>
+            configuration.ConfigureHttpClient((options, services) =>
             {
-                x.Timeout = TimeSpan.FromSeconds(15);
-                x.DefaultRequestHeaders.Add("User-Agent", "HubconTestClient");
+                options.Timeout = TimeSpan.FromSeconds(15);
+                options.DefaultRequestHeaders.Add("Origin", "Hubcon");
             });
+
 
             configuration.UseAuthenticationManager<AuthenticationManager>();
 

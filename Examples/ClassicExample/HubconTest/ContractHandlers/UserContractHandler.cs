@@ -64,8 +64,7 @@ namespace HubconTest.ContractHandlers
             return true;
         }
 
-        [AllowAnonymous]
-        [StreamingSettings(1000)]
+        [StreamingSettings(1, 1)]
         public async IAsyncEnumerable<string> GetMessages(int count)
         {
             for (int i = 0; i < count; i++)

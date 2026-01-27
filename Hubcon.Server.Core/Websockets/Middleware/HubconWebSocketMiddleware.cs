@@ -68,6 +68,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 await next(context);
                 return;
             }
+
             var corsService = context.RequestServices.GetRequiredService<ICorsService>();
             var corsPolicyProvider = context.RequestServices.GetRequiredService<ICorsPolicyProvider>();
 
@@ -473,7 +474,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             finally
             {
-                if(webSocket.State == WebSocketState.Open)
+                if (webSocket.State == WebSocketState.Open)
                     await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
 
                 await connectionSupervisor.UnregisterAsync(connectionId);
@@ -738,12 +739,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         complete.Item2?.Dispose();
                         complete.Item4?.RateBucket.Dispose();
                         handlerRegistration.Dispose();
-                        operationConfigRegistry.Unlink(id);
                         await rateLimiterManager.Unlink(id);
                     });
 
                     watchers.Add(hw);
-                    operationConfigRegistry.Link(id, blueprint!);
                     await rateLimiterManager.Link(id, operationRequest);
                     _ingestRouters.TryAdd(id, (observable, handlerCts, hw, settings));
                     sources.TryAdd(id, observer.GetAsyncEnumerable(handlerCts.Token));
@@ -1009,7 +1008,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         {
             using var localCts = new CancellationTokenSource();
             using var registration = cancellationToken.Register(localCts.Cancel);
-
+            IOperationRequest operationRequest = null!;
             try
             {
                 if (streamInitMessage == null || streamInitMessage.Id == Guid.Empty) return;
@@ -1018,7 +1017,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 _streams.TryAdd(streamInitMessage.Id, localCts);
 
-                IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(streamInitMessage.Payload)!;
+                operationRequest = converter.DeserializeData<OperationRequest>(streamInitMessage.Payload)!;
                 var streamResult = await entrypoint.HandleMethodStream(operationRequest, localCts.Token);
 
                 if (streamResult.Failure)
@@ -1026,6 +1025,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     await sender.SendAsync(new ErrorMessage(streamInitMessage.Id, converter.SerializeToElement(streamResult)));
                     return;
                 }
+
+                await rateLimiterManager.Link(streamInitMessage.Id, operationRequest);
 
                 var stream = streamResult.Data! as IAsyncEnumerable<object?>;
 
@@ -1074,7 +1075,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             catch (Exception)
             {
-                await sender.SendAsync(new ErrorMessage(streamInitMessage.Id, converter.SerializeToElement(HubconResponse.InternalError())));
+                if (webSocket.State == WebSocketState.Open)
+                {
+                    await sender.SendAsync(new ErrorMessage(streamInitMessage.Id, converter.SerializeToElement(HubconResponse.InternalError())));
+                }
             }
             finally
             {
@@ -1087,8 +1091,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 }
 
                 streamInitMessage.Dispose();
+
+                await rateLimiterManager.Unlink(streamInitMessage.Id);
             }
-            ;
         }
 
         private async Task HandleTokenRefresh(

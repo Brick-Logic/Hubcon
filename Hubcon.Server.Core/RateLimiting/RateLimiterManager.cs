@@ -7,7 +7,12 @@ using System.Threading.RateLimiting;
 
 namespace Hubcon.Server.Core.RateLimiting
 {
-    public class RateLimiterManager(ISettingsManager settingsManager, IInternalServerOptions options) : IRateLimiterManager, IAsyncDisposable
+    public class RateLimiterManager(
+        ISettingsManager settingsManager, 
+        IInternalServerOptions options, 
+        IOperationConfigRegistry operationConfigRegistry,
+        IOperationRegistry operationRegistry
+        ) : IRateLimiterManager, IAsyncDisposable
     {
         private readonly ConcurrentDictionary<MessageType, RateLimiter> _typeLimiters = new();
 
@@ -103,14 +108,17 @@ namespace Hubcon.Server.Core.RateLimiting
             }
         }
 
-        public ValueTask Link(Guid id, IOperationEndpoint endpoint)
+        public ValueTask Link(Guid id, IOperationRequest request)
         {
-            linkedSettings.TryAdd(id, endpoint);
+            operationRegistry.GetOperationBlueprint(request, out var value);
+            operationConfigRegistry.Link(id, value!);
+            linkedSettings.TryAdd(id, request);
             return ValueTask.CompletedTask;
         }
 
         public ValueTask Unlink(Guid id)
         {
+            operationConfigRegistry.Unlink(id);
             linkedSettings.TryRemove(id, out _);
             return ValueTask.CompletedTask;
         }

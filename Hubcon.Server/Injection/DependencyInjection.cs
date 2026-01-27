@@ -96,10 +96,15 @@ namespace Hubcon
             return app;
         }
 
-        public static WebApplication UseHubconWebsocketEndpoints(this WebApplication app)
+        public static WebApplication UseHubconWebsocketEndpoints(this WebApplication app, WebSocketOptions? options = null)
         {
             var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
-            app.UseWebSockets();
+
+            if(options != null)
+                app.UseWebSockets(options);
+            else
+                app.UseWebSockets();
+
             app.UseMiddleware<HubconWebSocketMiddleware>();
             operationRegistry.Build();
 

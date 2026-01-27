@@ -1,8 +1,10 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Routing.Models;
+using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
@@ -137,13 +139,13 @@ namespace Hubcon.Server.Core.Routing
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
                         var res = await requestHandler.GetStream(operationRequest, wrapper, cancellationToken);
-                        
+
                         if (res.Failure)
                         {
                             return ProcessResponse(res, context);
                         }
 
-                        return new SseResult((res.Data as IAsyncEnumerable<object?>)!);
+                        return new SseResult((res.Data as IAsyncEnumerable<object?>)!, operationRequest);
                     })
                     .ApplyOpenApiFromMethod(controllerMethod!, verbResult);
                     builder.WithRequestTimeout(options.HttpTimeout);
@@ -198,7 +200,7 @@ namespace Hubcon.Server.Core.Routing
                             return ProcessResponse(res, context);
                         }
 
-                        return new SseResult((res.Data! as IAsyncEnumerable<object?>)!);
+                        return new SseResult((res.Data! as IAsyncEnumerable<object?>)!, operationRequest);
                     }).ApplyOpenApiFromMethod(controllerMethod!, verbResult);
                     builder.WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);

@@ -134,6 +134,9 @@ namespace Hubcon.Client.Core.Websockets
         {
             var request = new SubscriptionInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
+            if (_webSocket?.State != WebSocketState.Open)
+                await EnsureConnectedAsync();
+
             var registration = cancellationToken.Register(async () =>
             {
                 if (remoteCancelEnabled)
@@ -152,8 +155,6 @@ namespace Hubcon.Client.Core.Websockets
             if (!_subscriptions.TryAdd(request.Id, observable))
                 throw new InvalidOperationException($"Ya existe una suscripción con Id {request.Id}");
 
-            if (_webSocket?.State != WebSocketState.Open)
-                await EnsureConnectedAsync();
 
             await SendMessageAsync(request, cancellationToken);
 
@@ -680,8 +681,6 @@ namespace Hubcon.Client.Core.Websockets
 
                         if (LoggingEnabled)
                             logger?.LogInformation("Intentando conectar...");
-
-                        _webSocket.Options.SetRequestHeader("Origin", "Hubcon");
 
                         WebSocketOptions?.Invoke(_webSocket.Options, serviceProvider);
 

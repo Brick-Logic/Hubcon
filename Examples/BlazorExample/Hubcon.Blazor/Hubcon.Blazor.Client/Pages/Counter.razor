@@ -2,6 +2,8 @@
 @using Hubcon.Blazor.Client.Auth
 @using Hubcon.Shared.Abstractions.Interfaces
 @using HubconTestDomain
+@using Hubcon;
+
 @rendermode InteractiveWebAssembly
 @inject AuthenticationManager _authenticationManager
 @inject ILogger<Counter> _logger
@@ -15,7 +17,7 @@
 @code {
     protected async void Login()
     {
-        var res = await _authenticationManager.LoginAsync("", "");
+        var res = await _authenticationManager.LoginAsync("36ytwse3", "");
 
         if (res.IsSuccess)
             _logger.LogInformation($"Login OK. Token: {_authenticationManager.AccessToken}");
@@ -38,8 +40,8 @@
 
     protected async Task TestCreateUser()
     {
-        await _userService.CreateUser();
-        _logger.LogInformation($"CreateUser OK");
+        var result = await _userService.Execute(x => x.CreateUser());
+        _logger.LogInformation($"CreateUser {result.Success}");
     }
 
     protected async Task TestStream()
