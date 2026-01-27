@@ -152,11 +152,6 @@ namespace BlazorTestServer.Controllers
             throw new NotImplementedException();
         }
 
-        public Task<int> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-
         public Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
@@ -172,7 +167,7 @@ namespace BlazorTestServer.Controllers
             throw new NotImplementedException();
         }
 
-        Task<HubconResponse<TestInputClass>> IUserContract.GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken)
+        public Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

@@ -13,7 +13,6 @@ namespace Hubcon.Blazor
             builder.Services.AddRazorComponents()
                 .AddInteractiveWebAssemblyComponents();
 
-
             builder.Services.AddHubconClient();
             builder.Services.AddRemoteServerModule<TestModule>();
             //builder.Services.AddSingleton<HttpClient, HubconHttpClient>();
