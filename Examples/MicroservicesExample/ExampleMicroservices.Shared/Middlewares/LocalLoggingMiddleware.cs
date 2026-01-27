@@ -1,9 +1,7 @@
-﻿using Hubcon.Server.Abstractions.Delegates;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon;
 using Microsoft.Extensions.Logging;
 
-namespace ExampleMicroservicesDomain.Middlewares
+namespace ExampleMicroservices.Shared.Middlewares
 {
     public class LocalLoggingMiddleware(ILogger<LocalLoggingMiddleware> logger) : ILoggingMiddleware
     {

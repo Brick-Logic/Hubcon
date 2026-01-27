@@ -1,10 +1,11 @@
-﻿using Hubcon.Server.Abstractions.Delegates;
+﻿using Hubcon;
+using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Microsoft.Extensions.Logging;
 
-namespace ExampleMicroservicesDomain.Middlewares
+namespace ExampleMicroservices.Shared.Middlewares
 {
     public class ExceptionMiddleware(ILogger<ExceptionMiddleware> logger) : IExceptionMiddleware
     {
@@ -16,7 +17,7 @@ namespace ExampleMicroservicesDomain.Middlewares
             }
             catch (Exception ex)
             {
-                context.Result = new BaseOperationResponse<object>(false, default!, ex.Message);
+                context.Response = HubconResponse.InternalError();
                 context.Exception = ex;
                 logger.LogInformation(ex.ToString());
                 return;

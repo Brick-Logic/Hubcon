@@ -13,7 +13,7 @@ namespace BlazorTestServer.Controllers
 
         public ISubscription<int?>? OnUserCreated4 { get; }
 
-        public ISubscription<IEnumerable<int>>? OnEnumerableTest => throw new NotImplementedException();
+        public ISubscription<IEnumerable<int>>? OnEnumerableTest { get; }
 
         public async Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
             => await Task.Run(() => new Random().Next(-10, 50));

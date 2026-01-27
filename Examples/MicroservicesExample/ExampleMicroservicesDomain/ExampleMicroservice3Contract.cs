@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
+﻿using Hubcon;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace ExampleMicroservicesDomain
 {

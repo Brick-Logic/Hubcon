@@ -1,6 +1,5 @@
 using ExampleMicroservice1.ServerModules;
-using Hubcon.Client;
-using Hubcon.Server.Injection;
+using Hubcon;
 using Scalar.AspNetCore;
 
 namespace ExampleMicroservice1

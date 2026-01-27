@@ -1,7 +1,4 @@
-﻿using Hubcon.Shared.Core.Websockets.Interfaces;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace HubconTestClient.Models
 {

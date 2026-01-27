@@ -1,7 +1,10 @@
-﻿using ExampleMicroservicesDomain;
+﻿using ExampleMicroservices.Shared.Middlewares;
+using ExampleMicroservicesDomain;
+using Hubcon;
 
 namespace ExampleMicroservice1.ContractHandlers
 {
+    [UseMiddleware<ExceptionMiddleware>]
     public class ExampleMicroservice1ContractHandler(
         IExampleMicroservice2Contract microservice2,
         ILogger<ExampleMicroservice1ContractHandler> logger) : IExampleMicroservice1Contract

@@ -1,4 +1,5 @@
 ﻿using ExampleMicroservicesDomain;
+using Hubcon;
 using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Builder;
 

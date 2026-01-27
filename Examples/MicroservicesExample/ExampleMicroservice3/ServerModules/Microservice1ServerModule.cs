@@ -1,6 +1,5 @@
 ﻿using ExampleMicroservicesDomain;
-using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Builder;
+using Hubcon;
 
 namespace ExampleMicroservice3.ServerModules
 {

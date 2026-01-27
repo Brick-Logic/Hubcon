@@ -1164,7 +1164,7 @@ namespace Hubcon.Client.Integration.Client
             string baseRestHttpUrl = string.Empty;
             string baseRestWebsocketUrl = string.Empty;
 
-            if (baseUri!.IsAbsoluteUri)
+            if (!baseUri!.IsAbsoluteUri)
             {
                 baseRestHttpUrl = $"{baseUri!.Host}:{baseUri.Port}/{httpEndpoint ?? ""}".TrimEnd('/');
                 baseRestWebsocketUrl = $"{baseUri!.Host}:{baseUri.Port}/{websocketEndpoint ?? "ws"}".TrimEnd('/');
