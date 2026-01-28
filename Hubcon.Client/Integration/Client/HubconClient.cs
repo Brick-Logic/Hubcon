@@ -895,7 +895,7 @@ namespace Hubcon.Client.Integration.Client
             while (!cancellationToken.IsCancellationRequested)
             {
                 line = await reader.ReadLineAsync();
-                if (!string.IsNullOrEmpty(line) || line.StartsWith("data: "))
+                if (!string.IsNullOrEmpty(line) && line.StartsWith("data: "))
                 {
                     string jsonData = line.Substring(6);
                     if (jsonData == "[DONE]") break;
@@ -1168,15 +1168,15 @@ namespace Hubcon.Client.Integration.Client
             string baseRestHttpUrl = string.Empty;
             string baseRestWebsocketUrl = string.Empty;
 
-            if (!baseUri!.IsAbsoluteUri)
-            {
-                baseRestHttpUrl = $"{baseUri!.Host}:{baseUri.Port}/{httpEndpoint ?? ""}".TrimEnd('/');
-                baseRestWebsocketUrl = $"{baseUri!.Host}:{baseUri.Port}/{websocketEndpoint ?? "ws"}".TrimEnd('/');
-            }
-            else
+            if (string.IsNullOrWhiteSpace(options.BaseUri?.Host))
             {
                 baseRestHttpUrl = $"{baseUri!.OriginalString.TrimEnd('/')}/{httpEndpoint ?? ""}".TrimEnd('/');
                 baseRestWebsocketUrl = $"{baseUri!.OriginalString.TrimEnd('/')}/{websocketEndpoint ?? "ws"}".TrimEnd('/');
+            }
+            else
+            {
+                baseRestHttpUrl = $"{baseUri!.Host}:{baseUri.Port}/{httpEndpoint ?? ""}".TrimEnd('/');
+                baseRestWebsocketUrl = $"{baseUri!.Host}:{baseUri.Port}/{websocketEndpoint ?? "ws"}".TrimEnd('/');
             }
 
             _restHttpUrl = useSecureConnection ? $"https://{baseRestHttpUrl}" : $"http://{baseRestHttpUrl}";

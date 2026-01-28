@@ -27,7 +27,7 @@ namespace Hubcon.Server.Core.RateLimiting
         private RateLimiter? _operationInvokeLimiter = null;
         private RateLimiter? _tokenUpdateLimiter = null;
 
-        public async ValueTask<bool> TryAcquireAsync(MessageType type, TransportAttribute transportAttribute, IOperationEndpoint? operation = null)
+        public async ValueTask<bool> TryAcquireAsync(MessageType type, TransportAttribute transportAttribute, IOperationRequest? operation = null)
         {
             try
             {

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
 
-namespace Hubcon.Shared.Abstractions.Interfaces
+namespace Hubcon
 {
     public interface IDynamicConverter
     {

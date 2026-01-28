@@ -75,25 +75,25 @@ internal class Program
 
 
         //logger.LogInformation($"Probando stream SSE non-hubcon...");
-        //await Task.Delay(500);
-        //var request = new OpenAIStreamRequest()
-        //{
-        //    Model = "gpt-5-nano",
-        //    Input = "Hablame sobre las ultimas novedades de .NET 10 en un parrafo de aprox 500 palabras.",
-        //};
+        await Task.Delay(500);
+        var request = new OpenAIStreamRequest()
+        {
+            Model = "gpt-5-nano",
+            Input = "Hablame sobre las ultimas novedades de .NET 10 en un parrafo de aprox 500 palabras.",
+        };
 
-        //var finalText = "";
-        //var stream = await openAi.Execute(x => x.GetResponseStream(request));
-        //logger.LogInformation($"Respuesta: {stream.Success}");
-        //await foreach (var item in stream.Data)
-        //{
-        //    logger.LogInformation($"Event received: {item.Delta}");
-        //    finalText += item.Delta;
-        //}
+        var finalText = "";
+        var streamResponse = await openAi.Execute(x => x.GetResponseStream(request));
+        logger.LogInformation($"Respuesta: {streamResponse.Success}");
+        await foreach (var item in streamResponse.Data!)
+        {
+            logger.LogInformation($"Event received: {item.Delta}");
+            finalText += item.Delta;
+        }
 
-        //logger.LogInformation($"Final text: {finalText}");
-        //logger.LogInformation($"Stream SSE de tokens: OK");
-        //await Task.Delay(1000);
+        logger.LogInformation($"Final text: {finalText}");
+        logger.LogInformation($"Stream SSE de tokens: OK");
+        await Task.Delay(1000);
 
         //logger.LogInformation($"Probando obtener inputs del modelo...");
         //var response2 = await openAi.Execute(x => x.GetModelResponseInputs(response.Data.Id));
