@@ -71,7 +71,7 @@ namespace Hubcon.Server.Core.Routing.Models
                 }
 
                 // Opcional: Mandar el [DONE] para cerrar el ciclo
-                await response.WriteAsync("data: [DONE]\n\n");
+                await response.WriteAsync("[DONE]\n\n");
             }
             catch (OperationCanceledException)
             {

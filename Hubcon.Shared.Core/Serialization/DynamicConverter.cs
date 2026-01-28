@@ -93,7 +93,6 @@ namespace Hubcon.Shared.Core.Serialization
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class DynamicConverter : IDynamicConverter
     {
-
         public ConcurrentDictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 
         public static JsonSerializerOptions JsonSerializerOptions { get; } = HubconJsonDefaults.Options;
@@ -337,6 +336,22 @@ namespace Hubcon.Shared.Core.Serialization
             var typeInfo = TypeInfoCache.GetOrAdd(typeof(T), x => JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(x, JsonSerializerOptions)!) as JsonTypeInfo<T>;
             JsonSerializer.Serialize(writer, message, typeInfo!);
         }
+
+        public JsonElement ToJsonElement(string rawData)
+        {
+            // Intentamos ver si ya es un JSON válido (objeto o array)
+            if ((rawData.StartsWith("{") && rawData.EndsWith("}")) ||
+                (rawData.StartsWith("[") && rawData.EndsWith("]")))
+            {
+                try
+                {
+                    return JsonDocument.Parse(rawData).RootElement.Clone();
+                }
+                catch { }
+            }
+
+            return JsonSerializer.SerializeToElement(rawData, JsonSerializerOptions);
+        }
     }
 
     public static class HubconJsonDefaults
@@ -370,7 +385,17 @@ namespace Hubcon.Shared.Core.Serialization
                 _options!.MaxDepth = 64;
                 _options!.PropertyNameCaseInsensitive = true;
                 _options!.Converters.Add(new JsonStringEnumConverter<MessageType>(JsonNamingPolicy.CamelCase));
+
+                if(SystemTypesContext.Default.Options.TypeInfoResolver != null)
+                    _options.TypeInfoResolverChain.Add(SystemTypesContext.Default.Options.TypeInfoResolver);
+
+                if (JsonSerializerOptions.Default.TypeInfoResolver != null)
+                    _options.TypeInfoResolverChain.Add(JsonSerializerOptions.Default.TypeInfoResolver);
+
+                foreach (var converter in JsonSerializerOptions.Default.Converters)
+                    _options!.Converters.Add(converter);
             }
+
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Hubcon;
+using Hubcon.Shared.Abstractions.Attributes;
 using HubconTestClient.Models;
 
 namespace HubconTestClient.Contracts
@@ -18,6 +19,10 @@ namespace HubconTestClient.Contracts
         public Task<OpenAIResponse> DeleteModelResponse(string id);
 
         [HttpPost("/v1/responses")]
+        [ParseSseMessage("data:", "")]
+        [ParseSseMessage("event:", "event")]
+        [ParseRawSseMessage]
+        [ParseEndSseMessage("[DONE]")]
         public IAsyncEnumerable<OpenAIStreamEvent> GetResponseStream([AsBody] OpenAIStreamRequest request);
     }
 }

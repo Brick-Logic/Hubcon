@@ -1,4 +1,5 @@
 ﻿using Hubcon;
+using Hubcon.Shared.Abstractions.Attributes;
 
 namespace HubconTestDomain
 {
@@ -28,7 +29,12 @@ namespace HubconTestDomain
         Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken = default);
         Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default);
         Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default);
+
+        [ParseSseMessage("data: ")]
+        [ParseSseMessage("event: ")]
+        [ParseEndSseMessage("[DONE]")]
         IAsyncEnumerable<string> GetMessages(int count);
+
         Task ShowTextOnServer();
         Task<IEnumerable<bool>> GetBooleans();
         Task<MyTestClass> GetObject();

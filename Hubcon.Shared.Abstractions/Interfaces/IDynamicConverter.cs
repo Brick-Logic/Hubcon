@@ -26,5 +26,6 @@ namespace Hubcon
         T DeserializeFromString<T>(string? json);
         ReadOnlySpan<byte> SerializeToSpan<T>(T value, ArrayBufferWriter<byte> bufferWriter);
         void Serialize<T>(Utf8JsonWriter writer, T? message);
+        JsonElement ToJsonElement(string rawData);
     }
 }

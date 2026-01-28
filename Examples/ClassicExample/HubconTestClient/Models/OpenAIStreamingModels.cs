@@ -31,6 +31,15 @@ namespace HubconTestClient.Models
         [JsonPropertyName("text")] public string? Text { get; set; }
 
         [JsonPropertyName("response")] public OpenAIResponse? Response { get; set; }
+
+        [JsonPropertyName("event")] public EventType Event { get; set; }
+    }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum EventType
+    {
+        [JsonPropertyName("response.created")]
+        ResponseCreated
     }
 
     public class OpenAIStreamingResponse

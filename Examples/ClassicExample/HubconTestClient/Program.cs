@@ -1,4 +1,5 @@
-﻿using HubconTestClient.Auth;
+﻿using Hubcon;
+using HubconTestClient.Auth;
 using HubconTestClient.Contracts;
 using HubconTestClient.Models;
 using HubconTestClient.Modules;
@@ -8,8 +9,8 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Threading.RateLimiting;
-using Hubcon;
 
 internal class Program
 {
@@ -74,12 +75,13 @@ internal class Program
         //await Task.Delay(1000);
 
 
+
         //logger.LogInformation($"Probando stream SSE non-hubcon...");
         await Task.Delay(500);
         var request = new OpenAIStreamRequest()
         {
             Model = "gpt-5-nano",
-            Input = "Hablame sobre las ultimas novedades de .NET 10 en un parrafo de aprox 500 palabras.",
+            Input = "Dame una frase de 5 palabras sobre una manzana.",
         };
 
         var finalText = "";

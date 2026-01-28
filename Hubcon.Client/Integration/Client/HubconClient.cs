@@ -1,26 +1,23 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.Helpers;
 using Hubcon.Client.Core.HubconInvocationContext;
 using Hubcon.Client.Core.Websockets;
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Channels;
 
 namespace Hubcon.Client.Integration.Client
@@ -791,7 +788,7 @@ namespace Hubcon.Client.Integration.Client
 
                 using var stream = await response.Content.ReadAsStreamAsync();
 
-                enumerable = ParseSSEStream(stream, cancellationToken);
+                enumerable = ParseSSEStream(stream, methodInfo, cancellationToken);
 
                 await foreach (var item in enumerable.WithCancellation(cancellationToken))
                 {
@@ -887,24 +884,74 @@ namespace Hubcon.Client.Integration.Client
             await ClientOptions.CallInterceptor(InterceptorType.OnUnsubscribed, context);
         }
 
-        public async IAsyncEnumerable<JsonElement> ParseSSEStream(Stream stream, [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<JsonElement> ParseSSEStream(Stream stream, MethodInfo methodInfo, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            var dataMessages = methodInfo.GetCustomAttributes<ParseSseMessageAttribute>();
+            var endMessages = methodInfo.GetCustomAttributes<ParseEndSseMessageAttribute>().Select(x => x.MessageName);
+            bool shouldReadRaw = methodInfo.HasCustomAttribute<ParseRawSseMessageAttribute>();  
+            
             using var reader = new StreamReader(stream);
             string line = "";
+            ParseSseMessageAttribute? foundMessage = null;
 
-            while (!cancellationToken.IsCancellationRequested)
+            while ((line = await reader.ReadLineAsync()) != null)
             {
-                line = await reader.ReadLineAsync();
-                if (!string.IsNullOrEmpty(line) && line.StartsWith("data: "))
+                if (endMessages.Any() && endMessages.Any(x => line.StartsWith(x)))
+                    break;
+
+                if(dataMessages.Any())
+                    foundMessage = dataMessages.FirstOrDefault(x => line.StartsWith(x.MessageName))!;
+
+                if (foundMessage != null)
                 {
-                    string jsonData = line.Substring(6);
-                    if (jsonData == "[DONE]") break;
+                    var sliced = line.Substring(foundMessage.MessageName.Length);
+                    var parsed = !string.IsNullOrWhiteSpace(foundMessage.JsonPropertyName)
+                        ? WrapInObject(foundMessage.JsonPropertyName, sliced).ToJsonString()
+                        : sliced;
+                    JsonElement ev;
+                    try
+                    {
+                        ev = JsonElement.Parse(parsed);
+                    }
+                    catch
+                    {
+                        ev = converter.SerializeToElement(parsed);
+                    }
 
-                    var ev = converter.DeserializeData<JsonElement>(jsonData);
-
+                    if (ev.ValueKind != JsonValueKind.Null) yield return ev;
+                    foundMessage = null;
+                }
+                else if (!string.IsNullOrWhiteSpace(line) && shouldReadRaw)
+                {
+                    var ev = converter.ToJsonElement(line);
+                    if (ev.ValueKind != JsonValueKind.Null) yield return ev;
+                }
+                else if (!string.IsNullOrWhiteSpace(line) && line.StartsWith("data:"))
+                {
+                    var sliced = line.Substring(6);
+                    var ev = converter.SerializeToElement(sliced);
                     if (ev.ValueKind != JsonValueKind.Null) yield return ev;
                 }
             }
+        }
+
+        public JsonObject WrapInObject(string title, string rawInput)
+        {
+            var root = new JsonObject();
+
+            try
+            {
+                // Intentamos parsear para ver si es un objeto/array JSON válido
+                var node = JsonNode.Parse(rawInput);
+                root[title] = node; // Queda como 'titulo' : { ... } o 'titulo' : [ ... ]
+            }
+            catch (JsonException)
+            {
+                // Si falla, es un string plano (ej: "hola")
+                root[title] = JsonValue.Create(rawInput); // Queda como 'titulo' : "hola"
+            }
+
+            return root;
         }
 
         public async Task<T> Ingest<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(IOperationRequest request, MethodInfo method, CancellationToken cancellationToken)
