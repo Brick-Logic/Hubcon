@@ -6,7 +6,7 @@ namespace Hubcon.Shared.Abstractions.Models
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class SubscriptionRequest : IOperationRequest
     {
-        public string ContractName { get; }
+        public string ContractName { get; private set; }
         public string OperationName { get; private set; }
         public IReadOnlyDictionary<string, object> Arguments { get; private set; }
 
@@ -41,6 +41,11 @@ namespace Hubcon.Shared.Abstractions.Models
         public void AssignArguments(IReadOnlyDictionary<string, object> arguments)
         {
             this.Arguments = arguments;
+        }
+
+        public void AddTransportPrefix(ITransportAttribute transport)
+        {
+            ContractName = transport.TransportKey + "_" + ContractName;
         }
     }
 }

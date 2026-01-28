@@ -119,14 +119,13 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
             IOperationConfigRegistry operationConfigRegistry = context.RequestServices.GetRequiredService<IOperationConfigRegistry>();
             IRateLimiterManager rateLimiterManager = context.RequestServices.GetRequiredService<IRateLimiterManager>();
-            DefaultEntrypoint entrypoint = context.RequestServices.GetRequiredService<DefaultEntrypoint>();
 
             TimeSpan timeoutSeconds = options.WebSocketTimeout;
             HeartbeatWatcher _heartbeatWatcher = null!;
             CancellationTokenSource cts = new();
             ConcurrentDictionary<Guid, CancellationTokenSource> _subscriptions = null!;
             ConcurrentDictionary<Guid, CancellationTokenSource> _streams = null!;
-            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingestRouters = null!;
+            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingestRouters = null!;
             ConcurrentDictionary<Guid, (CancellationTokenSource, CancellationTokenRegistration)> _ingestHandlers = null!;
             ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels = null!;
             ConcurrentDictionary<Guid, CancellationTokenSource> _tasks = null!;
@@ -253,7 +252,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 sender,
                                 new SubscriptionInitMessage(tmo, message.Id, message.Type),
                                 rateLimiterManager,
-                                entrypoint,
                                 cts.Token);
 
                             break;
@@ -271,7 +269,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             _ = HandleUnsubscribe(
                                 _subscriptions,
                                 context,
-                                entrypoint,
                                 new SubscriptionCompleteMessage(tmo, message.Id, message.Type));
 
                             break;
@@ -294,7 +291,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 new StreamInitMessage(tmo, message.Id, message.Type),
                                 webSocket,
                                 rateLimiterManager,
-                                entrypoint,
                                 cts.Token);
 
                             break;
@@ -312,7 +308,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             _ = HandleUnsubscribe(
                                 _subscriptions,
                                 context,
-                                entrypoint,
                                 new SubscriptionCompleteMessage(tmo, message.Id, message.Type));
 
                             break;
@@ -349,7 +344,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 new OperationInvokeMessage(tmo, message.Id, message.Type),
                                 _tasks,
                                 webSocket,
-                                entrypoint,
                                 cts.Token);
 
                             break;
@@ -368,7 +362,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 context,
                                 new OperationCallMessage(tmo, message.Id, message.Type),
                                 _tasks,
-                                entrypoint,
                                 cts.Token);
 
                             break;
@@ -384,6 +377,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             }
 
                             _ = HandleIngestInit(
+                                context,
                                 sender,
                                 new IngestInitMessage(tmo, message.Id, message.Type),
                                 _ingestHandlers,
@@ -391,7 +385,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 settingsManager,
                                 operationConfigRegistry,
                                 rateLimiterManager,
-                                entrypoint,
                                 cts.Token);
 
                             break;
@@ -628,7 +621,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             await sender.SendAsync(new ErrorMessage(id, converter.SerializeToElement(HubconResponse.Unauthorized())));
         }
 
-        private async Task HandleIngestComplete(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingests, IngestCompleteMessage ingestCompleteMessage)
+        private async Task HandleIngestComplete(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingests, IngestCompleteMessage ingestCompleteMessage)
         {
             foreach (var id in ingestCompleteMessage.StreamIds)
             {
@@ -647,7 +640,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         }
 
         private async Task HandleIngestDataWithAck(
-            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingests,
+            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingests,
             WebSocketMessageSender sender,
             IngestDataWithAckMessage ingestDataWithAckMessage
             )
@@ -663,7 +656,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             ingestDataWithAckMessage.Dispose();
         }
 
-        private async Task HandleIngestData(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingests, IngestDataMessage ingestDataMessage)
+        private async Task HandleIngestData(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingests, IngestDataMessage ingestDataMessage)
         {
             if (ingestDataMessage == null || !_ingests.TryGetValue(ingestDataMessage.Id, out var ingest))
                 return;
@@ -674,14 +667,14 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         }
 
         private async Task HandleIngestInit(
+            HttpContext context,
             WebSocketMessageSender sender,
             IngestInitMessage ingestInitMessage,
             ConcurrentDictionary<Guid, (CancellationTokenSource, CancellationTokenRegistration)> _ingestHandlers,
-            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, IngestSettings)> _ingestRouters,
+            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingestRouters,
             ISettingsManager settingsManager,
             IOperationConfigRegistry operationConfigRegistry,
             IRateLimiterManager rateLimiterManager,
-            DefaultEntrypoint entrypoint,
             CancellationToken cancellationToken)
         {
             Dictionary<Guid, object> sources = new();
@@ -694,33 +687,28 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 var operationRequest = converter.DeserializeData<OperationRequest>(ingestInitMessage!.Payload)!;
 
-                if (!operationRegistry.GetOperationBlueprint(operationRequest, out var blueprint))
+                if (!operationRegistry.GetOperationBlueprint(operationRequest, WebSocketsAttribute.Default, out var blueprint))
                     return;
 
-                IngestSettingsAttribute ingestSettings = settingsManager.GetSettings(operationRequest, () => IngestSettingsAttribute.Default());
-
-                IngestSettings? sharedSettings = null;
+                bool shareLimiter = blueprint!.Attributes.Any(x => x is IngestShareLimiter);
+                RateLimitAttribute? sharedSettings = null;
+                if (shareLimiter) sharedSettings = settingsManager.GetSettings(operationRequest, WebSocketsAttribute.Default, () => new RateLimitAttribute()); ;
 
                 _ingestHandlers.TryAdd(ingestInitMessage.Id, (localCts, registration));
 
                 foreach (var id in ingestInitMessage!.StreamIds)
                 {
-                    if (sharedSettings != null && ingestSettings.SharedRateLimiter)
-                    {
-                        sharedSettings = ingestSettings.Factory();
-                    }
-
-                    var settings = sharedSettings ?? ingestSettings.Factory();
+                    RateLimitAttribute settings = sharedSettings ?? settingsManager.GetSettings(operationRequest, WebSocketsAttribute.Default, () => new RateLimitAttribute());
 
                     if (_ingestRouters.TryGetValue(id, out _))
                         return;
 
                     var observable = new GenericObservable<JsonElement>(converter);
 
-                    var bufferOptions = new BoundedChannelOptions(settings.ChannelCapacity)
+                    var bufferOptions = new BoundedChannelOptions(settings.QueueLimit)
                     {
-                        FullMode = settings.ChannelFullMode,
-                        Capacity = settings.ChannelCapacity,
+                        FullMode = BoundedChannelFullMode.Wait,
+                        Capacity = settings.QueueLimit,
                         SingleReader = true,
                         SingleWriter = false,
                         AllowSynchronousContinuations = false,
@@ -743,12 +731,21 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     });
 
                     watchers.Add(hw);
-                    await rateLimiterManager.Link(id, operationRequest);
+                    await rateLimiterManager.Link(id, WebSocketsAttribute.Default, operationRequest);
                     _ingestRouters.TryAdd(id, (observable, handlerCts, hw, settings));
                     sources.TryAdd(id, observer.GetAsyncEnumerable(handlerCts.Token));
                 }
 
-                var ingestTask = entrypoint.HandleIngest(operationRequest, sources, localCts.Token);
+                using var scope = context.RequestServices.CreateScope();
+
+                var ingestTask = DefaultEntrypoint.HandleIngest(
+                    operationRequest, 
+                    WebSocketsAttribute.Default,
+                    scope.ServiceProvider, 
+                    sources, 
+                    null,
+                    localCts.Token);
+
                 await sender.SendAsync(new IngestInitAckMessage(ingestInitMessage.Id));
                 await Task.Delay(100);
                 var result = await ingestTask;
@@ -806,7 +803,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             OperationInvokeMessage operationInvokeMessage,
             ConcurrentDictionary<Guid, CancellationTokenSource> _tasks,
             WebSocket webSocket,
-            DefaultEntrypoint entrypoint,
             CancellationToken cancellationToken)
         {
             using var localCts = new CancellationTokenSource();
@@ -821,7 +817,15 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 if (operationInvokeMessage == null) return;
 
                 operationRequest = converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload)!;
-                var response = await entrypoint.HandleMethodWithResult(operationRequest, localCts.Token);
+
+                using var scope = context.RequestServices.CreateScope();
+
+                var response = await DefaultEntrypoint.HandleMethodWithResult(
+                    operationRequest,
+                    WebSocketsAttribute.Default,
+                    scope.ServiceProvider,
+                    null,
+                    localCts.Token);
 
                 if (webSocket.State == WebSocketState.Open)
                 {
@@ -845,7 +849,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             HttpContext context,
             OperationCallMessage operationCallMessage,
             ConcurrentDictionary<Guid, CancellationTokenSource> tasks,
-            DefaultEntrypoint entrypoint,
             CancellationToken cancellationToken)
         {
             using var localCts = new CancellationTokenSource();
@@ -857,7 +860,15 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return;
 
                 IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(operationCallMessage.Payload)!;
-                await entrypoint.HandleMethodVoid(operationRequest, localCts.Token);
+
+                using var scope = context.RequestServices.CreateScope();
+
+                await DefaultEntrypoint.HandleMethodVoid(
+                    operationRequest,
+                    WebSocketsAttribute.Default,
+                    scope.ServiceProvider,
+                    null,
+                    localCts.Token);
             }
             catch (Exception ex)
             {
@@ -874,7 +885,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         private async Task HandleUnsubscribe(
             ConcurrentDictionary<Guid, CancellationTokenSource> subscriptions,
             HttpContext context,
-            DefaultEntrypoint entrypoint,
             SubscriptionCompleteMessage subscriptionCompletemessage)
         {
             try
@@ -918,7 +928,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             WebSocketMessageSender sender,
             SubscriptionInitMessage subscribeMessage,
             IRateLimiterManager rateLimiterManager,
-            DefaultEntrypoint entrypoint,
             CancellationToken cancellationToken)
         {
             if (subscribeMessage == null || subscribeMessage.Id == Guid.Empty) return;
@@ -934,7 +943,13 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(subscribeMessage.Payload)!;
 
-                var streamResult = await entrypoint.HandleSubscription(operationRequest, localCts.Token);
+                using var scope = context.RequestServices.CreateScope();
+
+                var streamResult = await DefaultEntrypoint.HandleSubscription(
+                    operationRequest,
+                    WebSocketsAttribute.Default,
+                    scope.ServiceProvider,
+                    localCts.Token);
 
                 if (streamResult.Failure)
                 {
@@ -975,7 +990,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         }
                     }
 
-                    await rateLimiterManager.TryAcquireAsync(type, operationRequest);
+                    await rateLimiterManager.TryAcquireAsync(type, WebSocketsAttribute.Default, operationRequest);
                 }
             }
             catch (OperationCanceledException)
@@ -1003,7 +1018,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             StreamInitMessage streamInitMessage,
             WebSocket webSocket,
             IRateLimiterManager rateLimiterManager,
-            DefaultEntrypoint entrypoint,
             CancellationToken cancellationToken)
         {
             using var localCts = new CancellationTokenSource();
@@ -1018,7 +1032,15 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 _streams.TryAdd(streamInitMessage.Id, localCts);
 
                 operationRequest = converter.DeserializeData<OperationRequest>(streamInitMessage.Payload)!;
-                var streamResult = await entrypoint.HandleMethodStream(operationRequest, localCts.Token);
+
+                using var scope = context.RequestServices.CreateScope();
+
+                var streamResult = await DefaultEntrypoint.HandleMethodStream(
+                    operationRequest,
+                    WebSocketsAttribute.Default,
+                    scope.ServiceProvider,
+                    null,
+                    localCts.Token);
 
                 if (streamResult.Failure)
                 {
@@ -1026,7 +1048,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return;
                 }
 
-                await rateLimiterManager.Link(streamInitMessage.Id, operationRequest);
+                await rateLimiterManager.Link(streamInitMessage.Id, WebSocketsAttribute.Default, operationRequest);
 
                 var stream = streamResult.Data! as IAsyncEnumerable<object?>;
 

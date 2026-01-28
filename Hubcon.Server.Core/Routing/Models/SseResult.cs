@@ -47,7 +47,7 @@ namespace Hubcon.Server.Core.Routing.Models
 
                 rateLimiter = services.GetRequiredService<IRateLimiterManager>();
 
-                await rateLimiter.Link(id, request);
+                await rateLimiter.Link(id, HttpAttribute.Default, request);
 
                 // 2. Usamos el BodyWriter para máxima performance (Zero-copy)
                 writer = response.BodyWriter;

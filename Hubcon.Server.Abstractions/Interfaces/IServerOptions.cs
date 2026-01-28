@@ -13,6 +13,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         public void AddAuthentication();
         public void AutoRegisterControllers();
         public void AddHttpRateLimiter(Action<RateLimiterOptions> options);
-        void AddTelemetry();
+        public void AddTelemetry();
+        public void AddTransport<T>() where T : class, ITransportAttribute, new();
     }
 }

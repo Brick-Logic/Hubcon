@@ -1,16 +1,10 @@
-﻿using Hubcon.Server.Abstractions.CustomAttributes;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Configuration;
+﻿using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Entrypoint;
 using Hubcon.Server.Core.Helpers;
-using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Routing.Models;
-using Hubcon.Server.Core.Routing.Registries;
-using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
-
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -48,12 +42,15 @@ namespace Hubcon.Server.Core.Routing
             WebApplication app,
             IOperationBlueprint blueprint)
         {
+            if (!blueprint.SupportsTransport<HttpAttribute>())
+                return;
+
             IEndpointConventionBuilder builder = null!;
             var route = blueprint.HttpRoute!;
             var operationName = blueprint.OperationName;
             var simpleContractName = NamingHelper.GetCleanName(blueprint.ContractName);
             var options = app.Services.GetRequiredService<IInternalServerOptions>();
-            var method = (MethodInfo)blueprint.OperationInfo!;
+            var method = (MethodInfo)blueprint.MemberInfo!;
 
             if (options.MethodOverloadingIsEnabled) route = $"{method.GetMethodSignature()}";
 
@@ -106,13 +103,11 @@ namespace Hubcon.Server.Core.Routing
                     {
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
-                        var requestHandler = services.GetRequiredService<IRequestHandler>();
                         var cancellationToken = context.RequestAborted;
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
 
-                        // Creamos la instancia del Wrapper (el Monstruo)
                         var wrapper = Activator.CreateInstance(wrapperType);
 
                         // Llenamos solo lo que sea Simple Type desde la Query
@@ -121,15 +116,11 @@ namespace Hubcon.Server.Core.Routing
                             var value = context.Request.Query[prop.Name];
                             if (value.Count > 0)
                             {
-                                // Aquí puedes usar un TypeConverter o un simple Convert.ChangeType
-                                // Para performance extrema, esto se puede pre-compilar con IL
                                 var converted = Convert.ChangeType(value.ToString(), prop.PropertyType);
                                 prop.SetValue(wrapper, converted);
                             }
                         }
 
-                        // Inyectamos el CancellationToken si el Wrapper lo tiene
-                        // (Esto soluciona tu problema anterior también)
                         var ctProp = wrapperType.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(CancellationToken));
                         ctProp?.SetValue(wrapper, context.RequestAborted);
 
@@ -138,7 +129,12 @@ namespace Hubcon.Server.Core.Routing
                             .ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString());
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
-                        var res = await requestHandler.GetStream(operationRequest, wrapper, cancellationToken);
+                        var res = await DefaultEntrypoint.HandleMethodStream(
+                            operationRequest, 
+                            HttpAttribute.Default, 
+                            services, 
+                            wrapper, 
+                            cancellationToken);
 
                         if (res.Failure)
                         {
@@ -161,7 +157,6 @@ namespace Hubcon.Server.Core.Routing
                     {
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
-                        var requestHandler = services.GetRequiredService<IRequestHandler>();
                         var converter = services.GetRequiredService<IDynamicConverter>();
                         var cancellationToken = context.RequestAborted;
 
@@ -193,7 +188,12 @@ namespace Hubcon.Server.Core.Routing
                             args
                         );
 
-                        var res = await requestHandler.GetStream(operationRequest, wrapper, cancellationToken);
+                        var res = await DefaultEntrypoint.HandleMethodStream(
+                            operationRequest,
+                            HttpAttribute.Default,
+                            services,
+                            wrapper,
+                            cancellationToken);
 
                         if (res.Failure)
                         {
@@ -222,7 +222,6 @@ namespace Hubcon.Server.Core.Routing
                     {
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
-                        var requestHandler = services.GetRequiredService<IRequestHandler>();
                         var cancellationToken = context.RequestAborted;
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
@@ -254,7 +253,13 @@ namespace Hubcon.Server.Core.Routing
                             .ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString());
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
-                        var res = await requestHandler.HandleWithResultAsync(operationRequest, wrapper, context.RequestAborted);
+                        var res = await DefaultEntrypoint.HandleMethodWithResult(
+                            operationRequest,
+                            HttpAttribute.Default,
+                            services,
+                            wrapper,
+                            cancellationToken);
+
                         return res;
                     })
                     .ApplyOpenApiFromMethod(controllerMethod!, verbResult);
@@ -271,7 +276,6 @@ namespace Hubcon.Server.Core.Routing
                     {
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
-                        var requestHandler = services.GetRequiredService<IRequestHandler>();
                         var converter = services.GetRequiredService<IDynamicConverter>();
                         var cancellationToken = context.RequestAborted;
 
@@ -303,7 +307,13 @@ namespace Hubcon.Server.Core.Routing
                             args
                         );
 
-                        var res = await requestHandler.HandleWithResultAsync(operationRequest, wrapper, cancellationToken);
+                        var res = await DefaultEntrypoint.HandleMethodWithResult(
+                            operationRequest,
+                            HttpAttribute.Default,
+                            services,
+                            wrapper,
+                            cancellationToken);
+
                         return res;
                     }).ApplyOpenApiFromMethod(controllerMethod!, verbResult);
                     builder.WithRequestTimeout(options.HttpTimeout);
@@ -323,7 +333,6 @@ namespace Hubcon.Server.Core.Routing
                     {
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
-                        var requestHandler = services.GetRequiredService<IRequestHandler>();
                         var cancellationToken = context.RequestAborted;
 
                         var dict = new Dictionary<string, object>();
@@ -335,7 +344,13 @@ namespace Hubcon.Server.Core.Routing
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
 
-                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest, null, cancellationToken);
+                        var res = await DefaultEntrypoint.HandleMethodVoid(
+                            operationRequest,
+                            HttpAttribute.Default,
+                            services,
+                            null,
+                            cancellationToken);
+
                         return res;
                     }).ApplyOpenApiFromMethod(controllerMethod!, verbResult).WithMetadata(new AsParametersAttribute());
                     builder.WithRequestTimeout(options.HttpTimeout);
@@ -352,7 +367,6 @@ namespace Hubcon.Server.Core.Routing
                     {
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
-                        var requestHandler = services.GetRequiredService<IRequestHandler>();
                         var converter = services.GetRequiredService<IDynamicConverter>();
                         var cancellationToken = context.RequestAborted;
 
@@ -387,7 +401,13 @@ namespace Hubcon.Server.Core.Routing
                             args
                         );
 
-                        var res = await requestHandler.HandleWithoutResultAsync(operationRequest, wrapper, cancellationToken);
+                        var res = await DefaultEntrypoint.HandleMethodVoid(
+                            operationRequest,
+                            HttpAttribute.Default,
+                            services,
+                            null,
+                            cancellationToken);
+
                         return res;
                     })
                     .ApplyOpenApiFromMethod(controllerMethod!, verbResult);

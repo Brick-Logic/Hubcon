@@ -29,14 +29,15 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public Type ReturnType { get; }
         public bool HasReturnType { get; }
 
-        public MemberInfo? OperationInfo { get; }
+        public MemberInfo? MemberInfo { get; }
 
         public bool RequiresAuthorization { get; }
         public IEnumerable<AuthorizeAttribute> AuthorizationAttributes { get; }
         public HashSet<string> PrecomputedRoles { get; private set; }
         public string?[] PrecomputedPolicies { get; private set; }
-        public IEnumerable<Attribute> Attributes { get; }
+        public IList<Attribute> Attributes { get; }
         public ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
+        public ConcurrentDictionary<Type, Attribute> TransportAttributes { get; }
         public Func<object?, object, object?>? InvokeDelegate { get; }
         public IPipelineBuilder PipelineBuilder { get; }
 
@@ -55,7 +56,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             string operationName,
             Type contractType,
             Type controllerType,
-            MemberInfo memberInfo,
+            MemberInfo intefaceMemberInfo,
+            MemberInfo? controllerMemberInfo,
             OperationKind kind,
             IPipelineBuilder pipelineBuilder,
             IInternalServerOptions options,
@@ -67,7 +69,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             ArgumentException.ThrowIfNullOrEmpty(operationName);
             ArgumentNullException.ThrowIfNull(contractType);
             ArgumentNullException.ThrowIfNull(controllerType);
-            ArgumentNullException.ThrowIfNull(memberInfo);
+            ArgumentNullException.ThrowIfNull(intefaceMemberInfo);
 
             OperationName = operationName;
             ContractType = contractType;
@@ -75,7 +77,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             SimpleContractName = NamingHelper.GetCleanName(contractType.Name);
             ControllerType = controllerType;
             ControllerName = controllerType.Name;
-            OperationInfo = memberInfo;
+            MemberInfo = intefaceMemberInfo;
             ParameterTypes = [];
             Kind = kind;
             CallWrapperType = callWrapperType;
@@ -92,7 +94,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             HasSubscriptions = SubscriptionProperties.Count > 0;
 
-            if (memberInfo is MethodInfo methodInfo)
+            if (intefaceMemberInfo is MethodInfo methodInfo)
             {
                 foreach (var parameter in methodInfo.GetParameters())
                 {
@@ -116,15 +118,22 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
 
                 Attributes = ControllerType.GetMethod(
-                    memberInfo.Name,
+                    intefaceMemberInfo.Name,
                     methodInfo.GetParameters().Select(x => x.ParameterType).ToArray())!
-                    .GetCustomAttributes();
+                    .GetCustomAttributes()
+                    .ToList();
+
+                var interfaceAttributes = ControllerType.GetMethod(
+                    intefaceMemberInfo.Name,
+                    methodInfo.GetParameters().Select(x => x.ParameterType).ToArray())!
+                    .GetCustomAttributes()
+                    .ToList();
 
                 endpointAttributes = Attributes
                     .Where(x => x is AuthorizeAttribute || x is AllowAnonymousAttribute)
                     .ToList();
             }
-            else if (memberInfo is PropertyInfo propertyInfo)
+            else if (intefaceMemberInfo is PropertyInfo propertyInfo)
             {
                 ReturnType = propertyInfo.PropertyType;
                 RawReturnType = propertyInfo.PropertyType;
@@ -132,7 +141,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
                 Kind = OperationKind.Subscription;
 
-                Attributes = ControllerType.GetMethod(propertyInfo.Name)?.GetCustomAttributes() ?? new List<Attribute>();
+                Attributes = ControllerType.GetMethod(propertyInfo.Name)?.GetCustomAttributes().ToList() ?? new List<Attribute>();
 
                 endpointAttributes = Attributes
                     .Where(x => x is SubscriptionAuthorizeAttribute || x is AllowAnonymousAttribute)
@@ -140,7 +149,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             }
             else
             {
-                throw new NotSupportedException($"The type {memberInfo.GetType()} is not supported as an operation type. Use PropertyInfo o MethodInfo instead.");
+                throw new NotSupportedException($"The type {intefaceMemberInfo.GetType()} is not supported as an operation type. Use PropertyInfo o MethodInfo instead.");
             }
 
             ReturnsHubconResponse = ReturnType.IsGenericType
@@ -181,42 +190,17 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             ConfigurationAttributes = new();
 
-            Attributes.Where(x =>
-            {
-                if (Kind == OperationKind.Subscription)
-                {
-                    return x is SubscriptionSettingsAttribute;
-                }
-                else if (Kind == OperationKind.Stream)
-                {
-                    return x is StreamingSettingsAttribute;
-                }
-                else if (Kind == OperationKind.Ingest)
-                {
-                    return x is IngestSettingsAttribute;
-                }
-                else if (Kind == OperationKind.CallMethod || Kind == OperationKind.InvokeMethod)
-                {
-                    return x is MethodSettingsAttribute;
-                }
-                else
-                    return false;
-            })
-            .ToList()
-            .ForEach(x =>
-            {
-                if (Kind == OperationKind.Subscription && x is SubscriptionSettingsAttribute subSettings)
-                    ConfigurationAttributes.TryAdd(typeof(SubscriptionSettingsAttribute), subSettings);
+            Attributes
+                .Where(x => x is IConfigurationAttribute)
+                .ToList()
+                .ForEach(x => ConfigurationAttributes.TryAdd(x.GetType(), x));
 
-                else if (Kind == OperationKind.Stream && x is StreamingSettingsAttribute streamSettings)
-                    ConfigurationAttributes.TryAdd(typeof(StreamingSettingsAttribute), streamSettings);
+            TransportAttributes = new();
 
-                else if (Kind == OperationKind.Ingest && x is IngestSettingsAttribute ingestSettings)
-                    ConfigurationAttributes.TryAdd(typeof(IngestSettingsAttribute), ingestSettings);
-
-                else if ((Kind == OperationKind.CallMethod || Kind == OperationKind.InvokeMethod) && x is MethodSettingsAttribute methodSettings)
-                    ConfigurationAttributes.TryAdd(typeof(MethodSettingsAttribute), methodSettings);
-            });
+            Attributes
+                .Where(x => x is ITransportAttribute)
+                .ToList()
+                .ForEach(x => TransportAttributes.TryAdd(x.GetType(), x));
 
             PipelineBuilder = pipelineBuilder;
             InvokeDelegate = invokeDelegate;

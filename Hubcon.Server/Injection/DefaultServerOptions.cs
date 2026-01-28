@@ -93,5 +93,16 @@ namespace Hubcon.Server.Injection
 
             Builder.Services.AddRateLimiter(hubconOptions);
         }
+        internal readonly List<ITransportAttribute> DefaultTransports = new();
+
+        public void AddTransport<T>() where T : class, ITransportAttribute, new()
+        {
+            HubconServerBuilder.AddTransport<T>();
+        }
+
+        public void AddTransport<T>(T attribute) where T : class, ITransportAttribute, new()
+        {
+            HubconServerBuilder.AddTransport<T>(attribute);
+        }
     }
 }

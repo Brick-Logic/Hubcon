@@ -88,7 +88,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                     foreach (var sub in context.Blueprint.SubscriptionProperties)
                     {
-                        if (!operationRegistry.GetOperationBlueprint(context.Blueprint.SimpleContractName, sub.PropInfo.Name, out IOperationBlueprint? blueprint))
+                        if (!operationRegistry.GetOperationBlueprint(context.Blueprint.SimpleContractName, sub.PropInfo.Name, WebSocketsAttribute.Default, out IOperationBlueprint? blueprint))
                             continue;
 
                         object? subInstance = null;
@@ -138,7 +138,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 string clientId = "";
 
-                if (context.Blueprint.OperationInfo == null)
+                if (context.Blueprint.MemberInfo == null)
                 {
                     context.Response = HubconResponse.NotFound(error: "Suscripcion no encontrada");
                     return;
@@ -186,13 +186,13 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     }
                 }
 
-                context.Blueprint.ConfigurationAttributes.TryGetValue(typeof(SubscriptionSettingsAttribute), out Attribute? attribute);
-                var subSettings = (attribute as SubscriptionSettingsAttribute)?.Factory() ?? SubscriptionSettingsAttribute.Default().Factory();
+                context.Blueprint.ConfigurationAttributes.TryGetValue(typeof(RateLimitAttribute), out Attribute? attribute);
+                var subSettings = (attribute as RateLimitAttribute) ?? new RateLimitAttribute();
 
-                var channelOptions = new BoundedChannelOptions(subSettings.ChannelCapacity)
+                var channelOptions = new BoundedChannelOptions(subSettings.QueueLimit)
                 {
-                    Capacity = subSettings.ChannelCapacity,
-                    FullMode = subSettings.ChannelFullMode,
+                    Capacity = subSettings.QueueLimit,
+                    FullMode = BoundedChannelFullMode.Wait,
                     SingleReader = false,
                     SingleWriter = false,
                     AllowSynchronousContinuations = true

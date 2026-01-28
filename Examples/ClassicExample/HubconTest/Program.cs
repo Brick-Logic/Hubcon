@@ -1,4 +1,5 @@
 using Hubcon;
+using Hubcon.Server.Abstractions.CustomAttributes;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -172,6 +173,7 @@ namespace HubconTest
                         return (user, expiration.Value);
                     })
                     .EnableWebsocketsLogging()
+                    .DisableAllRateLimiters()
                     .EnableRequestDetailedErrors();
                 });
 

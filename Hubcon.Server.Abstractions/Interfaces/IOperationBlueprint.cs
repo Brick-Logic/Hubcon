@@ -16,7 +16,7 @@ namespace Hubcon
         Type ControllerType { get; }
         bool HasReturnType { get; }
         string? HttpEndpointGroupName { get; }
-        MemberInfo? OperationInfo { get; }
+        MemberInfo? MemberInfo { get; }
         string OperationName { get; }
         OperationKind Kind { get; }
         ConcurrentDictionary<string, Type> ParameterTypes { get; }
@@ -28,7 +28,8 @@ namespace Hubcon
         Type? CallWrapperType { get; }
         string? HttpRoute { get; }
         ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
-        IEnumerable<Attribute> Attributes { get; }
+        ConcurrentDictionary<Type, Attribute> TransportAttributes { get; }
+        IList<Attribute> Attributes { get; }
         HashSet<string> PrecomputedRoles { get; }
         string?[] PrecomputedPolicies { get; }
         string SimpleContractName { get; }
@@ -38,5 +39,13 @@ namespace Hubcon
 
         bool HasSubscriptions { get; }
         ObjectFactory ControllerFactory { get; }
+
+        public bool SupportsTransport<T>() where T : class, ITransportAttribute
+        {
+            if (TransportAttributes.IsEmpty)
+                return true;
+
+            return TransportAttributes.Any(x => x is T);
+        }
     }
 }

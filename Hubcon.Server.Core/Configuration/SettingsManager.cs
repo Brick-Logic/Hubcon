@@ -5,9 +5,9 @@ namespace Hubcon.Server.Core.Configuration
 {
     public sealed class SettingsManager(IOperationRegistry operationRegistry, IOperationConfigRegistry operationConfigRegistry) : ISettingsManager
     {
-        public T GetSettings<T>(IOperationEndpoint operationRequest, Func<T> onNull)
+        public T GetSettings<T>(IOperationEndpoint operationRequest, ITransportAttribute transportAttribute, Func<T> onNull)
         {
-            if (!operationRegistry.GetOperationBlueprint(operationRequest, out var blueprint))
+            if (!operationRegistry.GetOperationBlueprint(operationRequest, transportAttribute, out var blueprint))
                 return onNull.Invoke();
 
             if (blueprint!.ConfigurationAttributes.TryGetValue(typeof(T), out Attribute? value)

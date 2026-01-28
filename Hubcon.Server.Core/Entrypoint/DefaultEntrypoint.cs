@@ -1,5 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -9,45 +10,36 @@ using System.Text.Json;
 namespace Hubcon.Server.Core.Entrypoint
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class DefaultEntrypoint(IServiceProvider ServiceProvider)
+    public static class DefaultEntrypoint
     {
-        public Task<IHubconResponse> HandleMethodWithResult(IOperationRequest request, CancellationToken cancellationToken = default)
+        public static Task<IHubconResponse> HandleMethodWithResult(IOperationRequest request, ITransportAttribute transport, IServiceProvider serviceProvider, object? wrapper = null, CancellationToken cancellationToken = default)
         {
-            using var scope = ServiceProvider.CreateScope();
-            var requestHandler = scope.ServiceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.HandleWithResultAsync(request, null, cancellationToken);
+            var requestHandler = serviceProvider.GetRequiredService<IRequestHandler>();
+            return requestHandler.HandleWithResultAsync(request, transport, wrapper, cancellationToken);
         }
 
-        public Task<IHubconResponse> HandleMethodVoid(IOperationRequest request, CancellationToken cancellationToken = default)
+        public static Task<IHubconResponse> HandleMethodVoid(IOperationRequest request, ITransportAttribute transport, IServiceProvider serviceProvider, object? wrapper = null, CancellationToken cancellationToken = default)
         {
-            using var scope = ServiceProvider.CreateScope();
-            var requestHandler = scope.ServiceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.HandleWithoutResultAsync(request, null, cancellationToken);
+            var requestHandler = serviceProvider.GetRequiredService<IRequestHandler>();
+            return requestHandler.HandleWithoutResultAsync(request, transport, wrapper, cancellationToken);
         }
 
-        public Task<IHubconResponse> HandleMethodStream(IOperationRequest request, CancellationToken cancellationToken = default)
+        public static Task<IHubconResponse> HandleMethodStream(IOperationRequest request, ITransportAttribute transport, IServiceProvider serviceProvider, object? wrapper = null, CancellationToken cancellationToken = default)
         {
-            using var scope = ServiceProvider.CreateScope();
-            var requestHandler = scope.ServiceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.GetStream(request, null, cancellationToken);
+            var requestHandler = serviceProvider.GetRequiredService<IRequestHandler>();
+            return requestHandler.GetStream(request, transport, wrapper, cancellationToken);
         }
 
-        public Task<IHubconResponse> HandleSubscription(IOperationRequest request, CancellationToken cancellationToken = default)
+        public static Task<IHubconResponse> HandleSubscription(IOperationRequest request, ITransportAttribute transport, IServiceProvider serviceProvider, CancellationToken cancellationToken = default)
         {
-            using var scope = ServiceProvider.CreateScope();
-            var requestHandler = scope.ServiceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.GetSubscription(request, cancellationToken);
+            var requestHandler = serviceProvider.GetRequiredService<IRequestHandler>();
+            return requestHandler.GetSubscription(request, transport, cancellationToken);
         }
 
-        public Task<IHubconResponse> HandleIngest(IOperationRequest request, Dictionary<Guid, object> sources, CancellationToken cancellationToken = default)
+        public static Task<IHubconResponse> HandleIngest(IOperationRequest request, ITransportAttribute transport, IServiceProvider serviceProvider, Dictionary<Guid, object> sources, object? wrapper = null, CancellationToken cancellationToken = default)
         {
-            using var scope = ServiceProvider.CreateScope();
-            var requestHandler = scope.ServiceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.HandleIngest(request, sources, null, cancellationToken);
-        }
-
-        public void Build()
-        {
+            var requestHandler = serviceProvider.GetRequiredService<IRequestHandler>();
+            return requestHandler.HandleIngest(request, transport, sources, wrapper, cancellationToken);
         }
     }
 }

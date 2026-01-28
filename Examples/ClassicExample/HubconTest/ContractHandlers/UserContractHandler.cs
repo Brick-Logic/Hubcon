@@ -64,7 +64,7 @@ namespace HubconTest.ContractHandlers
             return true;
         }
 
-        [StreamingSettings(1, 1)]
+        [RateLimit(1)]
         public async IAsyncEnumerable<string> GetMessages(int count)
         {
             for (int i = 0; i < count; i++)
@@ -82,7 +82,7 @@ namespace HubconTest.ContractHandlers
             }
         }
 
-        [StreamingSettings(10000000, 10000000)]
+        [RateLimit(10000000)]
         public async IAsyncEnumerable<string> GetMessages2(CancellationToken cancellationToken)
         {
             while (true)
@@ -103,7 +103,7 @@ namespace HubconTest.ContractHandlers
             
         }
 
-        [IngestSettings(5000, 5)]
+        [RateLimit(5000)]
         public async Task<string> IngestMessages(
             IAsyncEnumerable<string> source,
             IAsyncEnumerable<string> source2,
@@ -246,7 +246,7 @@ namespace HubconTest.ContractHandlers
         static int maxReqs = 0;
         static Stopwatch sw;
 
-        [IngestSettings(100, 1)]
+        [RateLimit(100)]
         public async Task IngestMessages(IAsyncEnumerable<string> source, [Required] int? count, CancellationToken cancellationToken)
         {
             _monitor ??= Monitor(cancellationToken);

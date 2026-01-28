@@ -16,7 +16,7 @@ namespace Hubcon.Server.Core.RateLimiting
     {
         private readonly ConcurrentDictionary<MessageType, RateLimiter> _typeLimiters = new();
 
-        private readonly ConcurrentDictionary<IOperationEndpoint, HubconSettings> operationSettings = new();
+        private readonly ConcurrentDictionary<IOperationEndpoint, RateLimitAttribute> operationLimiters = new();
         private readonly ConcurrentDictionary<Guid, IOperationEndpoint> linkedSettings = new();
 
         private readonly RateLimiter? _globalLimiter = new TokenBucketRateLimiter(options.WebsocketReaderRateLimiter.Invoke());
@@ -27,7 +27,7 @@ namespace Hubcon.Server.Core.RateLimiting
         private RateLimiter? _operationInvokeLimiter = null;
         private RateLimiter? _tokenUpdateLimiter = null;
 
-        public async ValueTask<bool> TryAcquireAsync(MessageType type, IOperationEndpoint? operation = null)
+        public async ValueTask<bool> TryAcquireAsync(MessageType type, ITransportAttribute transportAttribute, IOperationEndpoint? operation = null)
         {
             try
             {
@@ -53,7 +53,7 @@ namespace Hubcon.Server.Core.RateLimiting
 
                 if (operation is not null)
                 {
-                    var settings = operationSettings.GetOrAdd(operation, x => GetOperationSettings(type, operation)!);
+                    var settings = operationLimiters.GetOrAdd(operation, x => GetOperationSettings(type, transportAttribute, operation)!);
                     await settings.RateBucket.AcquireAsync();
                 }
 
@@ -95,7 +95,7 @@ namespace Hubcon.Server.Core.RateLimiting
 
                     if (operationEndpoint != null)
                     {
-                        var settings = operationSettings.GetOrAdd(operationEndpoint, x => GetLinkedSettings(type, messageId)!);
+                        var settings = operationLimiters.GetOrAdd(operationEndpoint, x => GetLinkedSettings(type, messageId)!);
                         await settings.RateBucket.AcquireAsync();
                     }
                 }
@@ -108,9 +108,9 @@ namespace Hubcon.Server.Core.RateLimiting
             }
         }
 
-        public ValueTask Link(Guid id, IOperationRequest request)
+        public ValueTask Link(Guid id, ITransportAttribute transportAttribute, IOperationRequest request)
         {
-            operationRegistry.GetOperationBlueprint(request, out var value);
+            operationRegistry.GetOperationBlueprint(request, transportAttribute, out var value);
             operationConfigRegistry.Link(id, value!);
             linkedSettings.TryAdd(id, request);
             return ValueTask.CompletedTask;
@@ -178,7 +178,7 @@ namespace Hubcon.Server.Core.RateLimiting
             };
         }
 
-        private HubconSettings? GetLinkedSettings(MessageType type, Guid id)
+        private RateLimitAttribute? GetLinkedSettings(MessageType type, Guid id)
         {
             // No limiters (inicialización, ack, errores, pong, etc.)
             return type switch
@@ -199,18 +199,18 @@ namespace Hubcon.Server.Core.RateLimiting
 
                 // Operation messages (round-trip)
                 MessageType.operation_invoke
-                    => settingsManager.GetSettings(id, () => WebsocketInvokeSettingsAttribute.Default()).Factory(),
+                    => settingsManager.GetSettings(id, () => new RateLimitAttribute()),
 
                 // Operation call (fire and forget)
                 MessageType.operation_call
-                    => settingsManager.GetSettings(id, () => WebsocketInvokeSettingsAttribute.Default()).Factory(),
+                    => settingsManager.GetSettings(id, () => new RateLimitAttribute()),
 
                 // Subscription group (comparten el mismo limiter)
                 MessageType.subscription_init
                 or MessageType.subscription_data
                 or MessageType.subscription_data_with_ack
                 or MessageType.subscription_complete
-                    => settingsManager.GetSettings(id, () => SubscriptionSettingsAttribute.Default()).Factory(),
+                    => settingsManager.GetSettings(id, () => new RateLimitAttribute()),
 
                 // Stream group (todos comparten)
                 MessageType.stream_init
@@ -218,7 +218,7 @@ namespace Hubcon.Server.Core.RateLimiting
                 or MessageType.stream_data
                 or MessageType.stream_data_ack
                 or MessageType.stream_data_with_ack
-                    => settingsManager.GetSettings(id, () => StreamingSettingsAttribute.Default()).Factory(),
+                    => settingsManager.GetSettings(id, () => new RateLimitAttribute()),
 
                 // Ingest group (comparten)
                 MessageType.ingest_init
@@ -226,13 +226,13 @@ namespace Hubcon.Server.Core.RateLimiting
                 or MessageType.ingest_data_with_ack
                 or MessageType.ingest_complete
                 or MessageType.ingest_result
-                    => settingsManager.GetSettings(id, () => IngestSettingsAttribute.Default()).Factory(),
+                    => settingsManager.GetSettings(id, () => new RateLimitAttribute()),
 
                 _ => null,
             };
         }
 
-        private HubconSettings? GetOperationSettings(MessageType type, IOperationEndpoint operation)
+        private RateLimitAttribute? GetOperationSettings(MessageType type, ITransportAttribute transportAttribute, IOperationEndpoint operation)
         {
             // No limiters (inicialización, ack, errores, pong, etc.)
             return type switch
@@ -251,20 +251,20 @@ namespace Hubcon.Server.Core.RateLimiting
                 MessageType.ping
                     => null,
 
-                // Operation messages (round-trip)
+                // Operation messages (round-trip)settingsManager.GetSettings(id, () => new RateLimitAttribute()),
                 MessageType.operation_invoke
-                    => settingsManager.GetSettings(operation, () => WebsocketInvokeSettingsAttribute.Default()).Factory(),
+                    => settingsManager.GetSettings(operation, transportAttribute, () => new RateLimitAttribute()),
 
                 // Operation call (fire and forget)
                 MessageType.operation_call
-                    => settingsManager.GetSettings(operation, () => WebsocketInvokeSettingsAttribute.Default()).Factory(),
+                    => settingsManager.GetSettings(operation, transportAttribute, () => new RateLimitAttribute()),
 
                 // Subscription group (comparten el mismo limiter)
                 MessageType.subscription_init
                 or MessageType.subscription_data
                 or MessageType.subscription_data_with_ack
                 or MessageType.subscription_complete
-                    => settingsManager.GetSettings(operation, () => SubscriptionSettingsAttribute.Default()).Factory(),
+                    => settingsManager.GetSettings(operation, transportAttribute, () => new RateLimitAttribute()),
 
                 // Stream group (todos comparten)
                 MessageType.stream_init
@@ -272,7 +272,7 @@ namespace Hubcon.Server.Core.RateLimiting
                 or MessageType.stream_data
                 or MessageType.stream_data_ack
                 or MessageType.stream_data_with_ack
-                    => settingsManager.GetSettings(operation, () => StreamingSettingsAttribute.Default()).Factory(),
+                    => settingsManager.GetSettings(operation, transportAttribute, () => new RateLimitAttribute()),
 
                 // Ingest group (comparten)
                 MessageType.ingest_init
@@ -280,7 +280,7 @@ namespace Hubcon.Server.Core.RateLimiting
                 or MessageType.ingest_data_with_ack
                 or MessageType.ingest_complete
                 or MessageType.ingest_result
-                    => settingsManager.GetSettings(operation, () => IngestSettingsAttribute.Default()).Factory(),
+                    => settingsManager.GetSettings(operation, transportAttribute, () => new RateLimitAttribute()),
 
                 _ => null,
             };
@@ -299,7 +299,7 @@ namespace Hubcon.Server.Core.RateLimiting
             _operationInvokeLimiter?.Dispose();
 
             linkedSettings.Clear();
-            operationSettings.Clear();
+            operationLimiters.Clear();
 
             await Task.CompletedTask;
         }

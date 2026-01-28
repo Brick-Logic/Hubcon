@@ -12,6 +12,7 @@ using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.ComponentModel;
@@ -25,11 +26,13 @@ namespace Hubcon.Server.Core.Routing.Registries
     {
         public event Action<IOperationBlueprint>? OnOperationRegistered;
 
-        private ConcurrentDictionary<string, ConcurrentDictionary<string, IOperationBlueprint>> AvailableOperations = new();
+        private ConcurrentDictionary<string, IOperationBlueprint> _availableOperations = new ConcurrentDictionary<string, IOperationBlueprint>();
+
+        //private ConcurrentDictionary<string, ConcurrentDictionary<string, IOperationBlueprint>> AvailableOperations = new();
         private ConcurrentDictionary<Type, bool> RegisteredControllers = new();
         private readonly bool useHashedNames;
 
-        private FrozenDictionary<(string Contract, string Operation), IOperationBlueprint>? _blueprintCache;
+        private FrozenDictionary<string, IOperationBlueprint>? _blueprintCache;
 
         public bool IsBuilt => _blueprintCache != null;
 
@@ -64,7 +67,28 @@ namespace Hubcon.Server.Core.Routing.Registries
                 if (methods.Length == 0)
                     continue;
 
-                var contractMethods = AvailableOperations.GetOrAdd(NamingHelper.GetCleanName(interfaceType.Name), _ => new ConcurrentDictionary<string, IOperationBlueprint>());
+                // Obtenemos atributos de transporte
+                List<ITransportAttribute> contractTransportAttributes = interfaceType.GetCustomAttributes()
+                    .Where(x => x is ITransportAttribute)
+                    .Select(x => x as ITransportAttribute)
+                    .ToList()!;
+
+                var controllerTransportAttributes = controllerType.GetCustomAttributes()
+                    .Where(x => x is ITransportAttribute)
+                    .Select(x => x as ITransportAttribute)
+                    .ToList()!;
+
+                contractTransportAttributes.AddRange(controllerTransportAttributes!);
+
+                if (contractTransportAttributes.Count == 0)
+                {
+                    contractTransportAttributes = serverOptions.DefaultTransports.Values.ToList();
+                }
+
+                //foreach(var item in transportAttributes)
+                //{
+                //    _availableOperations.GetOrAdd(NamingHelper.GetCleanName(interfaceType.Name), _ => new ConcurrentDictionary<string, IOperationBlueprint>());
+                //}
 
                 var classFilters = controllerType.GetCustomAttributes()
                         .Where(x => x is UseMiddlewareAttribute)
@@ -88,7 +112,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                         p.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>));
 
                     if (isStream && isIngest)
-                        throw new InvalidOperationException($"Method '{method.Name}': Returning IAsyncEnumerable<T> and also using IAsyncEnumerable<T> parameters is not supported.");
+                        throw new InvalidOperationException($"Method '{method.Name}': Returning IAsyncEnumerable<T> and using IAsyncEnumerable<T> parameters is not supported.");
 
                     var hasReturnType = returnType != typeof(void) && returnType != typeof(Task);
 
@@ -110,6 +134,26 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                     var parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
                     var controllerMethod = controllerType.GetMethod(method.Name, parameterTypes)!;
+
+                    Dictionary<Type, ITransportAttribute> methodTransportAttributes = new();
+                    
+                    foreach (Attribute attribute in method.GetCustomAttributes().Where(x => x is ITransportAttribute))
+                    {
+                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as ITransportAttribute)!);
+                    }
+
+                    foreach (Attribute attribute in controllerMethod.GetCustomAttributes().Where(x => x is ITransportAttribute))
+                    {
+                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as ITransportAttribute)!);
+                    }
+
+                    if (methodTransportAttributes.Count == 0)
+                    {
+                        foreach (Attribute attribute in contractTransportAttributes)
+                        {
+                            methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as ITransportAttribute)!);
+                        }
+                    }
 
                     var methodSignature = method.GetMethodSignature(useHashedNames);
 
@@ -172,6 +216,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                         interfaceType,
                         controllerType,
                         method,
+                        controllerMethod,
                         kind,
                         pipelineBuilder,
                         serverOptions,
@@ -181,9 +226,11 @@ namespace Hubcon.Server.Core.Routing.Registries
                         action!
                     );
 
+                    foreach (var transport in contractTransportAttributes)
+                    {
+                        _availableOperations.GetOrAdd(GetOperationKey(transport.TransportKey, interfaceType.Name, descriptor.OperationName), descriptor);
+                    }
 
-                    // Usa TryAdd para evitar sobreescritura accidental
-                    contractMethods.TryAdd(descriptor.OperationName, descriptor);
                     OnOperationRegistered?.Invoke(descriptor);
                 }
 
@@ -199,6 +246,8 @@ namespace Hubcon.Server.Core.Routing.Registries
                     var pipelineBuilder = new PipelineBuilder();
                     var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);
 
+                    var controllerProperty = controllerType.GetProperty(propertyInfo.Name)!;
+
                     options?.Invoke(middlewareOptions);
 
                     var descriptor = new OperationBlueprint(
@@ -206,17 +255,27 @@ namespace Hubcon.Server.Core.Routing.Registries
                         interfaceType,
                         controllerType,
                         propertyInfo,
+                        controllerProperty,
                         OperationKind.Subscription,
                         pipelineBuilder,
                         serverOptions
                     );
 
-                    contractMethods.TryAdd(descriptor.OperationName, descriptor);
+                    foreach (var transport in contractTransportAttributes)
+                    {
+                        _availableOperations.GetOrAdd(GetOperationKey(transport.TransportKey, interfaceType.Name, descriptor.OperationName), descriptor);
+                    }
+
                     OnOperationRegistered?.Invoke(descriptor);
                 }
 
                 RegisteredControllers.TryAdd(controllerType, true);
             }
+        }
+
+        private static string GetOperationKey(string transportKey, string contractName, string operationName)
+        {
+            return transportKey + "_" + NamingHelper.GetCleanName(contractName) + "_" + operationName;
         }
 
         private static readonly HashSet<Type> SimpleTypes = new()
@@ -248,24 +307,27 @@ namespace Hubcon.Server.Core.Routing.Registries
             return false;
         }
 
-        public void MapControllers(WebApplication app)
-        {
-            foreach (var operationskvp in AvailableOperations)
-            {
-                foreach (var operation in operationskvp.Value)
-                {
-                    if (operation.Value.Kind != OperationKind.CallMethod && operation.Value.Kind != OperationKind.InvokeMethod && operation.Value.Kind != OperationKind.Stream)
-                        continue;
+        //public void MapControllers(WebApplication app)
+        //{
+        //    foreach (var operation in _availableOperations.Where(x => x.Key.StartsWith(H)))
+        //    {
+        //        if (operation.Value.Kind != OperationKind.CallMethod && operation.Value.Kind != OperationKind.InvokeMethod && operation.Value.Kind != OperationKind.Stream)
+        //            continue;
 
-                    if (operation.Value.OperationInfo is MethodInfo)
-                    {
-                        app.MapTypedEndpoint(operation.Value);
-                    }
-                }
-            }
+        //        if (operation.Value.OperationInfo is MethodInfo)
+        //        {
+        //            app.MapTypedEndpoint(operation.Value);
+        //        }
+        //    }
+        //}
+
+        public void MapTransport(WebApplication app, ITransportAttribute transportAttribute, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication> endpointRegisterer)
+        {
+            var items = _availableOperations.Where(x => x.Key.StartsWith(transportAttribute.TransportKey)).ToDictionary();
+            endpointRegisterer.Invoke(items, app);
         }
 
-        public bool GetOperationBlueprint(IOperationEndpoint request, out IOperationBlueprint? value)
+        public bool GetOperationBlueprint(IOperationEndpoint request, ITransportAttribute transportAttribute, out IOperationBlueprint? value)
         {
             if (request == null)
             {
@@ -273,19 +335,17 @@ namespace Hubcon.Server.Core.Routing.Registries
                 return false;
             }
 
-            return GetOperationBlueprint(request.ContractName, request.OperationName, out value);
+            return GetOperationBlueprint(request.ContractName, request.OperationName, transportAttribute, out value);
         }
 
-        public bool GetOperationBlueprint(string contractName, string operationName, out IOperationBlueprint? value)
+        public bool GetOperationBlueprint(string contractName, string operationName, ITransportAttribute transportAttribute, out IOperationBlueprint? value)
         {
             if (_blueprintCache != null)
             {
-                return _blueprintCache.TryGetValue((contractName, operationName), out value);
+                return _blueprintCache.TryGetValue(GetOperationKey(transportAttribute.TransportKey, contractName, operationName), out value);
             }
 
-            // Fallback por si la caché no se ha buildeado aún
-            if (AvailableOperations.TryGetValue(contractName, out var descriptors)
-                && descriptors.TryGetValue(operationName, out var descriptor))
+            if (_availableOperations.TryGetValue(contractName, out var descriptor))
             {
                 value = descriptor;
                 return true;
@@ -295,19 +355,24 @@ namespace Hubcon.Server.Core.Routing.Registries
             return false;
         }
 
-        public void Build()
-        {
-            if (IsBuilt)
-                return;
+        public void Build(ITransportAttribute transport)
+        {                       
+            if(_blueprintCache == null)
+            {
+                _blueprintCache ??= _availableOperations.Where(x => x.Key.StartsWith(transport.TransportKey)).ToFrozenDictionary();          
+            }
+            else
+            {
+                var tempCache = _blueprintCache.ToDictionary();
+                var tempOperations = _availableOperations.Where(x => x.Key.StartsWith(transport.TransportKey));
+                
+                foreach(var operation in tempOperations)
+                {
+                    tempCache.TryAdd(operation.Key, operation.Value);
+                }
 
-            var flatList = AvailableOperations
-                .SelectMany(contract => contract.Value
-                    .Select(op => new KeyValuePair<(string, string), IOperationBlueprint>(
-                        (contract.Key, op.Key), // Llave por valor (Tupla)
-                        op.Value)))
-                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-            _blueprintCache = flatList.ToFrozenDictionary();
+                _blueprintCache = tempCache.ToFrozenDictionary();
+            }
         }
 
         private Delegate CreateMethodDescriptor(MethodInfo method)

@@ -1,7 +1,9 @@
 ﻿using Hubcon.Server;
+using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.EndpointDocumentation;
 using Hubcon.Server.Core.Entrypoint;
+using Hubcon.Server.Core.Routing;
 using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Server.Core.Websockets.Middleware;
 using Hubcon.Server.Injection;
@@ -11,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using System.Reflection;
 using System.Text.Json.Serialization;
 
 namespace Hubcon
@@ -72,7 +75,6 @@ namespace Hubcon
 
             ServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
             {
-                container.AddScoped<DefaultEntrypoint>();
                 container.AddTransient(typeof(ISubscription<>), typeof(ServerSubscriptionHandler<>));
             });
 
@@ -90,8 +92,22 @@ namespace Hubcon
         public static WebApplication UseHubconHttpEndpoints(this WebApplication app)
         {
             var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
-            operationRegistry.MapControllers(app);
-            operationRegistry.Build();
+
+            operationRegistry.MapTransport(app, HttpAttribute.Default, (operations, app) =>
+            {
+                foreach (var operation in operations)
+                {
+                    if (operation.Value.Kind != OperationKind.CallMethod && operation.Value.Kind != OperationKind.InvokeMethod && operation.Value.Kind != OperationKind.Stream)
+                        continue;
+
+                    if (operation.Value.MemberInfo is MethodInfo)
+                    {
+                        app.MapTypedEndpoint(operation.Value);
+                    }
+                }
+            });
+
+            operationRegistry.Build(HttpAttribute.Default);
 
             return app;
         }
@@ -106,7 +122,7 @@ namespace Hubcon
                 app.UseWebSockets();
 
             app.UseMiddleware<HubconWebSocketMiddleware>();
-            operationRegistry.Build();
+            operationRegistry.Build(WebSocketsAttribute.Default);
 
             return app;
         }

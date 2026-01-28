@@ -1,4 +1,5 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.CustomAttributes;
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
@@ -26,7 +27,6 @@ namespace Hubcon.Server
         private CoreServerOptions ServerOptions { get; } = new();
         private IServiceCollection Services;
 
-
         private static ServerBuilder _current = null!;
         public static ServerBuilder Current
         {
@@ -48,6 +48,9 @@ namespace Hubcon.Server
             Services = builder.Services;
 
             builder.AddServerCore();
+
+            ServerOptions.AddTransport<WebSocketsAttribute>();
+            ServerOptions.AddTransport<HttpAttribute>();
 
             Services.AddSingleton<IInternalServerOptions>(ServerOptions);
             Services.AddSingleton(OperationRegistry);
@@ -74,31 +77,15 @@ namespace Hubcon.Server
             return this;
         }
 
-        //internal ContainerBuilder AddHubconControllersFromAssembly(ContainerBuilder container, Assembly assembly, Action<IControllerOptions>? globalMiddlewareOptions = null)
-        //{
-        //    var contracts = assembly
-        //        .GetTypes()
-        //        .Where(t => t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t))
-        //        .ToList();
+        internal void AddTransport<T>() where T : class, ITransportAttribute, new()
+        {
+            ServerOptions.AddTransport<T>();
+        }
 
-        //    var controllers = assembly
-        //        .GetTypes()
-        //        .Where(t => !t.IsInterface && typeof(IControllerContract).IsAssignableFrom(t) && t.IsDefined(typeof(HubconControllerAttribute)))
-        //        .ToList();
-
-        //    foreach (var controller in controllers)
-        //        container.RegisterWithInjector(x => x.RegisterType(controller));
-
-        //    return container;
-        //}
-
-        //internal ContainerBuilder AddHubconEntrypoint(ContainerBuilder container, Type hubconEntrypointType)
-        //{
-        //    if (!hubconEntrypointType.IsAssignableTo(typeof(DefaultEntrypoint)))
-        //        throw new ArgumentException($"El tipo {hubconEntrypointType.Name} no es compatible con la clase {nameof(DefaultEntrypoint)}");
-
-        //    return container.RegisterWithInjector(x => x.RegisterType(hubconEntrypointType));
-        //}
+        internal void AddTransport<T>(T attribute) where T : class, ITransportAttribute
+        {
+            ServerOptions.AddTransport(attribute);
+        }
 
         internal WebApplicationBuilder AddHubconController<T>(WebApplicationBuilder builder, Action<IControllerOptions>? options = null)
             where T : class, IControllerContract

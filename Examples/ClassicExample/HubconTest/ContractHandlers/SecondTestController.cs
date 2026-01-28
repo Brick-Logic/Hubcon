@@ -10,11 +10,6 @@ namespace HubconTest.ContractHandlers
 {
     public class SecondTestController(ILogger<SecondTestController> logger) : ISecondTestContract
     {
-        public async Task TestMethod()
-        {
-            logger.LogInformation("TestMethod called");
-        }
-
         public async Task TestMethod([Required] string message)
         {
             logger.LogInformation(message);

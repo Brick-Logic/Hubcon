@@ -12,12 +12,12 @@ namespace Hubcon.Server.Abstractions.Interfaces
 {
     public interface IRequestHandler
     {
-        Task<IHubconResponse> GetStream(IOperationRequest request, object? wrappedRequest, CancellationToken cancellationToken = default);
-        Task<IHubconResponse> GetSubscription(IOperationRequest request, CancellationToken cancellationToken = default);
-        Task<IHubconResponse> HandleIngest(IOperationRequest request, Dictionary<Guid, object> sources, object? wrappedRequest, CancellationToken cancellationToken = default);
-        Task<IHubconResponse> HandleSynchronous(IOperationRequest request, object? wrappedRequest, CancellationToken cancellationToken = default);
-        Task<IHubconResponse> HandleSynchronousResult(IOperationRequest request, object? wrappedRequest, CancellationToken cancellationToken = default);
-        Task<IHubconResponse> HandleWithoutResultAsync(IOperationRequest request, object? wrappedRequest, CancellationToken cancellationToken = default);
-        Task<IHubconResponse> HandleWithResultAsync(IOperationRequest request, object? wrappedRequest, CancellationToken cancellationToken = default);
+        Task<IHubconResponse> GetStream(IOperationRequest request, ITransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default);
+        Task<IHubconResponse> GetSubscription(IOperationRequest request, ITransportAttribute transportAttribute, CancellationToken cancellationToken = default);
+        Task<IHubconResponse> HandleIngest(IOperationRequest request, ITransportAttribute transportAttribute, Dictionary<Guid, object> sources, object? wrappedRequest, CancellationToken cancellationToken = default);
+        Task<IHubconResponse> HandleSynchronous(IOperationRequest request, ITransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default);
+        Task<IHubconResponse> HandleSynchronousResult(IOperationRequest request, ITransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default);
+        Task<IHubconResponse> HandleWithoutResultAsync(IOperationRequest request, ITransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default);
+        Task<IHubconResponse> HandleWithResultAsync(IOperationRequest request, ITransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default);
     }
 }

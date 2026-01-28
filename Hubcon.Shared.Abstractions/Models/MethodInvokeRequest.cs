@@ -56,5 +56,10 @@ namespace Hubcon.Shared.Abstractions.Models
         {
             this.Arguments = arguments;
         }
+
+        public void AddTransportPrefix(ITransportAttribute transport)
+        {
+            ContractName = transport.TransportKey + "_" + ContractName;
+        }
     }
 }

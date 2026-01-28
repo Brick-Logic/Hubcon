@@ -6,5 +6,6 @@
         string OperationName { get; }
 
         public void SetOperationName(string operationName);
+        public void AddTransportPrefix(ITransportAttribute transport);
     }
 }

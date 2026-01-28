@@ -131,8 +131,6 @@ internal class Program
         await Task.Delay(100);
         await TestIngest(client, logger);
         await Task.Delay(100);
-        await TestOverloading(client2, logger);
-        await Task.Delay(100);
         await TestInvokeNoParameters(client2, logger);
         await Task.Delay(100);
         await TestSubscriptions(client, logger);
@@ -411,21 +409,6 @@ internal class Program
             logger.LogInformation($"Invocación sin parametros OK.");
         else
             throw new Exception("Invocación sin parametros fallida.");
-    }
-
-    private static async Task TestOverloading(ISecondTestContract client2, ILogger<IUserContract> logger)
-    {
-        logger.LogWarning($"Probando parametros sobrecargados sobre http...");
-        try
-        {
-            var result1 = await client2.Execute(x => x.TestMethod());
-            var result2 = await client2.Execute(x => x.TestMethod("test"));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError($"Error en invocación sobrecargada: {ex}");
-            logger.LogError($"La sobrecarga falló o no está habilitada.");
-        }
     }
 
     private static async Task TestIngest(IUserContract client, ILogger<IUserContract> logger)

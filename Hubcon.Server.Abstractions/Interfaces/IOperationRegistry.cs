@@ -8,11 +8,12 @@ namespace Hubcon.Server.Abstractions.Interfaces
     {
         event Action<IOperationBlueprint>? OnOperationRegistered;
 
-        void Build();
+        void Build(ITransportAttribute transport);
         bool ControllerExists(Type controllerType);
-        bool GetOperationBlueprint(IOperationEndpoint request, out IOperationBlueprint? value);
-        bool GetOperationBlueprint(string contractName, string operationName, out IOperationBlueprint? value);
-        void MapControllers(WebApplication app);
+        bool GetOperationBlueprint(IOperationEndpoint request, ITransportAttribute transportAttribute, out IOperationBlueprint? value);
+        bool GetOperationBlueprint(string contractName, string operationName, ITransportAttribute transportAttribute, out IOperationBlueprint? value);
+        //void MapControllers(WebApplication app);
+        void MapTransport(WebApplication app, ITransportAttribute transportAttribute, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication> endpointRegisterer);
         void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<IServiceCollection>> servicesToInject);
     }
 }

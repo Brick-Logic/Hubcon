@@ -76,7 +76,6 @@ namespace HubconTestClient.Modules
                 contractConfigurator.ConfigureOperations(operationSelector =>
                 {
                     operationSelector.Configure(c => c.TestMethod(default!)).UseTransport(TransportType.Http);
-                    operationSelector.Configure(c => c.TestMethod()).UseTransport(TransportType.Http);
                 });
             });
 
