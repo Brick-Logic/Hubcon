@@ -29,7 +29,7 @@ namespace Hubcon.Server.Core.Pipelines
             _serviceProvider = serviceProvider;
         }
 
-        public async Task<IHubconResponse> HandleWithoutResultAsync(IOperationRequest request, ITransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
+        public async Task<IHubconResponse> HandleWithoutResultAsync(IOperationRequest request, TransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.CallMethod))
             {
@@ -43,7 +43,7 @@ namespace Hubcon.Server.Core.Pipelines
             return pipelineResult.Response;
         }
 
-        public async Task<IHubconResponse> HandleSynchronousResult(IOperationRequest request, ITransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
+        public async Task<IHubconResponse> HandleSynchronousResult(IOperationRequest request, TransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint)
                 && blueprint?.Kind == OperationKind.InvokeMethod))
@@ -59,7 +59,7 @@ namespace Hubcon.Server.Core.Pipelines
             return pipelineResult.Response;
         }
 
-        public async Task<IHubconResponse> HandleSynchronous(IOperationRequest request, ITransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
+        public async Task<IHubconResponse> HandleSynchronous(IOperationRequest request, TransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.CallMethod))
                 return HubconResponse.NotFound();
@@ -71,7 +71,7 @@ namespace Hubcon.Server.Core.Pipelines
             return pipelineResult.Response!;
         }
 
-        public async Task<IHubconResponse> GetStream(IOperationRequest request, ITransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
+        public async Task<IHubconResponse> GetStream(IOperationRequest request, TransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Stream))
                 return HubconResponse.NotFound();
@@ -88,7 +88,7 @@ namespace Hubcon.Server.Core.Pipelines
             return res;
         }
 
-        public async Task<IHubconResponse> GetSubscription(IOperationRequest request, ITransportAttribute transportAttribute, CancellationToken cancellationToken = default)
+        public async Task<IHubconResponse> GetSubscription(IOperationRequest request, TransportAttribute transportAttribute, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Subscription))
                 return HubconResponse.NotFound();
@@ -105,7 +105,7 @@ namespace Hubcon.Server.Core.Pipelines
             return res;
         }
 
-        public async Task<IHubconResponse> HandleWithResultAsync(IOperationRequest request, ITransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
+        public async Task<IHubconResponse> HandleWithResultAsync(IOperationRequest request, TransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.InvokeMethod))
                 return HubconResponse.NotFound();
@@ -117,7 +117,7 @@ namespace Hubcon.Server.Core.Pipelines
             return pipelineResult.Response;
         }
 
-        public async Task<IHubconResponse> HandleIngest(IOperationRequest request, ITransportAttribute transportAttribute, Dictionary<Guid, object> sources, object? wrappedRequest, CancellationToken cancellationToken = default)
+        public async Task<IHubconResponse> HandleIngest(IOperationRequest request, TransportAttribute transportAttribute, Dictionary<Guid, object> sources, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
             if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Ingest))
                 return HubconResponse.NotFound();

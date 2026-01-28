@@ -1118,25 +1118,16 @@ namespace Hubcon.Client.Core.Websockets
         {
             if (_disposed) return;
 
-            _disposed = true;
-            _cts.Cancel();
-
             try
             {
-                _webSocket?.Abort();
-                _webSocket?.Dispose();
-                _receiveLoopCts?.Cancel();
-                _receiveLoopCts?.Dispose();
+                await Disconnect();
 
-                _pingTimer?.Stop();
-                _pingTimer?.Dispose();
-
-                _timeoutTimer?.Stop();
-                _timeoutTimer?.Dispose();
+                _disposed = true;
+                _cts.Cancel();
             }
             finally
             {
-                /*Ignore*/
+                CancelAll();
             }
         }
 

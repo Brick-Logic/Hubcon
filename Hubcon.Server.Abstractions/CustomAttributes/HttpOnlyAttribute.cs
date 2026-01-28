@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 namespace Hubcon
 {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Method)]
-    public sealed class HttpAttribute : Attribute, ITransportAttribute
+    public sealed class HttpAttribute : TransportAttribute
     {
-        public readonly static ITransportAttribute Default = new HttpAttribute();
+        public readonly static TransportAttribute Default = new HttpAttribute();
 
-        public string TransportKey => "Http";
+        public override string TransportKey => "Http";
     }
 }

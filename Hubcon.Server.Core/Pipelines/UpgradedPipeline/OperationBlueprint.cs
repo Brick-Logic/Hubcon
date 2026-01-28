@@ -198,7 +198,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             TransportAttributes = new();
 
             Attributes
-                .Where(x => x is ITransportAttribute)
+                .Where(x => x is TransportAttribute)
                 .ToList()
                 .ForEach(x => TransportAttributes.TryAdd(x.GetType(), x));
 

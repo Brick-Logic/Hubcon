@@ -77,12 +77,12 @@ namespace Hubcon.Server
             return this;
         }
 
-        internal void AddTransport<T>() where T : class, ITransportAttribute, new()
+        internal void AddTransport<T>() where T : TransportAttribute, new()
         {
             ServerOptions.AddTransport<T>();
         }
 
-        internal void AddTransport<T>(T attribute) where T : class, ITransportAttribute
+        internal void AddTransport<T>(T attribute) where T : TransportAttribute
         {
             ServerOptions.AddTransport(attribute);
         }

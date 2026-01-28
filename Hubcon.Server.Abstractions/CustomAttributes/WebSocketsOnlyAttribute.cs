@@ -7,11 +7,10 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Server.Abstractions.CustomAttributes
 {
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Method)]
-    public sealed class WebSocketsAttribute : Attribute, ITransportAttribute
+    public sealed class WebSocketsAttribute : TransportAttribute
     {
-        public readonly static ITransportAttribute Default = new WebSocketsAttribute();
+        public readonly static TransportAttribute Default = new WebSocketsAttribute();
 
-        public string TransportKey => "WebSocket";
+        public override string TransportKey => "WebSocket";
     }
 }

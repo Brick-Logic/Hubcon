@@ -68,14 +68,14 @@ namespace Hubcon.Server.Core.Routing.Registries
                     continue;
 
                 // Obtenemos atributos de transporte
-                List<ITransportAttribute> contractTransportAttributes = interfaceType.GetCustomAttributes()
-                    .Where(x => x is ITransportAttribute)
-                    .Select(x => x as ITransportAttribute)
+                List<TransportAttribute> contractTransportAttributes = interfaceType.GetCustomAttributes()
+                    .Where(x => x is TransportAttribute)
+                    .Select(x => x as TransportAttribute)
                     .ToList()!;
 
                 var controllerTransportAttributes = controllerType.GetCustomAttributes()
-                    .Where(x => x is ITransportAttribute)
-                    .Select(x => x as ITransportAttribute)
+                    .Where(x => x is TransportAttribute)
+                    .Select(x => x as TransportAttribute)
                     .ToList()!;
 
                 contractTransportAttributes.AddRange(controllerTransportAttributes!);
@@ -135,23 +135,23 @@ namespace Hubcon.Server.Core.Routing.Registries
                     var parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
                     var controllerMethod = controllerType.GetMethod(method.Name, parameterTypes)!;
 
-                    Dictionary<Type, ITransportAttribute> methodTransportAttributes = new();
+                    Dictionary<Type, TransportAttribute> methodTransportAttributes = new();
                     
-                    foreach (Attribute attribute in method.GetCustomAttributes().Where(x => x is ITransportAttribute))
+                    foreach (Attribute attribute in method.GetCustomAttributes().Where(x => x is TransportAttribute))
                     {
-                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as ITransportAttribute)!);
+                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as TransportAttribute)!);
                     }
 
-                    foreach (Attribute attribute in controllerMethod.GetCustomAttributes().Where(x => x is ITransportAttribute))
+                    foreach (Attribute attribute in controllerMethod.GetCustomAttributes().Where(x => x is TransportAttribute))
                     {
-                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as ITransportAttribute)!);
+                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as TransportAttribute)!);
                     }
 
                     if (methodTransportAttributes.Count == 0)
                     {
                         foreach (Attribute attribute in contractTransportAttributes)
                         {
-                            methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as ITransportAttribute)!);
+                            methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as TransportAttribute)!);
                         }
                     }
 
@@ -321,13 +321,13 @@ namespace Hubcon.Server.Core.Routing.Registries
         //    }
         //}
 
-        public void MapTransport(WebApplication app, ITransportAttribute transportAttribute, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication> endpointRegisterer)
+        public void MapTransport(WebApplication app, TransportAttribute transportAttribute, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication> endpointRegisterer)
         {
             var items = _availableOperations.Where(x => x.Key.StartsWith(transportAttribute.TransportKey)).ToDictionary();
             endpointRegisterer.Invoke(items, app);
         }
 
-        public bool GetOperationBlueprint(IOperationEndpoint request, ITransportAttribute transportAttribute, out IOperationBlueprint? value)
+        public bool GetOperationBlueprint(IOperationEndpoint request, TransportAttribute transportAttribute, out IOperationBlueprint? value)
         {
             if (request == null)
             {
@@ -338,7 +338,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             return GetOperationBlueprint(request.ContractName, request.OperationName, transportAttribute, out value);
         }
 
-        public bool GetOperationBlueprint(string contractName, string operationName, ITransportAttribute transportAttribute, out IOperationBlueprint? value)
+        public bool GetOperationBlueprint(string contractName, string operationName, TransportAttribute transportAttribute, out IOperationBlueprint? value)
         {
             if (_blueprintCache != null)
             {
@@ -355,7 +355,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             return false;
         }
 
-        public void Build(ITransportAttribute transport)
+        public void Build(TransportAttribute transport)
         {                       
             if(_blueprintCache == null)
             {

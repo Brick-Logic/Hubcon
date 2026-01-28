@@ -27,7 +27,7 @@ namespace Hubcon.Server.Core.RateLimiting
         private RateLimiter? _operationInvokeLimiter = null;
         private RateLimiter? _tokenUpdateLimiter = null;
 
-        public async ValueTask<bool> TryAcquireAsync(MessageType type, ITransportAttribute transportAttribute, IOperationEndpoint? operation = null)
+        public async ValueTask<bool> TryAcquireAsync(MessageType type, TransportAttribute transportAttribute, IOperationEndpoint? operation = null)
         {
             try
             {
@@ -108,7 +108,7 @@ namespace Hubcon.Server.Core.RateLimiting
             }
         }
 
-        public ValueTask Link(Guid id, ITransportAttribute transportAttribute, IOperationRequest request)
+        public ValueTask Link(Guid id, TransportAttribute transportAttribute, IOperationRequest request)
         {
             operationRegistry.GetOperationBlueprint(request, transportAttribute, out var value);
             operationConfigRegistry.Link(id, value!);
@@ -232,7 +232,7 @@ namespace Hubcon.Server.Core.RateLimiting
             };
         }
 
-        private RateLimitAttribute? GetOperationSettings(MessageType type, ITransportAttribute transportAttribute, IOperationEndpoint operation)
+        private RateLimitAttribute? GetOperationSettings(MessageType type, TransportAttribute transportAttribute, IOperationEndpoint operation)
         {
             // No limiters (inicialización, ack, errores, pong, etc.)
             return type switch
