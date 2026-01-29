@@ -1,4 +1,6 @@
-﻿namespace Hubcon.Client.Abstractions.Interfaces
+﻿using System;
+
+namespace Hubcon.Client.Abstractions.Interfaces
 {
     public interface IPersistedSession
     {

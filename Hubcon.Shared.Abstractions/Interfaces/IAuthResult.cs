@@ -1,4 +1,6 @@
-﻿namespace Hubcon
+﻿using System;
+
+namespace Hubcon
 {
     public interface IAuthResult
     {

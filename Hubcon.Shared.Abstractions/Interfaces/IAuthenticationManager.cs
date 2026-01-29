@@ -1,19 +1,23 @@
-﻿namespace Hubcon;
+﻿using System;
+using System.Threading.Tasks;
 
-public interface IAuthenticationManager
+namespace Hubcon
 {
-    public abstract event Action? OnSessionIsActive;
-    public abstract event Action? OnSessionIsInactive;
+    public interface IAuthenticationManager
+    {
+        public abstract event Action? OnSessionIsActive;
+        public abstract event Action? OnSessionIsInactive;
 
-    string? AccessToken { get; }
-    DateTime? AccessTokenExpiresAt { get; }
-    bool IsSessionActive { get; }
-    string? RefreshToken { get; }
-    string? TokenType { get; }
+        string? AccessToken { get; }
+        DateTime? AccessTokenExpiresAt { get; }
+        bool IsSessionActive { get; }
+        string? RefreshToken { get; }
+        string? TokenType { get; }
 
-    Task<IHubconResult> LoadSessionAsync();
-    Task<IHubconResult> LoginAsync(string username, string password);
-    Task LogoutAsync();
-    Task<IHubconResult> TryRefreshSessionAsync();
-    Task<IHubconResult> LoginWithTokenAsync(string token, string type);
+        Task<IHubconResult> LoadSessionAsync();
+        Task<IHubconResult> LoginAsync(string username, string password);
+        Task LogoutAsync();
+        Task<IHubconResult> TryRefreshSessionAsync();
+        Task<IHubconResult> LoginWithTokenAsync(string token, string type);
+    }
 }

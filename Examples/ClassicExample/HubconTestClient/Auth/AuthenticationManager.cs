@@ -3,8 +3,15 @@ using HubconTestDomain;
 
 namespace HubconTestClient.Auth
 {
-    public class AuthenticationManager(ISecondTestContract secondTestContract) : BaseAuthenticationManager
+    public class AuthenticationManager : BaseAuthenticationManager
     {
+        private readonly ISecondTestContract secondTestContract;
+
+        public AuthenticationManager(ISecondTestContract secondTestContract)
+        {
+            this.secondTestContract = secondTestContract;
+        }
+
         protected async override Task<IAuthResult> AuthenticateAsync(string username, string password)
         {
             var token = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand(username, password, true)));

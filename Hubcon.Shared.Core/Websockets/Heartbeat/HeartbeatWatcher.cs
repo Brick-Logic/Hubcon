@@ -1,4 +1,8 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
+
 
 namespace Hubcon.Shared.Core.Websockets.Heartbeat
 {

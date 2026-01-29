@@ -1,6 +1,4 @@
 ﻿using Hubcon;
-using Hubcon.Server.Abstractions.CustomAttributes;
-using Hubcon.Server.Core.Middlewares;
 using HubconTest.Filters;
 using HubconTest.Middlewares;
 using HubconTestDomain;

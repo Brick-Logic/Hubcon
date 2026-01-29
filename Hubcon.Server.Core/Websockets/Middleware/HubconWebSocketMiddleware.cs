@@ -1,5 +1,4 @@
-﻿using Hubcon.Server.Abstractions.CustomAttributes;
-using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Entrypoint;
 using Hubcon.Server.Core.Websockets.Helpers;
@@ -28,6 +27,17 @@ using System.Net.WebSockets;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Channels;
+
+using System.Net.Http;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Immutable;
+using System.IO;
 
 namespace Hubcon.Server.Core.Websockets.Middleware
 {
@@ -687,18 +697,18 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 var operationRequest = converter.DeserializeData<OperationRequest>(ingestInitMessage!.Payload)!;
 
-                if (!operationRegistry.GetOperationBlueprint(operationRequest, WebSocketsAttribute.Default, out var blueprint))
+                if (!operationRegistry.GetOperationBlueprint(operationRequest, HubconTransport.GetDefault<WebSockets>(), out var blueprint))
                     return;
 
                 bool shareLimiter = blueprint!.Attributes.Any(x => x is IngestShareLimiter);
                 RateLimitAttribute? sharedSettings = null;
-                if (shareLimiter) sharedSettings = settingsManager.GetSettings(operationRequest, WebSocketsAttribute.Default, () => new RateLimitAttribute()); ;
+                if (shareLimiter) sharedSettings = settingsManager.GetSettings(operationRequest, HubconTransport.GetDefault<WebSockets>(), () => new RateLimitAttribute()); ;
 
                 _ingestHandlers.TryAdd(ingestInitMessage.Id, (localCts, registration));
 
                 foreach (var id in ingestInitMessage!.StreamIds)
                 {
-                    RateLimitAttribute settings = sharedSettings ?? settingsManager.GetSettings(operationRequest, WebSocketsAttribute.Default, () => new RateLimitAttribute());
+                    RateLimitAttribute settings = sharedSettings ?? settingsManager.GetSettings(operationRequest, HubconTransport.GetDefault<WebSockets>(), () => new RateLimitAttribute());
 
                     if (_ingestRouters.TryGetValue(id, out _))
                         return;
@@ -731,7 +741,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     });
 
                     watchers.Add(hw);
-                    await rateLimiterManager.Link(id, WebSocketsAttribute.Default, operationRequest);
+                    await rateLimiterManager.Link(id, HubconTransport.GetDefault<WebSockets>(), operationRequest);
                     _ingestRouters.TryAdd(id, (observable, handlerCts, hw, settings));
                     sources.TryAdd(id, observer.GetAsyncEnumerable(handlerCts.Token));
                 }
@@ -740,7 +750,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 var ingestTask = DefaultEntrypoint.HandleIngest(
                     operationRequest, 
-                    WebSocketsAttribute.Default,
+                    HubconTransport.GetDefault<WebSockets>(),
                     scope.ServiceProvider, 
                     sources, 
                     null,
@@ -822,7 +832,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 var response = await DefaultEntrypoint.HandleMethodWithResult(
                     operationRequest,
-                    WebSocketsAttribute.Default,
+                    HubconTransport.GetDefault<WebSockets>(),
                     scope.ServiceProvider,
                     null,
                     localCts.Token);
@@ -865,7 +875,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 await DefaultEntrypoint.HandleMethodVoid(
                     operationRequest,
-                    WebSocketsAttribute.Default,
+                    HubconTransport.GetDefault<WebSockets>(),
                     scope.ServiceProvider,
                     null,
                     localCts.Token);
@@ -947,7 +957,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 var streamResult = await DefaultEntrypoint.HandleSubscription(
                     operationRequest,
-                    WebSocketsAttribute.Default,
+                    HubconTransport.GetDefault<WebSockets>(),
                     scope.ServiceProvider,
                     localCts.Token);
 
@@ -990,7 +1000,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         }
                     }
 
-                    await rateLimiterManager.TryAcquireAsync(type, WebSocketsAttribute.Default, operationRequest);
+                    await rateLimiterManager.TryAcquireAsync(type, HubconTransport.GetDefault<WebSockets>(), operationRequest);
                 }
             }
             catch (OperationCanceledException)
@@ -1037,7 +1047,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 var streamResult = await DefaultEntrypoint.HandleMethodStream(
                     operationRequest,
-                    WebSocketsAttribute.Default,
+                    HubconTransport.GetDefault<WebSockets>(),
                     scope.ServiceProvider,
                     null,
                     localCts.Token);
@@ -1048,7 +1058,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return;
                 }
 
-                await rateLimiterManager.Link(streamInitMessage.Id, WebSocketsAttribute.Default, operationRequest);
+                await rateLimiterManager.Link(streamInitMessage.Id, HubconTransport.GetDefault<WebSockets>(), operationRequest);
 
                 var stream = streamResult.Data! as IAsyncEnumerable<object?>;
 

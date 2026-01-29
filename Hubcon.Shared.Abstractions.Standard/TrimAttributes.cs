@@ -1,4 +1,6 @@
-﻿namespace Hubcon.Shared.Abstractions.Standard
+﻿using System;
+
+namespace Hubcon.Shared.Abstractions.Standard
 {
     [AttributeUsage(AttributeTargets.GenericParameter | AttributeTargets.Parameter | AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
     internal sealed class DynamicallyAccessedMembersAttribute : Attribute

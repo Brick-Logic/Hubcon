@@ -5,12 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Server.Abstractions.CustomAttributes
+namespace Hubcon
 {
-    public sealed class WebSocketsAttribute : TransportAttribute
+    public sealed class WebSockets : HubconTransport
     {
-        public readonly static TransportAttribute Default = new WebSocketsAttribute();
-
-        public override string TransportKey => "WebSocket";
+        public override string TransportKey { get; } = "WebSocket";
     }
 }

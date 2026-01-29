@@ -1,14 +1,14 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Threading.RateLimiting;
+using System.Threading.Tasks;
 
 namespace Hubcon.Client.Builder
 {

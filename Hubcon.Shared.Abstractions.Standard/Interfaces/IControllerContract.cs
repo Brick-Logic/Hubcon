@@ -1,5 +1,6 @@
-﻿namespace Hubcon;
-
-public interface IControllerContract
+﻿namespace Hubcon
 {
+    public interface IControllerContract
+    {
+    }
 }

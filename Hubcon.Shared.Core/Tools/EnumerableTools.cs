@@ -1,5 +1,4 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Serialization;
+﻿using Hubcon.Shared.Core.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +6,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Tools

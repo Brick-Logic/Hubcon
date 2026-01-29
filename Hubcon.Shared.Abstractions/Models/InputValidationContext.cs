@@ -1,5 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using System;
+using System.Threading;
 
 namespace Hubcon.Shared.Abstractions.Models
 {

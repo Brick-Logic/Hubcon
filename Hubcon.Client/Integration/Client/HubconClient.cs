@@ -3,14 +3,20 @@ using Hubcon.Client.Core.Helpers;
 using Hubcon.Client.Core.HubconInvocationContext;
 using Hubcon.Client.Core.Websockets;
 using Hubcon.Shared.Abstractions.Attributes;
+using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -18,7 +24,10 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Channels;
+using System.Threading.Tasks;
+
 
 namespace Hubcon.Client.Integration.Client
 {

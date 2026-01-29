@@ -4,8 +4,12 @@ using HubconTestDomain;
 
 namespace HubconTestClient.Modules
 {
-    internal class TestModule(object item) : RemoteServerModule
+    internal class TestModule : RemoteServerModule
     {
+        public TestModule(object item)
+        {
+        }
+
         public override void Configure(IServerModuleConfiguration configuration)
         {
             configuration.WithBaseUrl("localhost:5000");

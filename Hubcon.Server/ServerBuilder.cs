@@ -1,5 +1,4 @@
-﻿using Hubcon.Server.Abstractions.CustomAttributes;
-using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
@@ -8,14 +7,11 @@ using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Server.Core.RateLimiting;
 using Hubcon.Server.Core.Routing.Registries;
 using Hubcon.Server.Core.Supervisor;
-using Hubcon.Server.Core.Telemetry;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Injection;
 using Hubcon.Shared.Core.Serialization;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon.Server
@@ -49,8 +45,8 @@ namespace Hubcon.Server
 
             builder.AddServerCore();
 
-            ServerOptions.AddTransport<WebSocketsAttribute>();
-            ServerOptions.AddTransport<HttpAttribute>();
+            ServerOptions.AddTransport<WebSockets>();
+            ServerOptions.AddTransport<HttpTransport>();
 
             Services.AddSingleton<IInternalServerOptions>(ServerOptions);
             Services.AddSingleton(OperationRegistry);
@@ -77,12 +73,12 @@ namespace Hubcon.Server
             return this;
         }
 
-        internal void AddTransport<T>() where T : TransportAttribute, new()
+        internal void AddTransport<T>() where T : HubconTransport, new()
         {
             ServerOptions.AddTransport<T>();
         }
 
-        internal void AddTransport<T>(T attribute) where T : TransportAttribute
+        internal void AddTransport<T>(T attribute) where T : HubconTransport
         {
             ServerOptions.AddTransport(attribute);
         }

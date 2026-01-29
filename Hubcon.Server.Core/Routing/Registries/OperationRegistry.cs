@@ -68,14 +68,14 @@ namespace Hubcon.Server.Core.Routing.Registries
                     continue;
 
                 // Obtenemos atributos de transporte
-                List<TransportAttribute> contractTransportAttributes = interfaceType.GetCustomAttributes()
-                    .Where(x => x is TransportAttribute)
-                    .Select(x => x as TransportAttribute)
+                List<HubconTransport> contractTransportAttributes = interfaceType.GetCustomAttributes()
+                    .Where(x => x is HubconTransport)
+                    .Select(x => x as HubconTransport)
                     .ToList()!;
 
                 var controllerTransportAttributes = controllerType.GetCustomAttributes()
-                    .Where(x => x is TransportAttribute)
-                    .Select(x => x as TransportAttribute)
+                    .Where(x => x is HubconTransport)
+                    .Select(x => x as HubconTransport)
                     .ToList()!;
 
                 contractTransportAttributes.AddRange(controllerTransportAttributes!);
@@ -84,11 +84,6 @@ namespace Hubcon.Server.Core.Routing.Registries
                 {
                     contractTransportAttributes = serverOptions.DefaultTransports.Values.ToList();
                 }
-
-                //foreach(var item in transportAttributes)
-                //{
-                //    _availableOperations.GetOrAdd(NamingHelper.GetCleanName(interfaceType.Name), _ => new ConcurrentDictionary<string, IOperationBlueprint>());
-                //}
 
                 var classFilters = controllerType.GetCustomAttributes()
                         .Where(x => x is UseMiddlewareAttribute)
@@ -112,7 +107,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                         p.ParameterType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>));
 
                     if (isStream && isIngest)
-                        throw new InvalidOperationException($"Method '{method.Name}': Returning IAsyncEnumerable<T> and using IAsyncEnumerable<T> parameters is not supported.");
+                        throw new InvalidOperationException($"Method '{method.Name}': Returning IAsyncEnumerable<T> and using IAsyncEnumerable<T> parameters at the same time is not supported.");
 
                     var hasReturnType = returnType != typeof(void) && returnType != typeof(Task);
 
@@ -135,23 +130,23 @@ namespace Hubcon.Server.Core.Routing.Registries
                     var parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
                     var controllerMethod = controllerType.GetMethod(method.Name, parameterTypes)!;
 
-                    Dictionary<Type, TransportAttribute> methodTransportAttributes = new();
+                    Dictionary<Type, HubconTransport> methodTransportAttributes = new();
                     
-                    foreach (Attribute attribute in method.GetCustomAttributes().Where(x => x is TransportAttribute))
+                    foreach (Attribute attribute in method.GetCustomAttributes().Where(x => x is HubconTransport))
                     {
-                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as TransportAttribute)!);
+                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransport)!);
                     }
 
-                    foreach (Attribute attribute in controllerMethod.GetCustomAttributes().Where(x => x is TransportAttribute))
+                    foreach (Attribute attribute in controllerMethod.GetCustomAttributes().Where(x => x is HubconTransport))
                     {
-                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as TransportAttribute)!);
+                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransport)!);
                     }
 
                     if (methodTransportAttributes.Count == 0)
                     {
                         foreach (Attribute attribute in contractTransportAttributes)
                         {
-                            methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as TransportAttribute)!);
+                            methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransport)!);
                         }
                     }
 
@@ -307,27 +302,18 @@ namespace Hubcon.Server.Core.Routing.Registries
             return false;
         }
 
-        //public void MapControllers(WebApplication app)
-        //{
-        //    foreach (var operation in _availableOperations.Where(x => x.Key.StartsWith(H)))
-        //    {
-        //        if (operation.Value.Kind != OperationKind.CallMethod && operation.Value.Kind != OperationKind.InvokeMethod && operation.Value.Kind != OperationKind.Stream)
-        //            continue;
-
-        //        if (operation.Value.OperationInfo is MethodInfo)
-        //        {
-        //            app.MapTypedEndpoint(operation.Value);
-        //        }
-        //    }
-        //}
-
-        public void MapTransport(WebApplication app, TransportAttribute transportAttribute, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication> endpointRegisterer)
+        public void MapTransport(WebApplication app, HubconTransport transportAttribute, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication>? endpointRegisterer = null)
         {
-            var items = _availableOperations.Where(x => x.Key.StartsWith(transportAttribute.TransportKey)).ToDictionary();
-            endpointRegisterer.Invoke(items, app);
+            Build(transportAttribute);
+
+            if(endpointRegisterer != null)
+            {
+                var items = _availableOperations.Where(x => x.Key.StartsWith(transportAttribute.TransportKey)).ToDictionary();
+                endpointRegisterer.Invoke(items, app);
+            }
         }
 
-        public bool GetOperationBlueprint(IOperationEndpoint request, TransportAttribute transportAttribute, out IOperationBlueprint? value)
+        public bool GetOperationBlueprint(IOperationEndpoint request, HubconTransport transportAttribute, out IOperationBlueprint? value)
         {
             if (request == null)
             {
@@ -338,7 +324,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             return GetOperationBlueprint(request.ContractName, request.OperationName, transportAttribute, out value);
         }
 
-        public bool GetOperationBlueprint(string contractName, string operationName, TransportAttribute transportAttribute, out IOperationBlueprint? value)
+        public bool GetOperationBlueprint(string contractName, string operationName, HubconTransport transportAttribute, out IOperationBlueprint? value)
         {
             if (_blueprintCache != null)
             {
@@ -355,7 +341,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             return false;
         }
 
-        public void Build(TransportAttribute transport)
+        private void Build(HubconTransport transport)
         {                       
             if(_blueprintCache == null)
             {
@@ -512,17 +498,15 @@ namespace Hubcon.Server.Core.Routing.Registries
         {
             var dictParam = Expression.Parameter(typeof(IDictionary<string, object>), "dict");
             var wrapperParam = Expression.Parameter(typeof(object), "wrapperObj");
-            var tokenParam = Expression.Parameter(typeof(CancellationToken), "ct"); // <--- Nuevo parámetro
+            var tokenParam = Expression.Parameter(typeof(CancellationToken), "ct");
 
             var typedWrapper = Expression.Convert(wrapperParam, wrapperType);
             var assignments = new List<Expression>();
 
             foreach (var prop in wrapperType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                // CASO ESPECIAL: Si la propiedad del Wrapper es un CancellationToken
                 if (prop.PropertyType == typeof(CancellationToken))
                 {
-                    // Asignación directa desde el parámetro 'ct', saltándose el diccionario
                     assignments.Add(Expression.Assign(Expression.Property(typedWrapper, prop), tokenParam));
                     continue;
                 }

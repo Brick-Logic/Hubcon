@@ -1,13 +1,10 @@
 ﻿using Hubcon.Server;
-using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.EndpointDocumentation;
-using Hubcon.Server.Core.Entrypoint;
 using Hubcon.Server.Core.Routing;
 using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Server.Core.Websockets.Middleware;
 using Hubcon.Server.Injection;
-using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Any;
@@ -93,7 +90,7 @@ namespace Hubcon
         {
             var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
 
-            operationRegistry.MapTransport(app, HttpAttribute.Default, (operations, app) =>
+            operationRegistry.MapTransport(app, HubconTransport.GetDefault<HttpTransport>(), (operations, app) =>
             {
                 foreach (var operation in operations)
                 {
@@ -107,8 +104,13 @@ namespace Hubcon
                 }
             });
 
-            operationRegistry.Build(HttpAttribute.Default);
+            return app;
+        }
 
+        public static WebApplication UseHubconTransport(this WebApplication app, HubconTransport transportAttribute, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication> configurator)
+        {
+            var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
+            operationRegistry.MapTransport(app, transportAttribute, configurator);
             return app;
         }
 
@@ -122,7 +124,8 @@ namespace Hubcon
                 app.UseWebSockets();
 
             app.UseMiddleware<HubconWebSocketMiddleware>();
-            operationRegistry.Build(WebSocketsAttribute.Default);
+
+            operationRegistry.MapTransport(app, HubconTransport.GetDefault<WebSockets>());
 
             return app;
         }

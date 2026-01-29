@@ -4,14 +4,25 @@ using Hubcon;
 
 namespace HubconTestClient.Modules
 {
-    public sealed class OpenAIServerModule(IConfigurationRoot config) : RemoteServerModule
+    public sealed class OpenAIServerModule : RemoteServerModule
     {
+        private readonly IConfigurationRoot config;
+
+        public OpenAIServerModule(IConfigurationRoot config)
+        {
+            this.config = config;
+        }
+
         public override void Configure(IServerModuleConfiguration configuration)
         {
             configuration.WithBaseUrl("https://api.openai.com/");
 
             // Indica que el servidor no es hubcon
             configuration.NonHubconServer();
+
+            //configuration.AddHeaderProvider("Authorization", services => services.Get...);
+
+            Func<string> test = () => "a";
 
             // Evita el uso de AuthenticationManager
             configuration.DisableHttpAuthentication();

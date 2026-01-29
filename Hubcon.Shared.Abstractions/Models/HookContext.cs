@@ -2,6 +2,7 @@
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Models

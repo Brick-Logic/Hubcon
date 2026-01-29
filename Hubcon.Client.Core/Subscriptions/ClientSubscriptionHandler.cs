@@ -1,14 +1,15 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Core.Proxies;
 using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Subscriptions

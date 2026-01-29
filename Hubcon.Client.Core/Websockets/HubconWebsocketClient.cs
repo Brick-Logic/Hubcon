@@ -5,7 +5,6 @@ using Hubcon.Client.Core.Helpers;
 using Hubcon.Client.Core.HubconInvocationContext;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets;
 using Hubcon.Shared.Core.Websockets.Events;
@@ -22,16 +21,22 @@ using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Hubcon.Shared.Core.Websockets.Messages.Token;
 using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
+using System.Threading.Tasks;
 using System.Timers;
+
 
 namespace Hubcon.Client.Core.Websockets
 {

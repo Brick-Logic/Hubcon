@@ -1,5 +1,4 @@
 using Hubcon;
-using Hubcon.Server.Abstractions.CustomAttributes;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;

@@ -1,7 +1,10 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
-using System.Net.WebSockets;
+﻿using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using System.IO;
 
 
 namespace Hubcon.Shared.Core.Serialization

@@ -43,7 +43,7 @@ internal class Program
         process.ProcessorAffinity = (IntPtr)coreMask;
         process.PriorityClass = ProcessPriorityClass.RealTime;
 
-        var builder = WebApplication.CreateSlimBuilder();
+        var builder = WebApplication.CreateBuilder();
 
         var config = new ConfigurationBuilder()
             .AddUserSecrets<Program>() // Necesita el ID del .csproj

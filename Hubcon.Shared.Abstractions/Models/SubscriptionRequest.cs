@@ -1,4 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 
 namespace Hubcon.Shared.Abstractions.Models

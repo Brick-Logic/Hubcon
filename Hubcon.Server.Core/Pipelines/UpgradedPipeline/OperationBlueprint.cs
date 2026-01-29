@@ -1,8 +1,5 @@
-﻿using Hubcon.Server.Abstractions.CustomAttributes;
-using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Extensions;
-using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Authorization;
@@ -198,7 +195,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             TransportAttributes = new();
 
             Attributes
-                .Where(x => x is TransportAttribute)
+                .Where(x => x is HubconTransport)
                 .ToList()
                 .ForEach(x => TransportAttributes.TryAdd(x.GetType(), x));
 

@@ -35,7 +35,7 @@ namespace Hubcon.Server.Core.Configuration
         private bool? checkTokenExpirationOnMsgReceived;
         private bool? methodOverloadingIsEnabled;
         private int? maxConcurrentOperations;
-        private Dictionary<Type, TransportAttribute> defaultTransportAttributes = new Dictionary<Type, TransportAttribute>();
+        private Dictionary<Type, HubconTransport> defaultTransportAttributes = new Dictionary<Type, HubconTransport>();
 
 
         private Func<TokenBucketRateLimiterOptions> websocketReaderRateLimiter = () => new TokenBucketRateLimiterOptions
@@ -191,7 +191,7 @@ namespace Hubcon.Server.Core.Configuration
 
         public int MaxConcurrentOperations => maxConcurrentOperations ?? 0;
 
-        public IReadOnlyDictionary<Type, TransportAttribute> DefaultTransports => defaultTransportAttributes;
+        public IReadOnlyDictionary<Type, HubconTransport> DefaultTransports => defaultTransportAttributes;
 
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
@@ -393,13 +393,13 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
 
-        public ICoreServerOptions AddTransport<T>() where T : TransportAttribute, new()
+        public ICoreServerOptions AddTransport<T>() where T : HubconTransport, new()
         {
             defaultTransportAttributes.TryAdd(typeof(T), new T());
             return this;
         }
 
-        public ICoreServerOptions AddTransport<T>(T transportAttribute) where T : TransportAttribute
+        public ICoreServerOptions AddTransport<T>(T transportAttribute) where T : HubconTransport
         {
             defaultTransportAttributes.TryAdd(typeof(T), transportAttribute);
             return this;

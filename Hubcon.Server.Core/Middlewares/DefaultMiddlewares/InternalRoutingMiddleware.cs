@@ -1,7 +1,5 @@
-﻿using Hubcon.Server.Abstractions.CustomAttributes;
-using Hubcon.Server.Abstractions.Delegates;
+﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 
 using Hubcon.Shared.Core.Tools;
@@ -88,7 +86,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                     foreach (var sub in context.Blueprint.SubscriptionProperties)
                     {
-                        if (!operationRegistry.GetOperationBlueprint(context.Blueprint.SimpleContractName, sub.PropInfo.Name, WebSocketsAttribute.Default, out IOperationBlueprint? blueprint))
+                        if (!operationRegistry.GetOperationBlueprint(context.Blueprint.SimpleContractName, sub.PropInfo.Name, HubconTransport.GetDefault<WebSockets>(), out IOperationBlueprint? blueprint))
                             continue;
 
                         object? subInstance = null;

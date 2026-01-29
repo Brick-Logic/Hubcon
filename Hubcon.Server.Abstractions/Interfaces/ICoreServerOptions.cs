@@ -224,8 +224,8 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Not implemented, will throw on use. Enables support for endpoint overloading, allowing multiple identical endpoints with diferent parameters to be used.
         /// </summary>
         ICoreServerOptions EnableEndpointOverloading();
-        ICoreServerOptions AddTransport<T>() where T : TransportAttribute, new();
-        ICoreServerOptions AddTransport<T>(T transportAttribute) where T : TransportAttribute;
+        ICoreServerOptions AddTransport<T>() where T : HubconTransport, new();
+        ICoreServerOptions AddTransport<T>(T transportAttribute) where T : HubconTransport;
     }
 
     public interface IInternalServerOptions
@@ -409,6 +409,6 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Defines how many operations can be processed at the same time for a single client.
         /// </summary>
         int MaxConcurrentOperations { get; }
-        IReadOnlyDictionary<Type, TransportAttribute> DefaultTransports { get; }
+        IReadOnlyDictionary<Type, HubconTransport> DefaultTransports { get; }
     }
 }
