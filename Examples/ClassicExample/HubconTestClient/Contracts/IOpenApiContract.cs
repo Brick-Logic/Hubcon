@@ -10,7 +10,7 @@ namespace HubconTestClient.Contracts
         public Task<OpenAIResponse> CreateModelResponse([AsBody] CreateResponseCommand command);
 
         [HttpGet("/v1/responses/{id}")]
-        public Task<OpenAIResponse> GetModelResponse(string id);
+        public Task<OpenAIResponse> GetModelResponse();
 
         [HttpGet("/v1/responses/{id}/input_items")]
         public Task<OpenAIList<OpenAIMessage>> GetModelResponseInputs(string id);

@@ -77,7 +77,7 @@ internal class Program
         //logger.LogInformation($"Respuesta: {response.Success}");
         //await Task.Delay(1000);
 
-        var response = await openAi.Execute(x => x.GetModelResponse(EventType.ResponseCreated));
+        var response = await openAi.Execute(x => x.GetModelResponse());
         logger.LogInformation($"Respuesta: {response.Success}");
         await Task.Delay(1000);
 
