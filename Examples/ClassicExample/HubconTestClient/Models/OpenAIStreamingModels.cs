@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using Hubcon;
+using System.Text.Json.Serialization;
 
 namespace HubconTestClient.Models
 {
@@ -35,11 +36,13 @@ namespace HubconTestClient.Models
         [JsonPropertyName("event")] public EventType Event { get; set; }
     }
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum EventType
     {
         [JsonPropertyName("response.created")]
-        ResponseCreated
+        ResponseCreated,
+
+        [JsonDefault]
+        Random
     }
 
     public class OpenAIStreamingResponse

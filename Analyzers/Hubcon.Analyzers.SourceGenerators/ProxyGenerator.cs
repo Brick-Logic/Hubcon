@@ -628,7 +628,7 @@ namespace HubconAnalyzers.SourceGenerators
                 {
                     // Usamos el convertidor genérico que es 100% compatible con AOT
                     sb.AppendLine($@"
-        var enumConverter = new System.Text.Json.Serialization.JsonStringEnumConverter<{fullName}>();
+        var enumConverter = global::Hubcon.HubconEnumConverter<{fullName}>.Current;
         return JsonMetadataServices.CreateValueInfo<{fullName}>({optionsName}, enumConverter);");
                 }
                 else if (IsDictionary(type, out var keyType, out var valueType))

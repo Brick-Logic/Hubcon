@@ -894,7 +894,7 @@ namespace Hubcon.Client.Integration.Client
             string line = "";
             ParseSseMessageAttribute? foundMessage = null;
 
-            while ((line = await reader.ReadLineAsync()) != null)
+            while (!cancellationToken.IsCancellationRequested && (line = await reader.ReadLineAsync()) != null )
             {
                 if (endMessages.Any() && endMessages.Any(x => line.StartsWith(x)))
                     break;

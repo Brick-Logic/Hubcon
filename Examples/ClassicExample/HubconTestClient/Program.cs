@@ -1,4 +1,5 @@
 ﻿using Hubcon;
+using Hubcon.Shared.Core.Serialization;
 using HubconTestClient.Auth;
 using HubconTestClient.Contracts;
 using HubconTestClient.Models;
@@ -63,6 +64,8 @@ internal class Program
         logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
         Console.ReadKey();
 
+        var converter = HubconEnumConverter<EventType>.Current;
+
         //logger.LogInformation("Probando creación de modelo de respuesta...");
         //var command = new CreateResponseCommand()
         //{
@@ -74,9 +77,7 @@ internal class Program
         //logger.LogInformation($"Respuesta: {response.Success}");
         //await Task.Delay(1000);
 
-
-
-        //logger.LogInformation($"Probando stream SSE non-hubcon...");
+        logger.LogInformation($"Probando stream SSE non-hubcon...");
         await Task.Delay(500);
         var request = new OpenAIStreamRequest()
         {
