@@ -571,7 +571,7 @@ namespace Hubcon.Client.Integration.Client
                 // Intentamos obtener el nombre del parámetro marcado con [Body]
                 var bodyParamName = metadata.BodyParameterNameHolder.GetOrAdd(methodInfo, method =>
                     method.GetParameters()
-                          .FirstOrDefault(p => p.GetCustomAttribute<AsBodyAttribute>() != null)?.Name);
+                          .FirstOrDefault(p => p.GetCustomAttribute<AsBodyAttribute>() != null)?.Name!);
 
                 // Si existe un parámetro [Body] y está en los argumentos, lo extraemos (Aplanamiento)
                 if (bodyParamName != null && request.Arguments.TryGetValue(bodyParamName, out var explicitBody))
@@ -601,7 +601,7 @@ namespace Hubcon.Client.Integration.Client
                 // Intentamos obtener el nombre del parámetro marcado con [AsQuery]
                 var queryParamName = metadata.QueryParameterNameHolder.GetOrAdd(methodInfo, method =>
                     method.GetParameters()
-                          .FirstOrDefault(p => p.GetCustomAttribute<AsQueryAttribute>() != null)?.Name);
+                          .FirstOrDefault(p => p.GetCustomAttribute<AsQueryAttribute>() != null)?.Name!);
 
                 // Si hay un objeto [AsQuery], lo aplanamos
                 if (queryParamName != null && remainingArguments.TryGetValue(queryParamName, out var queryObj) && queryObj != null)
@@ -632,7 +632,7 @@ namespace Hubcon.Client.Integration.Client
             return url;
         }
 
-        private static Dictionary<string, object> GetRemainingArguments(IOperationRequest request, ref string finalRoute)
+        private Dictionary<string, object> GetRemainingArguments(IOperationRequest request, ref string finalRoute)
         {
 
             // 2. Lógica de Reemplazo en URL (Path Parameters)
@@ -644,7 +644,15 @@ namespace Hubcon.Client.Integration.Client
                 string placeholder = $"{{{arg.Key}}}";
                 if (finalRoute.Contains(placeholder))
                 {
-                    finalRoute = finalRoute.Replace(placeholder, Uri.EscapeDataString(arg.Value?.ToString() ?? ""));
+                    string? value = null;
+
+                    if (arg.Value is Enum)
+                    {
+                        value = converter.SerializeToElement(arg.Value).ToString();
+                    }
+
+                    value ??= Uri.EscapeDataString(arg.Value?.ToString() ?? "");
+                    finalRoute = finalRoute.Replace(placeholder, value);
                     remainingArguments.Remove(arg.Key); // Ya se usó en el Path, lo quitamos
                 }
             }

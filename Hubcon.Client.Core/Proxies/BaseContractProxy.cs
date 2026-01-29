@@ -1,5 +1,6 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.Exceptions;
+using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Cache;
@@ -52,11 +53,21 @@ namespace Hubcon.Client.Core.Proxies
 
                 Methods.GetOrAdd(signature, _ => (method.GetMethodSignature(useHashed), method));
 
-                var verb = method.GetCustomAttribute<HttpGetAttribute>();
+                var get = method.HasCustomAttribute<HttpGetAttribute>();
 
-                if (verb != null && !method.AreParametersValid())
+                if (get && !method.AreParametersValid())
                 {
-                    throw new HubconGenericException($"Operation '{method.Name}' cannot be used with GET verb as it contains complex or null types. Use primitive types or a DTO class with primitive types instead.");
+                    throw new HubconGenericException($"Method '{method.ReflectedType}.{method.Name}' cannot be used with GET verb as it contains types that cannot be converted to query strings. Use primitive types or use [AsQuery] for 1 complex type instead.");
+                }
+
+                foreach (var parameter in method.GetParameters())
+                {
+                    var asQuery = parameter.IsDefined(typeof(AsQueryAttribute));
+                    
+                    if(asQuery && !parameter.ParameterType.IsTypeAllowed())
+                    {
+                        throw new HubconGenericException($"Parameter '{parameter.Name}' from method '{method.ReflectedType}.{method.Name}' cannot be used as query verb as it contains complex or null types. Use primitive or enum types instead.");
+                    }
                 }
             }
         }

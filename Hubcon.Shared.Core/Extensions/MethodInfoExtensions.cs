@@ -21,6 +21,7 @@ namespace Hubcon.Shared.Core.Extensions
                 hasAttribute = method.IsDefined(typeof(TCustomAttribute), false);
                 _attributeCache[methodName] = hasAttribute;
             }
+
             return hasAttribute;
         }
 
@@ -82,17 +83,36 @@ namespace Hubcon.Shared.Core.Extensions
             if (AllowedTypes.Contains(type))
                 return true;
 
-            // Si es clase o struct definido por usuario, chequear propiedades
+            if (type.IsEnum)
+                return true;
+
             if (type.IsClass || (type.IsValueType && !type.IsPrimitive))
             {
                 var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
                 if (properties.Length == 0)
                     return false; // clase sin propiedades es inválida
 
-                return properties.All(p => IsTypeAllowed(p.PropertyType));
+                var result = properties.All(p => TypeIsPrimitive(p.PropertyType));
+                return result;
             }
 
-            // Cualquier otro tipo (array, list, interface, etc.) → invalido
+            return false;
+        }
+
+        public static bool TypeIsPrimitive(this Type type)
+        {
+            // Nullable<T> → tomar el tipo subyacente
+            if (Nullable.GetUnderlyingType(type) != null)
+            {
+                type = Nullable.GetUnderlyingType(type)!;
+            }
+
+            if (AllowedTypes.Contains(type))
+                return true;
+
+            if (type.IsEnum)
+                return true;
+         
             return false;
         }
     }

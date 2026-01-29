@@ -115,7 +115,7 @@ namespace HubconTestClient.Modules
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError($"Token refresh error: {ex.Message}.");
+                        logger.LogError("Token refresh error: {Message}.", ex.Message);
                     }
                 }
             });

@@ -77,6 +77,10 @@ internal class Program
         //logger.LogInformation($"Respuesta: {response.Success}");
         //await Task.Delay(1000);
 
+        var response = await openAi.Execute(x => x.GetModelResponse(EventType.ResponseCreated));
+        logger.LogInformation($"Respuesta: {response.Success}");
+        await Task.Delay(1000);
+
         logger.LogInformation($"Probando stream SSE non-hubcon...");
         await Task.Delay(500);
         var request = new OpenAIStreamRequest()
