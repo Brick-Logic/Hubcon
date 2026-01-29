@@ -415,5 +415,4 @@ FodyWeavers.xsd
 */dataSources/
 */dataSources.local.xml
 *.json
-/Examples/ClassicExample/HubconTestClient/Properties/launchSettings.json
-/Examples/ClassicExample/HubconTestClient/Properties/launchSettings.json
+*/launchSettings.json
