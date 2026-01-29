@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Diagnostics;
+using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
 
@@ -195,9 +196,6 @@ namespace HubconTest
             app.UseAuthorization();
 
             app.UseHubconHttpEndpoints();
-
-            //var options = new WebSocketOptions();
-            //options.AllowedOrigins.Add("http://localhost:5000");
             app.UseHubconWebsocketEndpoints();
 
             var logger = app.Services.GetService<ILogger<object>>();

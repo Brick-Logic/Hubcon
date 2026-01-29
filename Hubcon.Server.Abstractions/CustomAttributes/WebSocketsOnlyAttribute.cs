@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon
 {
-    public sealed class WebSockets : HubconTransport
+    public sealed class WebSocketTransport : HubconTransport
     {
         public override string TransportKey { get; } = "WebSocket";
     }

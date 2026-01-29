@@ -302,13 +302,14 @@ namespace Hubcon.Server.Core.Routing.Registries
             return false;
         }
 
-        public void MapTransport(WebApplication app, HubconTransport transportAttribute, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication>? endpointRegisterer = null)
+        public void MapTransport<T>(WebApplication app, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication>? endpointRegisterer = null) where T : HubconTransport, new()
         {
-            Build(transportAttribute);
+            var transport = HubconTransport.GetDefault<T>();
 
+            Build(transport);
             if(endpointRegisterer != null)
             {
-                var items = _availableOperations.Where(x => x.Key.StartsWith(transportAttribute.TransportKey)).ToDictionary();
+                var items = _availableOperations.Where(x => x.Key.StartsWith(transport.TransportKey)).ToDictionary();
                 endpointRegisterer.Invoke(items, app);
             }
         }

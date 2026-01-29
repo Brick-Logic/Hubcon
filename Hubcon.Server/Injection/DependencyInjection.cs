@@ -90,7 +90,7 @@ namespace Hubcon
         {
             var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
 
-            operationRegistry.MapTransport(app, HubconTransport.GetDefault<HttpTransport>(), (operations, app) =>
+            operationRegistry.MapTransport<HttpTransport>(app, (operations, app) =>
             {
                 foreach (var operation in operations)
                 {
@@ -107,10 +107,10 @@ namespace Hubcon
             return app;
         }
 
-        public static WebApplication UseHubconTransport(this WebApplication app, HubconTransport transportAttribute, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication> configurator)
+        public static WebApplication UseHubconTransport<T>(this WebApplication app, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication>? configurator = null) where T : HubconTransport, new()
         {
             var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
-            operationRegistry.MapTransport(app, transportAttribute, configurator);
+            operationRegistry.MapTransport<T>(app, configurator);
             return app;
         }
 
@@ -125,7 +125,7 @@ namespace Hubcon
 
             app.UseMiddleware<HubconWebSocketMiddleware>();
 
-            operationRegistry.MapTransport(app, HubconTransport.GetDefault<WebSockets>());
+            operationRegistry.MapTransport<WebSocketTransport>(app);
 
             return app;
         }
