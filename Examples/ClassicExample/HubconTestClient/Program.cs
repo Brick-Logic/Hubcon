@@ -45,9 +45,14 @@ internal class Program
 
         var builder = WebApplication.CreateSlimBuilder();
 
+        var config = new ConfigurationBuilder()
+            .AddUserSecrets<Program>() // Necesita el ID del .csproj
+            .AddEnvironmentVariables()
+            .Build();
+
         builder.Services.AddHubconClient();
         builder.Services.AddRemoteServerModule<TestModule>(() => new TestModule(new object()));
-        builder.Services.AddRemoteServerModule<OpenAIServerModule>();
+        builder.Services.AddRemoteServerModule<OpenAIServerModule>(() => new OpenAIServerModule(config));
 
         builder.Logging.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
         builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
@@ -64,8 +69,6 @@ internal class Program
         logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
         Console.ReadKey();
 
-        var converter = HubconEnumConverter<EventType>.Current;
-
         //logger.LogInformation("Probando creación de modelo de respuesta...");
         //var command = new CreateResponseCommand()
         //{
@@ -77,30 +80,30 @@ internal class Program
         //logger.LogInformation($"Respuesta: {response.Success}");
         //await Task.Delay(1000);
 
-        var response = await openAi.Execute(x => x.GetModelResponse());
-        logger.LogInformation($"Respuesta: {response.Success}");
-        await Task.Delay(1000);
+        //var response = await openAi.Execute(x => x.GetModelResponse());
+        //logger.LogInformation($"Respuesta: {response.Success}");
+        //await Task.Delay(1000);
 
-        logger.LogInformation($"Probando stream SSE non-hubcon...");
-        await Task.Delay(500);
-        var request = new OpenAIStreamRequest()
-        {
-            Model = "gpt-5-nano",
-            Input = "Dame una frase de 5 palabras sobre una manzana.",
-        };
+        //logger.LogInformation($"Probando stream SSE non-hubcon...");
+        //await Task.Delay(500);
+        //var request = new OpenAIStreamRequest()
+        //{
+        //    Model = "gpt-5-nano",
+        //    Input = "Dame una frase de 5 palabras sobre una manzana.",
+        //};
 
-        var finalText = "";
-        var streamResponse = await openAi.Execute(x => x.GetResponseStream(request));
-        logger.LogInformation($"Respuesta: {streamResponse.Success}");
-        await foreach (var item in streamResponse.Data!)
-        {
-            logger.LogInformation($"Event received: {item.Delta}");
-            finalText += item.Delta;
-        }
+        //var finalText = "";
+        //var streamResponse = await openAi.Execute(x => x.GetResponseStream(request));
+        //logger.LogInformation($"Respuesta: {streamResponse.Success}");
+        //await foreach (var item in streamResponse.Data!)
+        //{
+        //    logger.LogInformation($"Event received: {item.Event}, data: {item.Delta}");
+        //    finalText += item.Delta;
+        //}
 
-        logger.LogInformation($"Final text: {finalText}");
-        logger.LogInformation($"Stream SSE de tokens: OK");
-        await Task.Delay(1000);
+        //logger.LogInformation($"Final text: {finalText}");
+        //logger.LogInformation($"Stream SSE de tokens: OK");
+        //await Task.Delay(1000);
 
         //logger.LogInformation($"Probando obtener inputs del modelo...");
         //var response2 = await openAi.Execute(x => x.GetModelResponseInputs(response.Data.Id));

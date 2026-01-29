@@ -21,7 +21,6 @@ namespace HubconTestClient.Contracts
         [HttpPost("/v1/responses")]
         [ParseSseMessage("data:", "")]
         [ParseSseMessage("event:", "event")]
-        [ParseRawSseMessage]
         [ParseEndSseMessage("[DONE]")]
         public IAsyncEnumerable<OpenAIStreamEvent> GetResponseStream([AsBody] OpenAIStreamRequest request);
     }

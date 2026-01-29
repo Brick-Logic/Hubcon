@@ -8,6 +8,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
 		<ServerGarbageCollection>false</ServerGarbageCollection>
+		<UserSecretsId>13f2f7ca-4f92-42d8-84fa-908a9804f866</UserSecretsId>
 
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 		<PublishAot>true</PublishAot>

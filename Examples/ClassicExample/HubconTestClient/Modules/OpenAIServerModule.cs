@@ -4,7 +4,7 @@ using Hubcon;
 
 namespace HubconTestClient.Modules
 {
-    public sealed class OpenAIServerModule : RemoteServerModule
+    public sealed class OpenAIServerModule(IConfigurationRoot config) : RemoteServerModule
     {
         public override void Configure(IServerModuleConfiguration configuration)
         {
@@ -19,7 +19,8 @@ namespace HubconTestClient.Modules
             configuration.ConfigureHttpClient((x, y) =>
             {
                 // Autenticacion manual
-                x.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
+                var key = config["OpenAI:ApiKey"];
+                x.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", key);
             });
 
             // Contrato que va a usar esta config
