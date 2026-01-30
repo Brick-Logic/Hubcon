@@ -12,11 +12,21 @@ namespace Hubcon.Client.Core.HubconInvocationContext
 
         public class Context
         {
-            public Exception? LastError { get; set; }
-            public bool HasError => LastError != null;
+            public bool HasError => Exception != null;
             public bool IsWrapped { get; set; }
-            public object? Response { get; set; }
             public Exception? Exception { get; set; }
+            public bool ResponseIsSet => Response != null;
+
+            private object? Response { get; set; }
+            public void SetResponse<T>(IHubconResponse<T> response)
+            {
+                Response ??= response;
+            }
+
+            public IHubconResponse<T>? GetResponse<T>()
+            {
+                return Response as IHubconResponse<T>;
+            }
         }
     }
 }

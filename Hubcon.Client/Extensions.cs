@@ -52,12 +52,12 @@ namespace Hubcon
         {
             HubconContext.Current.IsWrapped = true;
             Exception? exception = null;
-            IHubconResponse<TOut?> response = default!;
+            IHubconResponse<TOut> response = default!;
 
             try
             {
                 var data = await call.Invoke(contract);
-                response = (HubconContext.Current.Response as IHubconResponse<TOut?>) ?? HubconResponse.OkT(data)!;
+                response = HubconContext.Current.GetResponse<TOut>() ?? HubconResponse.OkT(data)!;
             }
             catch (Exception ex) when (HandleException(ex, out exception))
             {
@@ -77,7 +77,7 @@ namespace Hubcon
                 }
             }
 
-            return response;
+            return response!;
         }
 
         /// <summary>
@@ -87,7 +87,7 @@ namespace Hubcon
         /// <typeparam name="T"></typeparam>
         /// <param name="task"></param>
         /// <returns></returns>
-        public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, Task<HubconResponse<TOut>>> call) where T : IControllerContract
+        public static async ValueTask<IHubconResponse<TOut?>> ExecuteResponse<T, TOut>(this T contract, Func<T, Task<HubconResponse<TOut?>>> call) where T : IControllerContract
         {
             HubconContext.Current.IsWrapped = true;
             Exception? exception = null;
@@ -135,7 +135,7 @@ namespace Hubcon
             try
             {
                 var data = call.Invoke(contract);
-                response = (HubconContext.Current.Response as IHubconResponse<TOut?>) ?? HubconResponse.OkT(data)!;
+                response = HubconContext.Current.GetResponse<TOut>() as IHubconResponse<TOut?> ?? HubconResponse.OkT(data)!;
             }
             catch (Exception ex) when (HandleException(ex, out exception))
             {
@@ -173,7 +173,7 @@ namespace Hubcon
             try
             {
                 await call.Invoke(contract);
-                response = (HubconContext.Current.Response as IHubconResponse<JsonElement>) ?? HubconResponse.OkT<JsonElement>()!;
+                response = HubconContext.Current.GetResponse<JsonElement>() ?? HubconResponse.OkT<JsonElement>()!;
             }
             catch (Exception ex) when (HandleException(ex, out exception))
             {

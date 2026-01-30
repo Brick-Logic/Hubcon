@@ -180,7 +180,7 @@ namespace Hubcon.Client.Integration.Client
                     var result = await client.InvokeAsync<T>(request, remoteCancellation, cancellationToken);
                     result ??= HubconResponse.Fail<T>("Received an empty response");
 
-                    HubconContext.Current.Response = result;
+                    HubconContext.Current.SetResponse(result);
 
                     await operationOptions.CallHook(HookType.OnAfterSend, context);
                     await contractOptions.CallHook(HookType.OnAfterSend, context);
@@ -250,7 +250,7 @@ namespace Hubcon.Client.Integration.Client
                     );
                     
 
-                    HubconContext.Current.Response = methodReponse;
+                    HubconContext.Current.SetResponse(methodReponse);
 
                     content?.Dispose();
                     httpRequest.Dispose();
@@ -323,7 +323,7 @@ namespace Hubcon.Client.Integration.Client
 
                     IHubconResponse<T> operationResponse = converter.DeserializeJsonElement<HubconResponse<T>>(result);
 
-                    HubconContext.Current.Response = operationResponse;
+                    HubconContext.Current.SetResponse(operationResponse);
 
                     context.IsSuccess = operationResponse.Success;
                     context.Result = operationResponse.Data;
@@ -348,7 +348,7 @@ namespace Hubcon.Client.Integration.Client
 
                 if (HubconContext.Current.IsWrapped)
                 {
-                    HubconContext.Current.Response = HubconResponse.Cancelled();
+                    HubconContext.Current.SetResponse(HubconResponse.Cancelled());
                     return default!;
                 }
 
@@ -366,7 +366,7 @@ namespace Hubcon.Client.Integration.Client
                 if (HubconContext.Current.IsWrapped)
                 {
                     HubconContext.Current.Exception = ex;
-                    HubconContext.Current.Response = HubconResponse.InternalError<T>(ex);
+                    HubconContext.Current.SetResponse(HubconResponse.InternalError<T>(ex));
                     return default!;
                 }
 
@@ -463,7 +463,7 @@ namespace Hubcon.Client.Integration.Client
                         (int)response.StatusCode
                     );
 
-                    HubconContext.Current.Response = methodReponse;
+                    HubconContext.Current.SetResponse(methodReponse);
 
                     content?.Dispose();
                     httpRequest.Dispose();
@@ -543,7 +543,7 @@ namespace Hubcon.Client.Integration.Client
 
                 if (HubconContext.Current.IsWrapped)
                 {
-                    HubconContext.Current.Response = HubconResponse.Cancelled();
+                    HubconContext.Current.SetResponse(HubconResponse.Cancelled());
                     return;
                 }
 
@@ -561,7 +561,7 @@ namespace Hubcon.Client.Integration.Client
                 if (HubconContext.Current.IsWrapped)
                 {
                     HubconContext.Current.Exception = ex;
-                    HubconContext.Current.Response = HubconResponse.InternalError(ex);
+                    HubconContext.Current.SetResponse(HubconResponse.InternalError(ex));
                     return;
                 }
 
@@ -793,7 +793,7 @@ namespace Hubcon.Client.Integration.Client
                     if (HubconContext.Current.IsWrapped)
                     {
                         HubconContext.Current.Exception = ex;
-                        HubconContext.Current.Response = HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex);
+                        HubconContext.Current.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex));
                     }
 
                     throw;
@@ -823,7 +823,7 @@ namespace Hubcon.Client.Integration.Client
                     observable = await client.Stream<JsonElement>(request, remoteCancellation, cancellationToken);
 
                     if (HubconContext.Current.IsWrapped == true)
-                        HubconContext.Current.Response = HubconResponse.OkT<IAsyncEnumerable<JsonElement>>();
+                        HubconContext.Current.SetResponse(HubconResponse.OkT<IAsyncEnumerable<JsonElement>>());
                 }
                 catch (Exception ex)
                 {
@@ -837,7 +837,7 @@ namespace Hubcon.Client.Integration.Client
                     if (HubconContext.Current.IsWrapped)
                     {
                         HubconContext.Current.Exception = ex;
-                        HubconContext.Current.Response = HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex);
+                        HubconContext.Current.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex));
                     }
 
                     throw;
@@ -885,7 +885,7 @@ namespace Hubcon.Client.Integration.Client
                             if (HubconContext.Current.IsWrapped)
                             {
                                 HubconContext.Current.Exception = ex;
-                                HubconContext.Current.Response = HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex);
+                                HubconContext.Current.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex));
                             }
 
                             throw;
@@ -1002,7 +1002,7 @@ namespace Hubcon.Client.Integration.Client
                 var response = await client.IngestMultiple<T>(request, remoteCancellation, ClientOptions, operationOptions, cancellationToken);
 
                 if (HubconContext.Current.IsWrapped == true)
-                    HubconContext.Current.Response = response;
+                    HubconContext.Current.SetResponse(response);
 
                 await operationOptions.CallHook(HookType.OnAfterSend, context);
                 await contractOptions.CallHook(HookType.OnAfterSend, context);
@@ -1030,7 +1030,7 @@ namespace Hubcon.Client.Integration.Client
                 if (HubconContext.Current.IsWrapped)
                 {
                     HubconContext.Current.Exception = ex;
-                    HubconContext.Current.Response = HubconResponse.InternalError<T>(ex);
+                    HubconContext.Current.SetResponse(HubconResponse.InternalError<T>(ex));
                     return default!;
                 }
 
@@ -1071,7 +1071,7 @@ namespace Hubcon.Client.Integration.Client
                 if (HubconContext.Current.IsWrapped)
                 {
                     HubconContext.Current.Exception = ex;
-                    HubconContext.Current.Response = HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex);
+                    HubconContext.Current.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex));
                 }
 
                 throw;
@@ -1115,7 +1115,7 @@ namespace Hubcon.Client.Integration.Client
                 if (HubconContext.Current.IsWrapped)
                 {
                     HubconContext.Current.Exception = ex;
-                    HubconContext.Current.Response = HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex);
+                    HubconContext.Current.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex));
                 }
 
                 throw;
@@ -1164,7 +1164,7 @@ namespace Hubcon.Client.Integration.Client
                             if (HubconContext.Current.IsWrapped)
                             {
                                 HubconContext.Current.Exception = ex;
-                                HubconContext.Current.Response = HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex);
+                                HubconContext.Current.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex));
                             }
 
                             throw;

@@ -370,7 +370,7 @@ namespace Hubcon.Client.Core.Websockets
                                ?? throw new HubconRemoteException("Received an empty response.");
 
                 if (HubconContext.Current.IsWrapped == true)
-                    HubconContext.Current.Response = response;
+                    HubconContext.Current.SetResponse(response);
 
                 return response;
             }

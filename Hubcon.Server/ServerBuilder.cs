@@ -45,8 +45,8 @@ namespace Hubcon.Server
 
             builder.AddServerCore();
 
-            ServerOptions.AddTransport<WebSocketTransport>();
             ServerOptions.AddTransport<HttpTransport>();
+            ServerOptions.AddTransport<WebSocketTransport>();
 
             Services.AddSingleton<IInternalServerOptions>(ServerOptions);
             Services.AddSingleton(OperationRegistry);
