@@ -1,5 +1,7 @@
 ﻿using Hubcon;
 using HubconTestDomain;
+using System;
+using System.Threading.Tasks;
 
 namespace HubconTestClient.Auth
 {

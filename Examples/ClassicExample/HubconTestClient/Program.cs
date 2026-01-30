@@ -5,13 +5,23 @@ using HubconTestClient.Contracts;
 using HubconTestClient.Models;
 using HubconTestClient.Modules;
 using HubconTestDomain;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.RateLimiting;
+using System.Threading.Tasks;
 
 internal class Program
 {
@@ -44,7 +54,6 @@ internal class Program
         process.PriorityClass = ProcessPriorityClass.RealTime;
 
         var builder = WebApplication.CreateBuilder();
-
         var config = new ConfigurationBuilder()
             .AddUserSecrets<Program>() // Necesita el ID del .csproj
             .AddEnvironmentVariables()
@@ -53,9 +62,17 @@ internal class Program
         builder.Services.AddHubconClient();
         builder.Services.AddRemoteServerModule<TestModule>(() => new TestModule(new object()));
         builder.Services.AddRemoteServerModule<OpenAIServerModule>(() => new OpenAIServerModule(config));
+        //var builder = Host.CreateDefaultBuilder(new string[] { })
+        //    .ConfigureServices((hostContext, services) =>
+        //    {
+        //        services.AddHubconClient();
+        //        services.AddRemoteServerModule<TestModule>(() => new TestModule(new object()));
+        //        services.AddRemoteServerModule<OpenAIServerModule>(() => new OpenAIServerModule(config));
+        //    });
 
         builder.Logging.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
         builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
+
 
         var app = builder.Build();
         var scope = app.Services.CreateScope();
@@ -198,39 +215,39 @@ internal class Program
 
         int rps = 9999999;
 
-        await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
-        {
-            TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions()
-            {
-                QueueLimit = 1,
-                AutoReplenishment = true,
-                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
-                TokenLimit = rps,
-                TokensPerPeriod = rps,
-            });
+        //await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
+        //{
+            //TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(
+        //    {
+        //        QueueLimit = 1,
+        //        AutoReplenishment = true,
+        //        ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+        //        TokenLimit = rps,
+        //        TokensPerPeriod = rps,
+        //    });
 
-            try
-            {
-                var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-                Interlocked.Increment(ref clientCount);
-                //await foreach(var item in client.GetMessages2())
-                while (true)
-                {
-                    // var swReq = Stopwatch.StartNew();
-                    //await tokenBucketRateLimiter.AcquireAsync();
-                    //await client.IngestMessages(GetMessages2(), default);
-                    //var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
-                    //await paralellClient.Execute(x => x.ShowTextOnServer());
+        //    try
+        //    {
+        //        var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+        //        Interlocked.Increment(ref clientCount);
+        //        //await foreach(var item in client.GetMessages2())
+        //        while (true)
+        //        {
+        //            // var swReq = Stopwatch.StartNew();
+        //            //await tokenBucketRateLimiter.AcquireAsync();
+        //            //await client.IngestMessages(GetMessages2(), default);
+        //            //var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
+        //            //await paralellClient.Execute(x => x.ShowTextOnServer());
 
-                    var item = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), ct));
-                    //Interlocked.Increment(ref _finishedRequestsCount);
-                }
-            }
-            finally
-            {
-                Interlocked.Decrement(ref clientCount);
-            }
-        });
+        //            var item = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), ct));
+        //            //Interlocked.Increment(ref _finishedRequestsCount);
+        //        }
+        //    }
+        //    finally
+        //    {
+        //        Interlocked.Decrement(ref clientCount);
+        //    }
+        //});
 
         //Console.ReadKey();
 
@@ -283,6 +300,53 @@ internal class Program
         //        //Interlocked.Decrement(ref clientCount);
         //    }
         //}
+
+        int maxDegreeOfParallelism = options.MaxDegreeOfParallelism;
+        var tasks = new List<Task>();
+
+        for (int i = 0; i < maxDegreeOfParallelism; i++)
+        {
+            // Lanzamos cada worker como una Task independiente
+            tasks.Add(Task.Run(async () =>
+            {
+                TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions()
+                {
+                    QueueLimit = 1,
+                    AutoReplenishment = true,
+                    ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                    TokenLimit = rps,
+                    TokensPerPeriod = rps,
+                });
+
+                try
+                {
+                    // Importante: Resolvemos el contrato dentro de la Task si el scope lo permite
+                    var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+                    Interlocked.Increment(ref clientCount);
+
+                    while (true)
+                    {
+                        // El AcquireAsync es vital para no saturar si el Rate Limiter está activo
+                        // await tokenBucketRateLimiter.AcquireAsync(1, ct); 
+
+                        var item = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+
+                        // Interlocked.Increment(ref _finishedRequestsCount);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Salida limpia por cancelación
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref clientCount);
+                }
+            }, default));
+        }
+
+        // Esperamos a que todas las tareas terminen (esto ocurrirá cuando se cancele el ct)
+        await Task.WhenAll(tasks);
     }
 
     private static async Task TestSseStreaming(IUserContract client, ILogger<IUserContract> logger)

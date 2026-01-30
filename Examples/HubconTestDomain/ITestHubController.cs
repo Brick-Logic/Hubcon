@@ -1,4 +1,6 @@
 ﻿using Hubcon;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace HubconTestDomain
 {

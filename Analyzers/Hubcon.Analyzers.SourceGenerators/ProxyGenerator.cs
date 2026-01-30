@@ -486,7 +486,6 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine($"{baseIndent}    {{");
             sb.AppendLine($"{baseIndent}        {proxyName}Preserver();");
 
-            sb.AppendLine($"{baseIndent}        Console.WriteLine(\"Modulo preserver ({fullProxyName}) cargado.\");");
             sb.AppendLine($"{baseIndent}        if (System.Guid.NewGuid().ToString() == \"preserver\")");
             sb.AppendLine($"{baseIndent}        {{");
 
@@ -549,6 +548,10 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("using System.Text.Json;");
             sb.AppendLine("using System.Text.Json.Serialization.Metadata;");
             sb.AppendLine("using System.Collections.Generic;");
+            sb.AppendLine("using Hubcon;");
+            sb.AppendLine("using Hubcon.Shared.Abstractions.Attributes;");
+            sb.AppendLine("using System.Threading;");
+            sb.AppendLine("using System.Threading.Tasks;");
             sb.AppendLine();
             sb.AppendLine($"namespace Hubcon.Generated {{");
 
@@ -970,8 +973,8 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("using System.Runtime.CompilerServices;");
             sb.AppendLine("using System.Diagnostics.CodeAnalysis;");
             sb.AppendLine();
-            sb.AppendLine("namespace Hubcon.Generated;");
-            sb.AppendLine();
+            sb.AppendLine("namespace Hubcon.Generated");
+            sb.AppendLine("{");
             sb.AppendLine("public static class ClientSubscriptionFactory");
             sb.AppendLine("{");
 
@@ -990,7 +993,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine();
 
             sb.AppendLine("    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ClientSubscriptionFactory))]");
-            sb.AppendLine("    public static object Create(Type type, object config)");
+            sb.AppendLine("    public static object Create(global::System.Type type, object config)");
             sb.AppendLine("    {");
             sb.AppendLine("        return type switch");
             sb.AppendLine("        {");
@@ -1008,12 +1011,13 @@ namespace HubconAnalyzers.SourceGenerators
                 string fullName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                 // Branch del switch
-                sb.AppendLine($"            Type t when t == typeof({fullName}) => new Hubcon.Client.Core.Subscriptions.ClientSubscriptionHandler<{fullName}>(config as Hubcon.Client.Core.Subscriptions.ClientSubscriptionConfig<object>),");
+                sb.AppendLine($"            global::System.Type t when t == typeof({fullName}) => new Hubcon.Client.Core.Subscriptions.ClientSubscriptionHandler<{fullName}>(config as Hubcon.Client.Core.Subscriptions.ClientSubscriptionConfig<object>),");
             }
 
             sb.AppendLine("            _ => null");
             sb.AppendLine("        };");
             sb.AppendLine("    }");
+            sb.AppendLine("}");
             sb.AppendLine("}");
 
             return sb.ToString();

@@ -1,5 +1,8 @@
 ﻿using Hubcon;
 using Hubcon.Shared.Abstractions.Attributes;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace HubconTestDomain
 {
@@ -55,6 +58,25 @@ namespace HubconTestDomain
     {
     }
 
-    public record class TestClass2(string Propiedad);
-    public record class MyTestClass(string Propiedad, TestClass2 Myclass);
+    public class TestClass2
+    {
+        public TestClass2(string Propiedad)
+        {
+            this.Propiedad = Propiedad;
+        }
+
+        public string Propiedad { get; }
+    }
+
+    public class MyTestClass
+    {
+        public MyTestClass(string Propiedad, TestClass2 Myclass)
+        {
+            this.Propiedad = Propiedad;
+            this.Myclass = Myclass;
+        }
+
+        public string Propiedad { get; }
+        public TestClass2 Myclass { get; }
+    }
 }

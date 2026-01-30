@@ -1,6 +1,8 @@
 ﻿using Hubcon;
 using Hubcon.Shared.Abstractions.Attributes;
 using HubconTestClient.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace HubconTestClient.Contracts
 {

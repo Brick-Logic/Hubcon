@@ -1,6 +1,9 @@
 ﻿using Hubcon;
 using HubconTestClient.Auth;
 using HubconTestDomain;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading;
 
 namespace HubconTestClient.Modules
 {
@@ -42,7 +45,7 @@ namespace HubconTestClient.Modules
                     .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
                     .ConfigureOperations(operationSelector =>
                     {
-                        operationSelector.Configure(contract => contract.GetTemperatureFromServer)
+                        operationSelector.Configure(contract => contract.GetTemperatureFromServer(default, default))
                             .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
                             .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
                             .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
@@ -53,11 +56,11 @@ namespace HubconTestClient.Modules
                             })
                             .LimitPerSecond(100);
 
-                        operationSelector.Configure(contract => contract.GetTemperatureFromServerBlocking)
+                        operationSelector.Configure(contract => contract.GetTemperatureFromServerBlocking(default))
                             .LimitPerSecond(10000000);
 
                         operationSelector
-                            .Configure(contract => contract.CreateUser)
+                            .Configure(contract => contract.CreateUser(default))
                             .LimitPerSecond(1000000);
 
                         //operationSelector
@@ -66,7 +69,7 @@ namespace HubconTestClient.Modules
                         //    .LimitPerSecond(1000000);
 
                         operationSelector
-                            .Configure(contract => contract.GetTemperatureFromServerWithInput)
+                            .Configure(contract => contract.GetTemperatureFromServerWithInput(default, default))
                             .UseTransport(TransportType.Websockets);
 
                         operationSelector
@@ -103,8 +106,8 @@ namespace HubconTestClient.Modules
 
             configuration.AddInterceptor(InterceptorType.OnPing, async ctx =>
             {
-                var authManager = ctx.Services.GetRequiredService<AuthenticationManager>();
-                var logger = ctx.Services.GetRequiredService<ILogger<object>>();
+                var authManager = (AuthenticationManager)ctx.Services.GetService(typeof(AuthenticationManager));
+                var logger = (ILogger<object>)ctx.Services.GetService(typeof(ILogger<object>));
 
                 var currentTime = DateTimeOffset.UtcNow.DateTime;
                 var lowerTime = authManager.AccessTokenExpiresAt.HasValue ? authManager.AccessTokenExpiresAt.Value.AddMinutes(-1) : DateTime.MaxValue;

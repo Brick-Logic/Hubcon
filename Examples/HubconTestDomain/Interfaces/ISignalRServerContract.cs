@@ -1,4 +1,5 @@
 ﻿using Hubcon;
+using System.Threading.Tasks;
 
 namespace HubconTestDomain.Interfaces
 {

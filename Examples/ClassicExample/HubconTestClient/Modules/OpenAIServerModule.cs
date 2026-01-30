@@ -1,6 +1,8 @@
 ﻿using HubconTestClient.Contracts;
 using System.Net.Http.Headers;
 using Hubcon;
+using Microsoft.Extensions.Configuration;
+using System;
 
 namespace HubconTestClient.Modules
 {
