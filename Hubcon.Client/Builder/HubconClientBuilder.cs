@@ -1,6 +1,7 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.Registries;
 using Hubcon.Client.Core.Subscriptions;
+using Hubcon.Client.Core.Transports;
 using Hubcon.Client.Integration.Client;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
@@ -50,6 +51,13 @@ namespace Hubcon.Client.Builder
             services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
             services.AddSingleton<IDynamicConverter, DynamicConverter>();
             services.AddTransient<IHubconClient, HubconClient>();
+
+            var clientMappings = TransportTypeResolver.GetMappings();
+
+            foreach (var mapping in clientMappings)
+            {
+                services.AddScoped(mapping.Value);
+            }
 
             return services;
         }

@@ -2,5 +2,5 @@
 
 namespace Hubcon.Server.Abstractions.Delegates
 {
-    public delegate Task<IHubconResponse> ResultHandlerDelegate(object? result);
+    public delegate Task<HubconResponse> ResultHandlerDelegate(object? result);
 }

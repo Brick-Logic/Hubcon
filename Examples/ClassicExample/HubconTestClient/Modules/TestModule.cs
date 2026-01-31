@@ -13,13 +13,13 @@ namespace HubconTestClient.Modules
         {
         }
 
-        public override void Configure(IServerModuleConfiguration configuration)
+        public override void Configure(IServerModuleConfiguration server)
         {
-            configuration.WithBaseUrl("localhost:5000");
+            server.WithBaseUrl("localhost:5000");
 
-            configuration.EnableWebsocketAutoReconnect(true);
-            configuration.GlobalLimit(200000000);
-            configuration.EnableLogging();
+            server.EnableWebsocketAutoReconnect(true);
+            server.GlobalLimit(200000000);
+            server.EnableLogging();
 
             //configuration.LimitIngest(100);
             //configuration.LimitSubscription(100);
@@ -29,12 +29,12 @@ namespace HubconTestClient.Modules
             //configuration.LimitWebsocketFireAndForget(100);
             //configuration.LimitHttpFireAndForget(100);
 
-            configuration.DisableAllLimiters();
+            server.DisableAllLimiters();
 
-            configuration.Implements<IUserContract>(contractConfigurator =>
+            server.Implements<IUserContract>((contractConfigurator =>
             {
                 contractConfigurator
-                    .UseWebsocketMethods()
+                    .SetDefaultTransport<WebSocketTransport>()
                     .AllowRemoteCancellation(false)
                     //.AddHook(HookType.OnSend, async ctx => ctx.Services
                     //    .GetRequiredService<ILogger<object>>()
@@ -43,7 +43,7 @@ namespace HubconTestClient.Modules
                     .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
                     .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
                     .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
-                    .ConfigureOperations(operationSelector =>
+                    .ConfigureOperations((operationSelector =>
                     {
                         operationSelector.Configure(contract => contract.GetTemperatureFromServer(default, default))
                             .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
@@ -70,41 +70,41 @@ namespace HubconTestClient.Modules
 
                         operationSelector
                             .Configure(contract => contract.GetTemperatureFromServerWithInput(default, default))
-                            .UseTransport(TransportType.Websockets);
+                            .UseTransport<WebSocketTransport>();
 
                         operationSelector
                             .Configure(contract => contract.GetMessages(default(int)))
-                            .UseTransport(TransportType.Http);
-                    });
-            });
+                            .UseTransport<HttpTransport>();
+                    }));
+            }));
 
-            configuration.Implements<ISecondTestContract>(contractConfigurator =>
+            server.Implements<ISecondTestContract>(contractConfigurator =>
             {
                 contractConfigurator.ConfigureOperations(operationSelector =>
                 {
-                    operationSelector.Configure(c => c.TestMethod(default!)).UseTransport(TransportType.Http);
+                    operationSelector.Configure(c => c.TestMethod(default!)).UseTransport<HttpTransport>();
                 });
             });
 
-            configuration.ConfigureWebsocketClient((x, services) =>
+            server.ConfigureWebsocketClient((x, services) =>
             {
                 x.SetBuffer(4 * 1024, 4 * 1024);
                 x.SetRequestHeader("Origin", "Hubcon");
             });
 
-            configuration.SetWebsocketPingInterval(TimeSpan.FromSeconds(15));
-            configuration.ScaleMessageProcessors(4);
+            server.SetWebsocketPingInterval(TimeSpan.FromSeconds(15));
+            server.ScaleMessageProcessors(4);
 
-            configuration.ConfigureHttpClient((options, services) =>
+            server.ConfigureHttpClient((options, services) =>
             {
                 options.Timeout = TimeSpan.FromSeconds(15);
                 options.DefaultRequestHeaders.Add("Origin", "Hubcon");
             });
 
 
-            configuration.UseAuthenticationManager<AuthenticationManager>();
+            server.UseAuthenticationManager<AuthenticationManager>();
 
-            configuration.AddInterceptor(InterceptorType.OnPing, async ctx =>
+            server.AddInterceptor(InterceptorType.OnPing, async ctx =>
             {
                 var authManager = (AuthenticationManager)ctx.Services.GetService(typeof(AuthenticationManager));
                 var logger = (ILogger<object>)ctx.Services.GetService(typeof(ILogger<object>));
@@ -127,7 +127,7 @@ namespace HubconTestClient.Modules
                 }
             });
 
-            configuration.UseInsecureConnection();
+            server.UseInsecureConnection();
         }
     }
 }

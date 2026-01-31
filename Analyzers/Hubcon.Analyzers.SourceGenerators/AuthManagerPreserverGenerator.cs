@@ -12,7 +12,7 @@ namespace HubconAnalyzers.SourceGenerators
     [Generator]
     public class AuthManagerPreserverGenerator : IIncrementalGenerator
     {
-        private const string TargetBaseType = "Hubcon.Client.Core.Authentication.BaseAuthenticationManager";
+        private const string TargetBaseType = "Hubcon.BaseAuthenticationManager";
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {

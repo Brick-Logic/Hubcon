@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 
-namespace Hubcon.Shared.Core.Extensions
+namespace Hubcon
 {
     public static class HttpRequestMessageExtensions
     {

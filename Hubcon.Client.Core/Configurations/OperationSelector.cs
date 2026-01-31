@@ -14,7 +14,6 @@ namespace Hubcon.Client.Core.Configurations
         {
             var env = Environment.GetEnvironmentVariable("HUBCON_OPNAME_DEBUG_ENABLED");
             useHashedNames = !bool.TryParse(env, out var parsed) ? true : !parsed;
-
             OperationOptions = operationOptions;
         }
 

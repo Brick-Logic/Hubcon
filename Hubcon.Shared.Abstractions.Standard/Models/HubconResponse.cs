@@ -1,6 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -13,68 +14,68 @@ namespace Hubcon
         {
         }
 
-        public static IHubconResponse Ok(string message = "Success")
+        public static HubconResponse Ok(string message = "Success")
         => new HubconResponse(true, false, message, null!, 200);
 
-        public static IHubconResponse Ok(object data, string message = "Success")
+        public static HubconResponse Ok(object data, string message = "Success")
         => new HubconResponse(true, false, message, null!, 200, data);
 
-        public static IHubconResponse Fail(string error, object data = null, Exception exception = null, int statusCode = 400)
+        public static HubconResponse Fail(string error, object data = null, Exception exception = null, int statusCode = 400)
             => new HubconResponse(false, true, null!, error, statusCode, data, exception);
 
-        public static IHubconResponse Cancelled(Exception exception = null, string error = "Operation cancelled by the user")
+        public static HubconResponse Cancelled(Exception exception = null, string error = "Operation cancelled by the user")
             => new HubconResponse(false, true, null!, error, 499, null, exception);
 
-        public static IHubconResponse NotFound(Exception exception = null, string error = "Resource not found")
+        public static HubconResponse NotFound(Exception exception = null, string error = "Resource not found")
             => new HubconResponse(false, true, null!, error, 404, null, exception);
 
-        public static IHubconResponse RequestTooLarge(Exception exception = null, string error = "Request too large")
+        public static HubconResponse RequestTooLarge(Exception exception = null, string error = "Request too large")
             => new HubconResponse(false, true, null!, error, 413, null, exception);
 
-        public static IHubconResponse TooManyRequests(Exception exception = null, string error = "Too many requests")
+        public static HubconResponse TooManyRequests(Exception exception = null, string error = "Too many requests")
             => new HubconResponse(false, true, null!, error, 429, null, exception);
 
-        public static IHubconResponse BadRequest(object data = null, Exception exception = null, string error = "Bad request")
+        public static HubconResponse BadRequest(object data = null, Exception exception = null, string error = "Bad request")
             => new HubconResponse(false, true, null!, error, 413, data, exception);
 
-        public static IHubconResponse Unauthorized(Exception exception = null, string error = "Unauthorized access")
+        public static HubconResponse Unauthorized(Exception exception = null, string error = "Unauthorized access")
             => new HubconResponse(false, true, null!, error, 401, null, exception);
 
-        public static IHubconResponse Forbidden(Exception exception = null, string error = "Forbidden access")
+        public static HubconResponse Forbidden(Exception exception = null, string error = "Forbidden access")
             => new HubconResponse(false, true, null!, error, 403, null, exception);
 
-        public static IHubconResponse InternalError(Exception exception = null, string error = "Internal server error")
+        public static HubconResponse InternalError(Exception exception = null, string error = "Internal server error")
             => new HubconResponse(false, true, null!, error, 500, null, exception);
 
 
-        public static IHubconResponse<T> OkT<T>(T data = default, string message = "Success")
+        public static HubconResponse<T> OkT<T>(T data = default, string message = "Success")
             => new HubconResponse<T>(true, false, message, null!, 200, data);
 
-        public static IHubconResponse<T> Created<T>(T data, string message = "Created")
+        public static HubconResponse<T> Created<T>(T data, string message = "Created")
             => new HubconResponse<T>(true, false, message, null!, 201, data);
 
-        public static IHubconResponse<T> Fail<T>(string error, Exception exception = null, int statusCode = 400, T data = default)
+        public static HubconResponse<T> Fail<T>(string error, Exception exception = null, int statusCode = 400, T data = default)
             => new HubconResponse<T>(false, true, null!, error, statusCode, data, exception);
 
-        public static IHubconResponse<T> Cancelled<T>(Exception exception = null, string error = "Operation cancelled by the user")
+        public static HubconResponse<T> Cancelled<T>(Exception exception = null, string error = "Operation cancelled by the user")
             => new HubconResponse<T>(false, true, null!, error, 499, default!, exception);
 
-        public static IHubconResponse<T> NotFound<T>(Exception exception = null, string error = "Resource not found")
+        public static HubconResponse<T> NotFound<T>(Exception exception = null, string error = "Resource not found")
             => new HubconResponse<T>(false, true, null!, error, 404, default!, exception);
 
-        public static IHubconResponse<T> RequestTooLarge<T>(Exception exception = null, string error = "Request too large")
+        public static HubconResponse<T> RequestTooLarge<T>(Exception exception = null, string error = "Request too large")
             => new HubconResponse<T>(false, true, null!, error, 413, default!, exception);
 
-        public static IHubconResponse<T> TooManyRequests<T>(Exception exception = null, string error = "Too many requests")
+        public static HubconResponse<T> TooManyRequests<T>(Exception exception = null, string error = "Too many requests")
             => new HubconResponse<T>(false, true, null!, error, 429, default!, exception);
 
-        public static IHubconResponse<T> Unauthorized<T>(Exception exception = null, string error = "Unauthorized access")
+        public static HubconResponse<T> Unauthorized<T>(Exception exception = null, string error = "Unauthorized access")
             => new HubconResponse<T>(false, true, null!, error, 401, default!, exception);
 
-        public static IHubconResponse<T> Forbidden<T>(Exception exception = null, string error = "Forbidden access")
+        public static HubconResponse<T> Forbidden<T>(Exception exception = null, string error = "Forbidden access")
             => new HubconResponse<T>(false, true, null!, error, 403, default!, exception);
 
-        public static IHubconResponse<T> InternalError<T>(Exception exception = null, string error = "Internal server error")
+        public static HubconResponse<T> InternalError<T>(Exception exception = null, string error = "Internal server error")
             => new HubconResponse<T>(false, true, null!, error, 500, default!, exception);
     }
 
@@ -125,6 +126,11 @@ namespace Hubcon
             StatusCode = statusCode;
             Exception = exception;
             Data = data;
+        }
+
+        public static implicit operator HubconResponse<T>(T value)
+        {
+            return HubconResponse.OkT(value);
         }
     }
 }

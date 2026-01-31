@@ -13,7 +13,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// <param name="onSend">The type of hook to add, specifying when it should be triggered.</param>
         /// <param name="hookDelegate">The delegate to execute when the hook is triggered.</param>
         /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
-        IOperationConfigurator AddHook(HookType onSend, Func<InvocationContext, Task> hookDelegate);
+        IOperationConfigurator AddHook(HookType onSend, Func<IInvocationContext, Task> hookDelegate);
 
         /// <summary>
         /// Adds a validation hook to validate the request before execution.
@@ -35,7 +35,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// </summary>
         /// <param name="transportType">The transport type to use (e.g., HTTP, WebSockets).</param>
         /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
-        IOperationConfigurator UseTransport(TransportType transportType);
+        IOperationConfigurator UseTransport<T>() where T : HubconTransportAttribute, new();
 
         /// <summary>
         /// Allows or disallows remote cancellation of the operation.
@@ -49,5 +49,8 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// </summary>
         /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
         IOperationConfigurator DisableHttpAuthentication();
+        IOperationConfigurator UseWebSockets();
+        IOperationConfigurator UseHttp();
+        IOperationConfigurator UseNonHubconHttp();
     }
 }

@@ -91,6 +91,8 @@ namespace Hubcon.Client.Core.Websockets
 
         public IClientOptions ClientOptions { get; set; }
 
+        private IClientOperationContext _context; 
+
         private System.Timers.Timer? _pingTimer;
         private System.Timers.Timer? _timeoutTimer;
         private List<Task?> _processingTasks;
@@ -103,21 +105,18 @@ namespace Hubcon.Client.Core.Websockets
         private readonly Channel<TrimmedMemoryOwner> _messageChannel;
         private readonly Channel<byte[]> _sendChannel;
 
-        InvocationContext GeneralContext = new InvocationContext();
-
-        public HubconWebSocketClient(Uri uri, IDynamicConverter converter, IClientOptions options,
-            IServiceProvider serviceProvider, ILogger<HubconWebSocketClient>? logger = null)
+        public HubconWebSocketClient(Uri uri, IClientOperationContext context, ILogger<HubconWebSocketClient>? logger = null)
         {
-            GeneralContext.Services = serviceProvider;
-            GeneralContext.CancellationToken = _cts.Token;
-
-            _pongStream = new GenericObservable<PongMessage>(converter);
-            _errorStream = new GenericObservable<Exception>(converter);
+            _pongStream = new GenericObservable<PongMessage>(context.Converter);
+            _errorStream = new GenericObservable<Exception>(context.Converter);
             _uri = uri;
-            this.converter = converter;
-            this.options = options;
-            this.serviceProvider = serviceProvider;
+            _context = context;
             this.logger = logger;
+            options = context.ClientOptions;
+            converter = context.Converter;
+            serviceProvider = context.ServiceProvider;
+            ClientOptions = context.ClientOptions;
+
 
             _messageChannel = Channel.CreateBounded<TrimmedMemoryOwner>(
                 new BoundedChannelOptions(20000 * options.MessageProcessorsCount)
@@ -214,7 +213,7 @@ namespace Hubcon.Client.Core.Websockets
             return observable;
         }
 
-        public async Task<IHubconResponse<T>> IngestMultiple<T>(
+        public async Task<HubconResponse<T>> IngestMultiple<T>(
             IOperationRequest operationRequest,
             bool remoteCancelEnabled,
             IClientOptions? clientOptions = null,
@@ -369,9 +368,6 @@ namespace Hubcon.Client.Core.Websockets
                 var response = converter.DeserializeJsonElement<HubconResponse<T>>(result.Data)
                                ?? throw new HubconRemoteException("Received an empty response.");
 
-                if (HubconContext.Current.IsWrapped == true)
-                    HubconContext.Current.SetResponse(response);
-
                 return response;
             }
             catch (OperationCanceledException)
@@ -423,7 +419,7 @@ namespace Hubcon.Client.Core.Websockets
             await SendMessageAsync(request, cancellationToken);
         }
 
-        public async Task<IHubconResponse<T>> InvokeAsync<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
+        public async Task<HubconResponse<T>> InvokeAsync<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             var request = new OperationInvokeMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
             var tcs = new TaskCompletionSource<OperationResponseMessage>();
@@ -510,7 +506,8 @@ namespace Hubcon.Client.Core.Websockets
                                 _lastPongTime = DateTime.UtcNow;
                                 _heartbeatWatcher?.NotifyHeartbeat();
                                 _pongStream.OnNext(pongMessage);
-                                await ClientOptions.CallInterceptor(InterceptorType.OnPong, GeneralContext);
+
+                                //await ClientOptions.CallInterceptor(InterceptorType.OnPong, GeneralContext);
                                 break;
 
                             case MessageType.subscription_data:
@@ -654,12 +651,8 @@ namespace Hubcon.Client.Core.Websockets
                     || _webSocket?.State is WebSocketState.CloseReceived
                     || _webSocket?.State is WebSocketState.CloseSent)
                 {
-                    await ClientOptions.CallInterceptor(InterceptorType.OnReconnect, GeneralContext);
+                    await _context.CallInterceptor(InterceptorType.OnReconnect);
                 }
-
-                var context = new InvocationContext();
-                context.Services = serviceProvider;
-                context.CancellationToken = _cts.Token;
 
                 int attempt = 0;
                 while (!_cts.IsCancellationRequested)
@@ -687,17 +680,16 @@ namespace Hubcon.Client.Core.Websockets
                         if (LoggingEnabled)
                             logger?.LogInformation("Intentando conectar...");
 
-                        WebSocketOptions?.Invoke(_webSocket.Options, serviceProvider);
+                        _context.ClientOptions.WebSocketOptions?.Invoke(_webSocket.Options, serviceProvider);
 
                         var uriBuilder = new UriBuilder(_uri);
-
                         var token = AuthorizationTokenProvider?.Invoke();
 
                         if (!string.IsNullOrEmpty(token))
                             uriBuilder.AddQueryParameter("access_token", token);
 
                         _websocketCts = new CancellationTokenSource();
-                        await ClientOptions.CallInterceptor(InterceptorType.OnConnecting, context);
+                        await _context.CallInterceptor(InterceptorType.OnConnecting);
                         await _webSocket.ConnectAsync(uriBuilder.Uri, _websocketCts.Token);
 
                         if (LoggingEnabled)
@@ -821,13 +813,12 @@ namespace Hubcon.Client.Core.Websockets
                             }
                         }
 
-                        await ClientOptions.CallInterceptor(InterceptorType.OnConnected, context);
+                        await _context.CallInterceptor(InterceptorType.OnConnected);
                         return;
                     }
                     catch (Exception ex)
                     {
-                        context.Exception = ex;
-                        await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
+                        await _context.CallInterceptor(InterceptorType.OnError);
 
                         _errorStream.OnNext(ex);
 
@@ -912,9 +903,7 @@ namespace Hubcon.Client.Core.Websockets
         {
             if (!IsReady) return;
 
-            var context = new InvocationContext();
-            context.Services = serviceProvider;
-            context.CancellationToken = _cts.Token;
+            var context = _context.CallContext;
             context.TryRefreshToken = TryRefreshToken;
 
             try
@@ -932,12 +921,12 @@ namespace Hubcon.Client.Core.Websockets
 
                 if (_webSocket != null)
                 {
-                    await ClientOptions.CallInterceptor(InterceptorType.OnPing, context);
+                    await _context.CallInterceptor(InterceptorType.OnPing);
                 }
             }
             catch (Exception ex)
             {
-                await ClientOptions.CallInterceptor(InterceptorType.OnError, context);
+                await _context.CallInterceptor(InterceptorType.OnError);
 
                 if (LoggingEnabled)
                     logger?.LogError($"Error en PingMessageLoop: {ex.Message}");
@@ -1136,7 +1125,7 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        public async Task<IHubconResponse<bool>> TryRefreshToken(string token)
+        public async Task<HubconResponse<bool>> TryRefreshToken(string token)
         {
             var request = new TokenUpdateMessage(Guid.NewGuid(), token);
             var tcs = new TaskCompletionSource<TokenUpdateResponseMessage>();

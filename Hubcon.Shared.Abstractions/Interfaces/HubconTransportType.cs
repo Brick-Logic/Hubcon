@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 namespace Hubcon
 {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Method | AttributeTargets.Property)]
-    public abstract class HubconTransport : Attribute
+    public abstract class HubconTransportAttribute : Attribute
     {
-        readonly static Dictionary<Type, HubconTransport> _defaultInstances = new Dictionary<Type, HubconTransport>();
+        readonly static Dictionary<Type, HubconTransportAttribute> _defaultInstances = new();
 
-        public static HubconTransport GetDefault<T>() where T : HubconTransport, new()
+        public static HubconTransportAttribute GetDefault<T>() where T : HubconTransportAttribute, new()
         {
             if (!_defaultInstances.TryGetValue(typeof(T), out var value))
             {
@@ -23,7 +23,7 @@ namespace Hubcon
             return (T)value;
         }
 
-        protected HubconTransport() 
+        protected HubconTransportAttribute() 
         {
         }
 

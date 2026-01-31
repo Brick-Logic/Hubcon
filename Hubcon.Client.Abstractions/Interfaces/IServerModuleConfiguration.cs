@@ -261,7 +261,7 @@ namespace Hubcon
         /// <param name="interceptorType">The type of hook to add, specifying when it should be triggered.</param>
         /// <param name="interceptorDelegate">The delegate to execute when the hook is triggered.</param>
         /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
-        IServerModuleConfiguration AddInterceptor(InterceptorType interceptorType, Func<InvocationContext, Task> interceptorDelegate);
+        IServerModuleConfiguration AddInterceptor(InterceptorType interceptorType, Func<IInvocationContext, Task> interceptorDelegate);
 
         /// <summary>
         /// Not implemented, will throw if used. Enables client-side endpoint overload usage. This needs the server to also enable endpoint overloading. Otherwise, it will fail.
@@ -270,16 +270,20 @@ namespace Hubcon
         IServerModuleConfiguration EnableHttpEndpointOverloading();
 
         /// <summary>
-        /// Indicates that the target server is not a Hubcon server.
-        /// </summary>
-        /// <returns></returns>
-        IServerModuleConfiguration NonHubconServer();
-
-        /// <summary>
         /// Specifies the http client factory to use. The factory must produce scoped or transient clients, otherwise contracts might overwrite other contract's http client settings.
         /// HttpClient is requested only once per singleton contract.
         /// </summary>
         /// <returns></returns>
         IServerModuleConfiguration UseHttpClientFactory(Func<IServiceProvider, HttpClient> httpClientFactory);
+
+        /// <summary>
+        /// Specifies which transport should be used. By default, HTTP is used.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        IServerModuleConfiguration SetDefaultTransport<T>() where T : HubconTransportAttribute, new();
+        IServerModuleConfiguration UseWebSockets();
+        IServerModuleConfiguration UseHttp();
+        IServerModuleConfiguration UseNonHubconHttp();
     }
 }

@@ -21,17 +21,17 @@ namespace Hubcon.Blazor.Client.Modules
             // Agrego los contratos que este servidor implementa
             // Estos contratos se resuelven por DI con la configuracion puesta en este lugar
 
-            server.Implements<IUserContract>(x =>
+            server.Implements<IUserContract>((x =>
             {
-                x.UseWebsocketMethods();
+                x.SetDefaultTransport<WebSocketTransport>();
 
-                x.ConfigureOperations(selector =>
+                x.ConfigureOperations((selector =>
                 {
                     selector
                         .Configure(contract => contract.GetMessages(default(int)))
-                        .UseTransport(TransportType.Http);
-                });
-            });
+                        .UseTransport<HttpTransport>();
+                }));
+            }));
 
             server.Implements<ISecondTestContract>();
 

@@ -1,27 +1,35 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Core.Context;
 using Hubcon.Shared.Core.Tools;
+using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Subscriptions
 {
+    public interface IBuildableSubscription
+    {
+        void Build(IClientOperationContext context);
+    }
+
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class ClientSubscriptionHandler<T> : ISubscription<T>
+    public sealed class ClientSubscriptionHandler<T> : ISubscription<T>, IBuildableSubscription
     {
         public event HubconEventHandler<object>? OnEventReceived;
         private readonly IDynamicConverter _converter;
         private readonly ILogger<ClientSubscriptionHandler<object>> logger;
         private CancellationTokenSource _tokenSource;
-
 
         private SubscriptionState _connected = SubscriptionState.Disconnected;
         public SubscriptionState Connected { get => _connected; }
@@ -30,6 +38,7 @@ namespace Hubcon.Client.Core.Subscriptions
         public IHubconClient Client { get; }
 
         public ConcurrentDictionary<object, HubconEventHandler<object>> Handlers { get; }
+        public IClientOperationContext Context { get; set; }
 
         public ClientSubscriptionHandler(ClientSubscriptionConfig<object> subscriptionConfig)
         {
@@ -86,14 +95,18 @@ namespace Hubcon.Client.Core.Subscriptions
                 var simpleContractName = NamingHelper.GetCleanName(Property.DeclaringType!.Name);
                 var request = new SubscriptionRequest(Property.Name, simpleContractName, null);
                 var random = new Random();
+                var scope = Context.RootServiceProvider.CreateScope();
 
                 while (!_tokenSource.IsCancellationRequested)
                 {
                     try
                     {
                         IAsyncEnumerable<JsonElement> eventSource = null!;
-
-                        eventSource = await Client.GetSubscription(request, Property, _tokenSource.Token);
+                        WrappedContext.SetWrapped(true);
+                        var callContext = new CallContext(scope.ServiceProvider, request, Context!.AuthenticationManagerFactory?.Invoke()!, true, _tokenSource.Token);
+                        HubconContext.UseContext(callContext);
+                        
+                        eventSource = Client.GetSubscription(request, Context, _tokenSource.Token);
 
                         _connected = SubscriptionState.Connected;
 
@@ -151,6 +164,11 @@ namespace Hubcon.Client.Core.Subscriptions
         public void EmitGeneric(object? eventValue)
         {
             OnEventReceived?.Invoke((T?)eventValue!);
+        }
+
+        public void Build(IClientOperationContext context)
+        {
+            Context ??= context;
         }
     }
 

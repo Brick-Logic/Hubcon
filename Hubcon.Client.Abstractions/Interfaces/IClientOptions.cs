@@ -51,12 +51,12 @@ namespace Hubcon.Client.Abstractions.Interfaces
         RateLimiter? WebsocketFireAndForgetRateBucket { get; }
         RateLimiter? HttpFireAndForgetRateBucket { get; }
         bool LoggingEnabled { get; }
-        bool HttpAuthIsEnabled { get; }
+        bool AuthIsEnabled { get; }
         bool UseHttpEndpointOverloading { get; }
-        public bool IsNonHubconServer { get; }
         Func<IServiceProvider, HttpClient> HttpClientFactory { get; }
 
-        public IContractOptions GetContractOptions(Type type);
-        Task CallInterceptor(InterceptorType interceptorType, InvocationContext context);
+        IContractOptions GetContractOptions(Type type);
+        Task CallInterceptor(InterceptorType interceptorType, IInvocationContext context);
+        HubconTransportAttribute TransportType { get; }
     }
 }

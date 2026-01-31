@@ -10,14 +10,14 @@ namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IContractOptions
     {
-        public bool WebsocketMethodsEnabled { get; }
         public Type ContractType { get; }
         ConcurrentDictionary<string, IOperationOptions> OperationOptions { get; }
-        IReadOnlyDictionary<HookType, Func<InvocationContext, Task>> Hooks { get; }
+        IReadOnlyDictionary<HookType, Func<IInvocationContext, Task>> Hooks { get; }
         bool RemoteCancellationIsAllowed { get; }
-        bool HttpAuthIsEnabled { get; }
-        Task CallHook(HookType hookType, InvocationContext context);
+
+        Task CallHook(HookType hookType, IInvocationContext context);
         IOperationOptions GetOperationOptions(string operationName, MemberInfo memberInfo);
-        bool IsWebsocketOperation(string operationName);
+        HubconTransportAttribute? TransportType { get; }
+        bool AuthIsEnabled { get; }
     }
 }

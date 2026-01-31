@@ -4,6 +4,6 @@ namespace Hubcon
 {
     public abstract class RemoteServerModule : IRemoteServerModule
     {
-        public abstract void Configure(IServerModuleConfiguration configuration);
+        public abstract void Configure(IServerModuleConfiguration server);
     }
 }

@@ -11,18 +11,18 @@ namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IOperationOptions
     {
-        TransportType TransportType { get; }
+        HubconTransportAttribute? TransportType { get; }
         MemberInfo MemberInfo { get; }
         MemberType MemberType { get; }
         TokenBucketRateLimiterOptions? RateBucketOptions { get; }
         int RequestsPerSecond { get; }
         bool RateLimiterIsShared { get; }
         RateLimiter? RateBucket { get; }
-        IReadOnlyDictionary<HookType, Func<InvocationContext, Task>> Hooks { get; }
+        IReadOnlyDictionary<HookType, Func<IInvocationContext, Task>> Hooks { get; }
         bool? RemoteCancellationIsAllowed { get; }
-        bool? HttpAuthIsEnabled { get; }
+        bool? AuthIsEnabled { get; }
 
-        Task CallHook(HookType hookType, InvocationContext context);
+        Task CallHook(HookType hookType, IInvocationContext context);
 
         Task CallValidationHook(IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken);
     }

@@ -26,9 +26,7 @@ namespace HubconTestClient.Auth
         }
 
         protected override Task ClearSessionAsync()
-        {
-            
-
+        {           
             return Task.CompletedTask;
         }
 

@@ -48,7 +48,7 @@ namespace Hubcon.Client.Builder
         private ConcurrentDictionary<Type, Type> _subTypesCache { get; } = new ConcurrentDictionary<Type, Type>();
         private ConcurrentDictionary<Type, IEnumerable<PropertyInfo>> _propTypesCache { get; } = new ConcurrentDictionary<Type, IEnumerable<PropertyInfo>>();
         private ConcurrentDictionary<Type, IContractOptions> _contractOptions { get; } = new ConcurrentDictionary<Type, IContractOptions>();
-        private ConcurrentDictionary<InterceptorType, Func<InvocationContext, Task>> _interceptors = new ConcurrentDictionary<InterceptorType, Func<InvocationContext, Task>>();
+        private ConcurrentDictionary<InterceptorType, Func<IInvocationContext, Task>> _interceptors = new ConcurrentDictionary<InterceptorType, Func<IInvocationContext, Task>>();
         private Dictionary<Type, object> _clients { get; } = new Dictionary<Type, object>();
         public bool AutoReconnect { get; set; } = true;
         public bool ReconnectStreams { get; set; } = false;
@@ -166,10 +166,11 @@ namespace Hubcon.Client.Builder
 
         public bool LoggingEnabled { get; set; }
         public bool DebuggingMethodSignaturesEnabled { get; set; }
-        public bool HttpAuthIsEnabled { get; set; } = true;
-        public bool IsNonHubconServer { get; set; }
+        public bool AuthIsEnabled { get; set; } = true;
 
         public Func<IServiceProvider, HttpClient> HttpClientFactory { get; set; } = x => new HttpClient();
+
+        public HubconTransportAttribute TransportType { get; set; } = HubconTransportAttribute.GetDefault<HttpTransport>();
 
         public T GetOrCreateClient<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(IServiceProvider services, bool useCached = true) where T : IControllerContract
         {
@@ -184,23 +185,24 @@ namespace Hubcon.Client.Builder
             if (!Contracts.Any(x => x == contractType))
                 return default!;
 
+            var contractScope = services.CreateScope();
+            var scopedServices = contractScope.ServiceProvider;
+
             var proxyType = proxyRegistry.TryGetProxy(contractType);
 
-            var hubconClient = services.GetService<IHubconClient>();
+            var hubconClient = scopedServices.GetService<IHubconClient>();
 
-            hubconClient?.Build(this, services, _contractOptions, UseSecureConnection);
+            var newClient = (BaseContractProxy)scopedServices.GetRequiredService(proxyType);
+            var converter = scopedServices.GetRequiredService<IDynamicConverter>();
 
-            var newClient = (BaseContractProxy)services.GetRequiredService(proxyType);
-            var converter = services.GetRequiredService<IDynamicConverter>();
-
-            newClient.BuildContractProxy(hubconClient!, converter);
+            var operations = newClient.BuildContractProxy(hubconClient!, this, scopedServices, _contractOptions, converter);
 
             static IEnumerable<PropertyInfo> CheckType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type x)
                 => x.GetProperties().Where(CheckProperty);
-            
+
             static bool CheckProperty([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] PropertyInfo x)
                 => typeof(ISubscription).IsAssignableFrom(x.PropertyType);
-            
+
             Func<Type, IEnumerable<PropertyInfo>> typeGetter = CheckType;
 
             var props = _propTypesCache.GetOrAdd(
@@ -212,27 +214,32 @@ namespace Hubcon.Client.Builder
                 var value = subscriptionProp.GetValue(newClient, null);
                 if (value == null)
                 {
-                    var genericType = _subTypesCache.GetOrAdd(
-                        subscriptionProp.PropertyType.GenericTypeArguments[0],
-                        x => HubconClientBuilder.GetProxyType(x)!);
-
-                    var propss = contractType.GetProperties().Where(x => x.Name == subscriptionProp.Name).FirstOrDefault();
-                    var factory = SubscriptionFactory.GetFactory();
-
-                    if (factory == null)
-                        continue;
-
-                    var config = new ClientSubscriptionConfig<object>()
+                    if (operations.TryGetValue(subscriptionProp.Name, out var context))
                     {
-                        Converter = converter,
-                        Logger = services.GetRequiredService<ILogger<ClientSubscriptionHandler<object>>>(),
-                        Property = propss,
-                        Client = hubconClient!,
-                    };
+                        var genericType = _subTypesCache.GetOrAdd(
+                            subscriptionProp.PropertyType.GenericTypeArguments[0],
+                            x => HubconClientBuilder.GetProxyType(x)!);
 
-                    var subscriptionInstance = (ISubscription)factory.Invoke(subscriptionProp.PropertyType.GenericTypeArguments[0], config);
-                    newClient.SetPropertyValue(subscriptionProp.Name, subscriptionInstance);
-                    subscriptionInstance.Build();
+                        var propss = contractType.GetProperties().Where(x => x.Name == subscriptionProp.Name).FirstOrDefault();
+                        var factory = SubscriptionFactory.GetFactory();
+
+                        if (factory == null)
+                            continue;
+
+                        var config = new ClientSubscriptionConfig<object>()
+                        {
+                            Converter = converter,
+                            Logger = scopedServices.GetRequiredService<ILogger<ClientSubscriptionHandler<object>>>(),
+                            Property = propss,
+                            Client = hubconClient!,
+                        };
+
+                        var subscriptionInstance = (ISubscription)factory.Invoke(subscriptionProp.PropertyType.GenericTypeArguments[0], config);
+                        var buildable = subscriptionInstance as IBuildableSubscription;
+                        buildable!.Build(context);
+                        newClient.SetPropertyValue(subscriptionProp.Name, subscriptionInstance);
+                        subscriptionInstance.Build();
+                    }
                 }
             }
 
@@ -286,12 +293,12 @@ namespace Hubcon.Client.Builder
             });
         }
 
-        public void AddInterceptor(InterceptorType interceptorType, Func<InvocationContext, Task> interceptorDelegate)
+        public void AddInterceptor(InterceptorType interceptorType, Func<IInvocationContext, Task> interceptorDelegate)
         {
             _interceptors.TryAdd(interceptorType, interceptorDelegate);
         }
 
-        public Task CallInterceptor(InterceptorType interceptorType, InvocationContext context)
+        public Task CallInterceptor(InterceptorType interceptorType, IInvocationContext context)
         {
             return _interceptors.GetOrAdd(interceptorType, _ => Task.CompletedTask).Invoke(context);
         }

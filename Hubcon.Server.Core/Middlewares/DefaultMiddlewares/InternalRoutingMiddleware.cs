@@ -86,7 +86,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                     foreach (var sub in context.Blueprint.SubscriptionProperties)
                     {
-                        if (!operationRegistry.GetOperationBlueprint(context.Blueprint.SimpleContractName, sub.PropInfo.Name, HubconTransport.GetDefault<WebSocketTransport>(), out IOperationBlueprint? blueprint))
+                        if (!operationRegistry.GetOperationBlueprint(context.Blueprint.SimpleContractName, sub.PropInfo.Name, HubconTransportAttribute.GetDefault<WebSocketTransport>(), out IOperationBlueprint? blueprint))
                             continue;
 
                         object? subInstance = null;

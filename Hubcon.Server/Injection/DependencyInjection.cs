@@ -5,6 +5,7 @@ using Hubcon.Server.Core.Routing;
 using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Server.Core.Websockets.Middleware;
 using Hubcon.Server.Injection;
+using Hubcon.Shared.Abstractions.Attributes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Any;
@@ -107,7 +108,7 @@ namespace Hubcon
             return app;
         }
 
-        public static WebApplication UseHubconTransport<T>(this WebApplication app, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication>? configurator = null) where T : HubconTransport, new()
+        public static WebApplication UseHubconTransport<T>(this WebApplication app, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication>? configurator = null) where T : HubconTransportAttribute, new()
         {
             var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
             operationRegistry.MapTransport<T>(app, configurator);

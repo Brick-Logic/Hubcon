@@ -45,4 +45,7 @@
 		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-rc*" />
 		<PackageReference Include="Hubcon.Shared" Version="1.0.0-rc*" />
 	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
+	</ItemGroup>
 </Project>

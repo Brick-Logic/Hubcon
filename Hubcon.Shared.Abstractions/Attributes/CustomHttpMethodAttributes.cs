@@ -1,9 +1,10 @@
-﻿using System;
+﻿using Hubcon.Shared.Abstractions.Attributes;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 
-namespace Hubcon
+namespace Hubcon.Shared.Abstractions.Attributes
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public abstract class HttpMethodDataAttribute : Attribute
@@ -16,7 +17,10 @@ namespace Hubcon
             Template = template ?? "/";
         }
     }
+}
 
+namespace Hubcon
+{
     public class HttpGetAttribute : HttpMethodDataAttribute
     {
         public override HttpMethod HttpMethod => HttpMethod.Get;
@@ -39,5 +43,23 @@ namespace Hubcon
     {
         public override HttpMethod HttpMethod => HttpMethod.Delete;
         public HttpDeleteAttribute(string template = "/") : base(template) { }
+    }
+
+    public class HttpPatchAttribute : HttpMethodDataAttribute
+    {
+        public override HttpMethod HttpMethod => HttpMethod.Patch;
+        public HttpPatchAttribute(string template = "/") : base(template) { }
+    }
+
+    public class HttpHeadAttribute : HttpMethodDataAttribute
+    {
+        public override HttpMethod HttpMethod => HttpMethod.Head;
+        public HttpHeadAttribute(string template = "/") : base(template) { }
+    }
+
+    public class HttpOptionsAttribute : HttpMethodDataAttribute
+    {
+        public override HttpMethod HttpMethod => HttpMethod.Options;
+        public HttpOptionsAttribute(string template = "/") : base(template) { }
     }
 }

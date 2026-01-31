@@ -18,13 +18,13 @@ namespace Hubcon.Client.Core.Configurations
 
         public MemberType MemberType { get; }
 
-        public TransportType TransportType { get; private set; } = TransportType.Default;
+        public HubconTransportAttribute? TransportType { get; private set; }
         public TokenBucketRateLimiterOptions? RateBucketOptions { get; private set; }
         public bool RateLimiterIsShared { get; private set; }
         public int RequestsPerSecond { get; private set; }
 
-        ConcurrentDictionary<HookType, Func<InvocationContext, Task>> _hooks = new();
-        public IReadOnlyDictionary<HookType, Func<InvocationContext, Task>> Hooks => _hooks;
+        ConcurrentDictionary<HookType, Func<IInvocationContext, Task>> _hooks = new();
+        public IReadOnlyDictionary<HookType, Func<IInvocationContext, Task>> Hooks => _hooks;
 
         private RateLimiter? _rateBucket;
         public RateLimiter? RateBucket => _rateBucket ??= RateBucketOptions != null ? new TokenBucketRateLimiter(RateBucketOptions) : null;
@@ -44,7 +44,7 @@ namespace Hubcon.Client.Core.Configurations
 
         public bool? RemoteCancellationIsAllowed { get; private set; }
 
-        public bool? HttpAuthIsEnabled { get; private set; }
+        public bool? AuthIsEnabled { get; private set; }
 
         public IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true)
         {
@@ -65,9 +65,27 @@ namespace Hubcon.Client.Core.Configurations
             return this;
         }
 
-        public IOperationConfigurator UseTransport(TransportType transportType)
+        public IOperationConfigurator UseTransport<T>() where T : HubconTransportAttribute, new()
         {
-            TransportType = transportType;
+            TransportType = HubconTransportAttribute.GetDefault<T>();
+            return this;
+        }
+
+        public IOperationConfigurator UseWebSockets()
+        {
+            TransportType = HubconTransportAttribute.GetDefault<WebSocketTransport>();
+            return this;
+        }
+
+        public IOperationConfigurator UseHttp()
+        {
+            TransportType = HubconTransportAttribute.GetDefault<WebSocketTransport>();
+            return this;
+        }
+
+        public IOperationConfigurator UseNonHubconHttp()
+        {
+            TransportType = HubconTransportAttribute.GetDefault<NonHubconHttpTransport>();
             return this;
         }
 
@@ -77,13 +95,13 @@ namespace Hubcon.Client.Core.Configurations
             return this;
         }
 
-        public IOperationConfigurator AddHook(HookType hookType, Func<InvocationContext, Task> hookDelegate)
+        public IOperationConfigurator AddHook(HookType hookType, Func<IInvocationContext, Task> hookDelegate)
         {
             _hooks.TryAdd(hookType, hookDelegate);
             return this;
         }
 
-        public Task CallHook(HookType hookType, InvocationContext context)
+        public Task CallHook(HookType hookType, IInvocationContext context)
         {
             return _hooks.GetOrAdd(hookType, _ => Task.CompletedTask).Invoke(context);
         }
@@ -106,7 +124,7 @@ namespace Hubcon.Client.Core.Configurations
 
         public IOperationConfigurator DisableHttpAuthentication()
         {
-            HttpAuthIsEnabled = false;
+            AuthIsEnabled = false;
             return this;
         }
     }

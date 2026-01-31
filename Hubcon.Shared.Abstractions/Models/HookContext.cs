@@ -12,25 +12,24 @@ namespace Hubcon.Shared.Abstractions.Models
         public IServiceProvider Services { get; }
         public IOperationRequest Request { get; }
         public CancellationToken CancellationToken { get; }
-        public object? Result { get; set; }
         public bool IsSuccess { get; }
-        public string Error { get; }
         public int StatusCode { get; }
         public Exception? Exception { get; }
-        public Func<string, Task<IHubconResponse<bool>>> TryRefreshToken { get; }
+        public Func<string, Task<HubconResponse<bool>>>? TryRefreshToken { get; }
+        public bool HasError { get; }
     }
 
-    [StructLayout(LayoutKind.Sequential, Size = 8)]
-    public sealed class InvocationContext : IInvocationContext
-    {
-        public IServiceProvider Services { get; set; }
-        public IOperationRequest Request { get; set; }
-        public CancellationToken CancellationToken { get; set; }
-        public object? Result { get; set; }
-        public bool IsSuccess { get; set; }
-        public string Error { get; set; } = string.Empty;
-        public Exception? Exception { get; set; }
-        public Func<string, Task<IHubconResponse<bool>>> TryRefreshToken { get; set; }
-        public int StatusCode { get; set; }
-    }
+    //[StructLayout(LayoutKind.Sequential, Size = 8)]
+    //public sealed class InvocationContext : IInvocationContext
+    //{
+    //    public IServiceProvider Services { get; set; }
+    //    public IOperationRequest Request { get; set; }
+    //    public CancellationToken CancellationToken { get; set; }
+    //    public object? Result { get; set; }
+    //    public bool IsSuccess { get; set; }
+    //    public string Error { get; set; } = string.Empty;
+    //    public Exception? Exception { get; set; }
+    //    public Func<string, Task<IHubconResponse<bool>>> TryRefreshToken { get; set; }
+    //    public int StatusCode { get; set; }
+    //}
 }

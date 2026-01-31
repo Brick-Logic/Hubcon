@@ -4,7 +4,7 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
 {
     internal static class PipelineResultHandlers
     {
-        internal static Task<IHubconResponse> ResultHandler(object? result)
+        internal static Task<HubconResponse> ResultHandler(object? result)
         {
             if (result is null)
             {
@@ -12,14 +12,14 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             }
             else
             {
-                if (result is IHubconResponse converted)
+                if (result is HubconResponse converted)
                     return Task.FromResult(converted);
 
                 return Task.FromResult(HubconResponse.Ok(result));
             }
         }
 
-        internal static async Task<IHubconResponse> NoResultHandler(object? result)
+        internal static async Task<HubconResponse> NoResultHandler(object? result)
         {
             if (result is Task task)
                 await task;
@@ -27,7 +27,7 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             return HubconResponse.Ok();
         }
 
-        internal static Task<IHubconResponse> StreamResultHandler(object? result)
+        internal static Task<HubconResponse> StreamResultHandler(object? result)
         {
             if (result is IAsyncEnumerable<object?> sub)
             {
@@ -39,20 +39,20 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             }
         }
 
-        internal static async Task<IHubconResponse> WithResultHandler(object? result)
+        internal static async Task<HubconResponse> WithResultHandler(object? result)
         {
             if (result is Task task)
             {
                 var response = await GetTaskResultAsync(task);
 
-                if (response is IHubconResponse converted)
+                if (response is HubconResponse converted)
                     return converted;
 
                 return HubconResponse.Ok(response);
             }
             else
             {
-                if (result is IHubconResponse converted)
+                if (result is HubconResponse converted)
                     return converted;
 
                 return HubconResponse.Ok(result);

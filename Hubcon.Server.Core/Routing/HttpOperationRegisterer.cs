@@ -131,7 +131,7 @@ namespace Hubcon.Server.Core.Routing
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
                         var res = await DefaultEntrypoint.HandleMethodStream(
                             operationRequest, 
-                            HubconTransport.GetDefault<HttpTransport>(), 
+                            HubconTransportAttribute.GetDefault<HttpTransport>(), 
                             services, 
                             wrapper, 
                             cancellationToken);
@@ -190,7 +190,7 @@ namespace Hubcon.Server.Core.Routing
 
                         var res = await DefaultEntrypoint.HandleMethodStream(
                             operationRequest,
-                            HubconTransport.GetDefault<HttpTransport>(),
+                            HubconTransportAttribute.GetDefault<HttpTransport>(),
                             services,
                             wrapper,
                             cancellationToken);
@@ -255,7 +255,7 @@ namespace Hubcon.Server.Core.Routing
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
                         var res = await DefaultEntrypoint.HandleMethodWithResult(
                             operationRequest,
-                            HubconTransport.GetDefault<HttpTransport>(),
+                            HubconTransportAttribute.GetDefault<HttpTransport>(),
                             services,
                             wrapper,
                             cancellationToken);
@@ -309,7 +309,7 @@ namespace Hubcon.Server.Core.Routing
 
                         var res = await DefaultEntrypoint.HandleMethodWithResult(
                             operationRequest,
-                            HubconTransport.GetDefault<HttpTransport>(),
+                            HubconTransportAttribute.GetDefault<HttpTransport>(),
                             services,
                             wrapper,
                             cancellationToken);
@@ -346,7 +346,7 @@ namespace Hubcon.Server.Core.Routing
 
                         var res = await DefaultEntrypoint.HandleMethodVoid(
                             operationRequest,
-                            HubconTransport.GetDefault<HttpTransport>(),
+                            HubconTransportAttribute.GetDefault<HttpTransport>(),
                             services,
                             null,
                             cancellationToken);
@@ -403,7 +403,7 @@ namespace Hubcon.Server.Core.Routing
 
                         var res = await DefaultEntrypoint.HandleMethodVoid(
                             operationRequest,
-                            HubconTransport.GetDefault<HttpTransport>(),
+                            HubconTransportAttribute.GetDefault<HttpTransport>(),
                             services,
                             null,
                             cancellationToken);

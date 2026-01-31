@@ -19,22 +19,16 @@ namespace Hubcon.Client.Core.Configurations
 
         public ConcurrentDictionary<string, IOperationOptions> OperationOptions { get; } = new();
 
-        private bool? websocketMethodsEnabled;
-        public bool WebsocketMethodsEnabled => websocketMethodsEnabled ?? false;
-
-        ConcurrentDictionary<HookType, Func<InvocationContext, Task>> _hooks = new();
-        public IReadOnlyDictionary<HookType, Func<InvocationContext, Task>> Hooks => _hooks;
+        ConcurrentDictionary<HookType, Func<IInvocationContext, Task>> _hooks = new();
+        public IReadOnlyDictionary<HookType, Func<IInvocationContext, Task>> Hooks => _hooks;
 
         public bool RemoteCancellationIsAllowed { get; private set; }
-        public bool HttpAuthIsEnabled { get; private set; } = true;
 
-        public IContractConfigurator<T> UseWebsocketMethods(bool value = true)
-        {
-            websocketMethodsEnabled ??= value;
-            return this;
-        }
+        public HubconTransportAttribute? TransportType { get; private set; } = HubconTransportAttribute.GetDefault<HttpTransport>();
 
-        public Task CallHook(HookType hookType, InvocationContext context)
+        public bool AuthIsEnabled { get; private set;  }
+
+        public Task CallHook(HookType hookType, IInvocationContext context)
         {
             return _hooks.GetOrAdd(hookType, _ => Task.CompletedTask).Invoke(context);
         }
@@ -44,22 +38,6 @@ namespace Hubcon.Client.Core.Configurations
             return OperationOptions.GetOrAdd(operationName, name => new OperationOptions(memberInfo));
         }
 
-        public bool IsWebsocketOperation(string operationName)
-        {
-            if (OperationOptions.TryGetValue(operationName, out IOperationOptions? operationOptions))
-            {
-                return operationOptions.TransportType switch
-                {
-                    TransportType.Default => WebsocketMethodsEnabled,
-                    TransportType.Websockets => true,
-                    TransportType.Http => false,
-                    _ => WebsocketMethodsEnabled
-                };
-            }
-
-            return false;
-        }
-
         public IContractConfigurator<T> ConfigureOperations(Action<Shared.Abstractions.Interfaces.IOperationSelector<T>> configure)
         {
             var options = new GlobalOperationConfigurator<T>(OperationOptions);
@@ -67,7 +45,7 @@ namespace Hubcon.Client.Core.Configurations
             return this;
         }
 
-        public IContractConfigurator<T> AddHook(HookType hookType, Func<InvocationContext, Task> hookDelegate)
+        public IContractConfigurator<T> AddHook(HookType hookType, Func<IInvocationContext, Task> hookDelegate)
         {
             _hooks.TryAdd(hookType, hookDelegate);
             return this;
@@ -79,9 +57,27 @@ namespace Hubcon.Client.Core.Configurations
             return this;
         }
 
-        public IContractConfigurator<T> DisableHttpAuthentication()
+        public IContractConfigurator<T> SetDefaultTransport<TTransport>() where TTransport : HubconTransportAttribute, new()
         {
-            HttpAuthIsEnabled = false;
+            TransportType = HubconTransportAttribute.GetDefault<TTransport>();
+            return this;
+        }
+
+        public IContractConfigurator<T> UseWebSockets()
+        {
+            TransportType = HubconTransportAttribute.GetDefault<WebSocketTransport>();
+            return this;
+        }
+
+        public IContractConfigurator<T> UseHttp()
+        {
+            TransportType = HubconTransportAttribute.GetDefault<WebSocketTransport>();
+            return this;
+        }
+
+        public IContractConfigurator<T> UseNonHubconHttp()
+        {
+            TransportType = HubconTransportAttribute.GetDefault<NonHubconHttpTransport>();
             return this;
         }
     }

@@ -15,21 +15,16 @@ namespace HubconTestClient.Modules
             this.config = config;
         }
 
-        public override void Configure(IServerModuleConfiguration configuration)
+        public override void Configure(IServerModuleConfiguration server)
         {
-            configuration.WithBaseUrl("https://api.openai.com/");
+            server.WithBaseUrl("https://api.openai.com/");
 
-            // Indica que el servidor no es hubcon
-            configuration.NonHubconServer();
-
-            //configuration.AddHeaderProvider("Authorization", services => services.Get...);
-
-            Func<string> test = () => "a";
+            server.UseNonHubconHttp();
 
             // Evita el uso de AuthenticationManager
-            configuration.DisableHttpAuthentication();
+            server.DisableHttpAuthentication();
 
-            configuration.ConfigureHttpClient((x, y) =>
+            server.ConfigureHttpClient((x, y) =>
             {
                 // Autenticacion manual
                 var key = config["OpenAI:ApiKey"];
@@ -37,7 +32,7 @@ namespace HubconTestClient.Modules
             });
 
             // Contrato que va a usar esta config
-            configuration.Implements<IOpenAIContract>();
+            server.Implements<IOpenAIContract>();
         }
     }
 }

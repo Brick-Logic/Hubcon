@@ -50,7 +50,7 @@ namespace Hubcon
         /// <returns></returns>
         public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, Task<TOut>> call) where T : IControllerContract
         {
-            HubconContext.Current.IsWrapped = true;
+            WrappedContext.SetWrapped(true);
             Exception? exception = null;
             IHubconResponse<TOut> response = default!;
 
@@ -89,7 +89,7 @@ namespace Hubcon
         /// <returns></returns>
         public static async ValueTask<IHubconResponse<TOut?>> ExecuteResponse<T, TOut>(this T contract, Func<T, Task<HubconResponse<TOut?>>> call) where T : IControllerContract
         {
-            HubconContext.Current.IsWrapped = true;
+            WrappedContext.SetWrapped(true);
             Exception? exception = null;
             IHubconResponse<TOut?> response = default!;
 
@@ -128,14 +128,14 @@ namespace Hubcon
         /// <returns></returns>
         public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, TOut> call) where T : IControllerContract
         {
-            HubconContext.Current.IsWrapped = true;
+            WrappedContext.SetWrapped(true);
             Exception? exception = null;
             IHubconResponse<TOut?> response = default!;
 
             try
             {
                 var data = call.Invoke(contract);
-                response = HubconContext.Current.GetResponse<TOut>() as IHubconResponse<TOut?> ?? HubconResponse.OkT(data)!;
+                response = HubconContext.Current?.GetResponse<TOut>() as IHubconResponse<TOut?> ?? HubconResponse.OkT(data)!;
             }
             catch (Exception ex) when (HandleException(ex, out exception))
             {
@@ -166,8 +166,7 @@ namespace Hubcon
         /// <returns></returns>
         public static async ValueTask<IHubconResponse<JsonElement>> Execute<T>(this T contract, Func<T, Task> call) where T : IControllerContract
         {
-            var context = HubconContext.Current;
-            context.IsWrapped = true;
+            WrappedContext.SetWrapped(true);
             Exception? exception = null;
             IHubconResponse<JsonElement> response = default!;
             try

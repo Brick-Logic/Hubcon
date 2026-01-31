@@ -7,10 +7,12 @@ namespace Hubcon.Shared.Abstractions.Interfaces
 {
     public interface IContractConfigurator<T>
     {
-        public IContractConfigurator<T> UseWebsocketMethods(bool value = true);
+        public IContractConfigurator<T> SetDefaultTransport<TTransport>() where TTransport : HubconTransportAttribute, new();
         public IContractConfigurator<T> ConfigureOperations(Action<IOperationSelector<T>> selector);
-        public IContractConfigurator<T> AddHook(HookType hookType, Func<InvocationContext, Task> hookDelegate);
+        public IContractConfigurator<T> AddHook(HookType hookType, Func<IInvocationContext, Task> hookDelegate);
         public IContractConfigurator<T> AllowRemoteCancellation(bool value = true);
-        public IContractConfigurator<T> DisableHttpAuthentication();
+        IContractConfigurator<T> UseWebSockets();
+        IContractConfigurator<T> UseHttp();
+        IContractConfigurator<T> UseNonHubconHttp();
     }
 }

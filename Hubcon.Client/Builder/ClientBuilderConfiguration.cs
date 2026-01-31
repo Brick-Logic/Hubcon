@@ -324,11 +324,11 @@ namespace Hubcon.Client.Builder
 
         public IServerModuleConfiguration DisableHttpAuthentication()
         {
-            builder.HttpAuthIsEnabled = false;
+            builder.AuthIsEnabled = false;
             return this;
         }
 
-        public IServerModuleConfiguration AddInterceptor(InterceptorType interceptorType, Func<InvocationContext, Task> interceptorDelegate)
+        public IServerModuleConfiguration AddInterceptor(InterceptorType interceptorType, Func<IInvocationContext, Task> interceptorDelegate)
         {
             builder.AddInterceptor(interceptorType, interceptorDelegate);
             return this;
@@ -341,15 +341,33 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
-        public IServerModuleConfiguration NonHubconServer()
-        {
-            builder.IsNonHubconServer = true;
-            return this;
-        }
-
         public IServerModuleConfiguration UseHttpClientFactory(Func<IServiceProvider, HttpClient> httpClientFactory)
         {
             builder.HttpClientFactory = httpClientFactory;
+            return this;
+        }
+
+        public IServerModuleConfiguration SetDefaultTransport<T>() where T : HubconTransportAttribute, new()
+        {
+            builder.TransportType = HubconTransportAttribute.GetDefault<T>();
+            return this;
+        }
+
+        public IServerModuleConfiguration UseWebSockets()
+        {
+            builder.TransportType = HubconTransportAttribute.GetDefault<WebSocketTransport>();
+            return this;
+        }
+
+        public IServerModuleConfiguration UseHttp()
+        {
+            builder.TransportType = HubconTransportAttribute.GetDefault<WebSocketTransport>();
+            return this;
+        }
+
+        public IServerModuleConfiguration UseNonHubconHttp()
+        {
+            builder.TransportType = HubconTransportAttribute.GetDefault<NonHubconHttpTransport>();
             return this;
         }
     }

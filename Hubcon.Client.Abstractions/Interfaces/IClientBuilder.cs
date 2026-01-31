@@ -45,16 +45,16 @@ namespace Hubcon.Client.Abstractions.Interfaces
         public TokenBucketRateLimiterOptions? HttpFireAndForgetLimiterOptions { get; set; }
 
         bool LoggingEnabled { get; set; }
-        bool HttpAuthIsEnabled { get; set; }
-        bool IsNonHubconServer { get; set; }
+        bool AuthIsEnabled { get; set; }
         Func<IServiceProvider, HttpClient> HttpClientFactory { get; set; }
+        HubconTransportAttribute TransportType { get; set; }
 
         T GetOrCreateClient<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(IServiceProvider services, bool useCached = true) where T : IControllerContract;
         object GetOrCreateClient([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type contractType, IServiceProvider services, bool useCached = true);
         void LoadContractProxy([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type contractType, IServiceCollection services);
         void UseAuthenticationManager<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(IServiceCollection services) where T : class, IAuthenticationManager;
         void ConfigureContract<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(Action<IContractConfigurator<T>>? configure) where T : IControllerContract;
-        void AddInterceptor(InterceptorType interceptorType, Func<InvocationContext, Task> interceptorDelegate);
+        void AddInterceptor(InterceptorType interceptorType, Func<IInvocationContext, Task> interceptorDelegate);
         void EnableHttpEndpointOverloading();
     }
 }

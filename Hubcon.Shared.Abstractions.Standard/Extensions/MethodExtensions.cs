@@ -61,7 +61,7 @@ namespace Hubcon.Shared.Abstractions.Standard.Extensions
                 });
             }
         }
-
+       
         static string GetRuntimeTypeString(Type type)
         {
             if (type.IsGenericType)

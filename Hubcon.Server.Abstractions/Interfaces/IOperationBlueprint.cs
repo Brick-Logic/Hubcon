@@ -40,7 +40,7 @@ namespace Hubcon
         bool HasSubscriptions { get; }
         ObjectFactory ControllerFactory { get; }
 
-        public bool SupportsTransport<T>() where T : HubconTransport
+        public bool SupportsTransport<T>() where T : HubconTransportAttribute
         {
             if (TransportAttributes.IsEmpty)
                 return true;
