@@ -84,9 +84,10 @@ namespace Hubcon
         IServerModuleConfiguration RequirePongResponse(bool value);
 
         /// <summary>
+        /// Disabled. This feature has no effect.
         /// Sets the number of message processors to scale to. The message processors are used to handle incoming messages. 
         /// Scaling them allows for better performance and concurrency in processing messages. 
-        /// Do not set this value too high, as it may lead to performance degradation due to excessive context switching.
+        /// Do not set this value too high, as it may lead to performance degradation.
         /// Default value is 1.
         /// </summary>
         /// <param name="count">The number of processors.</param>

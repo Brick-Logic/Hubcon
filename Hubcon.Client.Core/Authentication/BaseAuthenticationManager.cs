@@ -8,6 +8,7 @@ namespace Hubcon
     {
         public event Action? OnSessionIsActive;
         public event Action? OnSessionIsInactive;
+        public event Action<IAuthResult>? OnTokenRefreshed;
 
         public string? TokenType { get; private set; }
         public string? AccessToken { get; private set; }
@@ -76,7 +77,7 @@ namespace Hubcon
             AccessToken = refresh.AccessToken;
             RefreshToken = refresh.RefreshToken;
             AccessTokenExpiresAt = refresh.ExpiresInSeconds;
-
+            OnTokenRefreshed?.Invoke(refresh);
 
             await SaveSessionAsync();
             OnSessionIsActive?.Invoke();

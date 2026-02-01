@@ -33,7 +33,7 @@ namespace Hubcon.Analyzers.SourceGenerators
             foreach (var i in classSymbol.AllInterfaces)
             {
                 // Validamos Nombre, Cantidad de Argumentos y Namespace
-                if (i.TypeArguments.Length == 1 && i.ContainingNamespace.ToDisplayString() == "Hubcon.ITransportClient")
+                if (i.TypeArguments.Length == 1 && i.ContainingNamespace.ToDisplayString() == "Hubcon.TransportClient")
                 {
                     return (
                         i.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),

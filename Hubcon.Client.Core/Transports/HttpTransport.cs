@@ -19,31 +19,18 @@ using System.Runtime.CompilerServices;
 
 namespace Hubcon.Client.Core.Transports
 {
-    public sealed class HttpTransportClient : ITransportClient<HttpTransport>
+    public sealed class HttpTransportClient : TransportClient<HttpTransport>
     {
-        HttpClient? _httpClient;
+        HttpClient _httpClient = null!;
 
-        private HttpClient GetHttpClient(IClientOperationContext context)
-        {
-            if (_httpClient != null)
-                return _httpClient;
-
-            _httpClient ??= context.ClientOptions.HttpClientFactory.Invoke(context.ServiceProvider);
-            context.ClientOptions.HttpClientOptions?.Invoke(_httpClient, context.ServiceProvider);
-
-            return _httpClient;
-        }
-
-        public async Task<HubconResponse<bool>> CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async Task<HubconResponse<bool>> CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
             var url = "";
             var methodInfo = (context.Member as MethodInfo)!;
             var httpMethod = context.HttpMethodAttribute!;
             var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
-            var httpClient = GetHttpClient(context);
             var converter = context.Converter;
-
             var route = methodInfo.GetRoute(false);
 
             if (httpMethod is HttpPostAttribute)
@@ -77,7 +64,7 @@ namespace Hubcon.Client.Core.Transports
             if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
                 httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
 
-            var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
 
             content?.Dispose();
             httpRequest.Dispose();
@@ -86,14 +73,13 @@ namespace Hubcon.Client.Core.Transports
             return true;
         }
 
-        public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public override async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
             var url = context.HttpUrl;
             var methodInfo = (context.Member as MethodInfo)!;
             var httpMethod = context.HttpMethodAttribute!;
             var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
-            var httpClient = GetHttpClient(context);
             string finalRoute = httpMethod.Template;
 
             Dictionary<string, object> remainingArguments = HttpMessageHelper.GetRemainingArguments(request, context.Converter, ref finalRoute);
@@ -108,7 +94,7 @@ namespace Hubcon.Client.Core.Transports
                 httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
 
             HttpResponseMessage response;
-            response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
             using var stream = await response.Content.ReadAsStreamAsync();
 
@@ -124,24 +110,23 @@ namespace Hubcon.Client.Core.Transports
             response.Dispose();
         }
 
-        public IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }
 
-        public Task<HubconResponse<T>> Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override Task<HubconResponse<T>> Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }
 
-        public async Task<HubconResponse<T>> SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async Task<HubconResponse<T>> SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
             var url = "";
             var methodInfo = (context.Member as MethodInfo)!;
             var httpMethod = context.HttpMethodDefined!;
             var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
-            var httpClient = GetHttpClient(context);
             var converter = context.Converter;
 
             if (context.HttpMethodDefined == HttpMethod.Post || context.HttpMethodDefined == HttpMethod.Put)
@@ -161,7 +146,7 @@ namespace Hubcon.Client.Core.Transports
             if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
                 httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
 
-            HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
+            HttpResponseMessage response = await _httpClient.SendAsync(httpRequest, cancellationToken);
 
             var responseBytes = await response.Content.ReadAsByteArrayAsync();
             var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
@@ -196,6 +181,12 @@ namespace Hubcon.Client.Core.Transports
             var arguments = context.Converter.Serialize(request.Arguments);
             content = new StringContent(arguments, Encoding.UTF8, "application/json");
             url = currentUrl + methodInfo.GetRoute(context.ClientOptions.UseHttpEndpointOverloading).FullRoute;
+        }
+
+        protected override void Build(TransportContext configuration)
+        {
+            _httpClient = configuration.ClientOptions.HttpClientFactory.Invoke(configuration.ProxyServiceProvider);
+            configuration.ClientOptions.HttpClientOptions?.Invoke(_httpClient, configuration.ProxyServiceProvider);;
         }
     }
 }

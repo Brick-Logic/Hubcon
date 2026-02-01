@@ -1,4 +1,5 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Client.Core.Configurations;
 using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.HubconInvocationContext;
 using Hubcon.Shared.Abstractions.Interfaces;
@@ -39,20 +40,22 @@ namespace Hubcon.Client.Core.Proxies
         private IDynamicConverter _converter = null!;
         private IClientOptions _clientOptions = null!;
         private IServiceProvider rootServiceProvider = null!;
+        private IServiceScope serviceScope = null!;
 
         public abstract void SetPropertyValue(string propertyName, object value);
 
         public FrozenDictionary<string, IClientOperationContext> BuildContractProxy(
             IHubconClient client, 
             IClientOptions clientOptions, 
-            IServiceProvider serviceProvider, 
+            IServiceScope serviceScope, 
             ConcurrentDictionary<Type, IContractOptions> contractOptionsDict, 
             IDynamicConverter converter)
         {
             _client = client;
             _converter = converter;
             _clientOptions = clientOptions;
-            rootServiceProvider = serviceProvider;
+            rootServiceProvider = serviceScope.ServiceProvider;
+            this.serviceScope = serviceScope;
 
             Dictionary<string, IClientOperationContext> tempOperations = new();
 
@@ -69,18 +72,19 @@ namespace Hubcon.Client.Core.Proxies
             var env = Environment.GetEnvironmentVariable("HUBCON_OPNAME_DEBUG_ENABLED");
             var useHashed = !bool.TryParse(env, out var parsed) ? true : !parsed;
 
+            IContractOptions contractOptions = clientOptions.GetContractOptions(_contractType);
+            var interceptorManager = new InterceptorManager(rootServiceProvider, clientOptions, contractOptions, null, null);
+
             foreach (var method in methods)
             {
                 var signature = method.GetMethodSignature(false);
-                IContractOptions contractOptions = clientOptions.GetContractOptions(_contractType);
-                IClientOperationContext context = new ClientOperationContext(method, rootServiceProvider, clientOptions, contractOptions, _contractType);
+                IClientOperationContext context = new ClientOperationContext(method, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType);
                 tempOperations.Add(signature, context);
             }
 
             foreach (var prop in _contractType.GetProperties().Where(x => x.PropertyType.IsGenericType && x.PropertyType.GetGenericTypeDefinition() == typeof(ISubscription<>)))
             {
-                IContractOptions contractOptions = clientOptions.GetContractOptions(_contractType);
-                IClientOperationContext context = new ClientOperationContext(prop, rootServiceProvider, clientOptions, contractOptions, _contractType);
+                IClientOperationContext context = new ClientOperationContext(prop, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType);
                 tempOperations.Add(prop.Name, context);
             }
 
@@ -98,6 +102,16 @@ namespace Hubcon.Client.Core.Proxies
                 using var scope = rootServiceProvider.CreateScope();
                 var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped, cancellationToken);
                 HubconContext.UseContext(callContext);
+
+                var interceptorContext = new InterceptorManager(
+                    scope.ServiceProvider,
+                    context.ClientOptions,
+                    context.ContractOptions, 
+                    context.OperationOptions, 
+                    callContext);
+
+                InterceptorContext.UseContext(interceptorContext);
+
                 return _client.SendAsync<T>(request, context, cancellationToken);
             }
             else
@@ -116,6 +130,15 @@ namespace Hubcon.Client.Core.Proxies
                 using var scope = rootServiceProvider.CreateScope();
                 var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped, cancellationToken);
                 HubconContext.UseContext(callContext);
+
+                var interceptorContext = new InterceptorManager(
+                    scope.ServiceProvider,
+                    context.ClientOptions,
+                    context.ContractOptions,
+                    context.OperationOptions,
+                    callContext);
+
+                InterceptorContext.UseContext(interceptorContext);
 
                 return _client.CallAsync(request, context, cancellationToken);
             }
@@ -136,6 +159,15 @@ namespace Hubcon.Client.Core.Proxies
                 var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped, cancellationToken);
                 HubconContext.UseContext(callContext);
 
+                var interceptorContext = new InterceptorManager(
+                    scope.ServiceProvider,
+                    context.ClientOptions,
+                    context.ContractOptions,
+                    context.OperationOptions,
+                    callContext);
+
+                InterceptorContext.UseContext(interceptorContext);
+
                 return _client.Ingest<T>(request, context, cancellationToken);
             }
             else
@@ -154,6 +186,15 @@ namespace Hubcon.Client.Core.Proxies
                 using var scope = rootServiceProvider.CreateScope();
                 var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped, cancellationToken);
                 HubconContext.UseContext(callContext);
+
+                var interceptorContext = new InterceptorManager(
+                    scope.ServiceProvider,
+                    context.ClientOptions,
+                    context.ContractOptions,
+                    context.OperationOptions,
+                    callContext);
+
+                InterceptorContext.UseContext(interceptorContext);
 
                 return _client.Ingest<JsonElement>(request, context, cancellationToken);
             }
@@ -174,6 +215,15 @@ namespace Hubcon.Client.Core.Proxies
                 using var scope = rootServiceProvider.CreateScope();
                 var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped, cancellationToken);
                 HubconContext.UseContext(callContext);
+
+                var interceptorContext = new InterceptorManager(
+                    scope.ServiceProvider,
+                    context.ClientOptions,
+                    context.ContractOptions,
+                    context.OperationOptions,
+                    callContext);
+
+                InterceptorContext.UseContext(interceptorContext);
 
                 IAsyncEnumerable<JsonElement> stream = _client.GetStream(request, context, cancellationToken);
 

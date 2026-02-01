@@ -195,7 +195,7 @@ namespace Hubcon.Client.Builder
             var newClient = (BaseContractProxy)scopedServices.GetRequiredService(proxyType);
             var converter = scopedServices.GetRequiredService<IDynamicConverter>();
 
-            var operations = newClient.BuildContractProxy(hubconClient!, this, scopedServices, _contractOptions, converter);
+            var operations = newClient.BuildContractProxy(hubconClient!, this, contractScope, _contractOptions, converter);
 
             static IEnumerable<PropertyInfo> CheckType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type x)
                 => x.GetProperties().Where(CheckProperty);

@@ -4,16 +4,16 @@ using Hubcon.Client.Core.Helpers;
 using Hubcon.Client.Core.Transports;
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Core.Context;
 using Hubcon.Shared.Core.Extensions;
-using Hubcon.Shared.Core.Websockets.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.HubconInvocationContext
@@ -31,9 +31,9 @@ namespace Hubcon.Client.Core.HubconInvocationContext
         public Func<IAuthenticationManager>? AuthenticationManagerFactory { get; }
         public ITransportClient Transport { get; }
         public bool RemoteCancellationIsAllowed { get; }
-        public IServiceProvider ServiceProvider => HubconContext.Current.Services;
+        public IServiceProvider ScopeServiceProvider => HubconContext.Current?.Services ?? RootServiceProvider;
         public IServiceProvider RootServiceProvider { get; }
-        public CallContext CallContext => HubconContext.Current;
+        public IInvocationContext CallContext => HubconContext.Current;
         public List<Attribute> Attributes { get; }
         public bool RequiresAuthentication { get; }
         public HttpMethod? HttpMethodDefined { get; }
@@ -46,7 +46,7 @@ namespace Hubcon.Client.Core.HubconInvocationContext
         public string WebSocketUrl { get; }
         public string HttpUrl { get; }
 
-        public ClientOperationContext(MemberInfo member, IServiceProvider serviceProvider, IClientOptions clientOptions, IContractOptions contractOptions, Type contractType)
+        public ClientOperationContext(MemberInfo member, InterceptorManager interceptorManager, IServiceProvider serviceProvider, IClientOptions clientOptions, IContractOptions contractOptions, Type contractType)
         {
             IsMethod = member is MethodInfo;
             Member = member;
@@ -122,9 +122,13 @@ namespace Hubcon.Client.Core.HubconInvocationContext
 
                 HttpGetAttribute? verb = Member.GetCustomAttribute<HttpGetAttribute>();
                 HttpMethodDefined = HttpMethodAttribute != null ? HttpMethodAttribute.HttpMethod : HttpMethod.Get;
-            }  
-           
-            Uri = ClientOptions.BaseUri ?? throw new ArgumentNullException("Base uri can't be null.");
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
+
+                Uri = ClientOptions.BaseUri ?? throw new ArgumentNullException("Base uri can't be null.");
             string baseRestHttpUrl = string.Empty;
 
             if (string.IsNullOrWhiteSpace(clientOptions.BaseUri?.Host))
@@ -143,6 +147,25 @@ namespace Hubcon.Client.Core.HubconInvocationContext
 
             var httpUrl = $"{BaseUrl.TrimEnd('/')}{ClientOptions.HttpPrefix}";
             HttpUrl = UseSecureConnection ? $"https://{httpUrl}" : $"http://{httpUrl}";
+
+            if (!Transport.IsBuilt())
+            {
+                var transportConfiguration = new TransportContext(
+                    RootServiceProvider,
+                    interceptorManager,
+                    ClientOptions,
+                    ContractOptions,
+                    Uri,
+                    AuthenticationManagerFactory,
+                    BaseUrl,
+                    OriginalUrl,
+                    clientOptions.UseSecureConnection,
+                    Converter,
+                    WebSocketUrl,
+                    HttpUrl);
+
+                Transport.Build(transportConfiguration);
+            }
         }
 
         private HttpMethodDataAttribute? TryFindHttpMethod(MemberInfo member)
@@ -157,40 +180,30 @@ namespace Hubcon.Client.Core.HubconInvocationContext
             else return null;
         }
 
-        public async Task CallHooks(HookType hookType)
-        {
-            var context = CallContext;
-
-            if (context?.Request == null)
-                return;
-
-            await OperationOptions.CallHook(hookType, context);
-            await ContractOptions.CallHook(hookType, context);
-        }
-
-        public async Task CallInterceptor(InterceptorType interceptorType)
-        {
-            var context = CallContext;
-
-            if (context?.Request == null)
-                return;
-
-            await ClientOptions.CallInterceptor(interceptorType, context);
-        }
-
-        public async Task CallValidationHooks()
-        {
-            var context = CallContext;
-
-            if (context?.Request == null)
-                return;
-
-            await OperationOptions.CallValidationHook(ServiceProvider, context.Request!, context.CancellationToken);
-        }
-
         public async Task AcquireRateLimiter()
         {
             await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, OperationOptions.RateBucket);
+        }
+
+        public async Task CallHooksAndInterceptors(HookType hookType, CancellationToken cancellationToken = default)
+        {
+            var interceptorManager = InterceptorContext.Current;
+            if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopeServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
+            await InterceptorContext.Current.CallHooksAndInterceptors(hookType, cancellationToken);
+        }
+
+        public async Task CallHooks(HookType hookType, CancellationToken cancellationToken = default)
+        {
+            var interceptorManager = InterceptorContext.Current;
+            if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopeServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
+            await InterceptorContext.Current.CallHooks(hookType, cancellationToken);
+        }
+
+        public async Task CallValidationHooks(CancellationToken cancellationToken = default)
+        {
+            var interceptorManager = InterceptorContext.Current;
+            if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopeServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
+            await InterceptorContext.Current.CallValidationHooks(cancellationToken);
         }
     }
 }

@@ -2,9 +2,7 @@
 using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.Extensions;
 using Hubcon.Client.Core.Helpers;
-using Hubcon.Client.Core.HubconInvocationContext;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets;
 using Hubcon.Shared.Core.Websockets.Events;
@@ -43,6 +41,7 @@ namespace Hubcon.Client.Core.Websockets
     public sealed class HubconWebSocketClient : IAsyncDisposable, IUnsubscriber
     {
         private readonly Uri _uri;
+        private readonly TransportContext context;
         private readonly IDynamicConverter converter;
         private readonly IClientOptions options;
         private readonly IServiceProvider serviceProvider;
@@ -91,8 +90,6 @@ namespace Hubcon.Client.Core.Websockets
 
         public IClientOptions ClientOptions { get; set; }
 
-        private IClientOperationContext _context; 
-
         private System.Timers.Timer? _pingTimer;
         private System.Timers.Timer? _timeoutTimer;
         private List<Task?> _processingTasks;
@@ -105,18 +102,17 @@ namespace Hubcon.Client.Core.Websockets
         private readonly Channel<TrimmedMemoryOwner> _messageChannel;
         private readonly Channel<byte[]> _sendChannel;
 
-        public HubconWebSocketClient(Uri uri, IClientOperationContext context, ILogger<HubconWebSocketClient>? logger = null)
+        public HubconWebSocketClient(Uri uri, TransportContext context, ILogger<HubconWebSocketClient>? logger = null)
         {
+            this.context = context;
             _pongStream = new GenericObservable<PongMessage>(context.Converter);
             _errorStream = new GenericObservable<Exception>(context.Converter);
             _uri = uri;
-            _context = context;
             this.logger = logger;
             options = context.ClientOptions;
             converter = context.Converter;
-            serviceProvider = context.ServiceProvider;
             ClientOptions = context.ClientOptions;
-
+            serviceProvider = context.ProxyServiceProvider;
 
             _messageChannel = Channel.CreateBounded<TrimmedMemoryOwner>(
                 new BoundedChannelOptions(20000 * options.MessageProcessorsCount)
@@ -507,12 +503,12 @@ namespace Hubcon.Client.Core.Websockets
                                 _heartbeatWatcher?.NotifyHeartbeat();
                                 _pongStream.OnNext(pongMessage);
 
-                                //await ClientOptions.CallInterceptor(InterceptorType.OnPong, GeneralContext);
+                                await context.InterceptorManager.CallInterceptor(InterceptorType.OnPong);
                                 break;
 
                             case MessageType.subscription_data:
                                 var eventData = new SubscriptionDataMessage(tmo, message.Id, message.Type);
-                                logger?.LogInformation("Received data");
+
                                 if (eventData?.Id != null && _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
                                 {
                                     sub.OnNextElement(eventData.Data);
@@ -651,7 +647,7 @@ namespace Hubcon.Client.Core.Websockets
                     || _webSocket?.State is WebSocketState.CloseReceived
                     || _webSocket?.State is WebSocketState.CloseSent)
                 {
-                    await _context.CallInterceptor(InterceptorType.OnReconnect);
+                    await context.InterceptorManager.CallInterceptor(InterceptorType.OnReconnect, _cts.Token);
                 }
 
                 int attempt = 0;
@@ -680,7 +676,7 @@ namespace Hubcon.Client.Core.Websockets
                         if (LoggingEnabled)
                             logger?.LogInformation("Intentando conectar...");
 
-                        _context.ClientOptions.WebSocketOptions?.Invoke(_webSocket.Options, serviceProvider);
+                        ClientOptions.WebSocketOptions?.Invoke(_webSocket.Options, serviceProvider);
 
                         var uriBuilder = new UriBuilder(_uri);
                         var token = AuthorizationTokenProvider?.Invoke();
@@ -689,7 +685,7 @@ namespace Hubcon.Client.Core.Websockets
                             uriBuilder.AddQueryParameter("access_token", token);
 
                         _websocketCts = new CancellationTokenSource();
-                        await _context.CallInterceptor(InterceptorType.OnConnecting);
+                        await context.InterceptorManager.CallInterceptor(InterceptorType.OnConnecting, _cts.Token);
                         await _webSocket.ConnectAsync(uriBuilder.Uri, _websocketCts.Token);
 
                         if (LoggingEnabled)
@@ -813,12 +809,12 @@ namespace Hubcon.Client.Core.Websockets
                             }
                         }
 
-                        await _context.CallInterceptor(InterceptorType.OnConnected);
+                        await context.InterceptorManager.CallInterceptor(InterceptorType.OnConnected, _cts.Token);
                         return;
                     }
                     catch (Exception ex)
                     {
-                        await _context.CallInterceptor(InterceptorType.OnError);
+                        await context.InterceptorManager.CallInterceptor(InterceptorType.OnError, _cts.Token);
 
                         _errorStream.OnNext(ex);
 
@@ -903,30 +899,27 @@ namespace Hubcon.Client.Core.Websockets
         {
             if (!IsReady) return;
 
-            var context = _context.CallContext;
-            context.TryRefreshToken = TryRefreshToken;
-
             try
             {
                 if (LoggingEnabled)
-                    logger?.LogError($"Ping invocado...");
+                    logger?.LogInformation($"Ping invocado...");
 
                 if (_webSocket?.State == WebSocketState.Open)
                 {
                     await SendMessageAsync(new PingMessage(Guid.NewGuid()));
 
                     if (LoggingEnabled)
-                        logger?.LogError($"Ping enviado.");
+                        logger?.LogInformation($"Ping enviado.");
                 }
 
                 if (_webSocket != null)
                 {
-                    await _context.CallInterceptor(InterceptorType.OnPing);
+                    await context.InterceptorManager.CallInterceptor(InterceptorType.OnPing, _cts.Token);
                 }
             }
             catch (Exception ex)
             {
-                await _context.CallInterceptor(InterceptorType.OnError);
+                await context.InterceptorManager.CallInterceptor(InterceptorType.OnError, _cts.Token);
 
                 if (LoggingEnabled)
                     logger?.LogError($"Error en PingMessageLoop: {ex.Message}");

@@ -7,6 +7,7 @@ namespace Hubcon
     {
         public abstract event Action? OnSessionIsActive;
         public abstract event Action? OnSessionIsInactive;
+        public abstract event Action<IAuthResult>? OnTokenRefreshed;
 
         string? AccessToken { get; }
         DateTime? AccessTokenExpiresAt { get; }

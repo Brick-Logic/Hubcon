@@ -17,6 +17,10 @@ namespace Hubcon.Shared.Abstractions.Models
         public Exception? Exception { get; }
         public Func<string, Task<HubconResponse<bool>>>? TryRefreshToken { get; }
         public bool HasError { get; }
+
+        IHubconResponse<T>? GetResponse<T>();
+        void SetException(Exception ex);
+        void SetResponse<T>(IHubconResponse<T> response);
     }
 
     //[StructLayout(LayoutKind.Sequential, Size = 8)]

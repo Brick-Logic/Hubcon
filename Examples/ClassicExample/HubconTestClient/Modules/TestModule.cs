@@ -15,7 +15,7 @@ namespace HubconTestClient.Modules
 
         public override void Configure(IServerModuleConfiguration server)
         {
-            server.WithBaseUrl("localhost:5000");
+            server.WithBaseUrl("http://localhost:5000");
 
             server.EnableWebsocketAutoReconnect(true);
             server.GlobalLimit(200000000);
@@ -93,7 +93,6 @@ namespace HubconTestClient.Modules
             });
 
             server.SetWebsocketPingInterval(TimeSpan.FromSeconds(15));
-            server.ScaleMessageProcessors(4);
 
             server.ConfigureHttpClient((options, services) =>
             {

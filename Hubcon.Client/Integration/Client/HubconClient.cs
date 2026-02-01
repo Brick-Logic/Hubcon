@@ -43,22 +43,21 @@ namespace Hubcon.Client.Integration.Client
 
             try
             {
-                await context.OperationOptions.CallValidationHook(context.ServiceProvider, request, cancellationToken);
-                await context.CallHooks(HookType.OnSend);
+                await context.OperationOptions.CallValidationHook(context.ScopeServiceProvider, request, cancellationToken);
+                await context.CallHooks(HookType.OnSend, cancellationToken);
 
                 var result = await context.Transport.SendAsync<T>(request, context, cancellationToken);
                 result ??= HubconResponse.Fail<T>("Received an empty response");
                 HubconContext.Current.SetResponse(result);
 
-                await context.CallHooks(HookType.OnAfterSend);
-                await context.CallHooks(HookType.OnResponse);
+                await context.CallHooks(HookType.OnAfterSend, cancellationToken);
+                await context.CallHooks(HookType.OnResponse, cancellationToken);
 
                 return result.Data;
             }
             catch (OperationCanceledException)
             {
-                await context.CallHooks(HookType.OnError);
-                await context.CallInterceptor(InterceptorType.OnError);
+                await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
 
                 if (HubconContext.Current?.IsWrapped == true)
                 {
@@ -70,8 +69,7 @@ namespace Hubcon.Client.Integration.Client
             }
             catch (Exception ex)
             {
-                await context.CallHooks(HookType.OnError);
-                await context.CallInterceptor(InterceptorType.OnError);
+                await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
 
                 if (HubconContext.Current?.IsWrapped == true)
                 {
@@ -95,8 +93,7 @@ namespace Hubcon.Client.Integration.Client
             }
             catch (OperationCanceledException)
             {
-                await context.CallHooks(HookType.OnError);
-                await context.CallInterceptor(InterceptorType.OnError);
+                await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
 
                 if (HubconContext.Current?.IsWrapped == true)
                 {
@@ -108,8 +105,7 @@ namespace Hubcon.Client.Integration.Client
             }
             catch (Exception ex)
             {
-                await context.CallHooks(HookType.OnError);
-                await context.CallInterceptor(InterceptorType.OnError);
+                await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
 
                 if (HubconContext.Current?.IsWrapped == true)
                 {
@@ -129,8 +125,7 @@ namespace Hubcon.Client.Integration.Client
 
             IAsyncEnumerable<JsonElement>? enumerable = null;
 
-            await context.CallHooks(HookType.OnSend);
-            await context.CallInterceptor(InterceptorType.OnSend);
+            await context.CallHooksAndInterceptors(HookType.OnSend, cancellationToken);
 
             try
             {
@@ -141,8 +136,7 @@ namespace Hubcon.Client.Integration.Client
             }
             catch (Exception ex)
             {
-                await context.CallHooks(HookType.OnError);
-                await context.CallInterceptor(InterceptorType.OnError);
+                await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
 
                 if (HubconContext.Current?.IsWrapped == true)
                 {
@@ -155,8 +149,8 @@ namespace Hubcon.Client.Integration.Client
 
             var enumerator = enumerable.GetAsyncEnumerator(cancellationToken);
 
-            await context.CallHooks(HookType.OnSubscribed);
-            await context.CallInterceptor(InterceptorType.OnSubscribed);
+            await context.CallHooksAndInterceptors(HookType.OnSubscribed, cancellationToken);
+
 
             while (true)
             {
@@ -172,8 +166,7 @@ namespace Hubcon.Client.Integration.Client
                 }
                 catch (Exception ex)
                 {
-                    await context.CallHooks(HookType.OnError);
-                    await context.CallInterceptor(InterceptorType.OnError);
+                    await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
 
                     if (HubconContext.Current?.IsWrapped == true)
                     {
@@ -187,11 +180,10 @@ namespace Hubcon.Client.Integration.Client
                 yield return result;
             }
 
-            await context.CallHooks(HookType.OnUnsubscribed);
-            await context.CallInterceptor(InterceptorType.OnUnsubscribed);
+            await context.CallHooksAndInterceptors(HookType.OnUnsubscribed, cancellationToken);
         }
 
-        
+
 
         public async Task<T> Ingest<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken)
         {
@@ -200,26 +192,21 @@ namespace Hubcon.Client.Integration.Client
 
             try
             {
-                await context.CallHooks(HookType.OnSend);
-                await context.CallInterceptor(InterceptorType.OnSend);
+                await context.CallHooksAndInterceptors(HookType.OnSend, cancellationToken);
 
                 var response = await context.Transport.Ingest<T>(request, context, cancellationToken);
 
                 if (HubconContext.Current?.IsWrapped == true)
                     HubconContext.Current.SetResponse(response);
 
-                await context.CallHooks(HookType.OnAfterSend);
-                await context.CallInterceptor(InterceptorType.OnAfterSend);
-
-                await context.CallHooks(HookType.OnResponse);
-                await context.CallInterceptor(InterceptorType.OnResponse);
+                await context.CallHooksAndInterceptors(HookType.OnAfterSend, cancellationToken);
+                await context.CallHooksAndInterceptors(HookType.OnResponse, cancellationToken);
 
                 return response.Data;
             }
             catch (Exception ex)
             {
-                await context.CallHooks(HookType.OnError);
-                await context.CallInterceptor(InterceptorType.OnError);
+                await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
 
                 if (HubconContext.Current?.IsWrapped == true)
                 {
@@ -239,8 +226,7 @@ namespace Hubcon.Client.Integration.Client
 
             IAsyncEnumerable<JsonElement>? enumerable = null;
 
-            await context.CallHooks(HookType.OnSend);
-            await context.CallInterceptor(InterceptorType.OnSend);
+            await context.CallHooksAndInterceptors(HookType.OnSend, cancellationToken);
 
             try
             {
@@ -251,8 +237,7 @@ namespace Hubcon.Client.Integration.Client
             }
             catch (Exception ex)
             {
-                await context.CallHooks(HookType.OnError);
-                await context.CallInterceptor(InterceptorType.OnError);
+                await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
 
                 if (HubconContext.Current?.IsWrapped == true)
                 {
@@ -265,8 +250,8 @@ namespace Hubcon.Client.Integration.Client
 
             var enumerator = enumerable.GetAsyncEnumerator(cancellationToken);
 
-            await context.CallHooks(HookType.OnSubscribed);
-            await context.CallInterceptor(InterceptorType.OnSubscribed);
+            await context.CallHooksAndInterceptors(HookType.OnSubscribed, cancellationToken);
+
 
             while (true)
             {
@@ -282,8 +267,7 @@ namespace Hubcon.Client.Integration.Client
                 }
                 catch (Exception ex)
                 {
-                    await context.CallHooks(HookType.OnError);
-                    await context.CallInterceptor(InterceptorType.OnError);
+                    await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
 
                     if (HubconContext.Current?.IsWrapped == true)
                     {
@@ -297,8 +281,7 @@ namespace Hubcon.Client.Integration.Client
                 yield return result;
             }
 
-            await context.CallHooks(HookType.OnUnsubscribed);
-            await context.CallInterceptor(InterceptorType.OnUnsubscribed);
+            await context.CallHooksAndInterceptors(HookType.OnUnsubscribed, cancellationToken);
         }
     }
 }

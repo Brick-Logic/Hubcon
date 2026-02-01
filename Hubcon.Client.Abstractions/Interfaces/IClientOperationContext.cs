@@ -1,11 +1,12 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Core.Context;
+using Hubcon.Shared.Abstractions.Models;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hubcon
@@ -27,9 +28,9 @@ namespace Hubcon
         HttpMethod? HttpMethodDefined { get; }
         bool RequiresAuthentication { get; }
         List<Attribute> Attributes { get; }
-        IServiceProvider ServiceProvider { get; }
+        IServiceProvider ScopeServiceProvider { get; }
         IServiceProvider RootServiceProvider { get; }
-        CallContext CallContext { get; }
+        IInvocationContext CallContext { get; }
         HttpMethodDataAttribute? HttpMethodAttribute { get; }
         bool UseSecureConnection { get; }
         string BaseUrl { get; }
@@ -39,8 +40,8 @@ namespace Hubcon
         string HttpUrl { get; }
 
         Task AcquireRateLimiter();
-        public Task CallHooks(HookType hookType);
-        Task CallInterceptor(InterceptorType interceptorType);
-        public Task CallValidationHooks();
+        Task CallHooks(HookType hookType, CancellationToken cancellationToken = default);
+        Task CallHooksAndInterceptors(HookType hookType, CancellationToken cancellationToken = default);
+        Task CallValidationHooks(CancellationToken cancellationToken = default);
     }
 }

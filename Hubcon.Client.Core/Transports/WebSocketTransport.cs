@@ -1,20 +1,11 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Core.Configurations;
-using Hubcon.Client.Core.Helpers;
 using Hubcon.Client.Core.Websockets;
-using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Websockets.Events;
-using Hubcon.Shared.Core.Websockets.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reactive.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
@@ -22,54 +13,28 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Transports
 {
-    public sealed class WebSocketTransportClient : ITransportClient<WebSocketTransport>
+    public sealed class WebSocketTransportClient : TransportClient<WebSocketTransport>
     {
-        HubconWebSocketClient client = null!;
-        private readonly IDynamicConverter converter;
+        HubconWebSocketClient _client = null!;
+        private readonly ILogger<HubconWebSocketClient> logger;
 
-        public WebSocketTransportClient(IDynamicConverter converter)
+        public WebSocketTransportClient(ILogger<HubconWebSocketClient> logger)
         {
-            this.converter = converter;
+            this.logger = logger;
         }
 
-        private HubconWebSocketClient GetClient(IClientOperationContext context)
+        public override async Task<HubconResponse<bool>> CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
-            if (client == null)
-            {
-                ILogger<HubconWebSocketClient> logger = context.ServiceProvider.GetService<ILogger<HubconWebSocketClient>>()!;
-                client = new HubconWebSocketClient(new Uri(context.WebSocketUrl), context, logger);
-
-                if (context.AuthenticationManagerFactory != null)
-                {
-                    var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
-                    if (authenticationManager != null)
-                    {
-                        authenticationManager.OnSessionIsInactive += async () => await client.Disconnect();
-                        client.AuthorizationTokenProvider = () => authenticationManager.AccessToken;
-                    }
-                }
-            }
-
-            return client;
-        }
-
-        public async Task<HubconResponse<bool>> CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
-        {
-            var client = GetClient(context);
-            context.CallContext.TryRefreshToken ??= client.TryRefreshToken;
-            await client.SendAsync(request, context.RemoteCancellationIsAllowed, cancellationToken);
+            await _client.SendAsync(request, context.RemoteCancellationIsAllowed, cancellationToken);
             return true;
         }
 
-        public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public override async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            var client = GetClient(context);
             IObservable<JsonElement> observable;
-            context.CallContext.TryRefreshToken ??= client.TryRefreshToken;
+            observable = await _client.Stream<JsonElement>(request, context.RemoteCancellationIsAllowed, cancellationToken);
 
-            observable = await client.Stream<JsonElement>(request, context.RemoteCancellationIsAllowed, cancellationToken);
-
-            var observer = AsyncObserver.Create<JsonElement>(converter);
+            var observer = AsyncObserver.Create<JsonElement>(context.Converter);
             var enumerable = observer.GetAsyncEnumerable(cancellationToken);
 
             using (observable.Subscribe(observer))
@@ -89,15 +54,13 @@ namespace Hubcon.Client.Core.Transports
             }
         }
 
-        public async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public override async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            var client = GetClient(context);
-            context.CallContext.TryRefreshToken ??= client.TryRefreshToken;
-            IObservable<JsonElement> observable = await client.Subscribe<JsonElement>(request, context.RemoteCancellationIsAllowed);
+            IObservable<JsonElement> observable = await _client.Subscribe<JsonElement>(request, context.RemoteCancellationIsAllowed);
 
             var options = new BoundedChannelOptions(5000);
 
-            var observer = AsyncObserver.Create<JsonElement>(converter, options);
+            var observer = AsyncObserver.Create<JsonElement>(context.Converter, options);
 
             try
             {
@@ -122,19 +85,40 @@ namespace Hubcon.Client.Core.Transports
             }
         }
 
-        public async Task<HubconResponse<T>> Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async Task<HubconResponse<T>> Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
-            var client = GetClient(context);
-            context.CallContext.TryRefreshToken ??= client.TryRefreshToken;
-            var response = await client.IngestMultiple<T>(request, context.RemoteCancellationIsAllowed, context.ClientOptions, context.OperationOptions, cancellationToken);
+            var response = await _client.IngestMultiple<T>(request, context.RemoteCancellationIsAllowed, context.ClientOptions, context.OperationOptions, cancellationToken);
             return response;
         }
 
-        public async Task<HubconResponse<T>> SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async Task<HubconResponse<T>> SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
-            var client = GetClient(context);
-            context.CallContext.TryRefreshToken ??= client.TryRefreshToken;
-            return await client.InvokeAsync<T>(request, context.RemoteCancellationIsAllowed, cancellationToken);
+            return await _client.InvokeAsync<T>(request, context.RemoteCancellationIsAllowed, cancellationToken);
+        }
+
+        protected override void Build(TransportContext context)
+        {
+            _client = new HubconWebSocketClient(new Uri(context.WebSocketUrl), context, logger);
+
+            if (context.AuthenticationManagerFactory != null)
+            {
+                var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
+                if (authenticationManager != null)
+                {
+                    authenticationManager.OnSessionIsInactive += async () => await _client.Disconnect();
+                    authenticationManager.OnTokenRefreshed += async (result) =>
+                    {
+                        if (context.ClientOptions.LoggingEnabled)
+                            logger.LogInformation("Refreshing token in WebSocketTransport...");
+
+                        var response = await _client.TryRefreshToken(authenticationManager.AccessToken!);
+
+                        if (context.ClientOptions.LoggingEnabled)
+                            logger.LogInformation($"Token refresh response: {response.Success} | Message: {response.Message}");
+                    };
+                    _client.AuthorizationTokenProvider = () => authenticationManager.AccessToken;
+                }
+            }
         }
     }
 }
