@@ -512,7 +512,7 @@ namespace Hubcon.Client.Core.Websockets
 
                             case MessageType.subscription_data:
                                 var eventData = new SubscriptionDataMessage(tmo, message.Id, message.Type);
-
+                                logger?.LogInformation("Received data");
                                 if (eventData?.Id != null && _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
                                 {
                                     sub.OnNextElement(eventData.Data);

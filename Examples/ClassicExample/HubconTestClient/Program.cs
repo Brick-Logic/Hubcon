@@ -1,4 +1,6 @@
 ﻿using Hubcon;
+using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Serialization;
 using HubconTestClient.Auth;
 using HubconTestClient.Contracts;
@@ -170,47 +172,47 @@ internal class Program
         await Task.Delay(100);
 
 
-        _sw = Stopwatch.StartNew();
-        var ts = TimeSpan.FromSeconds(1);
-        var worker = new System.Timers.Timer();
         int clientCount = 0;
-        worker.Interval = 1000;
-        worker.Elapsed += (sender, eventArgs) =>
-        {
-            var avgRequestsPerSec = _finishedRequestsCount - _lastRequests;
+        //_sw = Stopwatch.StartNew();
+        //var ts = TimeSpan.FromSeconds(1);
+        //var worker = new System.Timers.Timer();
+        //worker.Interval = 1000;
+        //worker.Elapsed += (sender, eventArgs) =>
+        //{
+        //    var avgRequestsPerSec = _finishedRequestsCount - _lastRequests;
 
-            double avgLatency = 0;
-            double p50 = 0, p95 = 0, p99 = 0;
+        //    double avgLatency = 0;
+        //    double p50 = 0, p95 = 0, p99 = 0;
 
-            var latenciesSnapshot = Latencies.ToArray();
-            Latencies.Clear();
+        //    var latenciesSnapshot = Latencies.ToArray();
+        //    Latencies.Clear();
 
-            if (latenciesSnapshot.Length > 0)
-            {
-                Array.Sort(latenciesSnapshot);
-                avgLatency = latenciesSnapshot.Average();
+        //    if (latenciesSnapshot.Length > 0)
+        //    {
+        //        Array.Sort(latenciesSnapshot);
+        //        avgLatency = latenciesSnapshot.Average();
 
-                p50 = Percentile(latenciesSnapshot, 50);
-                p95 = Percentile(latenciesSnapshot, 95);
-                p99 = Percentile(latenciesSnapshot, 99);
-            }
+        //        p50 = Percentile(latenciesSnapshot, 50);
+        //        p95 = Percentile(latenciesSnapshot, 95);
+        //        p99 = Percentile(latenciesSnapshot, 99);
+        //    }
 
-            _maxReqs = Math.Max(_maxReqs, avgRequestsPerSec);
+        //    _maxReqs = Math.Max(_maxReqs, avgRequestsPerSec);
 
-            logger.LogInformation($" Client count: {clientCount} | Requests: {_finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {_maxReqs} | " +
-                                  $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
+        //    logger.LogInformation($" Client count: {clientCount} | Requests: {_finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {_maxReqs} | " +
+        //                          $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
 
-            var allocated = GC.GetTotalMemory(forceFullCollection: false);
-            logger.LogInformation($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {_sw.Elapsed}");
+        //    var allocated = GC.GetTotalMemory(forceFullCollection: false);
+        //    logger.LogInformation($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {_sw.Elapsed}");
 
-            _lastRequests = _finishedRequestsCount;
-            _sw.Restart();
-        };
-        worker.Start();
+        //    _lastRequests = _finishedRequestsCount;
+        //    _sw.Restart();
+        //};
+        //worker.Start();
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 512
+            MaxDegreeOfParallelism = 128
         };
 
         int rps = 9999999;
@@ -354,8 +356,8 @@ internal class Program
         logger.LogInformation("Probando streaming por SSE, pidiendo 10 eventos...");
 
         var eventos = 0;
-        var stream = await client.Execute(x => x.GetMessages(10));
-        await foreach (var item in stream.Data!)
+        //var stream = await client.Execute(x => x.GetMessages(10));
+        await foreach (var item in client.GetMessages(10))
         {
             logger.LogInformation($"Evento recibido: {item}");
             eventos++;
@@ -383,7 +385,7 @@ internal class Program
                 logger.LogInformation("Cancelacion OK.");
             else
             {
-                logger.LogInformation($"FAILED: {e}");
+                throw new Exception($"Error en la cancelación: {e}");
             }
         }
     }
@@ -392,9 +394,12 @@ internal class Program
     {
         logger.LogWarning("Probando invocación con retorno...");
 
-        var temp = await client.Execute(x => x.GetTemperatureFromServer(""));
+        var response = await client.Execute(x => x.GetTemperatureFromServer(""));
 
-        logger.LogInformation($"Invocación OK. Datos recibidos: {temp}");
+        if (response.Success)
+            logger.LogInformation($"Invocación OK. Datos recibidos: {response.Data}");
+        else
+            throw new Exception($"Error de invocacion.");
     }
 
     private static async Task TestSubscriptions(IUserContract client, ILogger<IUserContract> logger)
@@ -477,12 +482,12 @@ internal class Program
     private static async Task TestInvokeNoParameters(ISecondTestContract client2, ILogger<IUserContract> logger)
     {
         logger.LogWarning($"Probando invocación sin parametros...");
-        var result = await client2.Execute(x => x.TestReturn());
+        var response = await client2.Execute(x => x.TestReturn());
 
-        if (result.Success)
+        if (response.Success)
             logger.LogInformation($"Invocación sin parametros OK.");
         else
-            throw new Exception("Invocación sin parametros fallida.");
+            throw new Exception($"Error de Invocación sin parametros: {response.Error}");
     }
 
     private static async Task TestIngest(IUserContract client, ILogger<IUserContract> logger)
@@ -495,10 +500,10 @@ internal class Program
         var source5 = GetMessages(3);
         var result = await client.Execute(x => x.IngestMessages2(source1, source2, source3, source4, source5));
 
-        if (result.Failure)
-            logger.LogInformation($"Ingest FAILED.");
-        else
+        if (result.Success)
             logger.LogInformation($"Ingest OK.");
+        else
+            throw new Exception($"Ingest FAILED.");
     }
 
     private static async Task TestValidations(IUserContract client, ILogger<IUserContract> logger)
@@ -508,15 +513,18 @@ internal class Program
         if (response.Failure)
             logger.LogInformation($"Validaciones OK.");
         else
-            logger.LogInformation($"Error de validaciones: {response.Error}");
+            throw new Exception($"Error de validaciones: {response.Error}");
     }
 
     private static async Task TestLogin(AuthenticationManager authManager, ILogger<IUserContract> logger)
     {
         logger.LogWarning($"Probando login...");
-        var result = await authManager.LoginAsync("miusuario", "");
-        logger.LogInformation("{0}", $"Login result: {result.IsSuccess}");
-        logger.LogInformation($"Login OK.");
+        var response = await authManager.LoginAsync("miusuario", "");
+
+        if (response.IsSuccess)
+            logger.LogInformation($"Login OK. Token: {authManager.TokenType}");
+        else
+            throw new Exception($"Error de login: {response.ErrorMessage}");
     }
 
     static async IAsyncEnumerable<string> GetMessages(int count, [EnumeratorCancellation] CancellationToken cancellationToken = default)

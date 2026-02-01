@@ -87,7 +87,7 @@ namespace Hubcon
         /// <typeparam name="T"></typeparam>
         /// <param name="task"></param>
         /// <returns></returns>
-        public static async ValueTask<IHubconResponse<TOut?>> ExecuteResponse<T, TOut>(this T contract, Func<T, Task<HubconResponse<TOut?>>> call) where T : IControllerContract
+        public static async ValueTask<IHubconResponse<TOut?>> ExecuteResponse<T, TOut>(this T contract, Func<T, Task<HubconResponse<TOut>>> call) where T : IControllerContract
         {
             WrappedContext.SetWrapped(true);
             Exception? exception = null;

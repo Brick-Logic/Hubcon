@@ -5,6 +5,8 @@ using Hubcon.Client.Core.Websockets;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Websockets.Events;
 using Hubcon.Shared.Core.Websockets.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -33,8 +35,9 @@ namespace Hubcon.Client.Core.Transports
         private HubconWebSocketClient GetClient(IClientOperationContext context)
         {
             if (client == null)
-            {                
-                client = new HubconWebSocketClient(new Uri(context.WebSocketUrl), context);
+            {
+                ILogger<HubconWebSocketClient> logger = context.ServiceProvider.GetService<ILogger<HubconWebSocketClient>>()!;
+                client = new HubconWebSocketClient(new Uri(context.WebSocketUrl), context, logger);
 
                 if (context.AuthenticationManagerFactory != null)
                 {

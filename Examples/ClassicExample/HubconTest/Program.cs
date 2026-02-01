@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -203,13 +204,15 @@ namespace HubconTest
             Watcher.Start(logger!);
 
             var telemetry = app.Services.GetRequiredService<ITelemetryService>();
-
             telemetry.OnRequestsPerSecondUpdated += (telemetry, rps) =>
             {
-                Console.Title = $" RPS: {rps.RequestsPerSecond} | CPU: {telemetry.CurrentCPU} | Threads: {telemetry.CurrentThreads} | WS clients: {telemetry.CurrentWebSocketClients} | WS req/s: {rps.WebSocketsRequestsPerSecond} | HTTP req/s: {rps.HttpRequestsPerSecond}"; 
+                Console.Title = $" RPS: {rps.RequestsPerSecond.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | Total requests: {TotalRequests.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | CPU: {telemetry.CurrentCPU} | Threads: {telemetry.CurrentThreads} | WS clients: {telemetry.CurrentWebSocketClients} | WS req/s: {rps.WebSocketsRequestsPerSecond} | HTTP req/s: {rps.HttpRequestsPerSecond}";
+                Interlocked.Add(ref TotalRequests, rps.RequestsPerSecond);
             };
 
             app.Run();
         }
+
+        static long TotalRequests = 0;
     }
 }
