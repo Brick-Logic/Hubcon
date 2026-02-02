@@ -55,7 +55,7 @@ internal class Program
         process.ProcessorAffinity = (IntPtr)coreMask;
         process.PriorityClass = ProcessPriorityClass.RealTime;
 
-        var builder = WebApplication.CreateBuilder();
+        var builder = WebApplication.CreateSlimBuilder();
         var config = new ConfigurationBuilder()
             .AddUserSecrets<Program>() // Necesita el ID del .csproj
             .AddEnvironmentVariables()
@@ -212,7 +212,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 128
+            MaxDegreeOfParallelism = 512
         };
 
         int rps = 9999999;

@@ -1,6 +1,7 @@
 ﻿using Hubcon;
 using HubconTestClient.Auth;
 using HubconTestDomain;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
@@ -105,19 +106,16 @@ namespace HubconTestClient.Modules
 
             server.AddInterceptor(InterceptorType.OnPing, async ctx =>
             {
-                var authManager = (AuthenticationManager)ctx.Services.GetService(typeof(AuthenticationManager));
-                var logger = (ILogger<object>)ctx.Services.GetService(typeof(ILogger<object>));
+                var authManager = ctx.Services.GetRequiredService<AuthenticationManager>();
+                var logger = ctx.Services.GetRequiredService<ILogger<object>>();
 
-                var currentTime = DateTimeOffset.UtcNow.DateTime;
-                var lowerTime = authManager.AccessTokenExpiresAt.HasValue ? authManager.AccessTokenExpiresAt.Value.AddMinutes(-1) : DateTime.MaxValue;
 
-                if (currentTime > lowerTime)
+                if (authManager.ShouldRefreshSession)
                 {
                     IHubconResult? refreshedToken = null!;
                     try
                     {
                         refreshedToken = await authManager.TryRefreshSessionAsync();
-                        await ctx.TryRefreshToken.Invoke(authManager.AccessToken!);
                     }
                     catch (Exception ex)
                     {

@@ -10,6 +10,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Net.WebSockets;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Text.Json;
@@ -87,7 +88,7 @@ namespace Hubcon.Client.Core.Subscriptions
 
             var tcs = new TaskCompletionSource<object>();
 
-            _ = Task.Run(async () =>
+            _ = Task.Factory.StartNew(async () =>
             {
                 int retry = 0;
 
@@ -110,7 +111,7 @@ namespace Hubcon.Client.Core.Subscriptions
 
                         _connected = SubscriptionState.Connected;
 
-                        tcs.SetResult(null!);
+                        tcs.TrySetResult(null!);
 
                         await foreach (var item in eventSource)
                         {
@@ -139,17 +140,17 @@ namespace Hubcon.Client.Core.Subscriptions
                     }
                 }
                 _connected = SubscriptionState.Disconnected;
-            });
+            },
+            default,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default).Unwrap();
 
             await tcs.Task;
         }
 
         public async Task Unsubscribe()
         {
-            while (_connected == SubscriptionState.Connected || _connected == SubscriptionState.Reconnecting)
-            {
-                await Task.Delay(100);
-            }
+            _tokenSource.Cancel();
         }
 
         public void Build()

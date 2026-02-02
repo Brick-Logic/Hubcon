@@ -1,5 +1,6 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hubcon
@@ -15,113 +16,220 @@ namespace Hubcon
         public string? RefreshToken { get; private set; }
         public DateTime? AccessTokenExpiresAt { get; private set; }
 
-        public bool IsSessionActive => !string.IsNullOrEmpty(AccessToken);
+        private SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
+        public bool IsSessionActive
+        {
+            get
+            {
+                var empty = string.IsNullOrEmpty(AccessToken);
+                var currentTime = DateTimeOffset.UtcNow.DateTime;
+                var lowerTime = AccessTokenExpiresAt.HasValue ? AccessTokenExpiresAt.Value : DateTime.MaxValue;
+
+                if (!empty && currentTime > lowerTime)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        public bool ShouldRefreshSession
+        {
+            get
+            {
+                var empty = string.IsNullOrEmpty(AccessToken);
+                var currentTime = DateTimeOffset.UtcNow.DateTime;
+                var lowerTime = AccessTokenExpiresAt.HasValue ? AccessTokenExpiresAt.Value.AddMinutes(-1) : DateTime.MaxValue;
+
+                if (!empty && currentTime > lowerTime)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+        }
 
         public string Username { get; protected set; } = string.Empty;
 
         public async Task<IHubconResult> LoginAsync(string username, string password)
         {
-            Username = username;
-
-            var auth = await AuthenticateAsync(username, password);
-
-            if (auth.IsFailure)
+            try
             {
-                OnSessionIsInactive?.Invoke();
-                return Result.Failure(auth.ErrorMessage);
+                await _semaphore.WaitAsync();
+
+                if (IsSessionActive)
+                    return Result.Success();
+
+                Username = username;
+
+                var auth = await AuthenticateAsync(username, password);
+
+                if (auth.IsFailure)
+                {
+                    OnSessionIsInactive?.Invoke();
+                    return Result.Failure(auth.ErrorMessage);
+                }
+
+                TokenType = auth.TokenType;
+                AccessToken = auth.AccessToken;
+                RefreshToken = auth.RefreshToken;
+                AccessTokenExpiresAt = auth.ExpiresInSeconds;
+
+                await SaveSessionAsync();
+                OnSessionIsActive?.Invoke();
+
+                return Result.Success();
             }
-
-            TokenType = auth.TokenType;
-            AccessToken = auth.AccessToken;
-            RefreshToken = auth.RefreshToken;
-            AccessTokenExpiresAt = auth.ExpiresInSeconds;
-
-            await SaveSessionAsync();
-            OnSessionIsActive?.Invoke();
-
-            return Result.Success();
+            catch (Exception ex)
+            {
+                return Result.Failure(ex.Message);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         public async Task<IHubconResult> LoginWithTokenAsync(string token, string type)
         {
-            var auth = await AuthenticateWithTokenAsync(token, type);
-
-            if (auth.IsFailure)
+            try
             {
-                OnSessionIsInactive?.Invoke();
-                return Result.Failure(auth.ErrorMessage);
+                await _semaphore.WaitAsync();
+
+                if (IsSessionActive)
+                    return Result.Success();
+
+                var auth = await AuthenticateWithTokenAsync(token, type);
+
+                if (auth.IsFailure)
+                {
+                    OnSessionIsInactive?.Invoke();
+                    return Result.Failure(auth.ErrorMessage);
+                }
+
+                AccessToken = auth.AccessToken;
+                RefreshToken = auth.RefreshToken;
+                AccessTokenExpiresAt = auth.ExpiresInSeconds;
+
+                await SaveSessionAsync();
+                OnSessionIsActive?.Invoke();
+
+                return Result.Success();
             }
-
-            AccessToken = auth.AccessToken;
-            RefreshToken = auth.RefreshToken;
-            AccessTokenExpiresAt = auth.ExpiresInSeconds;
-
-            await SaveSessionAsync();
-            OnSessionIsActive?.Invoke();
-
-            return Result.Success();
+            catch (Exception ex)
+            {
+                return Result.Failure(ex.Message);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         public async Task<IHubconResult> TryRefreshSessionAsync()
         {
-            var refresh = await RefreshSessionAsync(RefreshToken!);
-
-            if (refresh.IsFailure)
+            try
             {
-                await ClearSessionAsync();
-                OnSessionIsInactive?.Invoke();
-                return Result.Failure("Refresh failed");
+                await _semaphore.WaitAsync();
+
+                var refresh = await RefreshSessionAsync(RefreshToken!);
+
+                if (refresh.IsFailure)
+                {
+                    await ClearSessionAsync();
+                    OnSessionIsInactive?.Invoke();
+                    return Result.Failure("Refresh failed");
+                }
+
+                TokenType = refresh.TokenType;
+                AccessToken = refresh.AccessToken;
+                RefreshToken = refresh.RefreshToken;
+                AccessTokenExpiresAt = refresh.ExpiresInSeconds;
+                OnTokenRefreshed?.Invoke(refresh);
+
+                await SaveSessionAsync();
+                OnSessionIsActive?.Invoke();
+
+                return Result.Success();
             }
-
-            TokenType = refresh.TokenType;
-            AccessToken = refresh.AccessToken;
-            RefreshToken = refresh.RefreshToken;
-            AccessTokenExpiresAt = refresh.ExpiresInSeconds;
-            OnTokenRefreshed?.Invoke(refresh);
-
-            await SaveSessionAsync();
-            OnSessionIsActive?.Invoke();
-
-            return Result.Success();
+            catch (Exception ex)
+            {
+                return Result.Failure(ex.Message);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         public async Task LogoutAsync()
         {
-            AccessToken = null;
-            RefreshToken = null;
-            AccessTokenExpiresAt = null;
-            await ClearSessionAsync();
-            OnSessionIsInactive?.Invoke();
+            try
+            {
+                AccessToken = null;
+                RefreshToken = null;
+                AccessTokenExpiresAt = null;
+                await ClearSessionAsync();
+                OnSessionIsInactive?.Invoke();
+            }
+            finally
+            {
+            }
         }
 
         public async Task<IHubconResult> LoadSessionAsync()
         {
-            var session = await LoadPersistedSessionAsync();
-            if (session is not null)
+            try
             {
-                AccessToken = session.AccessToken;
-                RefreshToken = session.RefreshToken;
-                AccessTokenExpiresAt = session.ExpiresAt;
-                OnSessionIsActive?.Invoke();
-                return Result.Success();
+                await _semaphore.WaitAsync();
+
+                if (IsSessionActive)
+                    return Result.Success();
+
+                var session = await LoadPersistedSessionAsync();
+                if (session is not null)
+                {
+                    AccessToken = session.AccessToken;
+                    RefreshToken = session.RefreshToken;
+                    AccessTokenExpiresAt = session.ExpiresAt;
+                    OnSessionIsActive?.Invoke();
+                    return Result.Success();
+                }
+
+                OnSessionIsInactive?.Invoke();
+
+                return Result.Failure();
             }
-
-            OnSessionIsInactive?.Invoke();
-
-            return Result.Failure();
+            catch (Exception ex)
+            {
+                return Result.Failure(ex.Message);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         private async Task SaveSessionAsync()
         {
-            var session = new PersistedSession()
+            try
             {
-                TokenType = TokenType!,
-                AccessToken = AccessToken!,
-                RefreshToken = RefreshToken,
-                ExpiresAt = AccessTokenExpiresAt.HasValue ? AccessTokenExpiresAt.Value : DateTime.MinValue
-            };
+                var session = new PersistedSession()
+                {
+                    TokenType = TokenType!,
+                    AccessToken = AccessToken!,
+                    RefreshToken = RefreshToken,
+                    ExpiresAt = AccessTokenExpiresAt.HasValue ? AccessTokenExpiresAt.Value : DateTime.MinValue
+                };
 
-            await SaveSessionAsync(session);
+                await SaveSessionAsync(session);
+            }
+            finally
+            {
+            }
         }
 
         protected abstract Task<IAuthResult> AuthenticateAsync(string username, string password);

@@ -477,8 +477,14 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             finally
             {
-                if (webSocket.State == WebSocketState.Open)
-                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
+                try
+                {
+                    if (webSocket.State == WebSocketState.Open)
+                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
+                }
+                finally
+                {
+                }
 
                 await connectionSupervisor.UnregisterAsync(connectionId);
 
@@ -749,10 +755,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 using var scope = context.RequestServices.CreateScope();
 
                 var ingestTask = DefaultEntrypoint.HandleIngest(
-                    operationRequest, 
+                    operationRequest,
                     HubconTransportAttribute.GetDefault<WebSocketTransport>(),
-                    scope.ServiceProvider, 
-                    sources, 
+                    scope.ServiceProvider,
+                    sources,
                     null,
                     localCts.Token);
 
@@ -782,18 +788,23 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             finally
             {
-                foreach (var watcher in watchers)
+
+                try
                 {
-                    try
+                    foreach (var watcher in watchers)
                     {
                         await watcher.DisposeAsync();
-                        watchers.Remove(watcher);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger?.LogError(ex.Message);
                     }
                 }
+                catch (Exception ex)
+                {
+                    logger?.LogError(ex.Message);
+                }
+                finally
+                {
+                    watchers.Clear();
+                }
+
                 _ingestHandlers.TryRemove(ingestInitMessage.Id, out _);
                 await localCts.CancelAsync();
                 ingestInitMessage.Dispose();

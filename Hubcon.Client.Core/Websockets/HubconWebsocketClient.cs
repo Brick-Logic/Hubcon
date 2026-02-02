@@ -273,7 +273,7 @@ namespace Hubcon.Client.Core.Websockets
 
                 foreach (var source in sources)
                 {
-                    var sourceTask = Task.Run(async () =>
+                    var sourceTask = Task.Factory.StartNew(async () =>
                     {
                         try
                         {
@@ -319,7 +319,10 @@ namespace Hubcon.Client.Core.Websockets
                             _errorStream.OnNext(ex);
                             cts.Cancel();
                         }
-                    }, cts.Token);
+                    }, 
+                    cts.Token,
+                    TaskCreationOptions.LongRunning,
+                    TaskScheduler.Default).Unwrap();
 
                     sourceTasks.Add(sourceTask);
                 }
@@ -493,8 +496,7 @@ namespace Hubcon.Client.Core.Websockets
 
                                 if (_lastPongId == pongMessage.Id)
                                 {
-                                    await _webSocket!.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "Pong error",
-                                        default);
+                                    _webSocket!.Abort();
                                     return;
                                 }
 

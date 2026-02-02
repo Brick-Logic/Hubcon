@@ -15,6 +15,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Hubcon.Client.Builder
 {
@@ -45,6 +46,22 @@ namespace Hubcon.Client.Builder
         public IServiceCollection AddHubconClient(IServiceCollection services)
         {
             Services = services;
+
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            {
+                Console.WriteLine("UNHANDLED EXCEPTION:");
+                Console.WriteLine(e.ExceptionObject);
+                Console.WriteLine("Presione dos teclas para salir...");
+                Console.ReadKey();
+                Console.ReadKey();
+            };
+
+            TaskScheduler.UnobservedTaskException += (s, e) =>
+            {
+                Console.WriteLine("UNOBSERVED TASK EXCEPTION:");
+                Console.WriteLine(e.Exception);
+                e.SetObserved();
+            };
 
             services.AddSingleton<IProxyRegistry>(Proxies);
             services.AddSingleton<IClientBuilderRegistry>(ClientBuilders);

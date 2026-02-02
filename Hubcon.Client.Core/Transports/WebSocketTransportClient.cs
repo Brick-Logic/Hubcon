@@ -1,10 +1,9 @@
-﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Core.Websockets;
+﻿using Hubcon.Client.Core.Websockets;
 using Hubcon.Shared.Core.Websockets.Events;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
@@ -116,6 +115,8 @@ namespace Hubcon.Client.Core.Transports
                         if (context.ClientOptions.LoggingEnabled)
                             logger.LogInformation($"Token refresh response: {response.Success} | Message: {response.Message}");
                     };
+                    authenticationManager.OnSessionIsActive += async () => await _client.EnsureConnectedAsync();
+
                     _client.AuthorizationTokenProvider = () => authenticationManager.AccessToken;
                 }
             }

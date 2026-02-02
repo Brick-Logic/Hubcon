@@ -1,8 +1,6 @@
-﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
 
 namespace Hubcon.Client.Core.Transports
 {
@@ -33,7 +31,7 @@ namespace Hubcon.Client.Core.Transports
             if (marker == null)
                 return null;
 
-            if(_lookups.TryGetValue(marker, out var value))
+            if (_lookups.TryGetValue(marker, out var value))
             {
                 return value;
             }

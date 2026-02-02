@@ -43,6 +43,22 @@ namespace Hubcon.Server
         {
             Services = builder.Services;
 
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            {
+                Console.WriteLine("UNHANDLED EXCEPTION:");
+                Console.WriteLine(e.ExceptionObject);
+                Console.WriteLine("Press two times to exit...");
+                Console.ReadKey();
+                Console.ReadKey();
+            };
+
+            TaskScheduler.UnobservedTaskException += (s, e) =>
+            {
+                Console.WriteLine("UNOBSERVED TASK EXCEPTION:");
+                Console.WriteLine(e.Exception);
+                e.SetObserved();
+            };
+
             builder.AddServerCore();
 
             ServerOptions.AddTransport<HttpTransport>();
