@@ -3,6 +3,7 @@ using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Context;
 using Hubcon.Shared.Core.Tools;
+using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,10 +12,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net.WebSockets;
+using System.Reactive.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Subscriptions
@@ -100,34 +103,68 @@ namespace Hubcon.Client.Core.Subscriptions
 
                 while (!_tokenSource.IsCancellationRequested)
                 {
+                    IAsyncEnumerator<JsonElement>? enumerator = null;
+
                     try
                     {
-                        IAsyncEnumerable<JsonElement> eventSource = null!;
+                        IObservable<JsonElement> observable = null!;
                         WrappedContext.SetWrapped(true);
                         var callContext = new CallContext(scope.ServiceProvider, request, Context!.AuthenticationManagerFactory?.Invoke()!, true, _tokenSource.Token);
                         HubconContext.UseContext(callContext);
-                        
-                        eventSource = Client.GetSubscription(request, Context, _tokenSource.Token);
 
+                        observable = await Client.GetSubscription(request, Context, _tokenSource.Token);
                         _connected = SubscriptionState.Connected;
+
+                        var options = new BoundedChannelOptions(999999999);
+                        var observer = AsyncObserver.Create<JsonElement>(Context.Converter, options);
 
                         tcs.TrySetResult(null!);
 
-                        await foreach (var item in eventSource)
+                        using (observable.Subscribe(observer))
                         {
-                            if (retry > 0) retry = 0;
+                            enumerator = observer
+                                .GetAsyncEnumerable(_tokenSource.Token)
+                                .GetAsyncEnumerator();
 
-                            var result = _converter.DeserializeData<T>(item);
+                            while (true)
+                            {
+                                bool moved;
+                                if (retry > 0) retry = 0;
 
-                            if (OnEventReceived != null)
-                                await OnEventReceived.Invoke(result!);
+                                try
+                                {
+                                    moved = await enumerator.MoveNextAsync();
+                                }
+                                catch (Exception)
+                                {
+                                    moved = false;
+                                }
+
+                                if (!moved)
+                                {
+                                    break;
+                                }
+
+                                var item = enumerator.Current;
+                                var result = _converter.DeserializeData<T>(enumerator.Current);
+
+                                if (OnEventReceived != null)
+                                    await OnEventReceived.Invoke(result!);
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
-                        retry += 1;
-                        _connected = SubscriptionState.Reconnecting;
                         logger.LogError(ex.Message, ex);
+                    }
+                    finally
+                    {
+                        retry += 1;
+
+                        if(enumerator != null)
+                            await enumerator.DisposeAsync();
+
+                        _connected = SubscriptionState.Reconnecting;
 
                         int baseReconnectionDelay = 1000;
                         int maxReconnectionDelay = 3000;
@@ -140,6 +177,7 @@ namespace Hubcon.Client.Core.Subscriptions
                     }
                 }
                 _connected = SubscriptionState.Disconnected;
+                _tokenSource.Dispose();
             },
             default,
             TaskCreationOptions.LongRunning,

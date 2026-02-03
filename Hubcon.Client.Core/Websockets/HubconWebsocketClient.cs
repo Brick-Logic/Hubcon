@@ -130,7 +130,7 @@ namespace Hubcon.Client.Core.Websockets
             });
         }
 
-        public async Task<IObservable<T>> Subscribe<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
+        public async Task<GenericObservable<T>> Subscribe<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             var request = new SubscriptionInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
@@ -155,7 +155,6 @@ namespace Hubcon.Client.Core.Websockets
             if (!_subscriptions.TryAdd(request.Id, observable))
                 throw new InvalidOperationException($"Ya existe una suscripción con Id {request.Id}");
 
-
             await SendMessageAsync(request, cancellationToken);
 
             return observable;
@@ -175,11 +174,11 @@ namespace Hubcon.Client.Core.Websockets
             {
                 if (remoteCancelEnabled)
                     await SendMessageAsync(new CancelMessage(request.Id));
-                _ = hw.DisposeAsync();
+
                 tcs.Cancel();
             });
 
-            hw = new HeartbeatWatcher(TimeSpan.FromSeconds(15000), async () =>
+            hw = new HeartbeatWatcher(TimeSpan.Zero, async () =>
             {
                 if (_streams.TryRemove(request.Id, out var obs))
                 {

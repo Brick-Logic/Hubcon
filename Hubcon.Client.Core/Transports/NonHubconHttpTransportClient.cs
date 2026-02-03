@@ -96,7 +96,7 @@ namespace Hubcon.Client.Core.Transports
             response.Dispose();
         }
 
-        public override IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override Task<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }

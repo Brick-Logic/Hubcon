@@ -24,6 +24,10 @@ namespace Hubcon.Shared.Core.Websockets.Events
         private readonly Channel<T> _channel;
         private readonly IDynamicConverter converter;
         private TaskCompletionSource<bool> _completed = new TaskCompletionSource<bool>();
+        public event Action? Completed;
+        public event Action? Error;
+        public event Action<T>? Next;
+        private readonly SemaphoreSlim _gate = new(1, 1);
 
         public ChannelAsyncObserver(IDynamicConverter converter, BoundedChannelOptions? options = null)
         {
@@ -86,9 +90,24 @@ namespace Hubcon.Shared.Core.Websockets.Events
         {
             try
             {
-                await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
+                var enumerator = _channel.Reader.ReadAllAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
+                while (true)
                 {
-                    yield return item;
+                    bool moved;
+                    try
+                    {
+                        moved = await enumerator.MoveNextAsync();
+                    }
+                    finally
+                    {
+                    }
+
+                    if (!moved)
+                    {
+                        break;
+                    }
+
+                    yield return enumerator.Current;
                 }
             }
             finally
@@ -113,17 +132,29 @@ namespace Hubcon.Shared.Core.Websockets.Events
         {
             _channel.Writer.Complete();
             _completed.SetResult(true);
+            Completed?.Invoke();
         }
 
         public void OnError(Exception error)
         {
-            _channel.Writer.Complete(error);
+            _channel.Writer.Complete();
             _completed.SetException(error);
+            Error?.Invoke();
         }
 
         public async void OnNext(T value)
         {
-            await WriteToChannelAsync(value);
+            _gate.Wait();
+
+            try
+            {
+                await WriteToChannelAsync(value);
+                Next?.Invoke(value);
+            }
+            finally
+            {
+                _gate.Release();
+            }
         }
 
         public Task WaitUntilCompleted()

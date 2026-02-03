@@ -22,8 +22,8 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
         {
             _timeoutSeconds = timeoutSeconds;
             _onTimeout = onTimeout;
-
-            _loop = RunAsync(_cts.Token);
+         
+            _loop = RunAsync(_cts.Token);         
         }
 
         public void NotifyHeartbeat()
@@ -36,6 +36,13 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
             if (_timeoutSeconds <= TimeSpan.Zero)
             {
                 await Task.Delay(Timeout.Infinite, token);
+
+                if (!timeoutExecuted)
+                {
+                    timeoutExecuted = true;
+                    await _onTimeout();
+                }
+
                 return;
             }
 

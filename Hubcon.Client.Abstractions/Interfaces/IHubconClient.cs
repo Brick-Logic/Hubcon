@@ -13,7 +13,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         Task<T> SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken);
         Task CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken);
         IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        Task<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
         Task<T> Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken);
     }
 }

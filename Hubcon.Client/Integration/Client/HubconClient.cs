@@ -7,6 +7,7 @@ using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
+using Hubcon.Shared.Core.Context;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +20,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reactive.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -219,18 +221,18 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        public async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public async Task<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             await context.AcquireRateLimiter();
             await context.CallValidationHooks();
 
-            IAsyncEnumerable<JsonElement>? enumerable = null;
+            IObservable<JsonElement>? observable = null;
 
             await context.CallHooksAndInterceptors(HookType.OnSend, cancellationToken);
 
             try
             {
-                enumerable = context.Transport.GetSubscription(request, context, cancellationToken);
+                observable = await context.Transport.GetSubscription(request, context, cancellationToken);
 
                 if (HubconContext.Current?.IsWrapped == true)
                     HubconContext.Current.SetResponse(HubconResponse.OkT<IAsyncEnumerable<JsonElement>>());
@@ -248,40 +250,73 @@ namespace Hubcon.Client.Integration.Client
                 throw;
             }
 
-            var enumerator = enumerable.GetAsyncEnumerator(cancellationToken);
+            var options = new BoundedChannelOptions(999999999);
+            var observer = AsyncObserver.Create<JsonElement>(context.Converter, options) as ChannelAsyncObserver<JsonElement>;
 
             await context.CallHooksAndInterceptors(HookType.OnSubscribed, cancellationToken);
 
+            var observerContext = context.CallContext as CallContext;
 
-            while (true)
+            if (observer != null)
             {
-                JsonElement result = default;
-                try
+                async void nextMethod(JsonElement x)
                 {
-                    if (!await enumerator.MoveNextAsync() || cancellationToken.IsCancellationRequested)
-                        break;
-
                     await context.AcquireRateLimiter();
-
-                    result = enumerator.Current;
+                    await context.CallHooksAndInterceptors(HookType.OnEventReceived);
                 }
-                catch (Exception ex)
+
+                async void errorMethod() => await context.CallHooksAndInterceptors(HookType.OnError);
+
+                async void completedMethod() => await context.CallHooksAndInterceptors(HookType.OnUnsubscribed);
+
+                observer.Next += nextMethod;
+                observer.Error += errorMethod;
+                observer.Completed += completedMethod;
+
+                _ = Task.Factory.StartNew(async () =>
                 {
-                    await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
-
-                    if (HubconContext.Current?.IsWrapped == true)
+                    try
                     {
-                        HubconContext.Current.SetException(ex);
-                        HubconContext.Current.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex));
+                        HubconContext.UseContext(observerContext!);
+                        using (observable.Subscribe(observer))
+                        {
+                            var enumerator = observer!
+                                .GetAsyncEnumerable(cancellationToken)
+                                .GetAsyncEnumerator();
+
+                            while (true)
+                            {
+                                try
+                                {
+                                    if (!await enumerator.MoveNextAsync() || cancellationToken.IsCancellationRequested)
+                                        break;
+                                }
+                                catch (Exception ex)
+                                {
+                                    if (HubconContext.Current?.IsWrapped == true)
+                                    {
+                                        HubconContext.Current.SetException(ex);
+                                        HubconContext.Current.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex));
+                                    }
+
+                                    await enumerator.DisposeAsync();
+                                    break;
+                                }
+                            }
+                        }
                     }
-
-                    throw;
-                }
-
-                yield return result;
+                    finally
+                    {
+                        observer!.OnCompleted();
+                        observer.Next -= nextMethod;
+                        observer.Error -= errorMethod;
+                        observer.Completed -= completedMethod;
+                    }
+                });
             }
 
-            await context.CallHooksAndInterceptors(HookType.OnUnsubscribed, cancellationToken);
+            await context.CallHooksAndInterceptors(HookType.OnResponse);
+            return observable;
         }
     }
 }

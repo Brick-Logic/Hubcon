@@ -53,35 +53,9 @@ namespace Hubcon.Client.Core.Transports
             }
         }
 
-        public override async IAsyncEnumerable<JsonElement> GetSubscription(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public override async Task<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
-            IObservable<JsonElement> observable = await _client.Subscribe<JsonElement>(request, context.RemoteCancellationIsAllowed);
-
-            var options = new BoundedChannelOptions(5000);
-
-            var observer = AsyncObserver.Create<JsonElement>(context.Converter, options);
-
-            try
-            {
-                using (observable.Subscribe(observer))
-                {
-                    var enumerator = observer.GetAsyncEnumerable(cancellationToken).GetAsyncEnumerator();
-                    JsonElement result = default;
-
-                    while (true)
-                    {
-                        if (!await enumerator.MoveNextAsync())
-                            break;
-
-                        result = enumerator.Current;
-                        yield return result;
-                    }
-                }
-            }
-            finally
-            {
-                observer.OnCompleted();
-            }
+            return await _client.Subscribe<JsonElement>(request, context.RemoteCancellationIsAllowed);
         }
 
         public override async Task<HubconResponse<T>> Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
