@@ -356,8 +356,8 @@ internal class Program
         logger.LogInformation("Probando streaming por SSE, pidiendo 10 eventos...");
 
         var eventos = 0;
-        //var stream = await client.Execute(x => x.GetMessages(10));
-        await foreach (var item in client.GetMessages(10))
+        var stream = await client.Execute(x => x.GetMessages(10));
+        await foreach (var item in stream.Data!)
         {
             logger.LogInformation($"Evento recibido: {item}");
             eventos++;

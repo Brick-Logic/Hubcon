@@ -8,7 +8,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
     public interface IAsyncObserver<T> : IObserver<T>
     {
         Task<bool> WriteToChannelAsync(T item);
-        IAsyncEnumerable<T> GetAsyncEnumerable(CancellationToken cancellationToken);
+        IAsyncEnumerable<T> GetAsyncEnumerable(CancellationToken cancellationToken, Action? disposeAction = null);
         Task WaitUntilCompleted();
         Task<T> ReadItemAsync(CancellationToken cancellationToken = default);
     }

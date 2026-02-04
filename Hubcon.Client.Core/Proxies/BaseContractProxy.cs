@@ -123,7 +123,7 @@ namespace Hubcon.Client.Core.Proxies
             }
         }
 
-        public override Task CallAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public override async Task CallAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
@@ -143,7 +143,7 @@ namespace Hubcon.Client.Core.Proxies
 
                 InterceptorContext.UseContext(interceptorContext);
 
-                return _client.CallAsync(request, context, cancellationToken);
+                await _client.CallAsync(request, context, cancellationToken);
             }
             else
             {
@@ -151,7 +151,7 @@ namespace Hubcon.Client.Core.Proxies
             }
         }
 
-        public override Task<T> IngestAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public override async Task<T> IngestAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
@@ -171,7 +171,9 @@ namespace Hubcon.Client.Core.Proxies
 
                 InterceptorContext.UseContext(interceptorContext);
 
-                return _client.Ingest<T>(request, context, cancellationToken);
+                await _client.Ingest<T>(request, context, cancellationToken);
+                var response = WrappedContext.CurrentWrapped.GetResponse<T>();
+                return response.Data;
             }
             else
             {
@@ -179,7 +181,7 @@ namespace Hubcon.Client.Core.Proxies
             }
         }
 
-        public override Task IngestAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public override async Task IngestAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
@@ -199,7 +201,7 @@ namespace Hubcon.Client.Core.Proxies
 
                 InterceptorContext.UseContext(interceptorContext);
 
-                return _client.Ingest<JsonElement>(request, context, cancellationToken);
+                await _client.Ingest<JsonElement>(request, context, cancellationToken);
             }
             else
             {
@@ -208,7 +210,7 @@ namespace Hubcon.Client.Core.Proxies
 
         }
 
-        public override async IAsyncEnumerable<T> StreamAsync<T>(string methodSignature, Dictionary<string, object> arguments, [EnumeratorCancellation] CancellationToken cancellationToken)
+        public override IAsyncEnumerable<T> StreamAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
@@ -228,18 +230,63 @@ namespace Hubcon.Client.Core.Proxies
 
                 InterceptorContext.UseContext(interceptorContext);
 
-                IAsyncEnumerable<JsonElement> stream = _client.GetStream(request, context, cancellationToken);
+                IAsyncEnumerable<JsonElement> stream = _client.GetStream(request, context, cancellationToken).Result;
 
-                await foreach(var item in _converter.ConvertStream<T>(stream, cancellationToken))
+                var receivedResponse = WrappedContext.CurrentWrapped.GetResponse<IAsyncEnumerable<JsonElement>>();
+                var response = new HubconResponse<IAsyncEnumerable<T>?>(
+                    receivedResponse.Success,
+                    !receivedResponse.Success,
+                    receivedResponse.Message,
+                    receivedResponse.Error,
+                    receivedResponse.StatusCode,
+                    receivedResponse.Data == null ? default : ConvertStream<T>(stream, context, cancellationToken)
+                );
+
+                context.SetResponse(response);
+                return (response.Data ?? default)!;
+            }
+            else
+            {
+                throw new Exception($"Could not find the operation '{methodSignature}'.");
+            }
+        }
+
+        public async IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement> stream, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            var enumerator = stream.GetAsyncEnumerator(cancellationToken);
+            T? item = default;
+            while (true)
+            {
+                JsonElement result = default;
+                try
                 {
-                    yield return item;
+                    if (!await enumerator.MoveNextAsync() || cancellationToken.IsCancellationRequested)
+                        break;
+
+                    await context.AcquireRateLimiter();
+
+                    result = enumerator.Current;
+                    item = context.Converter.DeserializeJsonElement<T>(result)!;
                 }
+                catch (Exception ex)
+                {
+                    await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
+
+                    if (HubconContext.Current?.IsWrapped == true)
+                    {
+                        HubconContext.Current.SetException(ex);
+                        await context.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex));
+                    }
+
+                    break;
+                }
+
+                yield return item;       
             }
-            else
-            {
-                throw new Exception($"Could not find the operation '{methodSignature}'.");
-            }
+
+            await context.CallHooksAndInterceptors(HookType.OnUnsubscribed, cancellationToken);
         }
+        
 
         // Accessor
         public IAuthenticationManager AuthenticationManager => _clientOptions.AuthenticationManagerFactory.GetValue<IAuthenticationManager>(rootServiceProvider);

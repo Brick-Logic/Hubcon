@@ -51,8 +51,6 @@ namespace Hubcon
         /// <returns></returns>
         public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, Task<TOut>> call) where T : IControllerContract
         {
-            var envelope = new WrappedEnvelope();
-            WrappedContext.UseWrapped(envelope);
             WrappedContext.SetWrapped(true);
             Exception? exception = null;
             IHubconResponse<TOut> response = default!;
@@ -92,8 +90,6 @@ namespace Hubcon
         /// <returns></returns>
         public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, Task<HubconResponse<TOut>>> call) where T : IControllerContract
         {
-            var envelope = new WrappedEnvelope();
-            WrappedContext.UseWrapped(envelope);
             WrappedContext.SetWrapped(true);
             Exception? exception = null;
             HubconResponse<TOut?> response = default!;           
@@ -133,8 +129,6 @@ namespace Hubcon
         /// <returns></returns>
         public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, TOut> call) where T : IControllerContract
         {
-            var envelope = new WrappedEnvelope();
-            WrappedContext.UseWrapped(envelope);
             WrappedContext.SetWrapped(true);
             Exception? exception = null;
             IHubconResponse<TOut?> response = default!;
@@ -173,8 +167,6 @@ namespace Hubcon
         /// <returns></returns>
         public static async ValueTask<IHubconResponse<JsonElement>> Execute<T>(this T contract, Func<T, Task> call) where T : IControllerContract
         {
-            var envelope = new WrappedEnvelope();
-            WrappedContext.UseWrapped(envelope);
             WrappedContext.SetWrapped(true);
             Exception? exception = null;
             IHubconResponse<JsonElement> response = default!;

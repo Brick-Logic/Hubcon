@@ -36,7 +36,7 @@ namespace Hubcon.Client.Integration.Client
 {
     public sealed class HubconClient : IHubconClient
     {
-        public async Task SendAsync<T>(
+        public async ValueTask SendAsync<T>(
             IOperationRequest request,
             IClientOperationContext context,
             CancellationToken cancellationToken)
@@ -80,7 +80,7 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        public async Task CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken)
+        public async ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken)
         {
             await context.AcquireRateLimiter();
             await context.CallValidationHooks();
@@ -116,7 +116,7 @@ namespace Hubcon.Client.Integration.Client
             }
         }
 
-        public async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             await context.AcquireRateLimiter();
             await context.CallValidationHooks();
@@ -127,10 +127,7 @@ namespace Hubcon.Client.Integration.Client
 
             try
             {
-                enumerable = context.Transport.GetStream(request, context, cancellationToken);
-
-                if (HubconContext.Current?.IsWrapped == true)
-                    await context.SetResponse(HubconResponse.OkT<IAsyncEnumerable<JsonElement>>());
+                enumerable = await context.Transport.GetStream(request, context, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -145,45 +142,13 @@ namespace Hubcon.Client.Integration.Client
                 throw;
             }
 
-            var enumerator = enumerable.GetAsyncEnumerator(cancellationToken);
-
             await context.CallHooksAndInterceptors(HookType.OnSubscribed, cancellationToken);
-
-
-            while (true)
-            {
-                JsonElement result = default;
-                try
-                {
-                    if (!await enumerator.MoveNextAsync() || cancellationToken.IsCancellationRequested)
-                        break;
-
-                    await context.AcquireRateLimiter();
-
-                    result = enumerator.Current;
-                }
-                catch (Exception ex)
-                {
-                    await context.CallHooksAndInterceptors(HookType.OnError, cancellationToken);
-
-                    if (HubconContext.Current?.IsWrapped == true)
-                    {
-                        HubconContext.Current.SetException(ex);
-                        await context.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex));
-                    }
-
-                    throw;
-                }
-
-                yield return result;
-            }
-
-            await context.CallHooksAndInterceptors(HookType.OnUnsubscribed, cancellationToken);
+            return enumerable;
         }
 
 
 
-        public async Task<T> Ingest<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken)
+        public async ValueTask Ingest<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken)
         {
             await context.AcquireRateLimiter();
             await context.CallValidationHooks();
@@ -192,15 +157,10 @@ namespace Hubcon.Client.Integration.Client
             {
                 await context.CallHooksAndInterceptors(HookType.OnSend, cancellationToken);
 
-                var response = await context.Transport.Ingest<T>(request, context, cancellationToken);
-
-                if (HubconContext.Current?.IsWrapped == true)
-                    await context.SetResponse(response);
+                await context.Transport.Ingest<T>(request, context, cancellationToken);
 
                 await context.CallHooksAndInterceptors(HookType.OnAfterSend, cancellationToken);
                 await context.CallHooksAndInterceptors(HookType.OnResponse, cancellationToken);
-
-                return response.Data;
             }
             catch (Exception ex)
             {
@@ -210,14 +170,14 @@ namespace Hubcon.Client.Integration.Client
                 {
                     HubconContext.Current.SetException(ex);
                     await context.SetResponse(HubconResponse.InternalError<T>(ex));
-                    return default!;
+                    return;
                 }
 
                 throw;
             }
         }
 
-        public async Task<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public async ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             await context.AcquireRateLimiter();
             await context.CallValidationHooks();

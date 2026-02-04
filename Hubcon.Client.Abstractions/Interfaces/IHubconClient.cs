@@ -10,10 +10,10 @@ namespace Hubcon.Client.Abstractions.Interfaces
 {
     public interface IHubconClient
     {
-        Task SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken);
-        Task CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken);
-        IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        Task<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        Task<T> Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken);
+        ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken);
+        ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken);
+        ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken);
     }
 }

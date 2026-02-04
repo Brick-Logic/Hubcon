@@ -1,10 +1,12 @@
 ﻿using Hubcon.Client.Core.Websockets;
+using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
@@ -23,49 +25,39 @@ namespace Hubcon.Client.Core.Transports
             this.logger = logger;
         }
 
-        public override async Task<HubconResponse<bool>> CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             await _client.SendAsync(request, context.RemoteCancellationIsAllowed, cancellationToken);
-            return true;
+            await context.SetResponse(HubconResponse.OkT(true));
         }
 
-        public override async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public override async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             IObservable<JsonElement> observable;
             observable = await _client.Stream<JsonElement>(request, context.RemoteCancellationIsAllowed, cancellationToken);
 
             var observer = AsyncObserver.Create<JsonElement>(context.Converter);
-            var enumerable = observer.GetAsyncEnumerable(cancellationToken);
+            var disposable = observable.Subscribe(observer);
+            var enumerable = observer.GetAsyncEnumerable(cancellationToken, () => disposable.Dispose());
 
-            using (observable.Subscribe(observer))
-            {
-                var enumerator = enumerable.GetAsyncEnumerator(cancellationToken);
-                JsonElement result = default;
-
-                while (true)
-                {
-                    if (!await enumerator.MoveNextAsync() || cancellationToken.IsCancellationRequested)
-                        break;
-
-                    result = enumerator.Current;
-
-                    yield return result;
-                }
-            }
+            await context.SetResponse(HubconResponse.OkT(enumerable));
+            return enumerable;
         }
 
-        public override async Task<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
-            return await _client.Subscribe<JsonElement>(request, context.RemoteCancellationIsAllowed);
+            var observable = await _client.Subscribe<JsonElement>(request, context.RemoteCancellationIsAllowed);
+            await context.SetResponse(HubconResponse.OkT<IObservable<JsonElement>>(observable));
+            return observable;
         }
 
-        public override async Task<HubconResponse<T>> Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
-            var response = await _client.IngestMultiple<T>(request, context.RemoteCancellationIsAllowed, context.ClientOptions, context.OperationOptions, cancellationToken);
-            return response;
+            var response = await _client.IngestMultiple<JsonElement>(request, context.RemoteCancellationIsAllowed, context.ClientOptions, context.OperationOptions, cancellationToken);
+            await context.HandleResponse<T>(response);
         }
 
-        public override async Task SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             var response = await _client.InvokeAsync<JsonElement>(request, context.RemoteCancellationIsAllowed, context.ExpectsHubconResponse, cancellationToken);
             await context.HandleResponse<T>(response);

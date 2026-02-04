@@ -73,11 +73,11 @@ namespace Hubcon.Shared.Core.Websockets.Events
             return converter.DeserializeData<T>(item)!;
         }
 
-        public IAsyncEnumerable<T> GetAsyncEnumerable(CancellationToken cancellationToken)
+        public IAsyncEnumerable<T> GetAsyncEnumerable(CancellationToken cancellationToken, Action? disposeAction = null)
         {
             try
             {
-                return ReadAsync(cancellationToken);
+                return ReadAsync(cancellationToken, disposeAction);
             }
             catch (Exception ex)
             {
@@ -86,7 +86,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
             }
         }
 
-        private async IAsyncEnumerable<T> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+        private async IAsyncEnumerable<T> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken, Action? disposeAction = null)
         {
             try
             {
@@ -112,6 +112,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
             }
             finally
             {
+                disposeAction?.Invoke();
             }
         }
 

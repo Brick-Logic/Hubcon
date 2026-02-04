@@ -112,7 +112,9 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                     }
                 }
 
-                ExpectsHubconResponse = method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(HubconResponse<>);
+                ExpectsHubconResponse = method.ReturnType.IsGenericType
+                    && method.ReturnType.GenericTypeArguments[0].IsGenericType
+                    && method.ReturnType.GenericTypeArguments[0].GetGenericTypeDefinition() == typeof(HubconResponse<>);
             }
             else if (member is PropertyInfo propertyInfo)
             {

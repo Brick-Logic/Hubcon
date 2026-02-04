@@ -208,7 +208,7 @@ namespace Hubcon.Client.Core.Websockets
             return observable;
         }
 
-        public async Task<HubconResponse<T>> IngestMultiple<T>(
+        public async Task<T> IngestMultiple<T>(
             IOperationRequest operationRequest,
             bool remoteCancelEnabled,
             IClientOptions? clientOptions = null,
@@ -363,7 +363,7 @@ namespace Hubcon.Client.Core.Websockets
 
                 if (result == null) throw new HubconRemoteException("Received an empty response.");
 
-                var response = converter.DeserializeJsonElement<HubconResponse<T>>(result.Data)
+                var response = converter.DeserializeJsonElement<T>(result.Data)
                                ?? throw new HubconRemoteException("Received an empty response.");
 
                 return response;

@@ -18,7 +18,7 @@ namespace Hubcon.Client.Core.Transports
     {
         HttpClient _httpClient = null!;
 
-        public override async Task<HubconResponse<bool>> CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
             var url = "";
@@ -61,14 +61,22 @@ namespace Hubcon.Client.Core.Transports
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
 
+            HubconResponse methodReponse = new HubconResponse(
+                response.IsSuccessStatusCode,
+                !response.IsSuccessStatusCode,
+                "",
+                "",
+                (int)response.StatusCode
+            );
+
+            await context.SetResponse(methodReponse);
+
             content?.Dispose();
             httpRequest.Dispose();
             response.Dispose();
-
-            return true;
         }
 
-        public override async IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public override async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
             var url = context.HttpUrl;
@@ -95,27 +103,35 @@ namespace Hubcon.Client.Core.Transports
 
             var enumerable = HttpMessageHelper.ParseSSEStream(stream, context, cancellationToken);
 
-            await foreach (var item in enumerable.WithCancellation(cancellationToken))
-            {
-                yield return item;
-            }
+            var methodReponse = new HubconResponse<IAsyncEnumerable<JsonElement>>(
+                response.IsSuccessStatusCode,
+                !response.IsSuccessStatusCode,
+                "",
+                "",
+                (int)response.StatusCode,
+                enumerable
+            );
+
+            await context.SetResponse(methodReponse);
 
             content?.Dispose();
             httpRequest.Dispose();
             response.Dispose();
+
+            return enumerable;
         }
 
-        public override Task<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }
 
-        public override Task<HubconResponse<T>> Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }
 
-        public override async Task SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
             var url = "";

@@ -40,9 +40,9 @@ namespace Hubcon
 
         public static void SetWrapped(bool wrapped)
         {
-            if (_current.Value is null || _currentWrappedSet.Value == true) return;
+            if (_currentWrappedSet.Value == true) return;
 
-            _current.Value.IsWrapped = wrapped;
+            CurrentWrapped.IsWrapped = wrapped;
             _currentWrappedSet.Value = true;
         }
     }
@@ -58,12 +58,12 @@ namespace Hubcon.Shared.Core.Context
 
         public void SetResponse<T>(IHubconResponse<T> response)
         {
-            Response ??= response;
+            Response = response;
         }
 
         public void SetResponse(IResponse response)
         {
-            Response ??= response;
+            Response = response;
         }
 
         public IHubconResponse<T> GetResponse<T>()

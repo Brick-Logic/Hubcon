@@ -15,11 +15,11 @@ namespace Hubcon.Client.Abstractions.Interfaces
 {
     public interface ITransportClient
     {
-        public Task SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        public Task<HubconResponse<bool>> CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        public IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        public Task<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        public Task<HubconResponse<T>> Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        public ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        public ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        public ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        public ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        public ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
 
         public void Build(TransportContext context);
         public bool IsBuilt();
@@ -82,11 +82,11 @@ namespace Hubcon
         private TransportContext? _context;
         protected TransportContext Context { get => _context!; }
 
-        public abstract Task SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        public abstract Task<HubconResponse<bool>> CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        public abstract IAsyncEnumerable<JsonElement> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        public abstract Task<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        public abstract Task<HubconResponse<T>> Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        public abstract ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        public abstract ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        public abstract ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        public abstract ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        public abstract ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
 
         void ITransportClient.Build(TransportContext context)
         {
