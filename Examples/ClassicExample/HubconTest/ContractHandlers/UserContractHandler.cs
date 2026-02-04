@@ -270,7 +270,7 @@ namespace HubconTest.ContractHandlers
         [Authorize(Roles = "Manager")]
         public async Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
         {
-            var response = HubconResponse.OkT(input) as HubconResponse<TestInputClass>;
+            var response = HubconResponse.OkT(input);
             return response;
         }
     }

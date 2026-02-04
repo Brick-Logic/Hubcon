@@ -92,7 +92,7 @@ namespace Hubcon.Client.Core.Proxies
             return _operations;
         }
 
-        public override Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public override async Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             if(_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
@@ -112,7 +112,10 @@ namespace Hubcon.Client.Core.Proxies
 
                 InterceptorContext.UseContext(interceptorContext);
 
-                return _client.SendAsync<T>(request, context, cancellationToken);
+                await _client.SendAsync<T>(request, context, cancellationToken);
+
+                var response = WrappedContext.CurrentWrapped.GetResponse<T>();
+                return response.Data;
             }
             else
             {

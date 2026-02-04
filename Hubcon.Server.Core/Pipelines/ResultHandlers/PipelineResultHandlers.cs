@@ -4,18 +4,18 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
 {
     internal static class PipelineResultHandlers
     {
-        internal static Task<HubconResponse> ResultHandler(object? result)
+        internal static async Task<HubconResponse> ResultHandler(object? result)
         {
             if (result is null)
             {
-                return Task.FromResult(HubconResponse.Ok());
+                return HubconResponse.Ok();
             }
             else
             {
-                if (result is HubconResponse converted)
-                    return Task.FromResult(converted);
+                if (result is IResponse converted)
+                    return converted.GetBoxed();
 
-                return Task.FromResult(HubconResponse.Ok(result));
+                return HubconResponse.Ok(result);
             }
         }
 
@@ -27,15 +27,15 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             return HubconResponse.Ok();
         }
 
-        internal static Task<HubconResponse> StreamResultHandler(object? result)
+        internal static async Task<HubconResponse> StreamResultHandler(object? result)
         {
             if (result is IAsyncEnumerable<object?> sub)
             {
-                return Task.FromResult(HubconResponse.Ok(sub));
+                return HubconResponse.Ok(sub);
             }
             else
             {
-                return Task.FromResult(HubconResponse.InternalError());
+                return HubconResponse.InternalError();
             }
         }
 
@@ -45,15 +45,15 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             {
                 var response = await GetTaskResultAsync(task);
 
-                if (response is HubconResponse converted)
-                    return converted;
+                if (response is IResponse converted)
+                    return converted.GetBoxed();
 
                 return HubconResponse.Ok(response);
             }
             else
             {
-                if (result is HubconResponse converted)
-                    return converted;
+                if (result is IResponse converted)
+                    return converted.GetBoxed();
 
                 return HubconResponse.Ok(result);
             }

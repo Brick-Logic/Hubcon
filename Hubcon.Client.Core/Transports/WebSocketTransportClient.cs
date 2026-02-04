@@ -1,4 +1,5 @@
 ﻿using Hubcon.Client.Core.Websockets;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.Logging;
 using System;
@@ -64,9 +65,10 @@ namespace Hubcon.Client.Core.Transports
             return response;
         }
 
-        public override async Task<HubconResponse<T>> SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async Task SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
-            return await _client.InvokeAsync<T>(request, context.RemoteCancellationIsAllowed, cancellationToken);
+            var response = await _client.InvokeAsync<JsonElement>(request, context.RemoteCancellationIsAllowed, context.ExpectsHubconResponse, cancellationToken);
+            await context.HandleResponse<T>(response);
         }
 
         protected override void Build(TransportContext context)

@@ -115,7 +115,7 @@ namespace Hubcon.Client.Core.Transports
             throw new NotSupportedException();
         }
 
-        public override async Task<HubconResponse<T>> SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async Task SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
             var url = "";
@@ -146,12 +146,11 @@ namespace Hubcon.Client.Core.Transports
             var responseBytes = await response.Content.ReadAsByteArrayAsync();
             var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
 
-            HubconResponse<T> operationResponse = converter.DeserializeJsonElement<HubconResponse<T>>(result);
+            await context.HandleResponse<T>(result);
 
             content?.Dispose();
             httpRequest.Dispose();
-            response.Dispose();
-            return operationResponse!;
+            response.Dispose();        
         }
 
         private static string HandleGeneric(IOperationRequest request, IClientOperationContext context, string currentUrl, MethodInfo methodInfo)

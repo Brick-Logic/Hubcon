@@ -129,7 +129,8 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 {
                 }
 
-                context.Response = await resultHandler.Invoke(result);
+                var response = await resultHandler.Invoke(result);
+                context.Response = (response as IHubconResponse)!;
                 await next();
             }
             else if (context.Blueprint.Kind == OperationKind.Subscription)
@@ -151,8 +152,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     if (subDescriptor == null)
                     {
                         var subscription = (ISubscription?)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
-
-                        subDescriptor = liveSubscriptionRegistry.RegisterHandler("", context.Blueprint.SimpleContractName, context.Blueprint.OperationName, subscription);
+                        subDescriptor = liveSubscriptionRegistry.RegisterHandler("", context.Blueprint.SimpleContractName, context.Blueprint.OperationName, subscription!);
                     }
                 }
                 else
@@ -210,7 +210,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     }
                 }
 
-                subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
+                await subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
 
                 async IAsyncEnumerable<object?> SubDelegate()
                 {
@@ -225,7 +225,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     {
                         observer.OnCompleted();
                         liveSubscriptionRegistry.RemoveHandler(clientId, context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
-                        subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
+                        await subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
                     }
                 };
 

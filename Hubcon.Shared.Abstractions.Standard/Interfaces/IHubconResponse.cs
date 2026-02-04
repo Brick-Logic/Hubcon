@@ -3,11 +3,22 @@ using System.Text.Json.Serialization;
 
 namespace Hubcon
 {
+    public interface IResponse
+    {
+        [JsonPropertyName("statusCode")]
+        int StatusCode { get; }
+
+        [JsonPropertyName("success")]
+        bool Success { get; }
+
+        HubconResponse GetBoxed();
+    }
+
     public interface IHubconResponse : IHubconResponse<object>
     {
     }
 
-    public interface IHubconResponse<T>
+    public interface IHubconResponse<T> : IResponse
     {
         [JsonPropertyName("error")]
         string Error { get; }
@@ -20,12 +31,6 @@ namespace Hubcon
 
         [JsonPropertyName("message")]
         string Message { get; }
-
-        [JsonPropertyName("statusCode")]
-        int StatusCode { get; }
-
-        [JsonPropertyName("success")]
-        bool Success { get; }
 
         [JsonPropertyName("data")]
         T Data { get; }

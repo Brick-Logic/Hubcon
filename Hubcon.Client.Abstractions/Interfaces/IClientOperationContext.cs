@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,10 +39,13 @@ namespace Hubcon
         string OriginalUrl { get; }
         string WebSocketUrl { get; }
         string HttpUrl { get; }
+        bool ExpectsHubconResponse { get; }
 
         Task AcquireRateLimiter();
         Task CallHooks(HookType hookType, CancellationToken cancellationToken = default);
         Task CallHooksAndInterceptors(HookType hookType, CancellationToken cancellationToken = default);
         Task CallValidationHooks(CancellationToken cancellationToken = default);
+        Task HandleResponse<T>(JsonElement response);
+        Task SetResponse(IResponse result);
     }
 }

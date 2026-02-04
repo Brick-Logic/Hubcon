@@ -132,5 +132,10 @@ namespace Hubcon
         {
             return HubconResponse.OkT(value);
         }
+
+        public HubconResponse GetBoxed()
+        {
+            return new HubconResponse(Success, Failure, Message, Error, StatusCode, Data, Exception);
+        }
     }
 }

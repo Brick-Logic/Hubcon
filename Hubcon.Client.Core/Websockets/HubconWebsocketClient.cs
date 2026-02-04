@@ -417,13 +417,12 @@ namespace Hubcon.Client.Core.Websockets
             await SendMessageAsync(request, cancellationToken);
         }
 
-        public async Task<HubconResponse<T>> InvokeAsync<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
+        public async Task<T> InvokeAsync<T>(IOperationRequest payload, bool remoteCancelEnabled, bool responseIsWrapped, CancellationToken cancellationToken = default)
         {
             var request = new OperationInvokeMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
             var tcs = new TaskCompletionSource<OperationResponseMessage>();
             _operationTcs.TryAdd(request.Id, tcs);
             OperationResponseMessage? response = null;
-            HubconResponse<T> converted = null!;
 
             if (_webSocket?.State != WebSocketState.Open)
                 await EnsureConnectedAsync();
@@ -447,8 +446,8 @@ namespace Hubcon.Client.Core.Websockets
 
                 if (response == null)
                     throw new HubconGenericException("There was an unknown error or the request timed out.");
-
-                converted = converter.DeserializeJsonElement<HubconResponse<T>>(response.Result)!;
+              
+                return converter.DeserializeJsonElement<T>(response.Result);
             }
             catch (Exception ex)
             {
@@ -464,8 +463,6 @@ namespace Hubcon.Client.Core.Websockets
                 _operationTcs.TryRemove(request.Id, out _);
                 response?.Dispose();
             }
-
-            return converted;
         }
 
         private async Task HandleIncomingMessage()

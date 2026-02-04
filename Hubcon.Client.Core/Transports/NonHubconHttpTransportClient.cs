@@ -50,7 +50,7 @@ namespace Hubcon.Client.Core.Transports
                 (int)response.StatusCode
             );
 
-            context.CallContext.SetResponse(methodReponse);
+            await context.SetResponse(methodReponse);
 
             content?.Dispose();
             httpRequest.Dispose();
@@ -106,7 +106,7 @@ namespace Hubcon.Client.Core.Transports
             throw new NotSupportedException();
         }
 
-        public override async Task<HubconResponse<T>> SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async Task SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
             var url = "";
@@ -132,24 +132,11 @@ namespace Hubcon.Client.Core.Transports
             var responseBytes = await response.Content.ReadAsByteArrayAsync();
             var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
 
-            var res = converter.DeserializeJsonElement<T>(result) ?? default!;
-
-            IHubconResponse methodReponse = new HubconResponse(
-                response.IsSuccessStatusCode,
-                !response.IsSuccessStatusCode,
-                "",
-                "",
-                (int)response.StatusCode,
-                res
-            );
-
-            context.CallContext.SetResponse(methodReponse);
-
+            await context.HandleResponse<T>(result);
+            
             content?.Dispose();
             httpRequest.Dispose();
             response.Dispose();
-
-            return (T)methodReponse.Data!;
         }
 
         protected override void Build(TransportContext configuration)

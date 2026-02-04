@@ -331,7 +331,7 @@ internal class Program
                         // El AcquireAsync es vital para no saturar si el Rate Limiter está activo
                         // await tokenBucketRateLimiter.AcquireAsync(1, ct); 
 
-                        var item = await paralellClient.ExecuteResponse(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+                        var item = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
 
                         // Interlocked.Increment(ref _finishedRequestsCount);
                     }

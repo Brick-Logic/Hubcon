@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -45,6 +46,7 @@ namespace Hubcon.Client.Core.HubconInvocationContext
         public IDynamicConverter Converter { get; }
         public string WebSocketUrl { get; }
         public string HttpUrl { get; }
+        public bool ExpectsHubconResponse { get; }
 
         public ClientOperationContext(MemberInfo member, InterceptorManager interceptorManager, IServiceProvider serviceProvider, IClientOptions clientOptions, IContractOptions contractOptions, Type contractType)
         {
@@ -109,6 +111,8 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                         throw new HubconGenericException($"Parameter '{parameter.Name}' from method '{method.ReflectedType}.{method.Name}' cannot be used as query verb as it contains complex or null types. Use primitive or enum types instead.");
                     }
                 }
+
+                ExpectsHubconResponse = method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(HubconResponse<>);
             }
             else if (member is PropertyInfo propertyInfo)
             {
@@ -204,6 +208,25 @@ namespace Hubcon.Client.Core.HubconInvocationContext
             var interceptorManager = InterceptorContext.Current;
             if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopeServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
             await InterceptorContext.Current.CallValidationHooks(cancellationToken);
+        }
+
+        public async Task SetResponse(IResponse result)
+        {
+            WrappedContext.CurrentWrapped.SetResponse(result);
+        }
+
+        public async Task HandleResponse<T>(JsonElement response)
+        {
+            if (ExpectsHubconResponse)
+            {
+                IResponse result = (Converter.DeserializeJsonElement<T>(response) as IResponse)!;
+                await SetResponse(result!);
+            }
+            else
+            {
+                IResponse result = Converter.DeserializeJsonElement<HubconResponse<T>>(response);
+                await SetResponse(result!);
+            }
         }
     }
 }
