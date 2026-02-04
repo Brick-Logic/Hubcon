@@ -97,6 +97,7 @@ namespace Hubcon.Client.Core.Proxies
             if(_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
                 OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
+                _ = WrappedContext.CurrentWrapped;
                 var wrapped = WrappedContext.Current;
 
                 using var scope = rootServiceProvider.CreateScope();
@@ -114,8 +115,17 @@ namespace Hubcon.Client.Core.Proxies
 
                 await _client.SendAsync<T>(request, context, cancellationToken);
 
-                var response = WrappedContext.CurrentWrapped.GetResponse<T>();
-                return response.Data;
+                var rawResponse = WrappedContext.CurrentWrapped.GetRawResponse();
+                if (rawResponse is HubconResponse<T> hubconResponse)
+                {
+                    return hubconResponse.Data;
+                }
+                else if(rawResponse is T response)
+                {
+                    return response;
+                }
+
+                return default!;
             }
             else
             {
@@ -128,6 +138,7 @@ namespace Hubcon.Client.Core.Proxies
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
                 OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
+                _ = WrappedContext.CurrentWrapped;
                 var wrapped = WrappedContext.Current;
 
                 using var scope = rootServiceProvider.CreateScope();
@@ -156,6 +167,7 @@ namespace Hubcon.Client.Core.Proxies
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
                 OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
+                _ = WrappedContext.CurrentWrapped;
                 var wrapped = WrappedContext.Current;
 
                 using var scope = rootServiceProvider.CreateScope();
@@ -172,8 +184,18 @@ namespace Hubcon.Client.Core.Proxies
                 InterceptorContext.UseContext(interceptorContext);
 
                 await _client.Ingest<T>(request, context, cancellationToken);
-                var response = WrappedContext.CurrentWrapped.GetResponse<T>();
-                return response.Data;
+
+                var rawResponse = WrappedContext.CurrentWrapped.GetRawResponse();
+                if (rawResponse is HubconResponse<T> hubconResponse)
+                {
+                    return hubconResponse.Data;
+                }
+                else if (rawResponse is T response)
+                {
+                    return response;
+                }
+
+                return default!;
             }
             else
             {
@@ -186,6 +208,7 @@ namespace Hubcon.Client.Core.Proxies
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
                 OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
+                _ = WrappedContext.CurrentWrapped;
                 var wrapped = WrappedContext.Current;
 
                 using var scope = rootServiceProvider.CreateScope();
@@ -215,6 +238,7 @@ namespace Hubcon.Client.Core.Proxies
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
                 OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
+                _ = WrappedContext.CurrentWrapped;
                 var wrapped = WrappedContext.Current;
 
                 using var scope = rootServiceProvider.CreateScope();

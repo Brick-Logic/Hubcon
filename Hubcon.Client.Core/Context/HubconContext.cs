@@ -29,8 +29,6 @@ namespace Hubcon
     public static class WrappedContext
     {
         private static readonly AsyncLocal<WrappedEnvelope> _current = new();
-
-        //private static readonly AsyncLocal<bool> _currentWrapped = new();
         private static readonly AsyncLocal<bool> _currentWrappedSet = new();
 
         public static bool Current { get => _current.Value?.IsWrapped ?? false; }

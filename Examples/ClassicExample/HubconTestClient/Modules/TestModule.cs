@@ -109,7 +109,6 @@ namespace HubconTestClient.Modules
                 var authManager = ctx.Services.GetRequiredService<AuthenticationManager>();
                 var logger = ctx.Services.GetRequiredService<ILogger<object>>();
 
-
                 if (authManager.ShouldRefreshSession)
                 {
                     IHubconResult? refreshedToken = null!;
