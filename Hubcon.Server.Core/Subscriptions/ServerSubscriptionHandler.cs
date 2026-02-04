@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Enums;
+﻿using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using System.Collections.Concurrent;
 using System.ComponentModel;
@@ -7,68 +8,61 @@ using System.Reflection;
 namespace Hubcon.Server.Core.Subscriptions
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class ServerSubscriptionHandler<T> : ISubscription<T>
+    public sealed class ServerSubscriptionHandler<T> : ISubscription<T>, IServerSubscription<T>
     {
-        public PropertyInfo Property { get; } = null!;
+        PropertyInfo IServerSubscription<T>.Property { get; } = null!;
 
+        ConcurrentDictionary<object, Func<object?, Task>> IServerSubscription<T>.Handlers { get; } = new();
 
-        private SubscriptionState _connected = SubscriptionState.Emitter;
-        public SubscriptionState Connected => _connected;
+        public event Func<object?, Task>? OnEventReceived;
 
-        public ConcurrentDictionary<object, HubconEventHandler<object>> Handlers { get; } = new();
-
-        public event HubconEventHandler<object>? OnEventReceived;
-
-        public void AddHandler(HubconEventHandler<T> handler)
+        async ValueTask IServerSubscription<T>.AddHandler(Func<T?, Task> handler)
         {
-            Task internalHandler(object? value) => handler.Invoke((T?)value!);
-            Handlers[handler] = internalHandler;
-            OnEventReceived += internalHandler;
+            async Task WrapHandler(object? value) => await handler.Invoke((T?)value!);
+
+            if (this is IServerSubscription<T> clientSubscription && !clientSubscription.Handlers.TryGetValue(handler, out var _))
+            {
+                clientSubscription.Handlers[handler] = WrapHandler;
+                OnEventReceived += WrapHandler;
+            }
         }
 
-        public void AddGenericHandler(HubconEventHandler<object> handler)
+        async ValueTask IServerSubscription.AddGenericHandler(Func<object?, Task> handler)
         {
-            Task internalHandler(object? value) => handler.Invoke((T?)value!);
-            Handlers[handler] = internalHandler;
-            OnEventReceived += internalHandler;
+            async Task WrapHandler (object? value) => await handler.Invoke((T?)value!);
+
+            if (this is IServerSubscription<T> clientSubscription && !clientSubscription.Handlers.TryGetValue(handler, out var _))
+            {
+                clientSubscription.Handlers[handler] = WrapHandler;
+                OnEventReceived += WrapHandler;
+            }
         }
 
-        public void RemoveHandler(HubconEventHandler<T> handler)
+        async ValueTask IServerSubscription<T>.RemoveHandler(Func<T, Task> handler)
         {
-            var internalHandler = Handlers[handler];
-            OnEventReceived -= internalHandler;
-            Handlers.TryRemove(handler, out _);
+            if (this is IServerSubscription<T> clientSubscription && clientSubscription.Handlers.TryRemove(handler, out var removedHandler))
+            {
+                OnEventReceived -= removedHandler;
+            }
         }
 
-        public void RemoveGenericHandler(HubconEventHandler<object> handler)
+        async ValueTask IServerSubscription.RemoveGenericHandler(Func<object?, Task> handler)
         {
-            var internalHandler = Handlers[handler];
-            OnEventReceived -= internalHandler;
-            Handlers.TryRemove(handler, out _);
+            if (this is IServerSubscription<T> clientSubscription && clientSubscription.Handlers.TryRemove(handler, out var removedHandler))
+            {
+                OnEventReceived -= removedHandler;
+            }
         }
 
-        public Task Subscribe()
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task Unsubscribe()
-        {
-            return Task.CompletedTask;
-        }
-
-        public void Build()
-        {
-        }
-
-        public void Emit(T? eventValue)
+        async ValueTask IServerSubscription<T>.Emit(T? eventValue)
         {
             OnEventReceived?.Invoke(eventValue);
         }
 
-        public void EmitGeneric(object? eventValue)
+        async ValueTask IServerSubscription.EmitGeneric(object? eventValue)
         {
-            OnEventReceived?.Invoke((T?)eventValue);
+            if(OnEventReceived != null)
+                await OnEventReceived.Invoke((T?)eventValue);
         }
     }
 }

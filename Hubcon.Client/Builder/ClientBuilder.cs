@@ -238,7 +238,6 @@ namespace Hubcon.Client.Builder
                         var buildable = subscriptionInstance as IBuildableSubscription;
                         buildable!.Build(context);
                         newClient.SetPropertyValue(subscriptionProp.Name, subscriptionInstance);
-                        subscriptionInstance.Build();
                     }
                 }
             }

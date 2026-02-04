@@ -1,8 +1,7 @@
-﻿using Hubcon.Client.Core.Proxies;
-using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
-using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
@@ -60,7 +59,7 @@ namespace Hubcon.Server.Injection
         public void AutoRegisterControllers()
         {
             var assembly = Assembly.GetCallingAssembly();
-            var foundControllers = ControllerContractHelper.FindImplementations(assembly, [typeof(BaseContractProxy)]);
+            var foundControllers = ControllerContractHelper.FindImplementations(assembly, [typeof(BaseProxy)]);
 
             foreach (var controller in foundControllers)
             {

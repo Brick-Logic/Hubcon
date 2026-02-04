@@ -15,6 +15,7 @@ using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
@@ -28,61 +29,73 @@ namespace Hubcon.Client.Core.Subscriptions
     }
 
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public sealed class ClientSubscriptionHandler<T> : ISubscription<T>, IBuildableSubscription
+    public sealed class ClientSubscriptionHandler<T> : ISubscription<T>, IClientSubscription<T>, IBuildableSubscription
     {
-        public event HubconEventHandler<object>? OnEventReceived;
+        public event Func<object?, Task>? OnEventReceived;
         private readonly IDynamicConverter _converter;
         private readonly ILogger<ClientSubscriptionHandler<object>> logger;
         private CancellationTokenSource _tokenSource;
 
         private SubscriptionState _connected = SubscriptionState.Disconnected;
-        public SubscriptionState Connected { get => _connected; }
+        SubscriptionState IClientSubscription<T>.Connected { get => _connected; }
 
-        public PropertyInfo Property { get; } = null!;
+        PropertyInfo IClientSubscription<T>.Property { get; set; } = null!;
         public IHubconClient Client { get; }
 
-        public ConcurrentDictionary<object, HubconEventHandler<object>> Handlers { get; }
-        public IClientOperationContext Context { get; set; }
+        ConcurrentDictionary<object, Func<object?, Task>> IClientSubscription<T>.Handlers { get; } = new();
+        public IClientOperationContext? Context { get; set; }
 
         public ClientSubscriptionHandler(ClientSubscriptionConfig<object> subscriptionConfig)
         {
             _converter = subscriptionConfig.Converter;
             this.logger = subscriptionConfig.Logger;
-            this.Property = subscriptionConfig.Property;
+            ((IClientSubscription<T>)this).Property = subscriptionConfig.Property;
             this.Client = subscriptionConfig.Client;
             _tokenSource = new CancellationTokenSource();
-            Handlers = new();
         }
 
-        public void AddHandler(HubconEventHandler<T> handler)
+        async ValueTask IClientSubscription<T>.AddHandler(Func<T?, Task> handler)
         {
-            HubconEventHandler<object> internalHandler = async (value) => await handler.Invoke((T?)value!);
-            Handlers[handler] = internalHandler;
-            OnEventReceived += internalHandler;
+            async Task WrapHandler(object? value) => await handler.Invoke((T?)value!);
+
+            if (this is IClientSubscription<T> clientSubscription && !clientSubscription.Handlers.TryGetValue(handler, out var _))
+            {
+                clientSubscription.Handlers[handler] = WrapHandler;
+                OnEventReceived += WrapHandler;
+            }
         }
 
-        public void AddGenericHandler(HubconEventHandler<object> handler)
+        async ValueTask IClientSubscription<T>.AddGenericHandler(Func<object?, Task> handler)
         {
-            HubconEventHandler<object> internalHandler = async (value) => await handler.Invoke((T?)value!);
-            Handlers[handler] = internalHandler;
-            OnEventReceived += internalHandler;
+            async Task WrapHandler(object? value) => await handler.Invoke((T?)value!);
+
+            if(this is IClientSubscription<T> clientSubscription && clientSubscription.Handlers.TryGetValue(handler, out var _))
+            {
+                clientSubscription.Handlers[handler] = WrapHandler;
+                OnEventReceived += WrapHandler;
+            }
         }
 
-        public void RemoveHandler(HubconEventHandler<T> handler)
+
+        async ValueTask IClientSubscription<T>.RemoveHandler(Func<T?, Task> handler)
         {
-            var internalHandler = Handlers[handler];
-            OnEventReceived -= internalHandler;
-            Handlers.TryRemove(handler, out _);
+            if(this is IClientSubscription<T> clientSubscription && clientSubscription.Handlers.TryRemove(handler, out _))
+            {
+                var internalHandler = ((IClientSubscription<T>)this).Handlers[handler];
+                OnEventReceived -= internalHandler;
+            }     
         }
 
-        public void RemoveGenericHandler(HubconEventHandler<object> handler)
+        async ValueTask IClientSubscription<T>.RemoveGenericHandler(Func<object?, Task> handler)
         {
-            var internalHandler = Handlers[handler];
-            OnEventReceived -= internalHandler;
-            Handlers.TryRemove(handler, out _);
+            if (this is IClientSubscription<T> clientSubscription && !clientSubscription.Handlers.TryRemove(handler, out _))
+            {
+                var internalHandler = ((IClientSubscription<T>)this).Handlers[handler];
+                OnEventReceived -= internalHandler;
+            }
         }
 
-        public async Task Subscribe()
+        async ValueTask IClientSubscription<T>.Subscribe()
         {
             if (_tokenSource.IsCancellationRequested == false && (_connected == SubscriptionState.Connected || _connected == SubscriptionState.Reconnecting))
                 return;
@@ -95,11 +108,11 @@ namespace Hubcon.Client.Core.Subscriptions
             {
                 int retry = 0;
 
-                var contract = Property.DeclaringType!;
-                var simpleContractName = NamingHelper.GetCleanName(Property.DeclaringType!.Name);
-                var request = new SubscriptionRequest(Property.Name, simpleContractName, null);
+                var contract = ((IClientSubscription<T>)this).Property.DeclaringType!;
+                var simpleContractName = NamingHelper.GetCleanName(((IClientSubscription<T>)this).Property.DeclaringType!.Name);
+                var request = new SubscriptionRequest(((IClientSubscription<T>)this).Property.Name, simpleContractName, null);
                 var random = new Random();
-                var scope = Context.RootServiceProvider.CreateScope();
+                var scope = Context!.RootServiceProvider.CreateScope();
 
                 while (!_tokenSource.IsCancellationRequested)
                 {
@@ -149,7 +162,7 @@ namespace Hubcon.Client.Core.Subscriptions
                                 var result = _converter.DeserializeData<T>(enumerator.Current);
 
                                 if (OnEventReceived != null)
-                                    await OnEventReceived.Invoke(result!);
+                                    await (OnEventReceived.Invoke(result!));
                             }
                         }
                     }
@@ -186,21 +199,12 @@ namespace Hubcon.Client.Core.Subscriptions
             await tcs.Task;
         }
 
-        public async Task Unsubscribe()
+        async ValueTask IClientSubscription<T>.Unsubscribe()
         {
             _tokenSource.Cancel();
         }
 
-        public void Build()
-        {
-        }
-
-        public void Emit(T? eventValue)
-        {
-            OnEventReceived?.Invoke(eventValue!);
-        }
-
-        public void EmitGeneric(object? eventValue)
+        async ValueTask IClientSubscription<T>.EmitGeneric(object? eventValue)
         {
             OnEventReceived?.Invoke((T?)eventValue!);
         }

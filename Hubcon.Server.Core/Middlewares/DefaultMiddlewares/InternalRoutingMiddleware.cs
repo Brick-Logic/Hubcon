@@ -1,7 +1,7 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
-
+using Hubcon.Server.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -227,7 +227,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                         liveSubscriptionRegistry.RemoveHandler(clientId, context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
                         subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
                     }
-                    ;
                 };
 
                 context.Response = HubconResponse.Ok(SubDelegate());

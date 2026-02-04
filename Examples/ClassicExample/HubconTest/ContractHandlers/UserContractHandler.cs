@@ -26,15 +26,13 @@ namespace HubconTest.ContractHandlers
         [UseHttpEndpointFilter(typeof(LoggingEndpointFilter))]
         [UseMiddleware(typeof(LocalLoggingMiddleware))]
         [UseHttpRateLimiter("endpoint")]
-        public Task CreateUser(CancellationToken cancellationToken)
+        public async Task CreateUser(CancellationToken cancellationToken)
         {
-            OnUserCreated?.Emit(1);
-            OnUserCreated2?.Emit(2);
-            OnUserCreated3?.Emit(3);
-            OnUserCreated4?.Emit(4);
-            OnEnumerableTest?.Emit([0,1,2,3,4]);
-
-            return Task.CompletedTask;
+            await OnUserCreated.Emit(1);
+            await OnUserCreated2.Emit(2);
+            await OnUserCreated3.Emit(3);
+            await OnUserCreated4.Emit(4);
+            await OnEnumerableTest.Emit([0,1,2,3,4]);
         }
 
         [UseHttpRateLimiter("endpoint")]

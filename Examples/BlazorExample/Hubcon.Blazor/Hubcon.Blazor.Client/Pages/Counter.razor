@@ -27,12 +27,12 @@
 
     protected async Task TestSubscribe()
     {
-        HubconEventHandler<int?> handler = async (int? input) =>
+        Func<int?, Task> handler = async (int? input) =>
         {
             _logger.LogInformation($"Evento recibido: {input}");
         };
 
-        _userService.OnUserCreated!.AddHandler(handler);
+        await _userService.OnUserCreated.AddHandler(handler);
         await _userService.OnUserCreated.Subscribe();
 
         _logger.LogInformation($"Subscribe OK");

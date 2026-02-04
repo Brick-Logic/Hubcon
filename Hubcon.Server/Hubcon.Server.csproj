@@ -38,8 +38,6 @@
 		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="1.0.0-rc*" />
 		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="1.0.0-rc*" />
 		
-		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" />
-		<ProjectReference Include="..\Hubcon.Client.Core\Hubcon.Client.Core.csproj" />
 		<ProjectReference Include="..\Hubcon.Server.Core\Hubcon.Server.Core.csproj" />
 		<ProjectReference Include="..\Hubcon.Server.Abstractions\Hubcon.Server.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
@@ -53,8 +51,6 @@
 		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="1.0.0-rc*" />
 		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="1.0.0-rc*" />
 
-		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-rc*" />
-		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-rc*" />
 		<PackageReference Include="Hubcon.Server.Core" Version="1.0.0-rc*" />
 		<PackageReference Include="Hubcon.Server.Abstractions" Version="1.0.0-rc*" />
 		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-rc*" />

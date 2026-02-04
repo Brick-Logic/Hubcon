@@ -441,22 +441,22 @@ internal class Program
             evento4 = true;
         }
 
-        async Task handler5(IEnumerable<int> input)
+        async Task handler5(IEnumerable<int>? input)
         {
-            logger.LogInformation($"Evento recibido: [{string.Join(",", input)}]");
+            logger.LogInformation($"Evento recibido: [{string.Join(",", input!)}]");
             Interlocked.Add(ref eventosRecibidos, 1);
             evento4 = true;
         }
 
-        client.OnUserCreated!.AddHandler(handler);
+        await client.OnUserCreated.AddHandler(handler);
         await client.OnUserCreated.Subscribe();
-        client.OnUserCreated2!.AddHandler(handler2);
+        await client.OnUserCreated2.AddHandler(handler2);
         await client.OnUserCreated2.Subscribe();
-        client.OnUserCreated3!.AddHandler(handler3);
+        await client.OnUserCreated3.AddHandler(handler3);
         await client.OnUserCreated3.Subscribe();
-        client.OnUserCreated4!.AddHandler(handler4);
+        await client.OnUserCreated4.AddHandler(handler4);
         await client.OnUserCreated4.Subscribe();
-        client.OnEnumerableTest!.AddHandler(handler5);
+        await client.OnEnumerableTest.AddHandler(handler5);
         await client.OnEnumerableTest.Subscribe();
 
         logger.LogInformation("Eventos conectados.");

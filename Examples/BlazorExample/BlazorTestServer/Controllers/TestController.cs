@@ -41,7 +41,7 @@ namespace BlazorTestServer.Controllers
         public async Task CreateUser(CancellationToken cancellationToken)
         {
             var number = Random.Shared.Next(-10, 50);
-            OnUserCreated?.Emit(number);
+            await OnUserCreated.Emit(number);
             await Task.CompletedTask;
         }
 
