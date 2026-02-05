@@ -1,4 +1,5 @@
-﻿using HubconTestDomain;
+﻿using Hubcon;
+using HubconTestDomain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.ComponentModel.DataAnnotations;

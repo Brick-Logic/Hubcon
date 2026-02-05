@@ -11,6 +11,7 @@ using Hubcon.Shared.Core.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
@@ -71,7 +72,7 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                     && ClientOptions.AuthIsEnabled;
 
             // Transport
-            var transportAttributeType = OperationOptions?.TransportType ?? contractOptions.TransportType ?? clientOptions.TransportType;
+            var transportAttributeType = ContractType.GetCustomAttributes().FirstOrDefault(x => x is HubconTransportAttribute) ?? OperationOptions?.TransportType ?? contractOptions.TransportType ?? clientOptions.TransportType;
             var transportType = TransportTypeResolver.Resolve(transportAttributeType.GetType())!;
             Transport = (ITransportClient)serviceProvider.GetRequiredService(transportType);
 
@@ -171,6 +172,21 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                     HttpUrl);
 
                 Transport.Build(transportConfiguration);
+            }
+
+            var operationConfigurator = OperationOptions as IOperationConfigurator;
+            var operationLimiter = Member.GetCustomAttribute<RateLimitAttribute>();
+            if (operationLimiter != null)
+            {
+                operationConfigurator?.ConfigureRateBucket(operationLimiter);
+            }
+            else
+            {
+                var limiter = contractType.GetCustomAttribute<RateLimitAttribute>();
+                if (limiter != null)
+                {
+                    operationConfigurator?.ConfigureRateBucket(new RateLimitAttribute(limiter.Requests, limiter.MillisecondsToReplenish, limiter.RateTokenLimit, limiter.QueueLimit));
+                }
             }
         }
 

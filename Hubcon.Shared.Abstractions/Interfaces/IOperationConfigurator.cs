@@ -49,8 +49,11 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// </summary>
         /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
         IOperationConfigurator DisableHttpAuthentication();
+        IOperationConfigurator ConfigureRateBucket(RateLimitAttribute rateLimitAttribute);
         IOperationConfigurator UseWebSockets();
         IOperationConfigurator UseHttp();
         IOperationConfigurator UseNonHubconHttp();
+
+
     }
 }

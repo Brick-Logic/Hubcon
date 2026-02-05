@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 
 namespace HubconTestDomain
 {
+    [HttpTransport]
     public interface ISecondTestContract : IControllerContract
     {
         public Task<string> LoginAsync(LoginCommand command);

@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 

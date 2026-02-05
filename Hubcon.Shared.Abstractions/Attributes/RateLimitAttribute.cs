@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon
 {
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Interface)]
     public class RateLimitAttribute : Attribute
     {
         public TokenBucketRateLimiter RateBucket { get; }

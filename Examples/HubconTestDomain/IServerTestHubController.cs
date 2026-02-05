@@ -21,6 +21,8 @@ namespace HubconTestDomain
         public string Type { get; set; }
     }
 
+    [WebSocketTransport]
+    [RateLimit(1)]
     public interface IUserContract : IControllerContract
     {
         ISubscription<int?>? OnUserCreated { get; }
@@ -41,6 +43,8 @@ namespace HubconTestDomain
         Task ShowTextOnServer();
         Task<IEnumerable<bool>> GetBooleans();
         Task<MyTestClass> GetObject();
+
+        [HttpTransport]
         Task CreateUser(CancellationToken cancellationToken = default);
         IAsyncEnumerable<string> GetMessages2(CancellationToken cancellationToken = default);
         Task IngestMessages(IAsyncEnumerable<string> source, int? count, CancellationToken cancellationToken = default);

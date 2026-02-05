@@ -127,5 +127,11 @@ namespace Hubcon.Client.Core.Configurations
             AuthIsEnabled = false;
             return this;
         }
+
+        public IOperationConfigurator ConfigureRateBucket(RateLimitAttribute rateLimitAttribute)
+        {
+            _rateBucket = rateLimitAttribute.RateBucket;
+            return this;
+        }
     }
 }

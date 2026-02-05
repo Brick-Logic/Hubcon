@@ -120,11 +120,12 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                     .GetCustomAttributes()
                     .ToList();
 
-                var interfaceAttributes = ControllerType.GetMethod(
+               ContractType.GetMethod(
                     intefaceMemberInfo.Name,
                     methodInfo.GetParameters().Select(x => x.ParameterType).ToArray())!
                     .GetCustomAttributes()
-                    .ToList();
+                    .ToList()
+                    .ForEach(x => Attributes.Add(x));         
 
                 endpointAttributes = Attributes
                     .Where(x => x is AuthorizeAttribute || x is AllowAnonymousAttribute)
@@ -139,6 +140,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 Kind = OperationKind.Subscription;
 
                 Attributes = ControllerType.GetMethod(propertyInfo.Name)?.GetCustomAttributes().ToList() ?? new List<Attribute>();
+                ContractType.GetMethod(propertyInfo.Name)?.GetCustomAttributes().ToList().ForEach(x => Attributes.Add(x));
 
                 endpointAttributes = Attributes
                     .Where(x => x is SubscriptionAuthorizeAttribute || x is AllowAnonymousAttribute)
@@ -198,6 +200,37 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 .Where(x => x is HubconTransportAttribute)
                 .ToList()
                 .ForEach(x => TransportAttributes.TryAdd(x.GetType(), x));
+
+            if(TransportAttributes.Count == 0)
+            {
+                Attributes
+                .Where(x => x is HubconTransportAttribute)
+                .ToList()
+                .ForEach(x => TransportAttributes.TryAdd(x.GetType(), x));
+            }
+
+            if (TransportAttributes.Count == 0)
+            {
+                ControllerType
+                    .GetCustomAttributes()
+                    .OfType<HubconTransportAttribute>()
+                    .ToList()
+                    .ForEach(x => TransportAttributes.TryAdd(x.GetType(), x));
+
+                ContractType
+                    .GetCustomAttributes()
+                    .OfType<HubconTransportAttribute>()
+                    .ToList()
+                    .ForEach(x => TransportAttributes.TryAdd(x.GetType(), x));
+            }
+
+            if (TransportAttributes.Count == 0)
+            {
+                foreach(var transport in options.DefaultTransports)
+                {
+                    TransportAttributes.TryAdd(transport.Key, transport.Value);
+                }
+            }
 
             PipelineBuilder = pipelineBuilder;
             InvokeDelegate = invokeDelegate;

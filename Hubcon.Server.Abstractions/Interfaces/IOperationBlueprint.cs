@@ -45,7 +45,7 @@ namespace Hubcon
             if (TransportAttributes.IsEmpty)
                 return true;
 
-            return TransportAttributes.Any(x => x is T);
+            return TransportAttributes.Any(x => x.Value is T);
         }
     }
 }

@@ -68,22 +68,22 @@ namespace Hubcon.Server.Core.Routing.Registries
                     continue;
 
                 // Obtenemos atributos de transporte
-                List<HubconTransportAttribute> contractTransportAttributes = interfaceType.GetCustomAttributes()
-                    .Where(x => x is HubconTransportAttribute)
-                    .Select(x => x as HubconTransportAttribute)
-                    .ToList()!;
+                //List<HubconTransportAttribute> contractTransportAttributes = interfaceType.GetCustomAttributes()
+                //    .Where(x => x is HubconTransportAttribute)
+                //    .Select(x => x as HubconTransportAttribute)
+                //    .ToList()!;
 
-                var controllerTransportAttributes = controllerType.GetCustomAttributes()
-                    .Where(x => x is HubconTransportAttribute)
-                    .Select(x => x as HubconTransportAttribute)
-                    .ToList()!;
+                //var controllerTransportAttributes = controllerType.GetCustomAttributes()
+                //    .Where(x => x is HubconTransportAttribute)
+                //    .Select(x => x as HubconTransportAttribute)
+                //    .ToList()!;
 
-                contractTransportAttributes.AddRange(controllerTransportAttributes!);
+                //contractTransportAttributes.AddRange(controllerTransportAttributes!);
 
-                if (contractTransportAttributes.Count == 0)
-                {
-                    contractTransportAttributes = serverOptions.DefaultTransports.Values.ToList();
-                }
+                //if (contractTransportAttributes.Count == 0)
+                //{
+                //    contractTransportAttributes = serverOptions.DefaultTransports.Values.ToList();
+                //}
 
                 var classFilters = controllerType.GetCustomAttributes()
                         .Where(x => x is UseMiddlewareAttribute)
@@ -130,25 +130,25 @@ namespace Hubcon.Server.Core.Routing.Registries
                     var parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
                     var controllerMethod = controllerType.GetMethod(method.Name, parameterTypes)!;
 
-                    Dictionary<Type, HubconTransportAttribute> methodTransportAttributes = new();
+                    //Dictionary<Type, HubconTransportAttribute> methodTransportAttributes = new();
                     
-                    foreach (Attribute attribute in method.GetCustomAttributes().Where(x => x is HubconTransportAttribute))
-                    {
-                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransportAttribute)!);
-                    }
+                    //foreach (Attribute attribute in method.GetCustomAttributes().Where(x => x is HubconTransportAttribute))
+                    //{
+                    //    methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransportAttribute)!);
+                    //}
 
-                    foreach (Attribute attribute in controllerMethod.GetCustomAttributes().Where(x => x is HubconTransportAttribute))
-                    {
-                        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransportAttribute)!);
-                    }
+                    //foreach (Attribute attribute in controllerMethod.GetCustomAttributes().Where(x => x is HubconTransportAttribute))
+                    //{
+                    //    methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransportAttribute)!);
+                    //}
 
-                    if (methodTransportAttributes.Count == 0)
-                    {
-                        foreach (Attribute attribute in contractTransportAttributes)
-                        {
-                            methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransportAttribute)!);
-                        }
-                    }
+                    //if (methodTransportAttributes.Count == 0)
+                    //{
+                    //    foreach (Attribute attribute in contractTransportAttributes)
+                    //    {
+                    //        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransportAttribute)!);
+                    //    }
+                    //}
 
                     var methodSignature = method.GetMethodSignature(useHashedNames);
 
@@ -221,11 +221,8 @@ namespace Hubcon.Server.Core.Routing.Registries
                         action!
                     );
 
-                    foreach (var transport in contractTransportAttributes)
-                    {
-                        _availableOperations.GetOrAdd(GetOperationKey(transport.TransportKey, interfaceType.Name, descriptor.OperationName), descriptor);
-                    }
-
+                    _availableOperations.GetOrAdd(GetOperationKey(interfaceType.Name, descriptor.OperationName), descriptor);
+                 
                     OnOperationRegistered?.Invoke(descriptor);
                 }
 
@@ -256,11 +253,8 @@ namespace Hubcon.Server.Core.Routing.Registries
                         serverOptions
                     );
 
-                    foreach (var transport in contractTransportAttributes)
-                    {
-                        _availableOperations.GetOrAdd(GetOperationKey(transport.TransportKey, interfaceType.Name, descriptor.OperationName), descriptor);
-                    }
-
+                     _availableOperations.GetOrAdd(GetOperationKey(interfaceType.Name, descriptor.OperationName), descriptor);
+                 
                     OnOperationRegistered?.Invoke(descriptor);
                 }
 
@@ -271,6 +265,11 @@ namespace Hubcon.Server.Core.Routing.Registries
         private static string GetOperationKey(string transportKey, string contractName, string operationName)
         {
             return transportKey + "_" + NamingHelper.GetCleanName(contractName) + "_" + operationName;
+        }
+
+        private static string GetOperationKey(string contractName, string operationName)
+        {
+            return NamingHelper.GetCleanName(contractName) + "_" + operationName;
         }
 
         private static readonly HashSet<Type> SimpleTypes = new()
@@ -306,12 +305,8 @@ namespace Hubcon.Server.Core.Routing.Registries
         {
             var transport = HubconTransportAttribute.GetDefault<T>();
 
-            Build(transport);
-            if(endpointRegisterer != null)
-            {
-                var items = _availableOperations.Where(x => x.Key.StartsWith(transport.TransportKey)).ToDictionary();
-                endpointRegisterer.Invoke(items, app);
-            }
+            var tempCache = Build(transport);
+            endpointRegisterer?.Invoke(tempCache, app);         
         }
 
         public bool GetOperationBlueprint(IOperationEndpoint request, HubconTransportAttribute transportAttribute, out IOperationBlueprint? value)
@@ -342,24 +337,18 @@ namespace Hubcon.Server.Core.Routing.Registries
             return false;
         }
 
-        private void Build(HubconTransportAttribute transport)
-        {                       
-            if(_blueprintCache == null)
-            {
-                _blueprintCache ??= _availableOperations.Where(x => x.Key.StartsWith(transport.TransportKey)).ToFrozenDictionary();          
-            }
-            else
-            {
-                var tempCache = _blueprintCache.ToDictionary();
-                var tempOperations = _availableOperations.Where(x => x.Key.StartsWith(transport.TransportKey));
-                
-                foreach(var operation in tempOperations)
-                {
-                    tempCache.TryAdd(operation.Key, operation.Value);
-                }
+        private IReadOnlyDictionary<string, IOperationBlueprint> Build(HubconTransportAttribute transport)
+        {
+            var tempCache = _blueprintCache?.ToDictionary() ?? new Dictionary<string, IOperationBlueprint>();
+            var tempOperations = _availableOperations.Where(x => x.Value.TransportAttributes.Any(x => x.Key == transport.GetType())).ToFrozenDictionary();
 
-                _blueprintCache = tempCache.ToFrozenDictionary();
+            foreach (var operation in tempOperations)
+            {
+                tempCache.TryAdd(transport.TransportKey + "_" + operation.Key, operation.Value);
             }
+
+            _blueprintCache = tempCache.ToFrozenDictionary();
+            return tempCache;
         }
 
         private Delegate CreateMethodDescriptor(MethodInfo method)
