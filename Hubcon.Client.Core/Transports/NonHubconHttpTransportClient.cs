@@ -25,15 +25,12 @@ namespace Hubcon.Client.Core.Transports
             var methodInfo = (context.Member as MethodInfo)!;
             var httpMethod = context.HttpMethodAttribute!;
             var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
-            var converter = context.Converter;
-            var baseUrl = context.BaseUrl;
-            var route = methodInfo.GetRoute(false);
             string finalRoute = httpMethod.Template;
 
             Dictionary<string, object> remainingArguments = HttpMessageHelper.GetRemainingArguments(request, context.Converter, ref finalRoute);
 
             url = HttpMessageHelper.BuildBodyAndFinalUrl(request, context, finalRoute, remainingArguments, ref content);
-        
+            
             var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
             httpRequest.Content = content;
 

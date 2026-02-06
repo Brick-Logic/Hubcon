@@ -49,7 +49,14 @@ namespace Hubcon.Client.Core.HubconInvocationContext
         public string HttpUrl { get; }
         public bool ExpectsHubconResponse { get; }
 
-        public ClientOperationContext(MemberInfo member, InterceptorManager interceptorManager, IServiceProvider serviceProvider, IClientOptions clientOptions, IContractOptions contractOptions, Type contractType)
+        public ClientOperationContext(
+            MemberInfo member, 
+            InterceptorManager interceptorManager, 
+            IServiceProvider serviceProvider, 
+            IClientOptions clientOptions, 
+            IContractOptions contractOptions, 
+            Type contractType, 
+            Dictionary<Type, ITransportClient> transports)
         {
             IsMethod = member is MethodInfo;
             Member = member;
@@ -135,7 +142,7 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                 throw new NotSupportedException();
             }
 
-                Uri = ClientOptions.BaseUri ?? throw new ArgumentNullException("Base uri can't be null.");
+            Uri = ClientOptions.BaseUri ?? throw new ArgumentNullException("Base uri can't be null.");
             string baseRestHttpUrl = string.Empty;
 
             if (string.IsNullOrWhiteSpace(clientOptions.BaseUri?.Host))
@@ -173,6 +180,8 @@ namespace Hubcon.Client.Core.HubconInvocationContext
 
                 Transport.Build(transportConfiguration);
             }
+
+            transports.TryAdd(transportAttributeType.GetType(), Transport);
 
             var operationConfigurator = OperationOptions as IOperationConfigurator;
             var operationLimiter = Member.GetCustomAttribute<RateLimitAttribute>();

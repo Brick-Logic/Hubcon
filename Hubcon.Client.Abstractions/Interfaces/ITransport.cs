@@ -28,6 +28,14 @@ namespace Hubcon.Client.Abstractions.Interfaces
 
 namespace Hubcon
 {
+    public interface IRealTimeTransport
+    {
+        public Task<HubconResponse> Connect(string? url = null);
+        public Task<HubconResponse> Reconnect(string url);
+        public Task<HubconResponse> Disconnect();
+        public Task<HubconResponse<bool>> IsConnected();
+    }
+
     public class TransportContext
     {
         public TransportContext(

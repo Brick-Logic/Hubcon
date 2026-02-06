@@ -28,10 +28,13 @@ namespace Hubcon.Client.Core.Proxies
     public interface IContractDataAccessor
     {
         IAuthenticationManager AuthenticationManager { get; }
+
+        ITransportClient GetTransportClient<T>() where T : HubconTransportAttribute;
     }
 
     public abstract class BaseContractProxy : BaseProxy, IContractDataAccessor
     {
+        private Dictionary<Type, ITransportClient> _transports;
         private FrozenDictionary<string, IClientOperationContext> _operations = null!;
         private string SimpleContractName { get; set; } = string.Empty;
 
@@ -45,10 +48,10 @@ namespace Hubcon.Client.Core.Proxies
         public abstract void SetPropertyValue(string propertyName, object value);
 
         public FrozenDictionary<string, IClientOperationContext> BuildContractProxy(
-            IHubconClient client, 
-            IClientOptions clientOptions, 
-            IServiceScope serviceScope, 
-            ConcurrentDictionary<Type, IContractOptions> contractOptionsDict, 
+            IHubconClient client,
+            IClientOptions clientOptions,
+            IServiceScope serviceScope,
+            ConcurrentDictionary<Type, IContractOptions> contractOptionsDict,
             IDynamicConverter converter)
         {
             _client = client;
@@ -75,26 +78,29 @@ namespace Hubcon.Client.Core.Proxies
             IContractOptions contractOptions = clientOptions.GetContractOptions(_contractType);
             var interceptorManager = new InterceptorManager(rootServiceProvider, clientOptions, contractOptions, null, null);
 
+            Dictionary<Type, ITransportClient> transports = new();
+
             foreach (var method in methods)
             {
                 var signature = method.GetMethodSignature(false);
-                IClientOperationContext context = new ClientOperationContext(method, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType);
+                IClientOperationContext context = new ClientOperationContext(method, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType, transports);
                 tempOperations.Add(signature, context);
             }
 
             foreach (var prop in _contractType.GetProperties().Where(x => x.PropertyType.IsGenericType && x.PropertyType.GetGenericTypeDefinition() == typeof(ISubscription<>)))
             {
-                IClientOperationContext context = new ClientOperationContext(prop, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType);
+                IClientOperationContext context = new ClientOperationContext(prop, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType, transports);
                 tempOperations.Add(prop.Name, context);
             }
 
+            _transports = transports;
             _operations = tempOperations.ToFrozenDictionary();
             return _operations;
         }
 
         public override async Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
-            if(_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
+            if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
                 OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
                 _ = WrappedContext.CurrentWrapped;
@@ -107,8 +113,8 @@ namespace Hubcon.Client.Core.Proxies
                 var interceptorContext = new InterceptorManager(
                     scope.ServiceProvider,
                     context.ClientOptions,
-                    context.ContractOptions, 
-                    context.OperationOptions, 
+                    context.ContractOptions,
+                    context.OperationOptions,
                     callContext);
 
                 InterceptorContext.UseContext(interceptorContext);
@@ -120,7 +126,7 @@ namespace Hubcon.Client.Core.Proxies
                 {
                     return hubconResponse.Data;
                 }
-                else if(rawResponse is T response)
+                else if (rawResponse is T response)
                 {
                     return response;
                 }
@@ -305,14 +311,24 @@ namespace Hubcon.Client.Core.Proxies
                     break;
                 }
 
-                yield return item;       
+                yield return item;
             }
 
             await context.CallHooksAndInterceptors(HookType.OnUnsubscribed, cancellationToken);
         }
-        
 
-        // Accessor
+        public ITransportClient GetTransportClient<T>() where T : HubconTransportAttribute
+        {
+            if(_transports.TryGetValue(typeof(T), out var value))
+            {
+                return value;
+            }
+            else
+            {
+                return default!;
+            }
+        }
+
         public IAuthenticationManager AuthenticationManager => _clientOptions.AuthenticationManagerFactory.GetValue<IAuthenticationManager>(rootServiceProvider);
     }
 }

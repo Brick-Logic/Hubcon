@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Transports
 {
-    public sealed class WebSocketTransportClient : TransportClient<WebSocketTransport>
+    public sealed class WebSocketTransportClient : TransportClient<WebSocketTransport>, IRealTimeTransport
     {
         HubconWebSocketClient _client = null!;
         private readonly ILogger<HubconWebSocketClient> logger;
@@ -88,6 +88,58 @@ namespace Hubcon.Client.Core.Transports
                     _client.AuthorizationTokenProvider = () => authenticationManager.AccessToken;
                 }
             }
+        }
+
+        public async Task<HubconResponse> Connect(string? url = null)
+        {
+            try
+            {
+                if (url == null)
+                    await _client.EnsureConnectedAsync();
+                else
+                    await _client.EnsureConnectedAsync(new Uri(url));
+
+                return HubconResponse.Ok();
+            }
+            catch (Exception ex)
+            {
+                return HubconResponse.InternalError(ex, ex.Message);
+            }
+        }
+
+        public async Task<HubconResponse> Reconnect(string url)
+        {
+            try
+            {
+                await _client.Disconnect();
+                await _client.EnsureConnectedAsync(new Uri(url));
+                return HubconResponse.Ok();
+            }
+            catch (Exception ex)
+            {
+                return HubconResponse.InternalError(ex, ex.Message);
+            }
+        }
+
+        public async Task<HubconResponse> Disconnect()
+        {
+            try
+            {
+                await _client.Disconnect();
+                return HubconResponse.Ok();
+            }
+            catch (Exception ex)
+            {
+                return HubconResponse.InternalError(ex, ex.Message);
+            }
+        }
+
+        public async Task<HubconResponse<bool>> IsConnected()
+        {
+            if (_client.IsConnected)
+                return HubconResponse.OkT(true);
+            else
+                return HubconResponse.OkT(false);
         }
     }
 }

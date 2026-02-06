@@ -40,7 +40,6 @@ namespace Hubcon.Client.Core.Websockets
 {
     public sealed class HubconWebSocketClient : IAsyncDisposable, IUnsubscriber
     {
-        private readonly Uri _uri;
         private readonly TransportContext context;
         private readonly IDynamicConverter converter;
         private readonly IClientOptions options;
@@ -51,6 +50,8 @@ namespace Hubcon.Client.Core.Websockets
         public bool CloseSent = false;
 
         public bool LoggingEnabled { get; set; } = true;
+        private Uri _uri;
+        public void SetUri(Uri uri) => _uri = uri;
 
         public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; set; }
         public Func<string?>? AuthorizationTokenProvider { get; set; }
@@ -79,6 +80,8 @@ namespace Hubcon.Client.Core.Websockets
         private bool _disposed = false;
 
         private bool IsReady = false;
+
+        public bool IsConnected => IsReady && _webSocket?.State == WebSocketState.Open;
 
         private HeartbeatWatcher? _heartbeatWatcher;
 
@@ -632,10 +635,10 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        public async Task EnsureConnectedAsync()
+        public async Task EnsureConnectedAsync(Uri? newUrl = null)
         {
             await _reconnectLock.WaitAsync();
-
+            
             try
             {
                 if (_webSocket?.State is WebSocketState.Open || _webSocket?.State is WebSocketState.Connecting)
@@ -671,12 +674,15 @@ namespace Hubcon.Client.Core.Websockets
                             _heartbeatWatcher = null;
                         }
 
+                        var url = newUrl ?? _uri;
+                        _uri = url;
+
                         if (LoggingEnabled)
                             logger?.LogInformation("Intentando conectar...");
 
                         ClientOptions.WebSocketOptions?.Invoke(_webSocket.Options, serviceProvider);
 
-                        var uriBuilder = new UriBuilder(_uri);
+                        var uriBuilder = new UriBuilder(url);
                         var token = AuthorizationTokenProvider?.Invoke();
 
                         if (!string.IsNullOrEmpty(token))
