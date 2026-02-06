@@ -21,6 +21,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         IReadOnlyDictionary<HookType, Func<IInvocationContext, Task>> Hooks { get; }
         bool? RemoteCancellationIsAllowed { get; }
         bool? AuthIsEnabled { get; }
+        Dictionary<string, Func<string>> HeaderProviders { get; }
 
         Task CallHook(HookType hookType, IInvocationContext context);
 

@@ -19,5 +19,6 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         IOperationOptions GetOperationOptions(string operationName, MemberInfo memberInfo);
         HubconTransportAttribute? TransportType { get; }
         bool AuthIsEnabled { get; }
+        Dictionary<string, Func<string>> HeaderProviders { get; }
     }
 }

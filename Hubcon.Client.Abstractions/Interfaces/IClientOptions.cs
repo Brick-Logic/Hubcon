@@ -58,5 +58,6 @@ namespace Hubcon.Client.Abstractions.Interfaces
         IContractOptions GetContractOptions(Type type);
         Task CallInterceptor(InterceptorType interceptorType, IInvocationContext context);
         HubconTransportAttribute TransportType { get; }
+        Dictionary<string, Func<string>> HeaderProviders { get; }
     }
 }

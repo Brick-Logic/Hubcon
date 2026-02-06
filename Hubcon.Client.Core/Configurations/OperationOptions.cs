@@ -22,6 +22,7 @@ namespace Hubcon.Client.Core.Configurations
         public TokenBucketRateLimiterOptions? RateBucketOptions { get; private set; }
         public bool RateLimiterIsShared { get; private set; }
         public int RequestsPerSecond { get; private set; }
+        public Dictionary<string, Func<string>> HeaderProviders { get; } = new();
 
         ConcurrentDictionary<HookType, Func<IInvocationContext, Task>> _hooks = new();
         public IReadOnlyDictionary<HookType, Func<IInvocationContext, Task>> Hooks => _hooks;
@@ -131,6 +132,12 @@ namespace Hubcon.Client.Core.Configurations
         public IOperationConfigurator ConfigureRateBucket(RateLimitAttribute rateLimitAttribute)
         {
             _rateBucket = rateLimitAttribute.RateBucket;
+            return this;
+        }
+
+        public IOperationConfigurator AddHeaderProvider(string key, Func<string> valueProvider)
+        {
+            HeaderProviders.TryAdd(key, valueProvider);
             return this;
         }
     }

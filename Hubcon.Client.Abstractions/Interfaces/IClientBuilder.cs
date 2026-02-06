@@ -48,6 +48,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         bool AuthIsEnabled { get; set; }
         Func<IServiceProvider, HttpClient> HttpClientFactory { get; set; }
         HubconTransportAttribute TransportType { get; set; }
+        Dictionary<string, Func<string>> HeaderProviders { get; }
 
         T GetOrCreateClient<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(IServiceProvider services, bool useCached = true) where T : IControllerContract;
         object GetOrCreateClient([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type contractType, IServiceProvider services, bool useCached = true);

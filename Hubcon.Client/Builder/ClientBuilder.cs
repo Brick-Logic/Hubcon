@@ -172,6 +172,8 @@ namespace Hubcon.Client.Builder
 
         public HubconTransportAttribute TransportType { get; set; } = HubconTransportAttribute.GetDefault<HttpTransport>();
 
+        public Dictionary<string, Func<string>> HeaderProviders { get; } = new();
+
         public T GetOrCreateClient<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(IServiceProvider services, bool useCached = true) where T : IControllerContract
         {
             return (T)GetOrCreateClient(typeof(T), services);

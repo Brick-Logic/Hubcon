@@ -11,8 +11,9 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         public IContractConfigurator<T> ConfigureOperations(Action<IOperationSelector<T>> selector);
         public IContractConfigurator<T> AddHook(HookType hookType, Func<IInvocationContext, Task> hookDelegate);
         public IContractConfigurator<T> AllowRemoteCancellation(bool value = true);
-        IContractConfigurator<T> UseWebSockets();
-        IContractConfigurator<T> UseHttp();
-        IContractConfigurator<T> UseNonHubconHttp();
+        public IContractConfigurator<T> UseWebSockets();
+        public IContractConfigurator<T> UseHttp();
+        public IContractConfigurator<T> UseNonHubconHttp();
+        public IContractConfigurator<T> AddHeaderProvider(string key, Func<string> valueProvider);
     }
 }

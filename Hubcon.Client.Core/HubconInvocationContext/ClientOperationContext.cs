@@ -48,6 +48,9 @@ namespace Hubcon.Client.Core.HubconInvocationContext
         public string WebSocketUrl { get; }
         public string HttpUrl { get; }
         public bool ExpectsHubconResponse { get; }
+        public IReadOnlyDictionary<string, Func<string>> HeaderProviders { get; }
+        public IReadOnlyDictionary<string, string> StaticHeaders { get; }
+        public HashSet<string> RequestedHeaders { get; }
 
         public ClientOperationContext(
             MemberInfo member, 
@@ -197,6 +200,38 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                     operationConfigurator?.ConfigureRateBucket(new RateLimitAttribute(limiter.Requests, limiter.MillisecondsToReplenish, limiter.RateTokenLimit, limiter.QueueLimit));
                 }
             }
+
+            var headerProviders = new Dictionary<string, Func<string>>();
+            foreach (var item in OperationOptions.HeaderProviders) headerProviders.TryAdd(item.Key, item.Value);
+            foreach (var item in contractOptions.HeaderProviders) headerProviders.TryAdd(item.Key, item.Value);
+            foreach (var item in clientOptions.HeaderProviders) headerProviders.TryAdd(item.Key, item.Value);
+            HeaderProviders = headerProviders;
+
+            var staticHeaders = new Dictionary<string, string>();
+            var requestedHeaders = new HashSet<string>();
+
+            foreach (var item in OperationOptions.MemberInfo.GetCustomAttributes<HeaderAttribute>()) 
+            {
+                if (item.IsStatic)
+                {
+                    staticHeaders.TryAdd(item.Key, item.Value!);
+                }
+
+                requestedHeaders.Add(item.Key);
+            }
+
+            foreach (var item in contractOptions.ContractType.GetCustomAttributes<HeaderAttribute>())
+            {
+                if (item.IsStatic)
+                {
+                    staticHeaders.TryAdd(item.Key, item.Value!);
+                }
+
+                requestedHeaders.Add(item.Key);
+            }
+
+            RequestedHeaders = requestedHeaders;
+            StaticHeaders = staticHeaders;
         }
 
         private HttpMethodDataAttribute? TryFindHttpMethod(MemberInfo member)
@@ -211,38 +246,38 @@ namespace Hubcon.Client.Core.HubconInvocationContext
             else return null;
         }
 
-        public async Task AcquireRateLimiter()
+        public async ValueTask AcquireRateLimiter()
         {
             await RateLimiterHelper.AcquireAsync(ClientOptions, ClientOptions.RateBucket, ClientOptions.HttpFireAndForgetRateBucket, OperationOptions.RateBucket);
         }
 
-        public async Task CallHooksAndInterceptors(HookType hookType, CancellationToken cancellationToken = default)
+        public async ValueTask CallHooksAndInterceptors(HookType hookType, CancellationToken cancellationToken = default)
         {
             var interceptorManager = InterceptorContext.Current;
             if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopeServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
             await InterceptorContext.Current.CallHooksAndInterceptors(hookType, cancellationToken);
         }
 
-        public async Task CallHooks(HookType hookType, CancellationToken cancellationToken = default)
+        public async ValueTask CallHooks(HookType hookType, CancellationToken cancellationToken = default)
         {
             var interceptorManager = InterceptorContext.Current;
             if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopeServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
             await InterceptorContext.Current.CallHooks(hookType, cancellationToken);
         }
 
-        public async Task CallValidationHooks(CancellationToken cancellationToken = default)
+        public async ValueTask CallValidationHooks(CancellationToken cancellationToken = default)
         {
             var interceptorManager = InterceptorContext.Current;
             if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopeServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
             await InterceptorContext.Current.CallValidationHooks(cancellationToken);
         }
 
-        public async Task SetResponse(IResponse result)
+        public async ValueTask SetResponse(IResponse result)
         {
             WrappedContext.CurrentWrapped.SetResponse(result);
         }
 
-        public async Task HandleResponse<T>(JsonElement response)
+        public async ValueTask HandleResponse<T>(JsonElement response)
         {
             if (ExpectsHubconResponse)
             {
@@ -254,6 +289,25 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                 IResponse result = Converter.DeserializeJsonElement<HubconResponse<T>>(response);
                 await SetResponse(result!);
             }
+        }
+
+        public async ValueTask<Dictionary<string, string>> GetHeaders()
+        {
+            Dictionary<string, string> headers = new();
+
+            foreach(var headerKey in RequestedHeaders)
+            {
+                if(HeaderProviders.TryGetValue(headerKey, out var headerGetter))
+                {
+                    headers.TryAdd(headerKey, headerGetter.Invoke());
+                }
+                else if(StaticHeaders.TryGetValue(headerKey, out var headerValue))
+                {
+                    headers.TryAdd(headerKey, headerValue);
+                }                
+            }
+
+            return headers;
         }
     }
 }

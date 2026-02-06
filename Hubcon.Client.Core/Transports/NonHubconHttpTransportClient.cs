@@ -32,7 +32,12 @@ namespace Hubcon.Client.Core.Transports
             url = HttpMessageHelper.BuildBodyAndFinalUrl(request, context, finalRoute, remainingArguments, ref content);
             
             var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
-            httpRequest.Content = content;
+
+            foreach (var header in await context.GetHeaders())
+                httpRequest.Headers.Add(header.Key, header.Value);
+
+            if(content != null)
+                httpRequest.Content = content;
 
             if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
                 httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
@@ -69,7 +74,12 @@ namespace Hubcon.Client.Core.Transports
 
             var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
             httpRequest.SetBrowserResponseStreamingEnabled(true);
-            httpRequest.Content = content;
+
+            foreach (var header in await context.GetHeaders())
+                httpRequest.Headers.Add(header.Key, header.Value);
+
+            if (content != null)
+                httpRequest.Content = content;
 
             if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
                 httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
@@ -124,8 +134,12 @@ namespace Hubcon.Client.Core.Transports
             url = HttpMessageHelper.BuildBodyAndFinalUrl(request, context, finalRoute, remainingArguments, ref content);
 
             var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
-            httpRequest.Content = content;
 
+            foreach (var header in await context.GetHeaders())
+                httpRequest.Headers.Add(header.Key, header.Value);
+
+            if (content != null)
+                httpRequest.Content = content;
 
             if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
                 httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);

@@ -53,7 +53,6 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         IOperationConfigurator UseWebSockets();
         IOperationConfigurator UseHttp();
         IOperationConfigurator UseNonHubconHttp();
-
-
+        IOperationConfigurator AddHeaderProvider(string key, Func<string> valueProvider);
     }
 }

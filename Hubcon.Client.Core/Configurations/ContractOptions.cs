@@ -27,6 +27,7 @@ namespace Hubcon.Client.Core.Configurations
         public HubconTransportAttribute? TransportType { get; private set; } = HubconTransportAttribute.GetDefault<HttpTransport>();
 
         public bool AuthIsEnabled { get; private set;  }
+        public Dictionary<string, Func<string>> HeaderProviders { get; } = new();
 
         public Task CallHook(HookType hookType, IInvocationContext context)
         {
@@ -78,6 +79,12 @@ namespace Hubcon.Client.Core.Configurations
         public IContractConfigurator<T> UseNonHubconHttp()
         {
             TransportType = HubconTransportAttribute.GetDefault<NonHubconHttpTransport>();
+            return this;
+        }
+
+        public IContractConfigurator<T> AddHeaderProvider(string key, Func<string> valueProvider)
+        {
+            HeaderProviders.TryAdd(key, valueProvider);
             return this;
         }
     }

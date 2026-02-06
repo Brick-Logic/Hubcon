@@ -40,12 +40,14 @@ namespace Hubcon
         string WebSocketUrl { get; }
         string HttpUrl { get; }
         bool ExpectsHubconResponse { get; }
+        HashSet<string> RequestedHeaders { get; }
 
-        Task AcquireRateLimiter();
-        Task CallHooks(HookType hookType, CancellationToken cancellationToken = default);
-        Task CallHooksAndInterceptors(HookType hookType, CancellationToken cancellationToken = default);
-        Task CallValidationHooks(CancellationToken cancellationToken = default);
-        Task HandleResponse<T>(JsonElement response);
-        Task SetResponse(IResponse result);
+        ValueTask AcquireRateLimiter();
+        ValueTask CallHooks(HookType hookType, CancellationToken cancellationToken = default);
+        ValueTask CallHooksAndInterceptors(HookType hookType, CancellationToken cancellationToken = default);
+        ValueTask CallValidationHooks(CancellationToken cancellationToken = default);
+        ValueTask<Dictionary<string, string>> GetHeaders();
+        ValueTask HandleResponse<T>(JsonElement response);
+        ValueTask SetResponse(IResponse result);
     }
 }

@@ -286,5 +286,6 @@ namespace Hubcon
         IServerModuleConfiguration UseWebSockets();
         IServerModuleConfiguration UseHttp();
         IServerModuleConfiguration UseNonHubconHttp();
+        IServerModuleConfiguration AddHeaderProvider(string key, Func<string> valueProvider);
     }
 }

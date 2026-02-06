@@ -371,5 +371,11 @@ namespace Hubcon.Client.Builder
             builder.TransportType = HubconTransportAttribute.GetDefault<NonHubconHttpTransport>();
             return this;
         }
+
+        public IServerModuleConfiguration AddHeaderProvider(string key, Func<string> valueProvider)
+        {
+            builder.HeaderProviders.TryAdd(key, valueProvider);
+            return this;
+        }
     }
 }

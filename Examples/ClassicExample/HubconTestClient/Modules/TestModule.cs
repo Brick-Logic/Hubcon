@@ -30,10 +30,14 @@ namespace HubconTestClient.Modules
             //configuration.LimitWebsocketFireAndForget(100);
             //configuration.LimitHttpFireAndForget(100);
 
+            server.AddHeaderProvider("key", () => "value");
+
             server.DisableAllLimiters();
 
             server.Implements<IUserContract>((contractConfigurator =>
             {
+                contractConfigurator.AddHeaderProvider("key", () => "value");
+
                 contractConfigurator
                     .SetDefaultTransport<WebSocketTransport>()
                     .AllowRemoteCancellation(false)
@@ -48,6 +52,7 @@ namespace HubconTestClient.Modules
                     {
                         operationSelector.Configure(contract => contract.GetTemperatureFromServer(default, default))
                             .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                            .AddHeaderProvider("key", () => "value")
                             .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
                             .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
                             .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
