@@ -99,12 +99,9 @@ internal class Program
         //logger.LogInformation($"Respuesta: {response.Success}");
         //await Task.Delay(1000);
 
-        //var response = await openAi.Execute(x => x.GetModelResponse());
-        //logger.LogInformation($"Respuesta: {response.Success}");
-        //await Task.Delay(1000);
-
         //logger.LogInformation($"Probando stream SSE non-hubcon...");
         //await Task.Delay(500);
+
         //var request = new OpenAIStreamRequest()
         //{
         //    Model = "gpt-5-nano",
@@ -140,7 +137,6 @@ internal class Program
         //await Task.Delay(1000);
 
 
-
         await TestLogin(authManager, logger);
         await Task.Delay(100);
 
@@ -161,8 +157,6 @@ internal class Program
         await TestIngest(client, logger);
         await Task.Delay(100);
         await TestInvokeNoParameters(client2, logger);
-        await Task.Delay(100);
-        await TestSubscriptions(client, logger);
         await Task.Delay(100);
         await TestInvokeWithParameters(client, logger);
         await Task.Delay(100);
@@ -448,16 +442,16 @@ internal class Program
             evento4 = true;
         }
 
-        await client.OnUserCreated.AddHandler(handler);
-        await client.OnUserCreated.Subscribe();
-        await client.OnUserCreated2.AddHandler(handler2);
-        await client.OnUserCreated2.Subscribe();
-        await client.OnUserCreated3.AddHandler(handler3);
-        await client.OnUserCreated3.Subscribe();
-        await client.OnUserCreated4.AddHandler(handler4);
-        await client.OnUserCreated4.Subscribe();
-        await client.OnEnumerableTest.AddHandler(handler5);
-        await client.OnEnumerableTest.Subscribe();
+        //await client.OnUserCreated.AddHandler(handler);
+        //await client.OnUserCreated.Subscribe();
+        //await client.OnUserCreated2.AddHandler(handler2);
+        //await client.OnUserCreated2.Subscribe();
+        //await client.OnUserCreated3.AddHandler(handler3);
+        //await client.OnUserCreated3.Subscribe();
+        //await client.OnUserCreated4.AddHandler(handler4);
+        //await client.OnUserCreated4.Subscribe();
+        //await client.OnEnumerableTest.AddHandler(handler5);
+        //await client.OnEnumerableTest.Subscribe();
 
         logger.LogInformation("Eventos conectados.");
 
@@ -467,7 +461,7 @@ internal class Program
         var result = await client.Execute(x => x.CreateUser());
         logger.LogInformation($"Esperando eventos...");
 
-        await Task.Delay(1000);
+        await Task.Delay(1000000);
 
         if (eventosRecibidos == 5)
         {

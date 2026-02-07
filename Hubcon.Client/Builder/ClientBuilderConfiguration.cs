@@ -6,6 +6,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Threading.RateLimiting;
@@ -323,9 +324,9 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
-        public IServerModuleConfiguration DisableHttpAuthentication()
+        public IServerModuleConfiguration AuthIsEnabled(bool enabled = true)
         {
-            builder.AuthIsEnabled = false;
+            builder.AuthIsEnabled = enabled;
             return this;
         }
 
@@ -372,7 +373,7 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
-        public IServerModuleConfiguration AddHeaderProvider(string key, Func<string> valueProvider)
+        public IServerModuleConfiguration AddHeaderProvider(string key, Func<IServiceProvider, string> valueProvider)
         {
             builder.HeaderProviders.TryAdd(key, valueProvider);
             return this;

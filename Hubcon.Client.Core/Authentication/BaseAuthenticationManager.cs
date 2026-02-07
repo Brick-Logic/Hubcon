@@ -26,7 +26,7 @@ namespace Hubcon
                 var currentTime = DateTimeOffset.UtcNow.DateTime;
                 var lowerTime = AccessTokenExpiresAt.HasValue ? AccessTokenExpiresAt.Value : DateTime.MaxValue;
 
-                if (!empty && currentTime > lowerTime)
+                if (!empty && currentTime < lowerTime)
                 {
                     return true;
                 }

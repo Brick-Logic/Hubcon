@@ -87,32 +87,10 @@ namespace Hubcon.Shared.Core.Websockets.Events
         }
 
         private async IAsyncEnumerable<T> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken, Action? disposeAction = null)
-        {
-            try
+        {       
+            await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
             {
-                var enumerator = _channel.Reader.ReadAllAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
-                while (true)
-                {
-                    bool moved;
-                    try
-                    {
-                        moved = await enumerator.MoveNextAsync();
-                    }
-                    finally
-                    {
-                    }
-
-                    if (!moved)
-                    {
-                        break;
-                    }
-
-                    yield return enumerator.Current;
-                }
-            }
-            finally
-            {
-                disposeAction?.Invoke();
+                yield return item;
             }
         }
 

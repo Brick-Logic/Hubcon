@@ -6,13 +6,14 @@ using System.Threading.Tasks;
 
 namespace HubconTestClient.Contracts
 {
+    [Header("Authorization")]
     public interface IOpenAIContract : IControllerContract
     {
         [HttpPost("/v1/responses")]
         public Task<OpenAIResponse> CreateModelResponse([AsBody] CreateResponseCommand command);
 
         [HttpGet("/v1/responses/{id}")]
-        public Task<OpenAIResponse> GetModelResponse();
+        public Task<OpenAIResponse> GetModelResponse(string id);
 
         [HttpGet("/v1/responses/{id}/input_items")]
         public Task<OpenAIList<OpenAIMessage>> GetModelResponseInputs(string id);

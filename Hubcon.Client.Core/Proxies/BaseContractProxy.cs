@@ -87,11 +87,11 @@ namespace Hubcon.Client.Core.Proxies
                 tempOperations.Add(signature, context);
             }
 
-            foreach (var prop in _contractType.GetProperties().Where(x => x.PropertyType.IsGenericType && x.PropertyType.GetGenericTypeDefinition() == typeof(ISubscription<>)))
-            {
-                IClientOperationContext context = new ClientOperationContext(prop, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType, transports);
-                tempOperations.Add(prop.Name, context);
-            }
+            //foreach (var prop in _contractType.GetProperties().Where(x => x.PropertyType.IsGenericType && x.PropertyType.GetGenericTypeDefinition() == typeof(ISubscription<>)))
+            //{
+            //    IClientOperationContext context = new ClientOperationContext(prop, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType, transports);
+            //    tempOperations.Add(prop.Name, context);
+            //}
 
             _transports = transports;
             _operations = tempOperations.ToFrozenDictionary();
@@ -284,10 +284,9 @@ namespace Hubcon.Client.Core.Proxies
         public async IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement> stream, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var enumerator = stream.GetAsyncEnumerator(cancellationToken);
-            T? item = default;
+            T? item;
             while (true)
             {
-                JsonElement result = default;
                 try
                 {
                     if (!await enumerator.MoveNextAsync() || cancellationToken.IsCancellationRequested)
@@ -295,8 +294,7 @@ namespace Hubcon.Client.Core.Proxies
 
                     await context.AcquireRateLimiter();
 
-                    result = enumerator.Current;
-                    item = context.Converter.DeserializeJsonElement<T>(result)!;
+                    item = context.Converter.DeserializeJsonElement<T>(enumerator.Current)!;
                 }
                 catch (Exception ex)
                 {
@@ -311,6 +309,7 @@ namespace Hubcon.Client.Core.Proxies
                     break;
                 }
 
+                await context.CallHooksAndInterceptors(HookType.OnEventReceived, cancellationToken);
                 yield return item;
             }
 
@@ -329,6 +328,6 @@ namespace Hubcon.Client.Core.Proxies
             }
         }
 
-        public IAuthenticationManager AuthenticationManager => _clientOptions.AuthenticationManagerFactory.GetValue<IAuthenticationManager>(rootServiceProvider);
+        public IAuthenticationManager? AuthenticationManager => _clientOptions.AuthenticationManagerFactory?.GetValue<IAuthenticationManager>(rootServiceProvider);
     }
 }

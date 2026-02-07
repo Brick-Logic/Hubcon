@@ -70,11 +70,13 @@ namespace Hubcon.Server.Core.Routing.Registries
             if (string.IsNullOrWhiteSpace(contractName) || string.IsNullOrWhiteSpace(handlerName))
                 return null;
 
-            if (_contractHandlers.TryGetValue(clientId, out var clientHandlers) &&
-                clientHandlers.TryGetValue(contractName, out var contractHandlers) &&
-                contractHandlers.TryGetValue(handlerName, out ISubscriptionDescriptor? handler))
+            if(_contractHandlers.TryGetValue(clientId, out var clientHandlers))
             {
-                return handler;
+                if(clientHandlers.TryGetValue(contractName, out var contractHandlers))
+                {
+                    contractHandlers.TryGetValue(handlerName, out ISubscriptionDescriptor? handler);
+                    return handler;
+                }
             }
 
             return null;

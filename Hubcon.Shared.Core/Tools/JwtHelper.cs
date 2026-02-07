@@ -53,6 +53,28 @@ namespace Hubcon
             return null;
         }
 
+        public static string? ExtractTokenFromHeader(string token)
+        {
+            try
+            {
+                if (token is null)
+                    return null;
+
+                if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    return token.Substring("Bearer ".Length).Trim();
+                }
+
+                return token;
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
+        }
+
         public static ClaimsPrincipal? ValidateJwtToken(string token, TokenValidationParameters validationParameters, out SecurityToken? validatedToken)
         {
             var handler = new JwtSecurityTokenHandler();

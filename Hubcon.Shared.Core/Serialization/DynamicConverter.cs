@@ -237,10 +237,17 @@ namespace Hubcon.Shared.Core.Serialization
         // 3. Convierte un JsonElement a un objeto fuertemente tipado
         public T? DeserializeJsonElement<T>(JsonElement element)
         {
-            if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
-                return default;
+            try
+            {
+                if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
+                    return default;
 
-            return element.Deserialize<T>(JsonSerializerOptions);
+                return element.Deserialize<T>(JsonSerializerOptions);
+            }
+            catch(Exception ex)
+            {
+                return default!;
+            }
         }
 
         // 4. Convierte una lista de JsonElements a objetos, según tipos dados

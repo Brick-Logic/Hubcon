@@ -44,13 +44,6 @@ namespace Hubcon.Client.Core.Transports
             return enumerable;
         }
 
-        public override async ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
-        {
-            var observable = await _client.Subscribe<JsonElement>(request, context.RemoteCancellationIsAllowed);
-            await context.SetResponse(HubconResponse.OkT<IObservable<JsonElement>>(observable));
-            return observable;
-        }
-
         public override async ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             var response = await _client.IngestMultiple<JsonElement>(request, context.RemoteCancellationIsAllowed, context.ClientOptions, context.OperationOptions, cancellationToken);
@@ -85,7 +78,7 @@ namespace Hubcon.Client.Core.Transports
                     };
                     authenticationManager.OnSessionIsActive += async () => await _client.EnsureConnectedAsync();
 
-                    _client.AuthorizationTokenProvider = () => authenticationManager.AccessToken;
+                    _client.AuthorizationTokenProvider = () => authenticationManager.TokenType + " " + authenticationManager.AccessToken;
                 }
             }
         }

@@ -1,6 +1,8 @@
 ﻿using Hubcon.Client.Core.Helpers;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Extensions;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -33,7 +35,7 @@ namespace Hubcon.Client.Core.Transports
             
             var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
 
-            foreach (var header in await context.GetHeaders())
+            foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
                 httpRequest.Headers.Add(header.Key, header.Value);
 
             if(content != null)
@@ -44,12 +46,13 @@ namespace Hubcon.Client.Core.Transports
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
 
-            HubconResponse methodReponse = new HubconResponse(
+            HubconResponse<bool> methodReponse = new HubconResponse<bool>(
                 response.IsSuccessStatusCode,
                 !response.IsSuccessStatusCode,
                 "",
-                "",
-                (int)response.StatusCode
+                response.Content.ToString(),
+                (int)response.StatusCode,
+                true
             );
 
             await context.SetResponse(methodReponse);
@@ -75,7 +78,7 @@ namespace Hubcon.Client.Core.Transports
             var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
             httpRequest.SetBrowserResponseStreamingEnabled(true);
 
-            foreach (var header in await context.GetHeaders())
+            foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
                 httpRequest.Headers.Add(header.Key, header.Value);
 
             if (content != null)
@@ -87,9 +90,7 @@ namespace Hubcon.Client.Core.Transports
             HttpResponseMessage response;
             response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
-            using var stream = await response.Content.ReadAsStreamAsync();
-
-            var enumerable = HttpMessageHelper.ParseSSEStream(stream, context, cancellationToken);
+            var enumerable = HttpMessageHelper.ParseSSEStream(response, context, cancellationToken);
 
             var methodReponse = new HubconResponse<IAsyncEnumerable<JsonElement>>(
                 response.IsSuccessStatusCode,
@@ -104,14 +105,8 @@ namespace Hubcon.Client.Core.Transports
 
             content?.Dispose();
             httpRequest.Dispose();
-            response.Dispose();
 
             return enumerable;
-        }
-
-        public override ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
-        {
-            throw new NotSupportedException();
         }
 
         public override ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
@@ -135,11 +130,11 @@ namespace Hubcon.Client.Core.Transports
 
             var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
 
-            foreach (var header in await context.GetHeaders())
+            foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
                 httpRequest.Headers.Add(header.Key, header.Value);
 
             if (content != null)
-                httpRequest.Content = content;
+                httpRequest.Content = content;     
 
             if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
                 httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
@@ -149,7 +144,16 @@ namespace Hubcon.Client.Core.Transports
             var responseBytes = await response.Content.ReadAsByteArrayAsync();
             var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
 
-            await context.HandleResponse<T>(result);
+            var methodReponse = new HubconResponse<T>(
+                response.IsSuccessStatusCode,
+                !response.IsSuccessStatusCode,
+                "",
+                "",
+                (int)response.StatusCode,
+                context.Converter.DeserializeJsonElement<T>(result)
+            );
+
+            await context.SetResponse(methodReponse);
 
             content?.Dispose();
             httpRequest.Dispose();

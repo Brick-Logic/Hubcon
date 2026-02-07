@@ -244,44 +244,44 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             _ = HandlePing(webSocket, sender, lastPingId, _heartbeatWatcher, new PingMessage(tmo, message.Id, message.Type));
                             break;
 
-                        case MessageType.subscription_init:
+                        //case MessageType.subscription_init:
 
-                            await rateLimiterManager.TryAcquireAsync(MessageType.subscription_init, message.Id);
+                        //    await rateLimiterManager.TryAcquireAsync(MessageType.subscription_init, message.Id);
 
-                            if (!options.WebSocketSubscriptionIsAllowed)
-                            {
-                                await HandleNotAllowed(message.Id, "Websocket subscriptions are disabled.", "", sender);
-                                break;
-                            }
+                        //    if (!options.WebSocketSubscriptionIsAllowed)
+                        //    {
+                        //        await HandleNotAllowed(message.Id, "Websocket subscriptions are disabled.", "", sender);
+                        //        break;
+                        //    }
 
-                            _ = HandleSubscribe(
-                                context,
-                                MessageType.subscription_init,
-                                _subscriptions,
-                                _ackChannels,
-                                sender,
-                                new SubscriptionInitMessage(tmo, message.Id, message.Type),
-                                rateLimiterManager,
-                                cts.Token);
+                        //    _ = HandleSubscribe(
+                        //        context,
+                        //        MessageType.subscription_init,
+                        //        _subscriptions,
+                        //        _ackChannels,
+                        //        sender,
+                        //        new SubscriptionInitMessage(tmo, message.Id, message.Type),
+                        //        rateLimiterManager,
+                        //        cts.Token);
 
-                            break;
+                        //    break;
 
-                        case MessageType.subscription_complete:
+                        //case MessageType.subscription_complete:
 
-                            await rateLimiterManager.TryAcquireAsync(MessageType.subscription_complete, message.Id);
+                        //    await rateLimiterManager.TryAcquireAsync(MessageType.subscription_complete, message.Id);
 
-                            if (!options.WebSocketSubscriptionIsAllowed)
-                            {
-                                await HandleNotAllowed(message.Id, "Websocket subscriptions are disabled.", "", sender);
-                                break;
-                            }
+                        //    if (!options.WebSocketSubscriptionIsAllowed)
+                        //    {
+                        //        await HandleNotAllowed(message.Id, "Websocket subscriptions are disabled.", "", sender);
+                        //        break;
+                        //    }
 
-                            _ = HandleUnsubscribe(
-                                _subscriptions,
-                                context,
-                                new SubscriptionCompleteMessage(tmo, message.Id, message.Type));
+                        //    _ = HandleUnsubscribe(
+                        //        _subscriptions,
+                        //        context,
+                        //        new SubscriptionCompleteMessage(tmo, message.Id, message.Type));
 
-                            break;
+                        //    break;
 
                         case MessageType.stream_init:
 
@@ -595,7 +595,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 {
                     try
                     {
-                        var claimsPrincipal = options.WebsocketTokenHandler.Invoke(token!, context.RequestServices)!;
+                        var extractedToken = JwtHelper.ExtractTokenFromHeader(token!);
+                        var claimsPrincipal = options.WebsocketTokenHandler.Invoke(extractedToken!, context.RequestServices)!;
 
                         if (claimsPrincipal is null)
                         {
@@ -884,12 +885,17 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 using var scope = context.RequestServices.CreateScope();
 
-                await DefaultEntrypoint.HandleMethodVoid(
+                var response = await DefaultEntrypoint.HandleMethodVoid(
                     operationRequest,
                     HubconTransportAttribute.GetDefault<WebSocketTransport>(),
                     scope.ServiceProvider,
                     null,
                     localCts.Token);
+
+                if(response.Failure)
+                {
+                    logger?.LogError(response.Message);
+                }
             }
             catch (Exception ex)
             {

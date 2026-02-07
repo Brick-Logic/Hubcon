@@ -48,7 +48,7 @@ namespace Hubcon.Client.Core.HubconInvocationContext
         public string WebSocketUrl { get; }
         public string HttpUrl { get; }
         public bool ExpectsHubconResponse { get; }
-        public IReadOnlyDictionary<string, Func<string>> HeaderProviders { get; }
+        public IReadOnlyDictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; }
         public IReadOnlyDictionary<string, string> StaticHeaders { get; }
         public HashSet<string> RequestedHeaders { get; }
 
@@ -69,22 +69,11 @@ namespace Hubcon.Client.Core.HubconInvocationContext
             ClientOptions = clientOptions;
             ContractOptions = contractOptions;
             ContractType = contractType;
-            RemoteCancellationIsAllowed = OperationOptions?.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed;
             RootServiceProvider = serviceProvider;
 
             // Attributes
             Attributes = new List<Attribute>();
             Attributes.AddRange(Member.GetCustomAttributes());
-
-            // Authentication
-            this.RequiresAuthentication = (OperationOptions?.AuthIsEnabled ?? true)
-                    && (ContractOptions.AuthIsEnabled)
-                    && ClientOptions.AuthIsEnabled;
-
-            // Transport
-            var transportAttributeType = ContractType.GetCustomAttributes().FirstOrDefault(x => x is HubconTransportAttribute) ?? OperationOptions?.TransportType ?? contractOptions.TransportType ?? clientOptions.TransportType;
-            var transportType = TransportTypeResolver.Resolve(transportAttributeType.GetType())!;
-            Transport = (ITransportClient)serviceProvider.GetRequiredService(transportType);
 
             if (clientOptions.AuthenticationManagerType != null && clientOptions.AuthenticationManagerFactory != null)
             {
@@ -95,14 +84,12 @@ namespace Hubcon.Client.Core.HubconInvocationContext
             {
                 SignatureIsHashed = !bool.TryParse(env, out var parsed) ? true : !parsed;
                 MethodSignature = method.GetMethodSignature(SignatureIsHashed);
-                OperationOptions = contractOptions.GetOperationOptions(MethodSignature, method);
                 Member = method;
-
+                OperationOptions = contractOptions.GetOperationOptions(MethodSignature, member);
                 var httpMethod = TryFindHttpMethod(method);
-                HttpMethodAttribute = httpMethod;
-
-                HttpGetAttribute? verb = method.GetCustomAttribute<HttpGetAttribute>();
-                HttpMethodDefined = HttpMethodAttribute != null ? HttpMethodAttribute.HttpMethod : (method.GetParameters().Length > 0 ? HttpMethod.Post : HttpMethod.Get);
+                var parameters = method.GetParameters();
+                HttpMethodAttribute = httpMethod != null ? httpMethod : ((parameters.Length - parameters.Count(x => x.ParameterType == typeof(CancellationToken)) > 0) ? new HttpPostAttribute() : new HttpGetAttribute());
+                HttpMethodDefined = HttpMethodAttribute.HttpMethod;
 
 
                 // Http validation
@@ -127,22 +114,41 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                     && method.ReturnType.GenericTypeArguments[0].IsGenericType
                     && method.ReturnType.GenericTypeArguments[0].GetGenericTypeDefinition() == typeof(HubconResponse<>);
             }
-            else if (member is PropertyInfo propertyInfo)
-            {
-                SignatureIsHashed = false;
-                MethodSignature = propertyInfo.Name;
-                OperationOptions = contractOptions.GetOperationOptions(MethodSignature, propertyInfo);
-                Member = propertyInfo;
+            //else if (member is PropertyInfo propertyInfo)
+            //{
+            //    SignatureIsHashed = false;
+            //    MethodSignature = propertyInfo.Name;
+            //    Member = propertyInfo;
+            //    OperationOptions = contractOptions.GetOperationOptions(MethodSignature, member);
+            //    var httpMethod = TryFindHttpMethod(Member);
+            //    HttpMethodAttribute = httpMethod;
 
-                var httpMethod = TryFindHttpMethod(Member);
-                HttpMethodAttribute = httpMethod;
-
-                HttpGetAttribute? verb = Member.GetCustomAttribute<HttpGetAttribute>();
-                HttpMethodDefined = HttpMethodAttribute != null ? HttpMethodAttribute.HttpMethod : HttpMethod.Get;
-            }
+            //    HttpGetAttribute? verb = Member.GetCustomAttribute<HttpGetAttribute>();
+            //    HttpMethodDefined = HttpMethodAttribute != null ? HttpMethodAttribute.HttpMethod : HttpMethod.Get;
+            //}
             else
             {
                 throw new NotSupportedException();
+            }
+
+            // Transport
+            var transportAttributeType = OperationOptions.MemberInfo.GetCustomAttribute<HubconTransportAttribute>() 
+                ?? OperationOptions?.TransportType 
+                ?? ContractType.GetCustomAttribute<HubconTransportAttribute>() 
+                ?? contractOptions.TransportType 
+                ?? clientOptions.TransportType;
+
+            var transportType = TransportTypeResolver.Resolve(transportAttributeType.GetType())!;
+            Transport = (ITransportClient)serviceProvider.GetRequiredService(transportType);
+
+            // Authentication
+            this.RequiresAuthentication = OperationOptions?.AuthIsEnabled ?? ContractOptions.AuthIsEnabled ?? ClientOptions.AuthIsEnabled;
+
+            RemoteCancellationIsAllowed = OperationOptions?.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed;
+
+            if (clientOptions.AuthenticationManagerType != null && clientOptions.AuthenticationManagerFactory != null)
+            {
+                AuthenticationManagerFactory = () => clientOptions.AuthenticationManagerFactory.GetValue<IAuthenticationManager>(serviceProvider);
             }
 
             Uri = ClientOptions.BaseUri ?? throw new ArgumentNullException("Base uri can't be null.");
@@ -201,7 +207,7 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                 }
             }
 
-            var headerProviders = new Dictionary<string, Func<string>>();
+            var headerProviders = new Dictionary<string, Func<IServiceProvider, string>>();
             foreach (var item in OperationOptions.HeaderProviders) headerProviders.TryAdd(item.Key, item.Value);
             foreach (var item in contractOptions.HeaderProviders) headerProviders.TryAdd(item.Key, item.Value);
             foreach (var item in clientOptions.HeaderProviders) headerProviders.TryAdd(item.Key, item.Value);
@@ -277,21 +283,40 @@ namespace Hubcon.Client.Core.HubconInvocationContext
             WrappedContext.CurrentWrapped.SetResponse(result);
         }
 
+        public async ValueTask SetResponse<T>(IHubconResponse<T> result)
+        {
+            WrappedContext.CurrentWrapped.SetResponse(result);
+        }
+
         public async ValueTask HandleResponse<T>(JsonElement response)
         {
             if (ExpectsHubconResponse)
             {
-                IResponse result = (Converter.DeserializeJsonElement<T>(response) as IResponse)!;
-                await SetResponse(result!);
+                try
+                {
+                    IHubconResponse<T> result = (Converter.DeserializeJsonElement<T>(response) as IHubconResponse<T>)!;
+                    await SetResponse<T>(result!);    
+                }
+                catch (Exception ex)
+                {
+                    await SetResponse<T>(HubconResponse.Fail<T>(response.ToString(), ex));
+                }
             }
             else
             {
-                IResponse result = Converter.DeserializeJsonElement<HubconResponse<T>>(response);
-                await SetResponse(result!);
+                try
+                {
+                    IResponse result = Converter.DeserializeJsonElement<HubconResponse<T>>(response);
+                    await SetResponse(result!);                 
+                }
+                catch (Exception ex)
+                {
+                    await SetResponse<T>(HubconResponse.Fail<T>(response.ToString(), ex));
+                }
             }
         }
 
-        public async ValueTask<Dictionary<string, string>> GetHeaders()
+        public async ValueTask<Dictionary<string, string>> GetHeaders(IServiceProvider serviceProvider)
         {
             Dictionary<string, string> headers = new();
 
@@ -299,7 +324,7 @@ namespace Hubcon.Client.Core.HubconInvocationContext
             {
                 if(HeaderProviders.TryGetValue(headerKey, out var headerGetter))
                 {
-                    headers.TryAdd(headerKey, headerGetter.Invoke());
+                    headers.TryAdd(headerKey, headerGetter.Invoke(serviceProvider));
                 }
                 else if(StaticHeaders.TryGetValue(headerKey, out var headerValue))
                 {

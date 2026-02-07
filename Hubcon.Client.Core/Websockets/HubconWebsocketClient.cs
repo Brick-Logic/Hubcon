@@ -133,35 +133,35 @@ namespace Hubcon.Client.Core.Websockets
             });
         }
 
-        public async Task<GenericObservable<T>> Subscribe<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
-        {
-            var request = new SubscriptionInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
+        //public async Task<GenericObservable<T>> Subscribe<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
+        //{
+        //    var request = new SubscriptionInitMessage(Guid.NewGuid(), converter.SerializeToElement(payload));
 
-            if (_webSocket?.State != WebSocketState.Open)
-                await EnsureConnectedAsync();
+        //    if (_webSocket?.State != WebSocketState.Open)
+        //        await EnsureConnectedAsync();
 
-            var registration = cancellationToken.Register(async () =>
-            {
-                if (remoteCancelEnabled)
-                    await SendMessageAsync(new CancelMessage(request.Id));
-            });
+        //    var registration = cancellationToken.Register(async () =>
+        //    {
+        //        if (remoteCancelEnabled)
+        //            await SendMessageAsync(new CancelMessage(request.Id));
+        //    });
 
-            var observable = new GenericObservable<T>(
-                this,
-                request.Id,
-                converter.SerializeToElement(request),
-                RequestType.Subscription,
-                converter,
-                () => registration.Dispose(),
-                options.ReconnectSubscriptions);
+        //    var observable = new GenericObservable<T>(
+        //        this,
+        //        request.Id,
+        //        converter.SerializeToElement(request),
+        //        RequestType.Subscription,
+        //        converter,
+        //        () => registration.Dispose(),
+        //        options.ReconnectSubscriptions);
 
-            if (!_subscriptions.TryAdd(request.Id, observable))
-                throw new InvalidOperationException($"Ya existe una suscripción con Id {request.Id}");
+        //    if (!_subscriptions.TryAdd(request.Id, observable))
+        //        throw new InvalidOperationException($"Ya existe una suscripción con Id {request.Id}");
 
-            await SendMessageAsync(request, cancellationToken);
+        //    await SendMessageAsync(request, cancellationToken);
 
-            return observable;
-        }
+        //    return observable;
+        //}
 
         public async Task<IObservable<T>> Stream<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
@@ -507,15 +507,15 @@ namespace Hubcon.Client.Core.Websockets
                                 await context.InterceptorManager.CallInterceptor(InterceptorType.OnPong);
                                 break;
 
-                            case MessageType.subscription_data:
-                                var eventData = new SubscriptionDataMessage(tmo, message.Id, message.Type);
+                            //case MessageType.subscription_data:
+                            //    var eventData = new SubscriptionDataMessage(tmo, message.Id, message.Type);
 
-                                if (eventData?.Id != null && _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
-                                {
-                                    sub.OnNextElement(eventData.Data);
-                                }
+                            //    if (eventData?.Id != null && _subscriptions.TryGetValue(eventData.Id, out BaseObservable? sub))
+                            //    {
+                            //        sub.OnNextElement(eventData.Data);
+                            //    }
 
-                                break;
+                            //    break;
 
                             case MessageType.stream_data:
                                 var streamData = new StreamDataMessage(tmo, message.Id, message.Type);

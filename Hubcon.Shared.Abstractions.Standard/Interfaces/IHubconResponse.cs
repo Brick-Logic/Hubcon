@@ -11,6 +11,18 @@ namespace Hubcon
         [JsonPropertyName("success")]
         bool Success { get; }
 
+        [JsonPropertyName("failure")]
+        bool Failure { get; }
+
+        [JsonPropertyName("error")]
+        string Error { get; }
+
+        [JsonIgnore]
+        Exception Exception { get; set; }
+
+        [JsonPropertyName("message")]
+        string Message { get; }
+
         HubconResponse GetBoxed();
     }
 
@@ -20,18 +32,6 @@ namespace Hubcon
 
     public interface IHubconResponse<T> : IResponse
     {
-        [JsonPropertyName("error")]
-        string Error { get; }
-
-        [JsonIgnore]
-        Exception Exception { get; set; }
-
-        [JsonPropertyName("failure")]
-        bool Failure { get; }
-
-        [JsonPropertyName("message")]
-        string Message { get; }
-
         [JsonPropertyName("data")]
         T Data { get; }
     }

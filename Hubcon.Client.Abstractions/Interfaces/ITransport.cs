@@ -18,7 +18,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         public ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
         public ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
         public ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        public ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        //public ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
         public ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
 
         public void Build(TransportContext context);
@@ -93,7 +93,7 @@ namespace Hubcon
         public abstract ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
         public abstract ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
         public abstract ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
-        public abstract ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
+        //public abstract ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
         public abstract ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default);
 
         void ITransportClient.Build(TransportContext context)

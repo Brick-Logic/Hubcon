@@ -10,7 +10,7 @@
 @inject IUserContract _userService
 
 <button class="btn btn-primary" @onclick="Login">Login</button>
-<button class="btn btn-primary" @onclick="TestSubscribe">TestSubscribe</button>
+@* <button class="btn btn-primary" @onclick="TestSubscribe">TestSubscribe</button> *@
 <button class="btn btn-primary" @onclick="TestCreateUser">TestCreateUser</button>
 <button class="btn btn-primary" @onclick="TestStream">TestStream</button>
 
@@ -25,18 +25,18 @@
             _logger.LogInformation($"Login failure.");
     }
 
-    protected async Task TestSubscribe()
-    {
-        Func<int?, Task> handler = async (int? input) =>
-        {
-            _logger.LogInformation($"Evento recibido: {input}");
-        };
+    // protected async Task TestSubscribe()
+    // {
+    //     Func<int?, Task> handler = async (int? input) =>
+    //     {
+    //         _logger.LogInformation($"Evento recibido: {input}");
+    //     };
 
-        await _userService.OnUserCreated.AddHandler(handler);
-        await _userService.OnUserCreated.Subscribe();
+    //     await _userService.OnUserCreated.AddHandler(handler);
+    //     await _userService.OnUserCreated.Subscribe();
 
-        _logger.LogInformation($"Subscribe OK");
-    }
+    //     _logger.LogInformation($"Subscribe OK");
+    // }
 
     protected async Task TestCreateUser()
     {

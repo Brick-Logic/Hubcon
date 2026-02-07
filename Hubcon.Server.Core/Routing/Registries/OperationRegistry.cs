@@ -130,26 +130,6 @@ namespace Hubcon.Server.Core.Routing.Registries
                     var parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
                     var controllerMethod = controllerType.GetMethod(method.Name, parameterTypes)!;
 
-                    //Dictionary<Type, HubconTransportAttribute> methodTransportAttributes = new();
-                    
-                    //foreach (Attribute attribute in method.GetCustomAttributes().Where(x => x is HubconTransportAttribute))
-                    //{
-                    //    methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransportAttribute)!);
-                    //}
-
-                    //foreach (Attribute attribute in controllerMethod.GetCustomAttributes().Where(x => x is HubconTransportAttribute))
-                    //{
-                    //    methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransportAttribute)!);
-                    //}
-
-                    //if (methodTransportAttributes.Count == 0)
-                    //{
-                    //    foreach (Attribute attribute in contractTransportAttributes)
-                    //    {
-                    //        methodTransportAttributes.TryAdd(attribute.GetType(), (attribute as HubconTransportAttribute)!);
-                    //    }
-                    //}
-
                     var methodSignature = method.GetMethodSignature(useHashedNames);
 
                     var verb = method.GetCustomAttribute<HttpGetAttribute>();
@@ -160,7 +140,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                     }
 
                     var httpVerb = verb != null
-                        ? HttpMethod.Get
+                        ? HttpMethod.Post
                         : (parameters.Length - parameters.Count(x => x.ParameterType == typeof(CancellationToken)) > 0 ? HttpMethod.Post : HttpMethod.Get);
 
                     var wrapperType = ParameterWrapHelper.CreateWrapperType(controllerMethod, x =>
@@ -226,37 +206,37 @@ namespace Hubcon.Server.Core.Routing.Registries
                     OnOperationRegistered?.Invoke(descriptor);
                 }
 
-                var subscriptions = interfaceType
-                    .GetProperties()
-                    .Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription)));
+                //var subscriptions = interfaceType
+                //    .GetProperties()
+                //    .Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription)));
 
-                foreach (var propertyInfo in subscriptions)
-                {
-                    if (!serverOptions.WebSocketSubscriptionIsAllowed)
-                        continue;
+                //foreach (var propertyInfo in subscriptions)
+                //{
+                //    if (!serverOptions.WebSocketSubscriptionIsAllowed)
+                //        continue;
 
-                    var pipelineBuilder = new PipelineBuilder();
-                    var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);
+                //    var pipelineBuilder = new PipelineBuilder();
+                //    var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);
 
-                    var controllerProperty = controllerType.GetProperty(propertyInfo.Name)!;
+                //    var controllerProperty = controllerType.GetProperty(propertyInfo.Name)!;
 
-                    options?.Invoke(middlewareOptions);
+                //    options?.Invoke(middlewareOptions);
 
-                    var descriptor = new OperationBlueprint(
-                        propertyInfo.Name,
-                        interfaceType,
-                        controllerType,
-                        propertyInfo,
-                        controllerProperty,
-                        OperationKind.Subscription,
-                        pipelineBuilder,
-                        serverOptions
-                    );
+                //    var descriptor = new OperationBlueprint(
+                //        propertyInfo.Name,
+                //        interfaceType,
+                //        controllerType,
+                //        propertyInfo,
+                //        controllerProperty,
+                //        OperationKind.Subscription,
+                //        pipelineBuilder,
+                //        serverOptions
+                //    );
 
-                     _availableOperations.GetOrAdd(GetOperationKey(interfaceType.Name, descriptor.OperationName), descriptor);
+                //     _availableOperations.GetOrAdd(GetOperationKey(interfaceType.Name, descriptor.OperationName), descriptor);
                  
-                    OnOperationRegistered?.Invoke(descriptor);
-                }
+                //    OnOperationRegistered?.Invoke(descriptor);
+                //}
 
                 RegisteredControllers.TryAdd(controllerType, true);
             }
@@ -348,7 +328,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             }
 
             _blueprintCache = tempCache.ToFrozenDictionary();
-            return tempCache;
+            return tempOperations;
         }
 
         private Delegate CreateMethodDescriptor(MethodInfo method)

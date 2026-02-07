@@ -11,6 +11,7 @@ namespace Hubcon.Shared.Abstractions.Attributes
     {
         public string Template { get; }
         public abstract HttpMethod HttpMethod { get; }
+        public string ContentType { get; protected set; } = "application/json";
 
         protected HttpMethodDataAttribute(string template = "/")
         {
@@ -24,7 +25,7 @@ namespace Hubcon
     public class HttpGetAttribute : HttpMethodDataAttribute
     {
         public override HttpMethod HttpMethod => HttpMethod.Get;
-        public HttpGetAttribute(string template = "/") : base(template) { }
+        public HttpGetAttribute(string template = "/") : base(template) {  }
     }
 
     public class HttpPostAttribute : HttpMethodDataAttribute
@@ -48,7 +49,10 @@ namespace Hubcon
     public class HttpPatchAttribute : HttpMethodDataAttribute
     {
         public override HttpMethod HttpMethod => HttpMethod.Patch;
-        public HttpPatchAttribute(string template = "/") : base(template) { }
+        public HttpPatchAttribute(string template = "/") : base(template) 
+        {
+            base.ContentType = "application/merge-patch+json";
+        }
     }
 
     public class HttpHeadAttribute : HttpMethodDataAttribute

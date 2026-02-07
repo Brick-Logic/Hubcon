@@ -16,23 +16,12 @@ namespace HubconTest.ContractHandlers
     [UseHttpRateLimiter("contract")]
     public class UserController(ILogger<UserController> logger) : IUserContract
     {
-        [SubscriptionAuthorize]
-        public ISubscription<int?>? OnUserCreated { get; }
-        public ISubscription<int?>? OnUserCreated2 { get; }
-        public ISubscription<int?>? OnUserCreated3 { get; }
-        public ISubscription<int?>? OnUserCreated4 { get; }
-        public ISubscription<IEnumerable<int>>? OnEnumerableTest { get; }
-
         [UseHttpEndpointFilter(typeof(LoggingEndpointFilter))]
         [UseMiddleware(typeof(LocalLoggingMiddleware))]
         [UseHttpRateLimiter("endpoint")]
         public async Task CreateUser(CancellationToken cancellationToken)
         {
-            await OnUserCreated.Emit(1);
-            await OnUserCreated2.Emit(2);
-            await OnUserCreated3.Emit(3);
-            await OnUserCreated4.Emit(4);
-            await OnEnumerableTest.Emit([0,1,2,3,4]);
+
         }
 
         [UseHttpRateLimiter("endpoint")]

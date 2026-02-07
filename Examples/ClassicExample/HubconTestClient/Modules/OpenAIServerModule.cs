@@ -21,15 +21,14 @@ namespace HubconTestClient.Modules
 
             server.UseNonHubconHttp();
 
-            // Evita el uso de AuthenticationManager
-            server.DisableHttpAuthentication();
+            server.AddHeaderProvider("Authorization", x => "Bearer " + config["OpenAI:ApiKey"]);
 
-            server.ConfigureHttpClient((x, y) =>
-            {
-                // Autenticacion manual
-                var key = config["OpenAI:ApiKey"];
-                x.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", key);
-            });
+            //server.ConfigureHttpClient((x, y) =>
+            //{
+            //    // Autenticacion manual
+            //    var key = config["OpenAI:ApiKey"];
+            //    x.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", key);
+            //});
 
             // Contrato que va a usar esta config
             server.Implements<IOpenAIContract>();

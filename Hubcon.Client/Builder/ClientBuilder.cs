@@ -172,7 +172,7 @@ namespace Hubcon.Client.Builder
 
         public HubconTransportAttribute TransportType { get; set; } = HubconTransportAttribute.GetDefault<HttpTransport>();
 
-        public Dictionary<string, Func<string>> HeaderProviders { get; } = new();
+        public Dictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; } = new();
 
         public T GetOrCreateClient<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(IServiceProvider services, bool useCached = true) where T : IControllerContract
         {
@@ -211,38 +211,38 @@ namespace Hubcon.Client.Builder
                 proxyType,
                 typeGetter);
 
-            foreach (var subscriptionProp in props)
-            {
-                var value = subscriptionProp.GetValue(newClient, null);
-                if (value == null)
-                {
-                    if (operations.TryGetValue(subscriptionProp.Name, out var context))
-                    {
-                        var genericType = _subTypesCache.GetOrAdd(
-                            subscriptionProp.PropertyType.GenericTypeArguments[0],
-                            x => HubconClientBuilder.GetProxyType(x)!);
+            //foreach (var subscriptionProp in props)
+            //{
+            //    var value = subscriptionProp.GetValue(newClient, null);
+            //    if (value == null)
+            //    {
+            //        if (operations.TryGetValue(subscriptionProp.Name, out var context))
+            //        {
+            //            var genericType = _subTypesCache.GetOrAdd(
+            //                subscriptionProp.PropertyType.GenericTypeArguments[0],
+            //                x => HubconClientBuilder.GetProxyType(x)!);
 
-                        var propss = contractType.GetProperties().Where(x => x.Name == subscriptionProp.Name).FirstOrDefault();
-                        var factory = SubscriptionFactory.GetFactory();
+            //            var propss = contractType.GetProperties().Where(x => x.Name == subscriptionProp.Name).FirstOrDefault();
+            //            var factory = SubscriptionFactory.GetFactory();
 
-                        if (factory == null)
-                            continue;
+            //            if (factory == null)
+            //                continue;
 
-                        var config = new ClientSubscriptionConfig<object>()
-                        {
-                            Converter = converter,
-                            Logger = scopedServices.GetRequiredService<ILogger<ClientSubscriptionHandler<object>>>(),
-                            Property = propss,
-                            Client = hubconClient!,
-                        };
+            //            var config = new ClientSubscriptionConfig<object>()
+            //            {
+            //                Converter = converter,
+            //                Logger = scopedServices.GetRequiredService<ILogger<ClientSubscriptionHandler<object>>>(),
+            //                Property = propss,
+            //                Client = hubconClient!,
+            //            };
 
-                        var subscriptionInstance = (ISubscription)factory.Invoke(subscriptionProp.PropertyType.GenericTypeArguments[0], config);
-                        var buildable = subscriptionInstance as IBuildableSubscription;
-                        buildable!.Build(context);
-                        newClient.SetPropertyValue(subscriptionProp.Name, subscriptionInstance);
-                    }
-                }
-            }
+            //            var subscriptionInstance = (ISubscription)factory.Invoke(subscriptionProp.PropertyType.GenericTypeArguments[0], config);
+            //            var buildable = subscriptionInstance as IBuildableSubscription;
+            //            buildable!.Build(context);
+            //            newClient.SetPropertyValue(subscriptionProp.Name, subscriptionInstance);
+            //        }
+            //    }
+            //}
 
             if (useCached) _clients.Add(contractType, newClient!);
 

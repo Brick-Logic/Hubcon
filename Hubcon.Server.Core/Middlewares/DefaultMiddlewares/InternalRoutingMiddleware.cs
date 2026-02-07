@@ -70,31 +70,31 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 var controller = context.Blueprint!.ControllerFactory.Invoke(serviceProvider, null);
 
-                if (context.Blueprint.HasSubscriptions)
-                {
-                    var subRegistry = context.RequestServices.GetRequiredService<ILiveSubscriptionRegistry>();
+                //if (context.Blueprint.HasSubscriptions)
+                //{
+                //    var subRegistry = context.RequestServices.GetRequiredService<ILiveSubscriptionRegistry>();
 
-                    string identity = "anonymous";
-                    if (context.Blueprint.RequiresAuthorization)
-                    {
-                        if (context.HttpContext!.Request.Headers.TryGetValue("Authorization", out var authHeader))
-                        {
-                            string rawValue = authHeader.ToString();
-                            identity = rawValue;
-                        }
-                    }
+                //    string identity = "anonymous";
+                //    if (context.Blueprint.RequiresAuthorization)
+                //    {
+                //        if (context.HttpContext!.Request.Headers.TryGetValue("Authorization", out var authHeader))
+                //        {
+                //            var token = JwtHelper.ExtractTokenFromHeader(context.HttpContext);
+                //            identity = token!;
+                //        }
+                //    }
 
-                    foreach (var sub in context.Blueprint.SubscriptionProperties)
-                    {
-                        if (!operationRegistry.GetOperationBlueprint(context.Blueprint.SimpleContractName, sub.PropInfo.Name, HubconTransportAttribute.GetDefault<WebSocketTransport>(), out IOperationBlueprint? blueprint))
-                            continue;
+                //    foreach (var sub in context.Blueprint.SubscriptionProperties)
+                //    {
+                //        if (!operationRegistry.GetOperationBlueprint(context.Blueprint.SimpleContractName, sub.PropInfo.Name, HubconTransportAttribute.GetDefault<WebSocketTransport>(), out IOperationBlueprint? blueprint))
+                //            continue;
 
-                        object? subInstance = null;
-                        var descriptor = subRegistry.GetHandler(identity, context.Blueprint.SimpleContractName, blueprint!.OperationName);
-                        subInstance = descriptor?.Subscription;
-                        sub.FastSetter.Invoke(controller, subInstance);
-                    }
-                }
+                //        object? subInstance = null;
+                //        var descriptor = subRegistry.GetHandler(identity, context.Blueprint.SimpleContractName, blueprint!.OperationName);
+                //        subInstance = descriptor?.Subscription;
+                //        sub.FastSetter.Invoke(controller, subInstance);
+                //    }
+                //}
 
                 var wrapper = Activator.CreateInstance(context.Blueprint!.CallWrapperType!)!;
                 context.Blueprint!.WrapperMapper!.Invoke(dict, wrapper, context.RequestAborted);
@@ -133,105 +133,108 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 context.Response = (response as IHubconResponse)!;
                 await next();
             }
-            else if (context.Blueprint.Kind == OperationKind.Subscription)
+            else
             {
-                string clientId = "";
-
-                if (context.Blueprint.MemberInfo == null)
-                {
-                    context.Response = HubconResponse.NotFound(error: "Suscripcion no encontrada");
-                    return;
-                }
-
-                ISubscriptionDescriptor? subDescriptor = null;
-
-                if (!context.Blueprint.RequiresAuthorization)
-                {
-                    subDescriptor = liveSubscriptionRegistry.GetHandler("", context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
-
-                    if (subDescriptor == null)
-                    {
-                        var subscription = (ISubscription?)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
-                        subDescriptor = liveSubscriptionRegistry.RegisterHandler("", context.Blueprint.SimpleContractName, context.Blueprint.OperationName, subscription!);
-                    }
-                }
-                else
-                {
-                    string websocketToken = context.HttpContext?.Request.Headers.Authorization.ToString()!;
-
-                    if (options.WebsocketRequiresAuthorization && context.HttpContext?.User == null)
-                    {
-                        context.Response = HubconResponse.Unauthorized();
-                        return;
-                    }
-
-                    clientId = websocketToken;
-
-                    subDescriptor = liveSubscriptionRegistry.GetHandler(websocketToken, context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
-
-
-                    if (subDescriptor == null)
-                    {
-                        var subscription = (ISubscription)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
-
-                        if (subscription is null)
-                        {
-                            context.Response = HubconResponse.InternalError();
-                            return;
-                        }
-
-                        subDescriptor = liveSubscriptionRegistry.RegisterHandler(websocketToken, context.Blueprint.SimpleContractName, context.Blueprint.OperationName, subscription);
-                    }
-                }
-
-                context.Blueprint.ConfigurationAttributes.TryGetValue(typeof(RateLimitAttribute), out Attribute? attribute);
-                var subSettings = (attribute as RateLimitAttribute) ?? new RateLimitAttribute();
-
-                var channelOptions = new BoundedChannelOptions(subSettings.QueueLimit)
-                {
-                    Capacity = subSettings.QueueLimit,
-                    FullMode = BoundedChannelFullMode.Wait,
-                    SingleReader = false,
-                    SingleWriter = false,
-                    AllowSynchronousContinuations = true
-                };
-
-                IAsyncObserver<object>? observer = AsyncObserver.Create<object>(dynamicConverter, channelOptions);
-
-                async Task hubconEventHandler(object? eventValue)
-                {
-                    try
-                    {
-                        await observer.WriteToChannelAsync(eventValue!);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex.Message);
-                    }
-                }
-
-                await subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
-
-                async IAsyncEnumerable<object?> SubDelegate()
-                {
-                    try
-                    {
-                        await foreach (var newEvent in observer.GetAsyncEnumerable(default))
-                        {
-                            yield return newEvent;
-                        }
-                    }
-                    finally
-                    {
-                        observer.OnCompleted();
-                        liveSubscriptionRegistry.RemoveHandler(clientId, context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
-                        await subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
-                    }
-                };
-
-                context.Response = HubconResponse.Ok(SubDelegate());
-                await next();
+                context.Response = HubconResponse.NotFound();
+                return;
             }
+            //else if (context.Blueprint.Kind == OperationKind.Subscription)
+            //{
+            //    string clientId = "";
+
+            //    if (context.Blueprint.MemberInfo == null)
+            //    {
+            //        context.Response = HubconResponse.NotFound(error: "Suscripcion no encontrada");
+            //        return;
+            //    }
+
+            //    ISubscriptionDescriptor? subDescriptor = null;
+
+            //    if (!context.Blueprint.RequiresAuthorization)
+            //    {
+            //        subDescriptor = liveSubscriptionRegistry.GetHandler("", context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
+
+            //        if (subDescriptor == null)
+            //        {
+            //            var subscription = (ISubscription?)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
+            //            subDescriptor = liveSubscriptionRegistry.RegisterHandler("", context.Blueprint.SimpleContractName, context.Blueprint.OperationName, subscription!);
+            //        }
+            //    }
+            //    else
+            //    {
+            //        string websocketToken = JwtHelper.ExtractTokenFromHeader(context.HttpContext)!;
+
+            //        if (options.WebsocketRequiresAuthorization && context.HttpContext?.User == null)
+            //        {
+            //            context.Response = HubconResponse.Unauthorized();
+            //            return;
+            //        }
+
+            //        clientId = websocketToken;
+            //        subDescriptor = liveSubscriptionRegistry.GetHandler(websocketToken, context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
+
+            //        if (subDescriptor == null)
+            //        {
+            //            var subscription = (ISubscription)context.RequestServices.GetRequiredService(context.Blueprint.RawReturnType);
+
+            //            if (subscription is null)
+            //            {
+            //                context.Response = HubconResponse.InternalError();
+            //                return;
+            //            }
+
+            //            subDescriptor = liveSubscriptionRegistry.RegisterHandler(websocketToken, context.Blueprint.SimpleContractName, context.Blueprint.OperationName, subscription);
+            //        }
+            //    }
+
+            //    context.Blueprint.ConfigurationAttributes.TryGetValue(typeof(RateLimitAttribute), out Attribute? attribute);
+            //    var subSettings = (attribute as RateLimitAttribute) ?? new RateLimitAttribute();
+
+            //    var channelOptions = new BoundedChannelOptions(subSettings.QueueLimit)
+            //    {
+            //        Capacity = subSettings.QueueLimit,
+            //        FullMode = BoundedChannelFullMode.Wait,
+            //        SingleReader = false,
+            //        SingleWriter = false,
+            //        AllowSynchronousContinuations = true
+            //    };
+
+            //    IAsyncObserver<object>? observer = AsyncObserver.Create<object>(dynamicConverter, channelOptions);
+
+            //    async Task hubconEventHandler(object? eventValue)
+            //    {
+            //        try
+            //        {
+            //            await observer.WriteToChannelAsync(eventValue!);
+            //        }
+            //        catch (Exception ex)
+            //        {
+            //            logger.LogError(ex.Message);
+            //        }
+            //    }
+
+            //    await subDescriptor.Subscription.AddGenericHandler(hubconEventHandler);
+
+            //    async IAsyncEnumerable<object?> SubDelegate()
+            //    {
+            //        try
+            //        {
+            //            await foreach (var newEvent in observer.GetAsyncEnumerable(default))
+            //            {
+            //                yield return newEvent;
+            //            }
+            //        }
+            //        finally
+            //        {
+            //            observer.OnCompleted();
+            //            liveSubscriptionRegistry.RemoveHandler(clientId, context.Blueprint.SimpleContractName, context.Blueprint.OperationName);
+            //            await subDescriptor.Subscription.RemoveGenericHandler(hubconEventHandler);
+            //        }
+            //    };
+
+            //    context.Response = HubconResponse.Ok(SubDelegate());
+            //    await next();
+            //}
         }
     }
 }

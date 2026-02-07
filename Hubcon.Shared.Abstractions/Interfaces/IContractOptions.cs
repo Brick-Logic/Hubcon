@@ -18,7 +18,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         Task CallHook(HookType hookType, IInvocationContext context);
         IOperationOptions GetOperationOptions(string operationName, MemberInfo memberInfo);
         HubconTransportAttribute? TransportType { get; }
-        bool AuthIsEnabled { get; }
-        Dictionary<string, Func<string>> HeaderProviders { get; }
+        bool? AuthIsEnabled { get; }
+        Dictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; }
     }
 }

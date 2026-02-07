@@ -1,7 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Interfaces;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -24,10 +22,10 @@ namespace Hubcon.Client.Core.Configurations
 
         public bool RemoteCancellationIsAllowed { get; private set; }
 
-        public HubconTransportAttribute? TransportType { get; private set; } = HubconTransportAttribute.GetDefault<HttpTransport>();
+        public HubconTransportAttribute? TransportType { get; private set; }
 
-        public bool AuthIsEnabled { get; private set;  }
-        public Dictionary<string, Func<string>> HeaderProviders { get; } = new();
+        public bool? AuthIsEnabled { get; private set; }
+        public Dictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; } = new();
 
         public Task CallHook(HookType hookType, IInvocationContext context)
         {
@@ -82,9 +80,15 @@ namespace Hubcon.Client.Core.Configurations
             return this;
         }
 
-        public IContractConfigurator<T> AddHeaderProvider(string key, Func<string> valueProvider)
+        public IContractConfigurator<T> AddHeaderProvider(string key, Func<IServiceProvider, string> valueProvider)
         {
             HeaderProviders.TryAdd(key, valueProvider);
+            return this;
+        }
+
+        public IContractConfigurator<T> EnableAuth(bool enabled)
+        {
+            AuthIsEnabled ??= enabled;
             return this;
         }
     }

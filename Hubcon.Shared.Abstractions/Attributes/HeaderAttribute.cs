@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Hubcon.Shared.Abstractions.Attributes
+namespace Hubcon
 {
     public sealed class HeaderAttribute : Attribute
     {

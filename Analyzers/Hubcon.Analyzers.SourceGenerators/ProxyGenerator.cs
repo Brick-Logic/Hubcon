@@ -154,8 +154,8 @@ namespace HubconAnalyzers.SourceGenerators
                            !string.IsNullOrWhiteSpace(ns);
                 }).ToList();
 
-                var subscriptionHandlersCode = GenerateSubscriptionHandlerFactory(interfaces, semiFilteredTypes);
-                spc.AddSource("ClientSubscriptionFactory.g.cs", subscriptionHandlersCode);
+                //var subscriptionHandlersCode = GenerateSubscriptionHandlerFactory(interfaces, semiFilteredTypes);
+                //spc.AddSource("ClientSubscriptionFactory.g.cs", subscriptionHandlersCode);
 
                 var filteredTypes = semiFilteredTypes.ToImmutableHashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
 

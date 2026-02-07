@@ -14,6 +14,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         public IContractConfigurator<T> UseWebSockets();
         public IContractConfigurator<T> UseHttp();
         public IContractConfigurator<T> UseNonHubconHttp();
-        public IContractConfigurator<T> AddHeaderProvider(string key, Func<string> valueProvider);
+        public IContractConfigurator<T> AddHeaderProvider(string key, Func<IServiceProvider, string> valueProvider);
+        IContractConfigurator<T> EnableAuth(bool enabled);
     }
 }

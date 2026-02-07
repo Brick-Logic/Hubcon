@@ -97,106 +97,106 @@ namespace Hubcon.Client.Core.Subscriptions
 
         async ValueTask IClientSubscription<T>.Subscribe()
         {
-            if (_tokenSource.IsCancellationRequested == false && (_connected == SubscriptionState.Connected || _connected == SubscriptionState.Reconnecting))
-                return;
+            //if (_tokenSource.IsCancellationRequested == false && (_connected == SubscriptionState.Connected || _connected == SubscriptionState.Reconnecting))
+            //    return;
 
-            _tokenSource = new CancellationTokenSource();
+            //_tokenSource = new CancellationTokenSource();
 
-            var tcs = new TaskCompletionSource<object>();
+            //var tcs = new TaskCompletionSource<object>();
 
-            _ = Task.Factory.StartNew(async () =>
-            {
-                int retry = 0;
+            //_ = Task.Factory.StartNew(async () =>
+            //{
+            //    int retry = 0;
 
-                var contract = ((IClientSubscription<T>)this).Property.DeclaringType!;
-                var simpleContractName = NamingHelper.GetCleanName(((IClientSubscription<T>)this).Property.DeclaringType!.Name);
-                var request = new SubscriptionRequest(((IClientSubscription<T>)this).Property.Name, simpleContractName, null);
-                var random = new Random();
-                var scope = Context!.RootServiceProvider.CreateScope();
+            //    var contract = ((IClientSubscription<T>)this).Property.DeclaringType!;
+            //    var simpleContractName = NamingHelper.GetCleanName(((IClientSubscription<T>)this).Property.DeclaringType!.Name);
+            //    var request = new SubscriptionRequest(((IClientSubscription<T>)this).Property.Name, simpleContractName, null);
+            //    var random = new Random();
+            //    var scope = Context!.RootServiceProvider.CreateScope();
 
-                while (!_tokenSource.IsCancellationRequested)
-                {
-                    IAsyncEnumerator<JsonElement>? enumerator = null;
+            //    while (!_tokenSource.IsCancellationRequested)
+            //    {
+            //        IAsyncEnumerator<JsonElement>? enumerator = null;
 
-                    try
-                    {
-                        IObservable<JsonElement> observable = null!;
-                        WrappedContext.SetWrapped(true);
-                        var callContext = new CallContext(scope.ServiceProvider, request, Context!.AuthenticationManagerFactory?.Invoke()!, true, _tokenSource.Token);
-                        HubconContext.UseContext(callContext);
+            //        try
+            //        {
+            //            IObservable<JsonElement> observable = null!;
+            //            WrappedContext.SetWrapped(true);
+            //            var callContext = new CallContext(scope.ServiceProvider, request, Context!.AuthenticationManagerFactory?.Invoke()!, true, _tokenSource.Token);
+            //            HubconContext.UseContext(callContext);
 
-                        observable = await Client.GetSubscription(request, Context, _tokenSource.Token);
-                        _connected = SubscriptionState.Connected;
+            //            observable = await Client.GetSubscription(request, Context, _tokenSource.Token);
+            //            _connected = SubscriptionState.Connected;
 
-                        var options = new BoundedChannelOptions(999999999);
-                        var observer = AsyncObserver.Create<JsonElement>(Context.Converter, options);
+            //            var options = new BoundedChannelOptions(999999999);
+            //            var observer = AsyncObserver.Create<JsonElement>(Context.Converter, options);
 
-                        tcs.TrySetResult(null!);
+            //            tcs.TrySetResult(null!);
 
-                        using (observable.Subscribe(observer))
-                        {
-                            enumerator = observer
-                                .GetAsyncEnumerable(_tokenSource.Token)
-                                .GetAsyncEnumerator();
+            //            using (observable.Subscribe(observer))
+            //            {
+            //                enumerator = observer
+            //                    .GetAsyncEnumerable(_tokenSource.Token)
+            //                    .GetAsyncEnumerator();
 
-                            while (true)
-                            {
-                                bool moved;
-                                if (retry > 0) retry = 0;
+            //                while (true)
+            //                {
+            //                    bool moved;
+            //                    if (retry > 0) retry = 0;
 
-                                try
-                                {
-                                    moved = await enumerator.MoveNextAsync();
-                                }
-                                catch (Exception)
-                                {
-                                    moved = false;
-                                }
+            //                    try
+            //                    {
+            //                        moved = await enumerator.MoveNextAsync();
+            //                    }
+            //                    catch (Exception)
+            //                    {
+            //                        moved = false;
+            //                    }
 
-                                if (!moved)
-                                {
-                                    break;
-                                }
+            //                    if (!moved)
+            //                    {
+            //                        break;
+            //                    }
 
-                                var item = enumerator.Current;
-                                var result = _converter.DeserializeData<T>(enumerator.Current);
+            //                    var item = enumerator.Current;
+            //                    var result = _converter.DeserializeData<T>(enumerator.Current);
 
-                                if (OnEventReceived != null)
-                                    await (OnEventReceived.Invoke(result!));
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex.Message, ex);
-                    }
-                    finally
-                    {
-                        retry += 1;
+            //                    if (OnEventReceived != null)
+            //                        await (OnEventReceived.Invoke(result!));
+            //                }
+            //            }
+            //        }
+            //        catch (Exception ex)
+            //        {
+            //            logger.LogError(ex.Message, ex);
+            //        }
+            //        finally
+            //        {
+            //            retry += 1;
 
-                        if(enumerator != null)
-                            await enumerator.DisposeAsync();
+            //            if(enumerator != null)
+            //                await enumerator.DisposeAsync();
 
-                        _connected = SubscriptionState.Reconnecting;
+            //            _connected = SubscriptionState.Reconnecting;
 
-                        int baseReconnectionDelay = 1000;
-                        int maxReconnectionDelay = 3000;
+            //            int baseReconnectionDelay = 1000;
+            //            int maxReconnectionDelay = 3000;
 
-                        int expDelay = baseReconnectionDelay * (int)Math.Pow(2, retry);
-                        int jitter = random.Next(0, 2000);
-                        int delay = Math.Min(expDelay + jitter, maxReconnectionDelay);
+            //            int expDelay = baseReconnectionDelay * (int)Math.Pow(2, retry);
+            //            int jitter = random.Next(0, 2000);
+            //            int delay = Math.Min(expDelay + jitter, maxReconnectionDelay);
 
-                        await Task.Delay(delay);
-                    }
-                }
-                _connected = SubscriptionState.Disconnected;
-                _tokenSource.Dispose();
-            },
-            default,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default).Unwrap();
+            //            await Task.Delay(delay);
+            //        }
+            //    }
+            //    _connected = SubscriptionState.Disconnected;
+            //    _tokenSource.Dispose();
+            //},
+            //default,
+            //TaskCreationOptions.LongRunning,
+            //TaskScheduler.Default).Unwrap();
 
-            await tcs.Task;
+            //await tcs.Task;
         }
 
         async ValueTask IClientSubscription<T>.Unsubscribe()

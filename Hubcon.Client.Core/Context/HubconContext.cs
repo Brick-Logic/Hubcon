@@ -69,6 +69,11 @@ namespace Hubcon.Shared.Core.Context
             return Response as IHubconResponse<T> ?? HubconResponse.Fail<T>("Empty response");
         }
 
+        public IResponse GetResponse()
+        {
+            return Response as IResponse ?? HubconResponse.Fail("Empty response");
+        }
+
         public object? GetRawResponse()
         {
             return Response;

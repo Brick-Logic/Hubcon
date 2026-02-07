@@ -165,15 +165,15 @@ namespace Hubcon
         /// </summary>
         /// <param name="task"></param>
         /// <returns></returns>
-        public static async ValueTask<IHubconResponse<JsonElement>> Execute<T>(this T contract, Func<T, Task> call) where T : IControllerContract
+        public static async ValueTask<IResponse> Execute<T>(this T contract, Func<T, Task> call) where T : IControllerContract
         {
             WrappedContext.SetWrapped(true);
             Exception? exception = null;
-            IHubconResponse<JsonElement> response = default!;
+            IResponse response = default!;
             try
             {
                 await call.Invoke(contract);
-                response = WrappedContext.CurrentWrapped.GetResponse<JsonElement>() ?? HubconResponse.OkT<JsonElement>()!;
+                response = WrappedContext.CurrentWrapped.GetResponse() ?? HubconResponse.Ok()!;
             }
             catch (Exception ex) when (HandleException(ex, out exception))
             {
@@ -184,11 +184,11 @@ namespace Hubcon
                 {                  
                     response = exception switch
                     {
-                        OperationCanceledException => HubconResponse.Cancelled<JsonElement>(exception),
-                        HubconRemoteException => HubconResponse.InternalError<JsonElement>(exception),
-                        HubconGenericException => HubconResponse.InternalError<JsonElement>(exception),
-                        UnauthorizedAccessException => HubconResponse.Unauthorized<JsonElement>(exception),
-                        _ => HubconResponse.InternalError<JsonElement>(exception)
+                        OperationCanceledException => HubconResponse.Cancelled<IResponse>(exception),
+                        HubconRemoteException => HubconResponse.InternalError<IResponse>(exception),
+                        HubconGenericException => HubconResponse.InternalError<IResponse>(exception),
+                        UnauthorizedAccessException => HubconResponse.Unauthorized<IResponse>(exception),
+                        _ => HubconResponse.InternalError<IResponse>(exception)
                     };
                 }
             }

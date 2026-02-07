@@ -50,10 +50,9 @@ namespace Hubcon.Client.Core.Transports
                 url = builder.ToString();
             }
 
-            url += methodInfo.GetRoute(false).FullRoute;
             var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
 
-            foreach(var header in await context.GetHeaders())
+            foreach(var header in await context.GetHeaders(context.ScopeServiceProvider))
                 httpRequest.Headers.Add(header.Key, header.Value);
 
             if (content != null)
@@ -79,23 +78,42 @@ namespace Hubcon.Client.Core.Transports
             response.Dispose();
         }
 
-        public override async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public override async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
-            var url = context.HttpUrl;
+            var url = "";
             var methodInfo = (context.Member as MethodInfo)!;
             var httpMethod = context.HttpMethodAttribute!;
             var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
-            string finalRoute = httpMethod.Template;
+            var converter = context.Converter;
+            var route = methodInfo.GetRoute(false);
 
-            Dictionary<string, object> remainingArguments = HttpMessageHelper.GetRemainingArguments(request, context.Converter, ref finalRoute);
-            url = HttpMessageHelper.BuildBodyAndFinalUrl(request, context, finalRoute, remainingArguments, ref content);
+            if (httpMethod is HttpPostAttribute)
+            {
+                var arguments = converter.Serialize(request.Arguments);
+                content = new StringContent(arguments, Encoding.UTF8, "application/json");
+                url = context.HttpUrl + route.FullRoute;
+            }
+            else
+            {
+                var builder = new UriBuilder(context.HttpUrl);
 
+                var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+
+                foreach (var argument in request.Arguments)
+                {
+                    query[argument.Key] = argument.Value?.ToString() ?? "";
+                }
+
+                builder.Path = route.FullRoute;
+                builder.Query = query.ToString();
+                url = builder.ToString();
+            }
 
             var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
             httpRequest.SetBrowserResponseStreamingEnabled(true);
 
-            foreach (var header in await context.GetHeaders())
+            foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
                 httpRequest.Headers.Add(header.Key, header.Value);
 
             if (content != null)
@@ -107,9 +125,7 @@ namespace Hubcon.Client.Core.Transports
             HttpResponseMessage response;
             response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
-            using var stream = await response.Content.ReadAsStreamAsync();
-
-            var enumerable = HttpMessageHelper.ParseSSEStream(stream, context, cancellationToken);
+            var enumerable = HttpMessageHelper.ParseSSEStream(response, context, cancellationToken);
 
             var methodReponse = new HubconResponse<IAsyncEnumerable<JsonElement>>(
                 response.IsSuccessStatusCode,
@@ -124,14 +140,8 @@ namespace Hubcon.Client.Core.Transports
 
             content?.Dispose();
             httpRequest.Dispose();
-            response.Dispose();
 
             return enumerable;
-        }
-
-        public override ValueTask<IObservable<JsonElement>> GetSubscription(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
-        {
-            throw new NotSupportedException();
         }
 
         public override ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
@@ -159,7 +169,7 @@ namespace Hubcon.Client.Core.Transports
 
             var httpRequest = new HttpRequestMessage(httpMethod, url);
 
-            foreach (var header in await context.GetHeaders())
+            foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
                 httpRequest.Headers.Add(header.Key, header.Value);
 
             if (content != null)

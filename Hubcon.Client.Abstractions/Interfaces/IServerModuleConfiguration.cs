@@ -254,7 +254,7 @@ namespace Hubcon
         /// authentication.  Use this method when authentication is not needed or is handled by other
         /// mechanisms.</remarks>
         /// <returns>The current <see cref="IServerModuleConfiguration"/> instance, allowing for method chaining.</returns>
-        IServerModuleConfiguration DisableHttpAuthentication();
+        IServerModuleConfiguration AuthIsEnabled(bool enabled = true);
 
         /// <summary>
         /// Adds an interceptor to be triggered during the operation lifecycle.
@@ -286,6 +286,6 @@ namespace Hubcon
         IServerModuleConfiguration UseWebSockets();
         IServerModuleConfiguration UseHttp();
         IServerModuleConfiguration UseNonHubconHttp();
-        IServerModuleConfiguration AddHeaderProvider(string key, Func<string> valueProvider);
+        IServerModuleConfiguration AddHeaderProvider(string key, Func<IServiceProvider, string> valueProvider);
     }
 }

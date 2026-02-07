@@ -1,4 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Attributes;
+using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Extensions;
 using System;
 using System.Collections.Concurrent;
@@ -64,11 +65,11 @@ namespace Hubcon.Client.Core.Helpers
 
                 var jsonBody = context.Converter.Serialize(bodyData);
                 content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-                url = context.BaseUrl.TrimEnd('/') + "/" + finalRoute.TrimStart('/');
+                url = url.TrimEnd('/') + "/" + finalRoute.TrimStart('/');
             }
             else // GET o DELETE
             {
-                var builder = new UriBuilder(context.BaseUrl);
+                var builder = new UriBuilder(url);
                 builder.Path = (builder.Path.TrimEnd('/') + "/" + finalRoute.TrimStart('/')).Replace("//", "/");
                 var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
 
@@ -134,13 +135,14 @@ namespace Hubcon.Client.Core.Helpers
             return remainingArguments;
         }
 
-        public static async IAsyncEnumerable<JsonElement> ParseSSEStream(Stream stream, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken)
+        public static async IAsyncEnumerable<JsonElement> ParseSSEStream(HttpResponseMessage response, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             var dataMessages = context.Attributes.OfType<ParseSseMessageAttribute>();
             var endMessages = context.Attributes.OfType<ParseEndSseMessageAttribute>().Select(x => x.MessageName);
             bool shouldReadRaw = context.Attributes.Any(x => x is ParseRawSseMessageAttribute);
             var converter = context.Converter;
 
+            using var stream = await response.Content.ReadAsStreamAsync();
             using var reader = new StreamReader(stream);
             string line = "";
             ParseSseMessageAttribute? foundMessage = null;
@@ -184,6 +186,8 @@ namespace Hubcon.Client.Core.Helpers
                     if (ev.ValueKind != JsonValueKind.Null) yield return ev;
                 }
             }
+
+            stream.Dispose();
         }
 
         private static JsonObject WrapInObject(string title, string rawInput)
