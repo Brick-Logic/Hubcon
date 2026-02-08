@@ -47,7 +47,7 @@ namespace Hubcon
         ValueTask CallHooksAndInterceptors(HookType hookType, CancellationToken cancellationToken = default);
         ValueTask CallValidationHooks(CancellationToken cancellationToken = default);
         ValueTask<Dictionary<string, string>> GetHeaders(IServiceProvider serviceProvider);
-        ValueTask HandleResponse<T>(JsonElement response);
+        ValueTask HandleResponse<T>(object response);
         ValueTask SetResponse(IResponse result);
     }
 }

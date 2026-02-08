@@ -39,7 +39,7 @@ namespace Hubcon.Client.Core.Helpers
             url = uriBuilder.ToString();
 
             // 3. Construcción de Body o QueryString según el Verbo
-            if (context.HttpMethodDefined == HttpMethod.Post || context.HttpMethodDefined == HttpMethod.Put)
+            if (context.HttpMethodDefined == HttpMethod.Post || context.HttpMethodDefined == HttpMethod.Put || context.HttpMethodDefined == HttpMethod.Patch)
             {
                 object? bodyData = null;
 
@@ -67,7 +67,7 @@ namespace Hubcon.Client.Core.Helpers
                 content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
                 url = url.TrimEnd('/') + "/" + finalRoute.TrimStart('/');
             }
-            else // GET o DELETE
+            else // GET, DELETE, OPTIONS Y HEAD
             {
                 var builder = new UriBuilder(url);
                 builder.Path = (builder.Path.TrimEnd('/') + "/" + finalRoute.TrimStart('/')).Replace("//", "/");

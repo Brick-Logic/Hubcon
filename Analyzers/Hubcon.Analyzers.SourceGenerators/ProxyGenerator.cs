@@ -64,8 +64,15 @@ namespace HubconAnalyzers.SourceGenerators
                     return local.Concat(referenced).Distinct(SymbolEqualityComparer.Default).ToArray();
                 });
 
-            context.RegisterSourceOutput(allInterfaces, (spc, interfaceList) =>
+            var finalProvider = allInterfaces.Combine(context.CompilationProvider.Select((c, _) => c.AssemblyName));
+
+            context.RegisterSourceOutput(finalProvider, (spc, data) =>
             {
+                var (interfaceList, assemblyName) = data;
+
+                if (assemblyName == "Hubcon.Client")
+                    return;
+
                 // 1. HashSet para evitar procesar la misma interfaz dos veces (evita el error de hintName)
                 var processedFullNames = new HashSet<string>();
                 var generatedResolverClasses = new List<string>(); // Para el Aggregator

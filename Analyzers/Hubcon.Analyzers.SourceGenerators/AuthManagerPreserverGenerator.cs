@@ -49,9 +49,17 @@ namespace HubconAnalyzers.SourceGenerators
                     return results;
                 });
 
+
+            var finalProvider = authManagers.Combine(context.CompilationProvider.Select((c, _) => c.AssemblyName));
+
             // 3. Generación del código
-            context.RegisterSourceOutput(authManagers, (spc, symbol) =>
+            context.RegisterSourceOutput(finalProvider, (spc, data) =>
             {
+                var (symbol, assemblyName) = data;
+
+                if (assemblyName == "Hubcon.Client")
+                    return;
+
                 string source = GeneratePreserverSource(symbol);
                 spc.AddSource(symbol.Name + "_AuthPreserver.g.cs", SourceText.From(source, Encoding.UTF8));
             });

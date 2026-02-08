@@ -41,7 +41,18 @@ namespace Hubcon.Generators
             });
 
             var allTypes = localTypes.Collect().Combine(referencedTypes);
-            context.RegisterSourceOutput(allTypes, (spc, source) => Execute(source.Left, source.Right, spc));
+
+            var finalProvider = allTypes.Combine(context.CompilationProvider.Select((c, _) => c.AssemblyName));
+
+            context.RegisterSourceOutput(finalProvider, (spc, data) =>
+            {
+                var (source, assemblyName) = data;
+
+                if (assemblyName == "Hubcon.Client")
+                    return;
+
+                Execute(source.Left, source.Right, spc);
+            });
         }
 
         private static INamedTypeSymbol GetIfDerived(INamedTypeSymbol symbol)

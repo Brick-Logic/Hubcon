@@ -13,6 +13,11 @@ namespace Hubcon.Shared.Abstractions.Attributes
         public abstract HttpMethod HttpMethod { get; }
         public string ContentType { get; protected set; } = "application/json";
 
+        public virtual void ConfigureHeaders(StringContent content)
+        {
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(ContentType);
+        }
+
         protected HttpMethodDataAttribute(string template = "/")
         {
             Template = template ?? "/";
@@ -52,6 +57,11 @@ namespace Hubcon
         public HttpPatchAttribute(string template = "/") : base(template) 
         {
             base.ContentType = "application/merge-patch+json";
+        }
+
+        public override void ConfigureHeaders(StringContent content)
+        {
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(ContentType);
         }
     }
 

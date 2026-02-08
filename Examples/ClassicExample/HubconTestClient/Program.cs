@@ -88,54 +88,8 @@ internal class Program
         logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
         Console.ReadKey();
 
-        //logger.LogInformation("Probando creación de modelo de respuesta...");
-        //var command = new CreateResponseCommand()
-        //{
-        //    Model = "gpt-5-nano",
-        //    Input = "Tell me a three sentence bedtime story about a unicorn."
-        //};
-
-        //var response = await openAi.Execute(x => x.CreateModelResponse(command));
-        //logger.LogInformation($"Respuesta: {response.Success}");
-        //await Task.Delay(1000);
-
-        //logger.LogInformation($"Probando stream SSE non-hubcon...");
-        //await Task.Delay(500);
-
-        //var request = new OpenAIStreamRequest()
-        //{
-        //    Model = "gpt-5-nano",
-        //    Input = "Dame una frase de 5 palabras sobre una manzana.",
-        //};
-
-        //var finalText = "";
-        //var streamResponse = await openAi.Execute(x => x.GetResponseStream(request));
-        //logger.LogInformation($"Respuesta: {streamResponse.Success}");
-        //await foreach (var item in streamResponse.Data!)
-        //{
-        //    logger.LogInformation($"Event received: {item.Event}, data: {item.Delta}");
-        //    finalText += item.Delta;
-        //}
-
-        //logger.LogInformation($"Final text: {finalText}");
-        //logger.LogInformation($"Stream SSE de tokens: OK");
-        //await Task.Delay(1000);
-
-        //logger.LogInformation($"Probando obtener inputs del modelo...");
-        //var response2 = await openAi.Execute(x => x.GetModelResponseInputs(response.Data.Id));
-        //logger.LogInformation($"Respuesta: {response2.Success}");
-        //await Task.Delay(1000);
-
-        //logger.LogInformation($"Probando obtener respuesta del modelo...");
-        //var response3 = await openAi.Execute(x => x.GetModelResponse(response.Data.Id));
-        //logger.LogInformation($"Respuesta: {response3.Success}");
-        //await Task.Delay(1000);
-
-        //logger.LogInformation($"Probando eliminar respuesta del modelo...");
-        //var response4 = await openAi.Execute(x => x.DeleteModelResponse(response3.Data.Id));
-        //logger.LogInformation($"Respuesta: {response4.Success}");
-        //await Task.Delay(1000);
-
+        //await TestOpenAiIntegration(logger, openAi);
+        //await Task.Delay(100);
 
         await TestLogin(authManager, logger);
         await Task.Delay(100);
@@ -213,7 +167,7 @@ internal class Program
 
         //await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
         //{
-            //TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(
+        //TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(
         //    {
         //        QueueLimit = 1,
         //        AutoReplenishment = true,
@@ -343,6 +297,57 @@ internal class Program
 
         // Esperamos a que todas las tareas terminen (esto ocurrirá cuando se cancele el ct)
         await Task.WhenAll(tasks);
+    }
+
+    private static async Task TestOpenAiIntegration(ILogger<IUserContract> logger, IOpenAIContract openAi)
+    {
+        logger.LogInformation("Probando creación de modelo de respuesta...");
+        var command = new CreateResponseCommand()
+        {
+            Model = "gpt-5-nano",
+            Input = "Tell me a three sentence bedtime story about a unicorn."
+        };
+
+        var response = await openAi.Execute(x => x.CreateModelResponse(command));
+        logger.LogInformation($"Respuesta: {response.Success}");
+        await Task.Delay(1000);
+
+        logger.LogInformation($"Probando stream SSE non-hubcon...");
+        await Task.Delay(500);
+
+        var request = new OpenAIStreamRequest()
+        {
+            Model = "gpt-5-nano",
+            Input = "Dame una frase de 5 palabras sobre una manzana.",
+        };
+
+        var finalText = "";
+        var streamResponse = await openAi.Execute(x => x.GetResponseStream(request));
+        logger.LogInformation($"Respuesta: {streamResponse.Success}");
+        await foreach (var item in streamResponse.Data!)
+        {
+            logger.LogInformation($"Event received: {item.Event}, data: {item.Delta}");
+            finalText += item.Delta;
+        }
+
+        logger.LogInformation($"Final text: {finalText}");
+        logger.LogInformation($"Stream SSE de tokens: OK");
+        await Task.Delay(1000);
+
+        logger.LogInformation($"Probando obtener inputs del modelo...");
+        var response2 = await openAi.Execute(x => x.GetModelResponseInputs(response.Data.Id));
+        logger.LogInformation($"Respuesta: {response2.Success}");
+        await Task.Delay(1000);
+
+        logger.LogInformation($"Probando obtener respuesta del modelo...");
+        var response3 = await openAi.Execute(x => x.GetModelResponse(response.Data.Id));
+        logger.LogInformation($"Respuesta: {response3.Success}");
+        await Task.Delay(1000);
+
+        logger.LogInformation($"Probando eliminar respuesta del modelo...");
+        var response4 = await openAi.Execute(x => x.DeleteModelResponse(response3.Data.Id));
+        logger.LogInformation($"Respuesta: {response4.Success}");
+        await Task.Delay(1000);
     }
 
     private static async Task TestSseStreaming(IUserContract client, ILogger<IUserContract> logger)

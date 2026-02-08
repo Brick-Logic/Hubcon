@@ -288,30 +288,44 @@ namespace Hubcon.Client.Core.HubconInvocationContext
             WrappedContext.CurrentWrapped.SetResponse(result);
         }
 
-        public async ValueTask HandleResponse<T>(JsonElement response)
+        public async ValueTask HandleResponse<T>(object response)
         {
             if (ExpectsHubconResponse)
             {
                 try
                 {
-                    IHubconResponse<T> result = (Converter.DeserializeJsonElement<T>(response) as IHubconResponse<T>)!;
+                    IHubconResponse<T>? result = Converter.DeserializeData<T>(response) as IHubconResponse<T>;
+
+                    if(result == null)
+                    {
+                        await SetResponse<T>(HubconResponse.InternalError<T>(null, "Parsing error.", response));
+                        return;
+                    }
+
                     await SetResponse<T>(result!);    
                 }
                 catch (Exception ex)
                 {
-                    await SetResponse<T>(HubconResponse.Fail<T>(response.ToString(), ex));
+                    await SetResponse<T>(HubconResponse.Fail<T>(response.ToString(), ex, originalData: response));
                 }
             }
             else
             {
                 try
                 {
-                    IResponse result = Converter.DeserializeJsonElement<HubconResponse<T>>(response);
+                    IResponse result = Converter.DeserializeData<HubconResponse<T>>(response);
+
+                    if (result == null)
+                    {
+                        await SetResponse<T>(HubconResponse.InternalError<T>(null, "Parsing error.", response));
+                        return;
+                    }
+
                     await SetResponse(result!);                 
                 }
                 catch (Exception ex)
                 {
-                    await SetResponse<T>(HubconResponse.Fail<T>(response.ToString(), ex));
+                    await SetResponse<T>(HubconResponse.Fail<T>(response.ToString(), ex, originalData: response));
                 }
             }
         }

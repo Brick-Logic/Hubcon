@@ -263,13 +263,15 @@ namespace Hubcon.Client.Core.Proxies
                 IAsyncEnumerable<JsonElement> stream = _client.GetStream(request, context, cancellationToken).Result;
 
                 var receivedResponse = WrappedContext.CurrentWrapped.GetResponse<IAsyncEnumerable<JsonElement>>();
+
                 var response = new HubconResponse<IAsyncEnumerable<T>?>(
                     receivedResponse.Success,
                     !receivedResponse.Success,
                     receivedResponse.Message,
                     receivedResponse.Error,
                     receivedResponse.StatusCode,
-                    receivedResponse.Data == null ? default : ConvertStream<T>(stream, context, cancellationToken)
+                    receivedResponse.Data == null ? default : ConvertStream<T>(stream, context, cancellationToken),
+                    null
                 );
 
                 context.SetResponse(response);

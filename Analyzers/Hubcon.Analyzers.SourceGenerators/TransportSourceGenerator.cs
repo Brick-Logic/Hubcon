@@ -20,9 +20,20 @@ namespace Hubcon.Analyzers.SourceGenerators
                 .CreateSyntaxProvider(
                     predicate: (s, _) => s is ClassDeclarationSyntax cds && cds.BaseList != null,
                     transform: GetTransportMapping)
-                .Where(m => m != null);
+                .Where(m => m != null)
+                .Collect();
 
-            context.RegisterSourceOutput(provider.Collect(), Execute);
+            var finalProvider = provider.Combine(context.CompilationProvider.Select((c, _) => c.AssemblyName));
+
+            context.RegisterSourceOutput(finalProvider, (spc, data) =>
+            {
+                var (source, assemblyName) = data;
+
+                if (assemblyName == "Hubcon.Client")
+                    return;
+
+                Execute(spc, source);
+            });
         }
 
         private static (string MarkerType, string ClientType)? GetTransportMapping(GeneratorSyntaxContext context, CancellationToken ct)

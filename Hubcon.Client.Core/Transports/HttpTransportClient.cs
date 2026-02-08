@@ -21,127 +21,151 @@ namespace Hubcon.Client.Core.Transports
         public override async ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
-            var url = "";
-            var methodInfo = (context.Member as MethodInfo)!;
-            var httpMethod = context.HttpMethodAttribute!;
-            var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
-            var converter = context.Converter;
-            var route = methodInfo.GetRoute(false);
-
-            if (httpMethod is HttpPostAttribute)
+            HttpRequestMessage? httpRequest = null;
+            HttpResponseMessage? response = null;
+            try
             {
-                var arguments = converter.Serialize(request.Arguments);
-                content = new StringContent(arguments, Encoding.UTF8, "application/json");
-                url = context.HttpUrl + route.FullRoute;
-            }
-            else
-            {
-                var builder = new UriBuilder(context.HttpUrl);
+                var url = "";
+                var methodInfo = (context.Member as MethodInfo)!;
+                var httpMethod = context.HttpMethodAttribute!;
+                var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
+                var converter = context.Converter;
+                var route = methodInfo.GetRoute(false);
 
-                var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
-
-                foreach (var argument in request.Arguments)
+                if (httpMethod is HttpPostAttribute)
                 {
-                    query[argument.Key] = argument.Value?.ToString() ?? "";
+                    var arguments = converter.Serialize(request.Arguments);
+                    content = new StringContent(arguments, Encoding.UTF8, "application/json");
+                    url = context.HttpUrl + route.FullRoute;
+                }
+                else
+                {
+                    var builder = new UriBuilder(context.HttpUrl);
+
+                    var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+
+                    foreach (var argument in request.Arguments)
+                    {
+                        query[argument.Key] = argument.Value?.ToString() ?? "";
+                    }
+
+                    builder.Path = route.FullRoute;
+                    builder.Query = query.ToString();
+                    url = builder.ToString();
                 }
 
-                builder.Path = route.FullRoute;
-                builder.Query = query.ToString();
-                url = builder.ToString();
+                httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
+
+                foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
+                    httpRequest.Headers.Add(header.Key, header.Value);
+
+                if (content != null)
+                    httpRequest.Content = content;
+
+                if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
+
+                response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+
+                HubconResponse methodReponse = new HubconResponse(
+                    response.IsSuccessStatusCode,
+                    !response.IsSuccessStatusCode,
+                    "",
+                    "",
+                    (int)response.StatusCode,
+                    null,
+                    response.Content.ToString()
+                );
+
+                await context.SetResponse(methodReponse);
             }
-
-            var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
-
-            foreach(var header in await context.GetHeaders(context.ScopeServiceProvider))
-                httpRequest.Headers.Add(header.Key, header.Value);
-
-            if (content != null)
-                httpRequest.Content = content;
-
-            if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
-                httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
-
-            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
-
-            HubconResponse methodReponse = new HubconResponse(
-                response.IsSuccessStatusCode,
-                !response.IsSuccessStatusCode,
-                "",
-                "",
-                (int)response.StatusCode
-            );
-
-            await context.SetResponse(methodReponse);
-
-            content?.Dispose();
-            httpRequest.Dispose();
-            response.Dispose();
+            catch (Exception ex)
+            {
+                await context.SetResponse(HubconResponse.InternalError(ex, originalData: response?.Content?.ToString()));
+            }
+            finally
+            {
+                content?.Dispose();
+                httpRequest?.Dispose();
+                response?.Dispose();
+            }
         }
 
         public override async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
-        {
+        {          
             StringContent? content = null;
-            var url = "";
-            var methodInfo = (context.Member as MethodInfo)!;
-            var httpMethod = context.HttpMethodAttribute!;
-            var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
-            var converter = context.Converter;
-            var route = methodInfo.GetRoute(false);
-
-            if (httpMethod is HttpPostAttribute)
+            HttpRequestMessage? httpRequest = null;
+            HttpResponseMessage? response = null;
+            try
             {
-                var arguments = converter.Serialize(request.Arguments);
-                content = new StringContent(arguments, Encoding.UTF8, "application/json");
-                url = context.HttpUrl + route.FullRoute;
-            }
-            else
-            {
-                var builder = new UriBuilder(context.HttpUrl);
+                var url = "";
+                var methodInfo = (context.Member as MethodInfo)!;
+                var httpMethod = context.HttpMethodAttribute!;
+                var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
+                var converter = context.Converter;
+                var route = methodInfo.GetRoute(false);
 
-                var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
-
-                foreach (var argument in request.Arguments)
+                if (httpMethod is HttpPostAttribute)
                 {
-                    query[argument.Key] = argument.Value?.ToString() ?? "";
+                    var arguments = converter.Serialize(request.Arguments);
+                    content = new StringContent(arguments, Encoding.UTF8, "application/json");
+                    url = context.HttpUrl + route.FullRoute;
+                }
+                else
+                {
+                    var builder = new UriBuilder(context.HttpUrl);
+
+                    var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+
+                    foreach (var argument in request.Arguments)
+                    {
+                        query[argument.Key] = argument.Value?.ToString() ?? "";
+                    }
+
+                    builder.Path = route.FullRoute;
+                    builder.Query = query.ToString();
+                    url = builder.ToString();
                 }
 
-                builder.Path = route.FullRoute;
-                builder.Query = query.ToString();
-                url = builder.ToString();
+                httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
+                httpRequest.SetBrowserResponseStreamingEnabled(true);
+
+                foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
+                    httpRequest.Headers.Add(header.Key, header.Value);
+
+                if (content != null)
+                    httpRequest.Content = content;
+
+                if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
+
+                response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+                var enumerable = HttpMessageHelper.ParseSSEStream(response, context, cancellationToken);
+
+                var methodReponse = new HubconResponse<IAsyncEnumerable<JsonElement>>(
+                    response.IsSuccessStatusCode,
+                    !response.IsSuccessStatusCode,
+                    "",
+                    "",
+                    (int)response.StatusCode,
+                    enumerable,
+                    response.Content.ToString()
+                );
+
+                await context.SetResponse(methodReponse);
+                return enumerable;
             }
-
-            var httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
-            httpRequest.SetBrowserResponseStreamingEnabled(true);
-
-            foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
-                httpRequest.Headers.Add(header.Key, header.Value);
-
-            if (content != null)
-                httpRequest.Content = content;
-
-            if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
-                httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
-
-            HttpResponseMessage response;
-            response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-
-            var enumerable = HttpMessageHelper.ParseSSEStream(response, context, cancellationToken);
-
-            var methodReponse = new HubconResponse<IAsyncEnumerable<JsonElement>>(
-                response.IsSuccessStatusCode,
-                !response.IsSuccessStatusCode,
-                "",
-                "",
-                (int)response.StatusCode,
-                enumerable
-            );
-
-            await context.SetResponse(methodReponse);
-
-            content?.Dispose();
-            httpRequest.Dispose();
-
-            return enumerable;
+            catch (Exception ex)
+            {
+                await context.SetResponse(HubconResponse.InternalError(ex, originalData: response?.Content?.ToString()));
+                return default!;
+            }
+            finally
+            {
+                content?.Dispose();
+                httpRequest?.Dispose();
+            }
         }
 
         public override ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
@@ -150,44 +174,55 @@ namespace Hubcon.Client.Core.Transports
         }
 
         public override async ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
-        {
+        {         
             StringContent? content = null;
-            var url = "";
-            var methodInfo = (context.Member as MethodInfo)!;
-            var httpMethod = context.HttpMethodDefined!;
-            var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
-            var converter = context.Converter;
-
-            if (context.HttpMethodDefined == HttpMethod.Post || context.HttpMethodDefined == HttpMethod.Put)
+            HttpRequestMessage? httpRequest = null;
+            HttpResponseMessage? response = null;
+            try
             {
-                HandlePost(request, context, out content, context.HttpUrl, out url, methodInfo);
+                var url = "";
+                var methodInfo = (context.Member as MethodInfo)!;
+                var httpMethod = context.HttpMethodDefined!;
+                var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
+                var converter = context.Converter;
+
+                if (context.HttpMethodDefined == HttpMethod.Post || context.HttpMethodDefined == HttpMethod.Put)
+                {
+                    HandlePost(request, context, out content, context.HttpUrl, out url, methodInfo);
+                }
+                else
+                {
+                    url = HandleGeneric(request, context, context.HttpUrl, methodInfo);
+                }
+
+                httpRequest = new HttpRequestMessage(httpMethod, url);
+
+                foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
+                    httpRequest.Headers.Add(header.Key, header.Value);
+
+                if (content != null)
+                    httpRequest.Content = content;
+
+                if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
+
+                response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+
+                var responseBytes = await response.Content.ReadAsByteArrayAsync();
+                var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
+
+                await context.HandleResponse<T>(result);
             }
-            else
+            catch (Exception ex)
             {
-                url = HandleGeneric(request, context, context.HttpUrl, methodInfo);
+                await context.SetResponse(HubconResponse.InternalError<T>(ex, originalData: response?.Content?.ToString()));
             }
-
-            var httpRequest = new HttpRequestMessage(httpMethod, url);
-
-            foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
-                httpRequest.Headers.Add(header.Key, header.Value);
-
-            if (content != null)
-                httpRequest.Content = content;
-
-            if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
-                httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
-
-            HttpResponseMessage response = await _httpClient.SendAsync(httpRequest, cancellationToken);
-
-            var responseBytes = await response.Content.ReadAsByteArrayAsync();
-            var result = converter.DeserializeByteArray<JsonElement>(responseBytes);
-
-            await context.HandleResponse<T>(result);
-
-            content?.Dispose();
-            httpRequest.Dispose();
-            response.Dispose();        
+            finally
+            {
+                content?.Dispose();
+                httpRequest?.Dispose();
+                response?.Dispose();
+            }
         }
 
         private static string HandleGeneric(IOperationRequest request, IClientOperationContext context, string currentUrl, MethodInfo methodInfo)
