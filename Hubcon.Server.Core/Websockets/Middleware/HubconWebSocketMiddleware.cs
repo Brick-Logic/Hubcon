@@ -621,7 +621,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             else
             {
                 context.Request.Headers.Authorization = Guid.NewGuid().ToString("N");
-                user = (null!, DateTime.UtcNow.AddYears(1));
+                user = (new ClaimsPrincipal(), DateTime.UtcNow.AddYears(50));
                 return true;
             }
         }
