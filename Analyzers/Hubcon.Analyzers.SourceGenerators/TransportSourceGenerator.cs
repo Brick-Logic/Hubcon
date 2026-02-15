@@ -68,7 +68,7 @@ namespace Hubcon.Analyzers.SourceGenerators
             sb.AppendLine("{");
             sb.AppendLine("    internal static class TransportLookup");
             sb.AppendLine("    {");
-            sb.AppendLine("        [ModuleInitializer]");
+            sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("        internal static void Initialize()");
             sb.AppendLine("        {");
             sb.AppendLine("            var mappings = new Dictionary<Type, Type>();");
@@ -82,7 +82,7 @@ namespace Hubcon.Analyzers.SourceGenerators
             }
 
             // Registramos este lote de transportes en la factoría central
-            sb.AppendLine("            TransportTypeResolver.RegisterMappings(mappings);");
+            sb.AppendLine("            global::Hubcon.Client.Core.Transports.TransportTypeResolver.RegisterMappings(mappings);");
             sb.AppendLine("        }");
             sb.AppendLine("    }");
             sb.AppendLine("}");

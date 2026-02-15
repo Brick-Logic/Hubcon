@@ -488,7 +488,7 @@ namespace HubconAnalyzers.SourceGenerators
                 sb.AppendLine($"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(\"{member.Name}\", typeof({fullProxyName}))]");
             }
 
-            sb.AppendLine($"{baseIndent}    [System.Runtime.CompilerServices.ModuleInitializer]");
+            sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine($"{baseIndent}    public static void Init()");
             sb.AppendLine($"{baseIndent}    {{");
             sb.AppendLine($"{baseIndent}        {proxyName}Preserver();");
@@ -928,7 +928,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("{");
             sb.AppendLine("    public class HubconSerialization");
             sb.AppendLine("    {");
-            sb.AppendLine("        [ModuleInitializer]");
+            sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("        public static void Initialize()");
             sb.AppendLine("        {");
             sb.AppendLine("            var options = new JsonSerializerOptions");
@@ -986,7 +986,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("{");
 
             // Module Initializer para registro automático
-            sb.AppendLine("    [ModuleInitializer]");
+            sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("    public static void Initialize()");
             sb.AppendLine("    {");
             sb.AppendLine("        Hubcon.Client.Builder.SubscriptionFactory.SetupSubscriptionFactory(Create);");
@@ -1047,7 +1047,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("        /// <summary>");
             sb.AppendLine("        /// Inicializa automáticamente el lookup de proxies en el framework.");
             sb.AppendLine("        /// </summary>");
-            sb.AppendLine("        [ModuleInitializer]");
+            sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("        public static void Initialize()");
             sb.AppendLine("        {");
             sb.AppendLine("            // Pasamos el método como Func<Type, Type?> al framework");
@@ -1109,7 +1109,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("{");
             sb.AppendLine("    internal static class EnumerableRegistry");
             sb.AppendLine("    {");
-            sb.AppendLine("        [ModuleInitializer]");
+            sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("        public static void Initialize()");
             sb.AppendLine("        {");
             sb.AppendLine("            Hubcon.Shared.Core.Tools.EnumerableTools.SetupEnumerableWrapper(GlobalWrapper);");

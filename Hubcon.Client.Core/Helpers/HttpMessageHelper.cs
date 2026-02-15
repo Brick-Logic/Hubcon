@@ -164,7 +164,7 @@ namespace Hubcon.Client.Core.Helpers
                     JsonElement ev;
                     try
                     {
-                        ev = JsonElement.Parse(parsed);
+                        ev = JsonDocument.Parse(parsed).RootElement.Clone();
                     }
                     catch
                     {

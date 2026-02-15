@@ -57,6 +57,9 @@
 		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-rc*" />
 		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-rc*" />
 	</ItemGroup>
+	<ItemGroup>
+	  <PackageReference Include="System.Text.Json" Version="8.0.6" />
+	</ItemGroup>
 
 	<!-- Usar nuspec customizado -->
 	<!--<PropertyGroup>

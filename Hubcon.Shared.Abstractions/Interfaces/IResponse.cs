@@ -1,16 +1,38 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
 using System.Text.Json.Serialization;
 
-namespace Hubcon.Shared.Abstractions.Interfaces
+namespace Hubcon
 {
     public interface IResponse
     {
-        [Required]
-        [JsonRequired]
-        public bool Success { get; set; }
+        [JsonPropertyName("statusCode")]
+        int StatusCode { get; }
 
-        [Required]
-        [JsonRequired]
-        public string Error { get; set; }
+        [JsonPropertyName("success")]
+        bool Success { get; }
+
+        [JsonPropertyName("failure")]
+        bool Failure { get; }
+
+        [JsonPropertyName("error")]
+        string Error { get; }
+
+        [JsonIgnore]
+        Exception Exception { get; set; }
+
+        [JsonPropertyName("message")]
+        string Message { get; }
+
+        IHubconResponse GetBoxed();
+    }
+
+    public interface IHubconResponse : IHubconResponse<object>
+    {
+    }
+
+    public interface IHubconResponse<T> : IResponse
+    {
+        [JsonPropertyName("data")]
+        T Data { get; }
     }
 }

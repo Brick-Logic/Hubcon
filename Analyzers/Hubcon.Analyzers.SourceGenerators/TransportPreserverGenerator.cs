@@ -110,7 +110,7 @@ namespace Hubcon.Generators
                 sb.AppendLine("        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(" + typeName + "))]");
             }
 
-            sb.AppendLine("        [ModuleInitializer]");
+            sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("        public static void Init()");
             sb.AppendLine("        {");
             sb.AppendLine("            if (Environment.TickCount < 0)");

@@ -1,7 +1,7 @@
 ﻿using Hubcon.Shared.Core.Attributes;
 using System;
-using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -14,11 +14,11 @@ namespace Hubcon
         // El CLR garantiza que esto ocurra una sola vez y sea Lazy
         public readonly static HubconEnumConverter<T> Current = new();
 
-        private readonly FrozenDictionary<string, T> _mappingTable;
-        private readonly FrozenDictionary<T, string> _reverseMappingTable;
+        private readonly IImmutableDictionary<string, T> _mappingTable;
+        private readonly IImmutableDictionary<T, string> _reverseMappingTable;
         private readonly T _fallbackValue;
 
-        private HubconEnumConverter()
+        public HubconEnumConverter()
         {
             var _tempMappingTable = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
             var _tempReverseMappingTable = new Dictionary<T, string>();
@@ -90,8 +90,8 @@ namespace Hubcon
                 }
             }
 
-            _mappingTable = _tempMappingTable.ToFrozenDictionary();
-            _reverseMappingTable = _tempReverseMappingTable.ToFrozenDictionary();
+            _mappingTable = _tempMappingTable.ToImmutableDictionary();
+            _reverseMappingTable = _tempReverseMappingTable.ToImmutableDictionary();
         }
 
         public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

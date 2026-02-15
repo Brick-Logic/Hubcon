@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace Hubcon.Shared.Abstractions.Standard.Interceptor
 {
     public abstract class BaseProxy
@@ -14,6 +15,6 @@ namespace Hubcon.Shared.Abstractions.Standard.Interceptor
 
         public abstract Task IngestAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken);
 
-        public abstract IAsyncEnumerable<T> StreamAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken);
+        public abstract object StreamAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken);
     }
 }

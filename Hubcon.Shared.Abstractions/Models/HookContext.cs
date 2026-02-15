@@ -15,7 +15,7 @@ namespace Hubcon.Shared.Abstractions.Models
         public bool IsSuccess { get; }
         public int StatusCode { get; }
         public Exception? Exception { get; }
-        public Func<string, Task<HubconResponse<bool>>>? TryRefreshToken { get; }
+        public Func<string, Task<IHubconResponse<bool>>>? TryRefreshToken { get; }
         public bool HasError { get; }
 
         void SetException(Exception ex);

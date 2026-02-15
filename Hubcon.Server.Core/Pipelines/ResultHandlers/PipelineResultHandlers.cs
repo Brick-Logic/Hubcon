@@ -13,7 +13,7 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             else
             {
                 if (result is IResponse converted)
-                    return converted.GetBoxed();
+                    return converted.GetBoxed() as HubconResponse;
 
                 return HubconResponse.Ok(result);
             }
@@ -46,16 +46,16 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
                 var response = await GetTaskResultAsync(task);
 
                 if (response is IResponse converted)
-                    return converted.GetBoxed();
+                    return converted.GetBoxed() as HubconResponse;
 
-                return HubconResponse.Ok(response);
+                return HubconResponse.Ok(response!);
             }
             else
             {
                 if (result is IResponse converted)
-                    return converted.GetBoxed();
+                    return converted.GetBoxed() as HubconResponse;
 
-                return HubconResponse.Ok(result);
+                return HubconResponse.Ok(result!);
             }
         }
 

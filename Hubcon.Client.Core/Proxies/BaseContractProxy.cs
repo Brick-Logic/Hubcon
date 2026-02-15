@@ -4,7 +4,6 @@ using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.HubconInvocationContext;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Cache;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Hubcon.Shared.Core.Context;
@@ -14,8 +13,8 @@ using Hubcon.Shared.Core.Websockets.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -32,10 +31,10 @@ namespace Hubcon.Client.Core.Proxies
         ITransportClient GetTransportClient<T>() where T : HubconTransportAttribute;
     }
 
-    public abstract class BaseContractProxy : BaseProxy, IContractDataAccessor
+    public abstract class BaseContractProxy : IContractDataAccessor
     {
         private Dictionary<Type, ITransportClient> _transports;
-        private FrozenDictionary<string, IClientOperationContext> _operations = null!;
+        private IImmutableDictionary<string, IClientOperationContext> _operations = null!;
         private string SimpleContractName { get; set; } = string.Empty;
 
         private Type _contractType = null!;
@@ -47,7 +46,7 @@ namespace Hubcon.Client.Core.Proxies
 
         public abstract void SetPropertyValue(string propertyName, object value);
 
-        public FrozenDictionary<string, IClientOperationContext> BuildContractProxy(
+        public IImmutableDictionary<string, IClientOperationContext> BuildContractProxy(
             IHubconClient client,
             IClientOptions clientOptions,
             IServiceScope serviceScope,
@@ -94,11 +93,11 @@ namespace Hubcon.Client.Core.Proxies
             //}
 
             _transports = transports;
-            _operations = tempOperations.ToFrozenDictionary();
+            _operations = tempOperations.ToImmutableDictionary();
             return _operations;
         }
 
-        public override async Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public async Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
@@ -139,7 +138,7 @@ namespace Hubcon.Client.Core.Proxies
             }
         }
 
-        public override async Task CallAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public async Task CallAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
@@ -168,7 +167,7 @@ namespace Hubcon.Client.Core.Proxies
             }
         }
 
-        public override async Task<T> IngestAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public async Task<T> IngestAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
@@ -209,7 +208,7 @@ namespace Hubcon.Client.Core.Proxies
             }
         }
 
-        public override async Task IngestAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public async Task IngestAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
@@ -239,7 +238,7 @@ namespace Hubcon.Client.Core.Proxies
 
         }
 
-        public override IAsyncEnumerable<T> StreamAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public IAsyncEnumerable<T> StreamAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {

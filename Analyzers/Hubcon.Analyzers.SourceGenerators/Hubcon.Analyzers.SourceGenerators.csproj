@@ -11,7 +11,7 @@
 		<PackageOutputPath>../../nupkgs</PackageOutputPath>
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Version>1.0.116</Version>
+		<Version>1.0.160</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<Description>Source code generators for Hubcon.</Description>
@@ -31,9 +31,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
-		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all" />
-		<PackageReference Include="System.Text.Json" Version="10.0.1" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.3" PrivateAssets="all" />
 	</ItemGroup>
 
 	<ItemGroup>

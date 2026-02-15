@@ -169,7 +169,7 @@ namespace Hubcon.Shared.Core.Context
         public IOperationRequest Request { get; }
         public IAuthenticationManager AuthenticationManager { get; }
         public CancellationToken CancellationToken { get; internal set; }
-        public Func<string, Task<HubconResponse<bool>>>? TryRefreshToken { get; set; }
+        public Func<string, Task<IHubconResponse<bool>>>? TryRefreshToken { get; set; }
 
         public bool IsWrapped { get; private set; }
 

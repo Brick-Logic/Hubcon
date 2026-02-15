@@ -91,30 +91,30 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("{");
             sb.AppendLine("    internal static class " + className + "AuthPreserver");
             sb.AppendLine("    {");
-            sb.AppendLine("        [ModuleInitializer]");
+            sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("        public static void Init()");
             sb.AppendLine("        {");
             sb.AppendLine("            if (Environment.TickCount < 0)");
             sb.AppendLine("            {");
 
             // Preservar constructores
+            int i = 0;
             foreach (var ctor in symbol.InstanceConstructors.Where(c => c.DeclaredAccessibility == Accessibility.Public))
             {
+                i++;
                 var paramTypes = ctor.Parameters.Select(p => "(" + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")default");
                 string paramsList = string.Join(", ", paramTypes);
-                sb.AppendLine("                _ = new " + fullTypeName + "(" + paramsList + ");");
+                sb.AppendLine($"                var instance{i} = new " + fullTypeName + "(" + paramsList + ");");
+
+                // Preservar métodos
+                foreach (var method in symbol.GetMembers().OfType<IMethodSymbol>().Where(m => m.MethodKind == MethodKind.Ordinary && m.DeclaredAccessibility == Accessibility.Public))
+                {
+                    var methodParamTypes = method.Parameters.Select(p => "(" + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")default");
+                    string methodParamsList = string.Join(", ", methodParamTypes);
+                    sb.AppendLine("                instance." + method.Name + "(" + methodParamsList + ");");
+                }
             }
 
-            // Obtener instancia fake
-            sb.AppendLine("                var instance = (" + fullTypeName + ")System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(" + fullTypeName + "));");
-
-            // Preservar métodos
-            foreach (var method in symbol.GetMembers().OfType<IMethodSymbol>().Where(m => m.MethodKind == MethodKind.Ordinary && m.DeclaredAccessibility == Accessibility.Public))
-            {
-                var paramTypes = method.Parameters.Select(p => "(" + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")default");
-                string paramsList = string.Join(", ", paramTypes);
-                sb.AppendLine("                instance." + method.Name + "(" + paramsList + ");");
-            }
 
             sb.AppendLine("            }");
             sb.AppendLine("        }");
