@@ -12,6 +12,7 @@ using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -41,11 +42,25 @@ namespace Hubcon.Client.Integration.Client
             IClientOperationContext context,
             CancellationToken cancellationToken)
         {
-            await context.AcquireRateLimiter();
-
             try
             {
-                await context.OperationOptions.CallValidationHook(context.ScopeServiceProvider, request, cancellationToken);
+                await context.AcquireRateLimiter();
+
+                var authManager = WrappedContext.CurrentWrapped.ShouldCheckAuth ? context.AuthenticationManagerFactory?.Invoke() : null;
+                if (authManager != null && context.RequiresAuthentication && !authManager.IsSessionActive && authManager.ShouldRefreshSession)
+                {
+                    var result = await authManager.TryRefreshSessionAsync();
+
+                    if (result.IsFailure)
+                    {
+                        await context.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(
+                            null!,
+                            "Received an error when trying to refresh token from '" + authManager.GetType().Name + "' authentication manager. Message: " + result.ErrorMessage));
+                        return;
+                    }
+                }
+
+                await context.OperationOptions.CallValidationHook(context.ScopedServiceProvider, request, cancellationToken);
                 await context.CallHooks(HookType.OnSend, cancellationToken);
 
                 await context.Transport.SendAsync<T>(request, context, cancellationToken);
@@ -82,11 +97,25 @@ namespace Hubcon.Client.Integration.Client
 
         public async ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken)
         {
-            await context.AcquireRateLimiter();
-            await context.CallValidationHooks();
-
             try
             {
+                await context.AcquireRateLimiter();
+                await context.CallValidationHooks();
+
+                var authManager = WrappedContext.CurrentWrapped.ShouldCheckAuth ? context.AuthenticationManagerFactory?.Invoke() : null;
+                if (authManager != null && context.RequiresAuthentication && !authManager.IsSessionActive && authManager.ShouldRefreshSession)
+                {
+                    var result = await authManager.TryRefreshSessionAsync();
+
+                    if (result.IsFailure)
+                    {
+                        await context.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(
+                            null!,
+                            "Received an error when trying to refresh token from '" + authManager.GetType().Name + "' authentication manager. Message: " + result.ErrorMessage));
+                        return;
+                    }
+                }
+
                 await context.Transport.CallAsync(request, context, cancellationToken);
             }
             catch (OperationCanceledException)
@@ -118,15 +147,29 @@ namespace Hubcon.Client.Integration.Client
 
         public async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
-            await context.AcquireRateLimiter();
-            await context.CallValidationHooks();
-
             IAsyncEnumerable<JsonElement>? enumerable = null;
-
-            await context.CallHooksAndInterceptors(HookType.OnSend, cancellationToken);
 
             try
             {
+                await context.AcquireRateLimiter();
+                await context.CallValidationHooks();
+
+                var authManager = WrappedContext.CurrentWrapped.ShouldCheckAuth ? context.AuthenticationManagerFactory?.Invoke() : null;
+                if (authManager != null && context.RequiresAuthentication && !authManager.IsSessionActive && authManager.ShouldRefreshSession)
+                {
+                    var result = await authManager.TryRefreshSessionAsync();
+
+                    if (result.IsFailure)
+                    {
+                        await context.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(
+                            null!,
+                            "Received an error when trying to refresh token from '" + authManager.GetType().Name + "' authentication manager. Message: " + result.ErrorMessage));
+                        return default!;
+                    }
+                }
+
+                await context.CallHooksAndInterceptors(HookType.OnSend, cancellationToken);
+
                 enumerable = await context.Transport.GetStream(request, context, cancellationToken);
             }
             catch (Exception ex)
@@ -137,6 +180,7 @@ namespace Hubcon.Client.Integration.Client
                 {
                     HubconContext.Current.SetException(ex);
                     await context.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(ex));
+                    return default!;
                 }
 
                 throw;
@@ -150,11 +194,25 @@ namespace Hubcon.Client.Integration.Client
 
         public async ValueTask Ingest<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken)
         {
-            await context.AcquireRateLimiter();
-            await context.CallValidationHooks();
-
             try
             {
+                await context.AcquireRateLimiter();
+                await context.CallValidationHooks();
+
+                var authManager = WrappedContext.CurrentWrapped.ShouldCheckAuth ? context.AuthenticationManagerFactory?.Invoke() : null;
+                if (authManager != null && context.RequiresAuthentication && !authManager.IsSessionActive && authManager.ShouldRefreshSession)
+                {
+                    var result = await authManager.TryRefreshSessionAsync();
+
+                    if (result.IsFailure)
+                    {
+                        await context.SetResponse(HubconResponse.InternalError<IAsyncEnumerable<JsonElement>>(
+                            null!,
+                            "Received an error when trying to refresh token from '" + authManager.GetType().Name + "' authentication manager. Message: " + result.ErrorMessage));
+                        return;
+                    }
+                }
+
                 await context.CallHooksAndInterceptors(HookType.OnSend, cancellationToken);
 
                 await context.Transport.Ingest<T>(request, context, cancellationToken);

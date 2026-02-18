@@ -22,7 +22,7 @@ namespace HubconTestClient.Contracts
         public Task<OpenAIResponse> DeleteModelResponse(string id);
 
         [HttpPost("/v1/responses")]
-        [ParseSseMessage("data:", "")]
+        [ParseSseMessage("data:")]
         [ParseSseMessage("event:", "event")]
         [ParseEndSseMessage("[DONE]")]
         public IAsyncEnumerable<OpenAIStreamEvent> GetResponseStream([AsBody] OpenAIStreamRequest request);

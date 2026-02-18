@@ -49,9 +49,10 @@ namespace Hubcon
         /// <typeparam name="T"></typeparam>
         /// <param name="task"></param>
         /// <returns></returns>
-        public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, Task<TOut>> call) where T : IControllerContract
+        public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, Task<TOut>> call, bool shouldTryRefreshAuth = false) where T : IControllerContract
         {
             WrappedContext.SetWrapped(true);
+            WrappedContext.CurrentWrapped.SetShouldCheckAuth(shouldTryRefreshAuth);
             Exception? exception = null;
             IHubconResponse<TOut> response = default!;
 
@@ -88,9 +89,10 @@ namespace Hubcon
         /// <typeparam name="T"></typeparam>
         /// <param name="task"></param>
         /// <returns></returns>
-        public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, Task<HubconResponse<TOut>>> call) where T : IControllerContract
+        public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, Task<HubconResponse<TOut>>> call, bool shouldTryRefreshAuth = false) where T : IControllerContract
         {
             WrappedContext.SetWrapped(true);
+            WrappedContext.CurrentWrapped.SetShouldCheckAuth(shouldTryRefreshAuth);
             Exception? exception = null;
             HubconResponse<TOut?> response = default!;           
 
@@ -127,9 +129,10 @@ namespace Hubcon
         /// <typeparam name="T"></typeparam>
         /// <param name="task"></param>
         /// <returns></returns>
-        public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, TOut> call) where T : IControllerContract
+        public static async ValueTask<IHubconResponse<TOut?>> Execute<T, TOut>(this T contract, Func<T, TOut> call, bool shouldTryRefreshAuth = false) where T : IControllerContract
         {
             WrappedContext.SetWrapped(true);
+            WrappedContext.CurrentWrapped.SetShouldCheckAuth(shouldTryRefreshAuth);
             Exception? exception = null;
             IHubconResponse<TOut?> response = default!;
 
@@ -165,9 +168,10 @@ namespace Hubcon
         /// </summary>
         /// <param name="task"></param>
         /// <returns></returns>
-        public static async ValueTask<IResponse> Execute<T>(this T contract, Func<T, Task> call) where T : IControllerContract
+        public static async ValueTask<IResponse> Execute<T>(this T contract, Func<T, Task> call, bool shouldTryRefreshAuth = false) where T : IControllerContract
         {
             WrappedContext.SetWrapped(true);
+            WrappedContext.CurrentWrapped.SetShouldCheckAuth(shouldTryRefreshAuth);
             Exception? exception = null;
             IResponse response = default!;
             try

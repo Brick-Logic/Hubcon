@@ -33,7 +33,7 @@ namespace Hubcon.Client.Core.HubconInvocationContext
         public Func<IAuthenticationManager>? AuthenticationManagerFactory { get; }
         public ITransportClient Transport { get; }
         public bool RemoteCancellationIsAllowed { get; }
-        public IServiceProvider ScopeServiceProvider => HubconContext.Current?.Services ?? RootServiceProvider;
+        public IServiceProvider ScopedServiceProvider => HubconContext.Current?.Services ?? RootServiceProvider;
         public IServiceProvider RootServiceProvider { get; }
         public IInvocationContext CallContext => HubconContext.Current;
         public List<Attribute> Attributes { get; }
@@ -260,21 +260,21 @@ namespace Hubcon.Client.Core.HubconInvocationContext
         public async ValueTask CallHooksAndInterceptors(HookType hookType, CancellationToken cancellationToken = default)
         {
             var interceptorManager = InterceptorContext.Current;
-            if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopeServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
+            if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopedServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
             await InterceptorContext.Current.CallHooksAndInterceptors(hookType, cancellationToken);
         }
 
         public async ValueTask CallHooks(HookType hookType, CancellationToken cancellationToken = default)
         {
             var interceptorManager = InterceptorContext.Current;
-            if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopeServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
+            if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopedServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
             await InterceptorContext.Current.CallHooks(hookType, cancellationToken);
         }
 
         public async ValueTask CallValidationHooks(CancellationToken cancellationToken = default)
         {
             var interceptorManager = InterceptorContext.Current;
-            if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopeServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
+            if (interceptorManager == null) InterceptorContext.UseContext(new InterceptorManager(ScopedServiceProvider, ClientOptions, ContractOptions, OperationOptions, CallContext));
             await InterceptorContext.Current.CallValidationHooks(cancellationToken);
         }
 

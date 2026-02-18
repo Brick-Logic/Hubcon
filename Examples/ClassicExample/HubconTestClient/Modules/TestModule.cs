@@ -22,14 +22,6 @@ namespace HubconTestClient.Modules
             server.GlobalLimit(200000000);
             server.EnableLogging();
 
-            //configuration.LimitIngest(100);
-            //configuration.LimitSubscription(100);
-            //configuration.LimitStreaming(100);
-            //configuration.LimitWebsocketRoundTrip(100);
-            //configuration.LimitHttpRoundTrip(100);
-            //configuration.LimitWebsocketFireAndForget(100);
-            //configuration.LimitHttpFireAndForget(100);
-
             server.AddHeaderProvider("key", x => "value");
 
             server.DisableAllLimiters();
@@ -40,9 +32,6 @@ namespace HubconTestClient.Modules
 
                 contractConfigurator
                     .AllowRemoteCancellation(false)
-                    //.AddHook(HookType.OnSend, async ctx => ctx.Services
-                    //    .GetRequiredService<ILogger<object>>()
-                    //    .LogInformation($"Operation {ctx.Request.OperationName} called. OnSend hook working."))
                     .AddHook(HookType.OnSend, async ctx => { })
                     .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
                     .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
@@ -57,31 +46,11 @@ namespace HubconTestClient.Modules
                             .AddValidationHook(async ctx =>
                             {
                                 if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }
-                            })
-                            .LimitPerSecond(100);
-
-                        operationSelector.Configure(contract => contract.GetTemperatureFromServerBlocking(default))
-                            .LimitPerSecond(10000000);
-
-                        operationSelector
-                            .Configure(contract => contract.CreateUser(default))
-                            .LimitPerSecond(1000000);
-
-                        //operationSelector
-                        //    .Configure(contract => contract.OnUserCreated)
-                        //    //.AddHook(HookType.OnEventReceived, async ctx => {  /*some operation logging or notification*/ })
-                        //    .LimitPerSecond(1000000);
-
+                            });
                     }));
             }));
 
-            server.Implements<ISecondTestContract>(contractConfigurator =>
-            {
-                contractConfigurator.ConfigureOperations(operationSelector =>
-                {
-                    operationSelector.Configure(c => c.TestMethod(default!)).UseTransport<HttpTransport>();
-                });
-            });
+            server.Implements<ISecondTestContract>();
 
             server.ConfigureWebsocketClient((x, services) =>
             {
@@ -89,14 +58,11 @@ namespace HubconTestClient.Modules
                 x.SetRequestHeader("Origin", "Hubcon");
             });
 
-            server.SetWebsocketPingInterval(TimeSpan.FromSeconds(15));
-
             server.ConfigureHttpClient((options, services) =>
             {
                 options.Timeout = TimeSpan.FromSeconds(15);
                 options.DefaultRequestHeaders.Add("Origin", "Hubcon");
             });
-
 
             server.UseAuthenticationManager<AuthenticationManager>();
 

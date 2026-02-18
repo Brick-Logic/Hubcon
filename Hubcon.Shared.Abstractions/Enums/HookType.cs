@@ -27,17 +27,17 @@
         OnError,
 
         /// <summary>
-        /// Triggered when a subscription is successfully established. Subscriptions and streams only.
+        /// Triggered when a stream is successfully established.
         /// </summary>
         OnSubscribed,
 
         /// <summary>
-        /// Triggered when a subscription is successfully terminated. Subscriptions and streams only.
+        /// Triggered when a stream is successfully terminated.
         /// </summary>
         OnUnsubscribed,
 
         /// <summary>
-        /// Triggered when an event related to the operation is received. Subscriptions and streams only.
+        /// Triggered when a stream event is received.
         /// </summary>
         OnEventReceived,
 

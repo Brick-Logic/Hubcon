@@ -146,6 +146,7 @@ namespace HubconTest
                     });
                 });
 
+
                 serverOptions.ConfigureCore(config =>
                 {
                     config.SetMaxConcurrentOperations(5000000);
@@ -172,8 +173,9 @@ namespace HubconTest
                             return null;
 
                         return (user, expiration.Value);
-                    })
-                    .EnableWebsocketsLogging()
+                    });
+
+                    config.EnableWebsocketsLogging()
                     .DisableAllRateLimiters()
                     .EnableRequestDetailedErrors();
                 });

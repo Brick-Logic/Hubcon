@@ -39,7 +39,7 @@ namespace Hubcon.Client.Core.Transports
 
                 httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
 
-                foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
+                foreach (var header in await context.GetHeaders(context.ScopedServiceProvider))
                     httpRequest.Headers.Add(header.Key, header.Value);
 
                 if (content != null)
@@ -97,7 +97,7 @@ namespace Hubcon.Client.Core.Transports
                 httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
                 httpRequest.SetBrowserResponseStreamingEnabled(true);
 
-                foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
+                foreach (var header in await context.GetHeaders(context.ScopedServiceProvider))
                     httpRequest.Headers.Add(header.Key, header.Value);
 
                 if (content != null)
@@ -164,7 +164,7 @@ namespace Hubcon.Client.Core.Transports
 
                 httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
 
-                foreach (var header in await context.GetHeaders(context.ScopeServiceProvider))
+                foreach (var header in await context.GetHeaders(context.ScopedServiceProvider))
                     httpRequest.Headers.Add(header.Key, header.Value);
 
                 if (content != null)

@@ -7,15 +7,45 @@ using System.Threading.Tasks;
 
 namespace Hubcon
 {
+    /// <summary>
+    /// Add rate limiting to a hubcon contract or endpoint. If used in a contract, every endpoint will receive it's own rate limiter. 
+    /// Endpoint rate limiters will override the contract's one. Clients will automatically use this to limit itself.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Interface)]
     public class RateLimitAttribute : Attribute
     {
+        /// <summary>
+        /// Gets the token bucket rate limiter instance configured for this attribute.
+        /// </summary>
         public TokenBucketRateLimiter RateBucket { get; }
+
+        /// <summary>
+        /// Gets the default number of requests allowed within the replenishment period.
+        /// </summary>
         public int Requests { get; }
+
+        /// <summary>
+        /// Gets the duration, in milliseconds, for the rate limiter to replenish tokens.
+        /// </summary>
         public int MillisecondsToReplenish { get; }
+
+        /// <summary>
+        /// Gets the maximum number of tokens that can be stored in the token bucket.
+        /// </summary>
         public int RateTokenLimit { get; }
+
+        /// <summary>
+        /// Gets the maximum number of requests that can be queued if the rate limit is exceeded.
+        /// </summary>
         public int QueueLimit { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RateLimitAttribute"/> class with specified limits and periods.
+        /// </summary>
+        /// <param name="requests">The maximum number of requests allowed within the period.</param>
+        /// <param name="millisecondsToReplenish">The period, in milliseconds, to replenish tokens.</param>
+        /// <param name="rateTokenLimit">The maximum number of tokens in the bucket; defaults to individual request limit if set to 0.</param>
+        /// <param name="queueLimit">The maximum number of requests that can be queued; defaults to individual request limit if set to 0.</param>
         public RateLimitAttribute(
             int requests = 1000,
             int millisecondsToReplenish = 1000,
@@ -31,6 +61,7 @@ namespace Hubcon
                 };
             }
 
+            // Initializes the token bucket rate limiter with configured parameters.
             RateBucket = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
             {
                 TokenLimit = GetOrDefault(rateTokenLimit, requests),

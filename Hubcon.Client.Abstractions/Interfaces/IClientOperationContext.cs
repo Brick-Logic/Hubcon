@@ -29,7 +29,7 @@ namespace Hubcon
         HttpMethod? HttpMethodDefined { get; }
         bool RequiresAuthentication { get; }
         List<Attribute> Attributes { get; }
-        IServiceProvider ScopeServiceProvider { get; }
+        IServiceProvider ScopedServiceProvider { get; }
         IServiceProvider RootServiceProvider { get; }
         IInvocationContext CallContext { get; }
         HttpMethodDataAttribute? HttpMethodAttribute { get; }

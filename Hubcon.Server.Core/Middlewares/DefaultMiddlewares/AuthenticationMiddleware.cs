@@ -14,15 +14,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             var httpContext = context.HttpContext;
             var user = httpContext?.User;
 
-            // 1. Fast Path: WebSocket sin autenticar
-            if (httpContext!.WebSockets.IsWebSocketRequest && user?.Identity?.IsAuthenticated != true)
-            {
-                // Evitamos interpolación de strings en el log si no es error crítico para ahorrar RAM
-                logger.LogError("Unauthorized WebSocket request.");
-                context.Response = HubconResponse.Unauthorized();
-                return;
-            }
-
             // 2. Si no requiere autorización, seguimos sin tocar nada
             if (!context.Blueprint.RequiresAuthorization)
             {

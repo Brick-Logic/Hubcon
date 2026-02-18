@@ -26,7 +26,10 @@ namespace HubconTestDomain
     public interface IUserContract : IControllerContract
     {
         Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken = default);
+
+        [HttpTransport]
         Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default);
+
         Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default);
 
         [ParseSseMessage("data: ")]

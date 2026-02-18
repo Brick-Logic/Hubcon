@@ -53,6 +53,12 @@ namespace Hubcon.Shared.Core.Context
         public bool ResponseIsSet => Response != null;
         private object? Response { get; set; }
         public bool IsWrapped { get; internal set; }
+        public bool ShouldCheckAuth { get; internal set; }
+
+        public void SetShouldCheckAuth(bool shouldCheckAuth)
+        {
+            ShouldCheckAuth = shouldCheckAuth;
+        }
 
         public void SetResponse<T>(IHubconResponse<T> response)
         {
@@ -169,10 +175,8 @@ namespace Hubcon.Shared.Core.Context
         public IOperationRequest Request { get; }
         public IAuthenticationManager AuthenticationManager { get; }
         public CancellationToken CancellationToken { get; internal set; }
-        public Func<string, Task<IHubconResponse<bool>>>? TryRefreshToken { get; set; }
 
         public bool IsWrapped { get; private set; }
-
 
         public bool HasError => Exception != null;
         public Exception? Exception { get; private set; }

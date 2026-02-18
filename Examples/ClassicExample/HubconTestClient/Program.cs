@@ -37,7 +37,7 @@ internal class Program
 
         long coreMask = 0;
 
-        int? customCores = 0;
+        int? customCores = null;
         int cores = customCores ?? Environment.ProcessorCount - 1;
 
         for (int i = 0; i <= cores; i++)
@@ -55,15 +55,8 @@ internal class Program
             .Build();
 
         builder.Services.AddHubconClient();
-        builder.Services.AddRemoteServerModule<TestModule>(() => new TestModule(new object()));
-        builder.Services.AddRemoteServerModule<OpenAIServerModule>(() => new OpenAIServerModule(config));
-        //var builder = Host.CreateDefaultBuilder(new string[] { })
-        //    .ConfigureServices((hostContext, services) =>
-        //    {
-        //        services.AddHubconClient();
-        //        services.AddRemoteServerModule<TestModule>(() => new TestModule(new object()));
-        //        services.AddRemoteServerModule<OpenAIServerModule>(() => new OpenAIServerModule(config));
-        //    });
+        builder.Services.AddRemoteServerModule(() => new TestModule(new object()));
+        builder.Services.AddRemoteServerModule(() => new OpenAIServerModule(config));
 
         builder.Logging.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
         builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
@@ -153,7 +146,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 512
+            MaxDegreeOfParallelism = 48
         };
 
         int rps = 9999999;
