@@ -32,8 +32,7 @@ namespace Hubcon.Server.Core.Helpers
                 .Where(t =>
                 {
                     var interfaces = t.GetInterfaces();
-                    return interfaces.Any(i =>
-                        i != baseInterface && baseInterface.IsAssignableFrom(i));
+                    return interfaces.Any(i =>  i != baseInterface && baseInterface.IsAssignableFrom(i));
                 });
 
             return implementations;

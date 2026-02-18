@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.1;net6.0</TargetFrameworks>
+		<TargetFrameworks>netstandard2.1</TargetFrameworks>
 		<Nullable>enable</Nullable>
 		<LangVersion>9.0</LangVersion>
 
@@ -48,7 +48,7 @@
 		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-rc*" />
 	</ItemGroup>
 	<ItemGroup>
-	  <PackageReference Include="System.Text.Json" Version="8.0.6" />
+	  <PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)" />
 	</ItemGroup>
 
 </Project>

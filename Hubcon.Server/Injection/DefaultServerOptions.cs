@@ -59,7 +59,7 @@ namespace Hubcon.Server.Injection
         public void AutoRegisterControllers()
         {
             var assembly = Assembly.GetCallingAssembly();
-            var foundControllers = ControllerContractHelper.FindImplementations(assembly, [typeof(BaseProxy)]);
+            var foundControllers = ControllerContractHelper.FindImplementations(assembly, [typeof(BaseClientProxyMarker)]).ToList();
 
             foreach (var controller in foundControllers)
             {

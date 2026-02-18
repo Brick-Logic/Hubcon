@@ -10,46 +10,46 @@ namespace Hubcon.Server.Core.Extensions;
 
 public static class OpenApiExtensions
 {
-    public static RouteHandlerBuilder MapRpcEndpoint(this RouteGroupBuilder group, string route, MethodInfo methodInfo)
-    {
-        // 1. Registro del endpoint que recibe el JSON bruto (JsonElement)
-        var builder = group.MapPost(route, async (JsonElement body, HttpContext context) =>
-        {
-            // Aquí invocarías tu mecanismo de parsing y ejecución:
-            // var result = await YourDispatcher.Execute(methodInfo, body, context);
-            return Results.Ok(new { message = "Ejecutado", method = methodInfo.Name });
-        });
+    //public static RouteHandlerBuilder MapRpcEndpoint(this RouteGroupBuilder group, string route, MethodInfo methodInfo)
+    //{
+    //    // 1. Registro del endpoint que recibe el JSON bruto (JsonElement)
+    //    var builder = group.MapPost(route, async (JsonElement body, HttpContext context) =>
+    //    {
+    //        // Aquí invocarías tu mecanismo de parsing y ejecución:
+    //        // var result = await YourDispatcher.Execute(methodInfo, body, context);
+    //        return Results.Ok(new { message = "Ejecutado", method = methodInfo.Name });
+    //    });
 
-        // 2. Configuración dinámica de OpenAPI
-        builder.WithOpenApi(operation =>
-        {
-            operation.Summary = $"RPC: {methodInfo.DeclaringType?.Name}.{methodInfo.Name}";
+    //    // 2. Configuración dinámica de OpenAPI
+    //    builder.WithOpenApi(operation =>
+    //    {
+    //        operation.Summary = $"RPC: {methodInfo.DeclaringType?.Name}.{methodInfo.Name}";
 
-            // Construimos el esquema del objeto que envuelve todos los parámetros
-            var rootSchema = new OpenApiSchema
-            {
-                Type = "object",
-                Properties = methodInfo.GetParameters().ToDictionary(
-                    p => p.Name ?? "arg",
-                    p => MapTypeToOpenApiSchema(p.ParameterType)
-                )
-            };
+    //        // Construimos el esquema del objeto que envuelve todos los parámetros
+    //        var rootSchema = new OpenApiSchema
+    //        {
+    //            Type = "object",
+    //            Properties = methodInfo.GetParameters().ToDictionary(
+    //                p => p.Name ?? "arg",
+    //                p => MapTypeToOpenApiSchema(p.ParameterType)
+    //            )
+    //        };
 
-            operation.RequestBody = new OpenApiRequestBody
-            {
-                Description = "Cuerpo de la solicitud RPC",
-                Required = true,
-                Content =
-            {
-                ["application/json"] = new OpenApiMediaType { Schema = rootSchema }
-            }
-            };
+    //        operation.RequestBody = new OpenApiRequestBody
+    //        {
+    //            Description = "Cuerpo de la solicitud RPC",
+    //            Required = true,
+    //            Content =
+    //        {
+    //            ["application/json"] = new OpenApiMediaType { Schema = rootSchema }
+    //        }
+    //        };
 
-            return operation;
-        });
+    //        return operation;
+    //    });
 
-        return builder;
-    }
+    //    return builder;
+    //}
 
     private static OpenApiSchema MapTypeToOpenApiSchema(Type type)
     {

@@ -5,7 +5,11 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Standard.Interceptor
 {
-    public abstract class BaseProxy
+    public abstract class BaseClientProxyMarker
+    {
+    }
+
+    public abstract class BaseProxy : BaseClientProxyMarker
     {
         public abstract Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken);
 

@@ -121,15 +121,15 @@ namespace Hubcon.Server
             if (OperationRegistry.ControllerExists(controllerType))
                 return builder;
 
-            foreach (var type in implementationTypes)
-            {
-                foreach (var property in type.GetProperties().Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription))))
-                {
-                    var controllerProp = controllerType.GetProperty(property.Name);
+            //foreach (var type in implementationTypes)
+            //{
+            //    foreach (var property in type.GetProperties().Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription))))
+            //    {
+            //        var controllerProp = controllerType.GetProperty(property.Name);
 
-                    SubscriptionRegistry.RegisterSubscriptionMetadata(NamingHelper.GetCleanName(property.DeclaringType!.Name), property.Name, controllerProp!);
-                }
-            }
+            //        SubscriptionRegistry.RegisterSubscriptionMetadata(NamingHelper.GetCleanName(property.DeclaringType!.Name), property.Name, controllerProp!);
+            //    }
+            //}
 
             OperationRegistry.RegisterOperations(controllerType, options, ServerOptions, out var services);
 

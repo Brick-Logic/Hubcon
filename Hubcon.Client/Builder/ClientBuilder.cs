@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
@@ -45,11 +46,10 @@ namespace Hubcon.Client.Builder
 
         public string ServerModuleName { get; }
 
-        private ConcurrentDictionary<Type, Type> _subTypesCache { get; } = new ConcurrentDictionary<Type, Type>();
         private ConcurrentDictionary<Type, IEnumerable<PropertyInfo>> _propTypesCache { get; } = new ConcurrentDictionary<Type, IEnumerable<PropertyInfo>>();
         private ConcurrentDictionary<Type, IContractOptions> _contractOptions { get; } = new ConcurrentDictionary<Type, IContractOptions>();
         private ConcurrentDictionary<InterceptorType, Func<IInvocationContext, Task>> _interceptors = new ConcurrentDictionary<InterceptorType, Func<IInvocationContext, Task>>();
-        private Dictionary<Type, object> _clients { get; } = new Dictionary<Type, object>();
+        private readonly ConcurrentDictionary<Type, object> _clients = new ConcurrentDictionary<Type, object>();
         public bool AutoReconnect { get; set; } = true;
         public bool ReconnectStreams { get; set; } = false;
         public bool ReconnectSubscriptions { get; set; } = true;
@@ -185,7 +185,7 @@ namespace Hubcon.Client.Builder
                 return client!;
 
             if (!Contracts.Any(x => x == contractType))
-                return default!;
+                return null!;
 
             var contractScope = services.CreateScope();
             var scopedServices = contractScope.ServiceProvider;
@@ -197,7 +197,8 @@ namespace Hubcon.Client.Builder
             var newClient = (BaseContractProxy)scopedServices.GetRequiredService(proxyType);
             var converter = scopedServices.GetRequiredService<IDynamicConverter>();
 
-            var operations = newClient.BuildContractProxy(hubconClient!, this, contractScope, _contractOptions, converter);
+            IImmutableDictionary<string, IClientOperationContext> operations = null!;
+   
 
             static IEnumerable<PropertyInfo> CheckType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type x)
                 => x.GetProperties().Where(CheckProperty);
@@ -211,40 +212,9 @@ namespace Hubcon.Client.Builder
                 proxyType,
                 typeGetter);
 
-            //foreach (var subscriptionProp in props)
-            //{
-            //    var value = subscriptionProp.GetValue(newClient, null);
-            //    if (value == null)
-            //    {
-            //        if (operations.TryGetValue(subscriptionProp.Name, out var context))
-            //        {
-            //            var genericType = _subTypesCache.GetOrAdd(
-            //                subscriptionProp.PropertyType.GenericTypeArguments[0],
-            //                x => HubconClientBuilder.GetProxyType(x)!);
+            if (useCached) _clients.TryAdd(contractType, newClient!);
 
-            //            var propss = contractType.GetProperties().Where(x => x.Name == subscriptionProp.Name).FirstOrDefault();
-            //            var factory = SubscriptionFactory.GetFactory();
-
-            //            if (factory == null)
-            //                continue;
-
-            //            var config = new ClientSubscriptionConfig<object>()
-            //            {
-            //                Converter = converter,
-            //                Logger = scopedServices.GetRequiredService<ILogger<ClientSubscriptionHandler<object>>>(),
-            //                Property = propss,
-            //                Client = hubconClient!,
-            //            };
-
-            //            var subscriptionInstance = (ISubscription)factory.Invoke(subscriptionProp.PropertyType.GenericTypeArguments[0], config);
-            //            var buildable = subscriptionInstance as IBuildableSubscription;
-            //            buildable!.Build(context);
-            //            newClient.SetPropertyValue(subscriptionProp.Name, subscriptionInstance);
-            //        }
-            //    }
-            //}
-
-            if (useCached) _clients.Add(contractType, newClient!);
+            operations = newClient.BuildContractProxy(hubconClient!, this, contractScope, _contractOptions, converter);
 
             return newClient!;
         }

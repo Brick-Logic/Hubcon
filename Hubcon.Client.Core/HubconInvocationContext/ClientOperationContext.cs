@@ -146,11 +146,6 @@ namespace Hubcon.Client.Core.HubconInvocationContext
 
             RemoteCancellationIsAllowed = OperationOptions?.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed;
 
-            if (clientOptions.AuthenticationManagerType != null && clientOptions.AuthenticationManagerFactory != null)
-            {
-                AuthenticationManagerFactory = () => clientOptions.AuthenticationManagerFactory.GetValue<IAuthenticationManager>(serviceProvider);
-            }
-
             Uri = ClientOptions.BaseUri ?? throw new ArgumentNullException("Base uri can't be null.");
             string baseRestHttpUrl = string.Empty;
 

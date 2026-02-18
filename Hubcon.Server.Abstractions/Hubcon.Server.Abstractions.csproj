@@ -46,6 +46,6 @@
 		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-rc*" />
 	</ItemGroup>
 	<ItemGroup>
-	  <PackageReference Include="System.Text.Json" Version="8.0.6" />
+	  <PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)" />
 	</ItemGroup>
 </Project>
