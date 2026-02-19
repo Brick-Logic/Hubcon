@@ -174,6 +174,7 @@ namespace Hubcon
                 AccessToken = auth.AccessToken;
                 RefreshToken = auth.RefreshToken;
                 ExpiresAt = auth.ExpiresAt;
+                TokenType = auth.TokenType;
 
                 await SaveSessionAsync();
                 OnSessionIsActive?.Invoke();

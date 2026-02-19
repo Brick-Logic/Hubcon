@@ -20,9 +20,13 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 await next();
                 return;
             }
+        
+            if (user == null)
+            {
+                SetUnauthorized(context);
+                return;
+            }
 
-            // 3. Chequeo de Políticas (Zero-allocation loop)
-            // Usamos ReadOnlySpan o listas precomputadas del blueprint
             var policies = context.Blueprint.PrecomputedPolicies;
             for (int i = 0; i < policies.Length; i++)
             {
