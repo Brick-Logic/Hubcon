@@ -1,5 +1,14 @@
-﻿using System;
+﻿using Hubcon.Shared.Abstractions.Interfaces;
+using System;
 using System.Threading.Tasks;
+
+namespace Hubcon.Shared.Abstractions.Interfaces
+{
+    public interface IBuildableAuthenticationManager
+    {
+        void Build(TimeSpan margin, TimeSpan interval);
+    }
+}
 
 namespace Hubcon
 {
@@ -9,7 +18,7 @@ namespace Hubcon
     /// <remarks>
     /// This interface defines the contract for handling authentication, including session management, token handling, and event notification for authentication state changes.
     /// </remarks>
-    public interface IAuthenticationManager
+    public interface IAuthenticationManager : IBuildableAuthenticationManager
     {
         /// <summary>
         /// Occurs when a valid session has been loaded or started and the application should treat the session as active.

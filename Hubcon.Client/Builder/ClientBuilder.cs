@@ -46,7 +46,6 @@ namespace Hubcon.Client.Builder
 
         public string ServerModuleName { get; }
 
-        private ConcurrentDictionary<Type, IEnumerable<PropertyInfo>> _propTypesCache { get; } = new ConcurrentDictionary<Type, IEnumerable<PropertyInfo>>();
         private ConcurrentDictionary<Type, IContractOptions> _contractOptions { get; } = new ConcurrentDictionary<Type, IContractOptions>();
         private ConcurrentDictionary<InterceptorType, Func<IInvocationContext, Task>> _interceptors = new ConcurrentDictionary<InterceptorType, Func<IInvocationContext, Task>>();
         private readonly ConcurrentDictionary<Type, object> _clients = new ConcurrentDictionary<Type, object>();
@@ -208,10 +207,6 @@ namespace Hubcon.Client.Builder
 
             Func<Type, IEnumerable<PropertyInfo>> typeGetter = CheckType;
 
-            var props = _propTypesCache.GetOrAdd(
-                proxyType,
-                typeGetter);
-
             if (useCached) _clients.TryAdd(contractType, newClient!);
 
             operations = newClient.BuildContractProxy(hubconClient!, this, contractScope, _contractOptions, converter);
@@ -226,6 +221,23 @@ namespace Hubcon.Client.Builder
 
             AuthenticationManagerType = typeof(T);
             AuthenticationManagerFactory = new LazyWrapper<T>();
+
+            HubconClientBuilder.Current.Services.AddSingleton<T>();
+        }
+
+        public void UseAuthenticationManager<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(IServiceCollection services, TimeSpan refreshBeforeExpirationMargin, TimeSpan refreshCheckInterval) where T : class, IAuthenticationManager
+        {
+            if (AuthenticationManagerType != null)
+                return;
+
+            AuthenticationManagerType = typeof(T);
+            AuthenticationManagerFactory = new LazyWrapper<T>(x =>
+            {
+                if(x is IBuildableAuthenticationManager buildableAuthenticationManager)
+                {
+                    buildableAuthenticationManager.Build(refreshBeforeExpirationMargin, refreshCheckInterval);
+                }
+            });
 
             HubconClientBuilder.Current.Services.AddSingleton<T>();
         }
@@ -278,6 +290,7 @@ namespace Hubcon.Client.Builder
         {
             UseHttpEndpointOverloading = true;
         }
+
     }
 
     public static class SubscriptionFactory

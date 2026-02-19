@@ -50,6 +50,12 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
+        public IServerModuleConfiguration UseAuthenticationManager<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(TimeSpan refreshBeforeExpirationMargin, TimeSpan refreshCheckInterval) where T : class, IAuthenticationManager
+        {
+            builder.UseAuthenticationManager<T>(services, refreshBeforeExpirationMargin, refreshCheckInterval);
+            return this;
+        }
+
         public IServerModuleConfiguration WithBaseUrl(string hostUrl)
         {
             builder.BaseUri ??= new Uri(hostUrl);

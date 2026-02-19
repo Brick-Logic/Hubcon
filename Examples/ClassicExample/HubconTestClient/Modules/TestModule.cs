@@ -64,26 +64,7 @@ namespace HubconTestClient.Modules
                 options.DefaultRequestHeaders.Add("Origin", "Hubcon");
             });
 
-            server.UseAuthenticationManager<AuthenticationManager>();
-
-            server.AddInterceptor(InterceptorType.OnPing, async ctx =>
-            {
-                var authManager = ctx.Services.GetRequiredService<AuthenticationManager>();
-                var logger = ctx.Services.GetRequiredService<ILogger<object>>();
-
-                if (authManager.ShouldRefreshSession)
-                {
-                    IHubconResult? refreshedToken = null!;
-                    try
-                    {
-                        refreshedToken = await authManager.TryRefreshSessionAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError("Token refresh error: {Message}.", ex.Message);
-                    }
-                }
-            });
+            server.UseAuthenticationManager<AuthenticationManager>(TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(5));
 
             server.UseInsecureConnection();
         }

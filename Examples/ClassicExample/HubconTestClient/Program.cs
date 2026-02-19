@@ -37,10 +37,12 @@ internal class Program
 
         long coreMask = 0;
 
-        int? customCores = null;
-        int cores = customCores ?? Environment.ProcessorCount - 1;
+        int minCore = 0;
+        int? maxCore = 0;
 
-        for (int i = 0; i <= cores; i++)
+        int cores = maxCore ?? Environment.ProcessorCount - 1;
+
+        for (int i = minCore; i <= cores; i++)
         {
             coreMask |= 1L << i;
         }

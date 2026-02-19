@@ -32,6 +32,13 @@ namespace Hubcon
         IServerModuleConfiguration UseAuthenticationManager<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>() where T : class, IAuthenticationManager;
 
         /// <summary>
+        /// Specifies the authentication manager to use for the server module. The authentication manager will only be used for this module.
+        /// </summary>
+        /// <typeparam name="T">The authentication manager type.</typeparam>
+        /// <returns>The current instance of <see cref="IServerModuleConfiguration"/> for method chaining.</returns>
+        IServerModuleConfiguration UseAuthenticationManager<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(TimeSpan refreshBeforeExpirationMargin, TimeSpan refreshCheckInterval) where T : class, IAuthenticationManager;
+
+        /// <summary>
         /// Sets the base URL that the contracts will use to connect to the server.
         /// </summary>
         /// <param name="baseUrl">The base URL string.</param>

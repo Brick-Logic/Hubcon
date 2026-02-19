@@ -10,14 +10,17 @@ namespace Hubcon.Shared.Core.Lazy
     public class LazyWrapper<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T> : ILazyWrapper where T : notnull
     {
         private Lazy<T>? _lazy;
+        private Action<T>? configurations;
+
+        public LazyWrapper(Action<T>? configurations = null)
+        {
+            this.configurations = configurations;
+        }
 
         public T1 GetValue<T1>(IServiceProvider sp)
         {
             _lazy ??= new Lazy<T>(sp.GetRequiredService<T>);
-
-            if (_lazy.IsValueCreated)
-                return (T1)(object)_lazy.Value;
-
+            configurations?.Invoke(_lazy.Value);
             return (T1)(object)_lazy.Value;
         }
     }

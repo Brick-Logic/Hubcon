@@ -1,4 +1,5 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Shared.Abstractions.Interfaces;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,9 +45,16 @@ namespace Hubcon
         /// <summary>
         /// The token expiration time as a Unix timestamp (UTC seconds).
         /// </summary>
-        public long? ExpiresAt { get; private set; }
+        public long? ExpiresAt 
+        {
+            get => expiresAt; 
+            private set => expiresAt = value;          
+        }
+
+        private long? expiresAt;
 
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+        private System.Timers.Timer? refreshTimer = null;
 
         /// <summary>
         /// Returns true if a session exists and the access token is not expired.
@@ -71,15 +79,17 @@ namespace Hubcon
         {
             get
             {
-                if (string.IsNullOrEmpty(AccessToken) || !ExpiresAt.HasValue)
+                if (string.IsNullOrEmpty(AccessToken) || string.IsNullOrEmpty(RefreshToken) || !ExpiresAt.HasValue)
                     return false;
 
                 long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                long refreshThreshold = ExpiresAt.Value - 60;
+                long refreshThreshold = ExpiresAt.Value - (shouldRefreshSessionMargin > 0 ? shouldRefreshSessionMargin : 60);
 
                 return currentTime > refreshThreshold;
             }
         }
+
+        long shouldRefreshSessionMargin = 0;
 
         /// <summary>
         /// Username associated with the current session.
@@ -347,6 +357,23 @@ namespace Hubcon
         /// </summary>
         /// <returns>The persisted session, or null if none exists.</returns>
         protected abstract Task<PersistedSession?> LoadPersistedSessionAsync();
+
+        void IBuildableAuthenticationManager.Build(TimeSpan margin, TimeSpan interval)
+        {
+            if (refreshTimer != null) return;
+
+            shouldRefreshSessionMargin = margin.Seconds;
+            refreshTimer = new System.Timers.Timer();
+            refreshTimer.Enabled = true;
+            refreshTimer.AutoReset = true;
+            refreshTimer.Interval = margin.TotalMilliseconds;
+            refreshTimer.Elapsed += async (object sender, System.Timers.ElapsedEventArgs e) =>
+            {
+                if (ShouldRefreshSession) 
+                    await TryRefreshSessionAsync();
+            };
+            refreshTimer.Start();
+        }
     }
 
     /// <summary>

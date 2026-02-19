@@ -34,7 +34,6 @@ namespace Hubcon.Client.Core.Proxies
     public abstract class BaseContractProxy : BaseClientProxyMarker, IContractDataAccessor
     {
         private Dictionary<Type, ITransportClient> _transports;
-        Guid _id = Guid.NewGuid();
         private IImmutableDictionary<string, IClientOperationContext> _operations = null!;
         private string SimpleContractName { get; set; } = string.Empty;
 
@@ -87,11 +86,11 @@ namespace Hubcon.Client.Core.Proxies
                 tempOperations.Add(signature, context);
             }
 
-            foreach (var prop in _contractType.GetProperties().Where(x => x.PropertyType.IsGenericType && x.PropertyType.GetGenericTypeDefinition() == typeof(ISubscription<>)))
-            {
-                IClientOperationContext context = new ClientOperationContext(prop, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType, transports);
-                tempOperations.Add(prop.Name, context);
-            }
+            //foreach (var prop in _contractType.GetProperties().Where(x => x.PropertyType.IsGenericType && x.PropertyType.GetGenericTypeDefinition() == typeof(ISubscription<>)))
+            //{
+            //    IClientOperationContext context = new ClientOperationContext(prop, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType, transports);
+            //    tempOperations.Add(prop.Name, context);
+            //}
 
             _transports = transports;
             _operations = tempOperations.ToImmutableDictionary();
@@ -100,8 +99,6 @@ namespace Hubcon.Client.Core.Proxies
 
         public async Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
-            if (_operations == null) return default!;
-
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
                 OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);

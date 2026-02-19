@@ -62,7 +62,6 @@ namespace Hubcon.Client.Core.Transports
 
             if (context.AuthenticationManagerFactory != null)
             {
-                // Problema de concurrencia
                 var authenticationManager = context.AuthenticationManagerFactory?.Invoke();
                 if (authenticationManager != null)
                 {
