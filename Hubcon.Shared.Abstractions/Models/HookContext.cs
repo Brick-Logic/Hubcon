@@ -1,5 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -12,6 +13,7 @@ namespace Hubcon.Shared.Abstractions.Models
         public IServiceProvider Services { get; }
         public IOperationRequest Request { get; }
         public CancellationToken CancellationToken { get; }
+        public ILogger Logger { get; }
         public bool IsSuccess { get; }
         public int StatusCode { get; }
         public Exception? Exception { get; }

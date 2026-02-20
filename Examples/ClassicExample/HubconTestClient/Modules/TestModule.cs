@@ -10,10 +10,6 @@ namespace HubconTestClient.Modules
 {
     internal class TestModule : RemoteServerModule
     {
-        public TestModule(object item)
-        {
-        }
-
         public override void Configure(IServerModuleConfiguration server)
         {
             server.WithBaseUrl("http://localhost:5000");
@@ -26,29 +22,29 @@ namespace HubconTestClient.Modules
 
             server.DisableAllLimiters();
 
-            server.Implements<IUserContract>((contractConfigurator =>
+            server.Implements<IUserContract>(contractConfigurator =>
             {
                 contractConfigurator.AddHeaderProvider("key", x => "value");
+
+
+                contractConfigurator
+                    .ForOperation(x => x.GetTemperatureFromServer(default!, default!))
+                    .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
+                    .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
+                    .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
+                    .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
+                    .AddValidationHook(async ctx =>
+                    {
+                        if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }
+                    });
 
                 contractConfigurator
                     .AllowRemoteCancellation(false)
                     .AddHook(HookType.OnSend, async ctx => { })
                     .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
                     .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
-                    .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
-                    .ConfigureOperations((operationSelector =>
-                    {
-                        operationSelector.Configure(contract => contract.GetTemperatureFromServer(default, default))
-                            .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })
-                            .AddHook(HookType.OnError, async ctx => { /*some error handling*/ })
-                            .AddValidationHook(async ctx =>
-                            {
-                                if (ctx.CancellationToken == CancellationToken.None) { int i = 0; /*Some operation*/ }
-                            });
-                    }));
-            }));
+                    .AddHook(HookType.OnError, async ctx => { /*some error handling*/ });
+            });
 
             server.Implements<ISecondTestContract>();
 

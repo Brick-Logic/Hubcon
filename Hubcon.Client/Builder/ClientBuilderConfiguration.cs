@@ -29,7 +29,10 @@ namespace Hubcon.Client.Builder
         {
             var type = typeof(T);
 
-            if (type.IsClass || builder.Contracts.Any(x => x == type))
+            if (type.IsClass)
+                throw new ArgumentException($"The provided type {type.FullName} is not an interface. Only IControllerContract-based interfaces can be implemented.");
+
+            if (builder.Contracts.Any(x => x == type))
                 return this;
 
             LoadContractProxy(type);

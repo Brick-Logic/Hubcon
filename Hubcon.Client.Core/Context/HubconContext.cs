@@ -1,7 +1,10 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Context;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -166,6 +169,7 @@ namespace Hubcon.Shared.Core.Context
             AuthenticationManager = authenticationManager;
             this.CancellationToken = cancellationToken;
             IsWrapped = isWrapped;
+            Logger = Services.GetRequiredService<ILogger<IHubconClient>>();
         }
 
         public IServiceProvider Services { get; private set; }
@@ -179,6 +183,8 @@ namespace Hubcon.Shared.Core.Context
         public Exception? Exception { get; private set; }
         public bool IsSuccess { get; set; }
         public int StatusCode { get; set; }
+
+        public ILogger Logger { get; set; }
 
         public void SetException(Exception ex)
         {

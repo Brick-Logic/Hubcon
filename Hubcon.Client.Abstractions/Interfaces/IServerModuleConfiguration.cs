@@ -17,7 +17,9 @@ namespace Hubcon
     public interface IServerModuleConfiguration
     {
         /// <summary>
-        /// Registers a contract interface with optional configuration.
+        /// Registers a contract interface with optional configuration. 
+        /// <br></br>
+        /// This method will extract and use the configuration attributes from the type <typeparamref name="T"/> and automatically allow it to be injected directly through dependency injection.
         /// </summary>
         /// <typeparam name="T">The controller contract type.</typeparam>
         /// <param name="configure">Optional configuration action for the contract.</param>
@@ -46,7 +48,7 @@ namespace Hubcon
         IServerModuleConfiguration WithBaseUrl(string baseUrl);
 
         /// <summary>
-        /// Configures the server module to use an insecure connection (e.g., HTTP instead of HTTPS, WS instead of WSS).
+        /// Configures the server module to use an insecure connection (e.g., HTTP instead of HTTPS, WS instead of WSS). Testing only, not intended or recommended for production.
         /// </summary>
         /// <returns>The current instance of <see cref="IServerModuleConfiguration"/> for method chaining.</returns>
         IServerModuleConfiguration UseInsecureConnection();
@@ -267,7 +269,7 @@ namespace Hubcon
         IServerModuleConfiguration AuthIsEnabled(bool enabled = true);
 
         /// <summary>
-        /// Adds an interceptor to be triggered during the operation lifecycle.
+        /// Adds an interceptor to be triggered during the operation lifecycle. Note that the same interceptor type cannot be registered multiple times.
         /// </summary>
         /// <param name="interceptorType">The type of hook to add, specifying when it should be triggered.</param>
         /// <param name="interceptorDelegate">The delegate to execute when the hook is triggered.</param>

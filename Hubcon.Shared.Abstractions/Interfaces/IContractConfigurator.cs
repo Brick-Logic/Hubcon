@@ -27,7 +27,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         public IContractConfigurator<T> ConfigureOperations(Action<IOperationSelector<T>> selector);
 
         /// <summary>
-        /// Adds a hook to the contract that will be invoked during specific operations.
+        /// Adds a hook to the contract that will be invoked during specific operations. Note that the same hook type cannot be registered multiples times.
         /// </summary>
         /// <param name="hookType">The type of hook to add, defined by <see cref="HookType"/>.</param>
         /// <param name="hookDelegate">The asynchronous delegate to invoke when the hook is triggered.</param>
@@ -73,5 +73,6 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// <param name="enabled">True to enable authentication; otherwise, false.</param>
         /// <returns>The current instance of <see cref="IContractConfigurator{T}"/> for method chaining.</returns>
         public IContractConfigurator<T> EnableAuth(bool enabled);
+        IOperationConfigurator ForOperation<TDelegate>(System.Linq.Expressions.Expression<Func<T, TDelegate>> expression);
     }
 }

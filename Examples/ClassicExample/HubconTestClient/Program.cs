@@ -51,18 +51,18 @@ internal class Program
         process.PriorityClass = ProcessPriorityClass.RealTime;
 
         var builder = WebApplication.CreateSlimBuilder();
+
         var config = new ConfigurationBuilder()
-            .AddUserSecrets<Program>() // Necesita el ID del .csproj
+            .AddUserSecrets<Program>()
             .AddEnvironmentVariables()
             .Build();
 
-        builder.Services.AddHubconClient();
-        builder.Services.AddRemoteServerModule(() => new TestModule(new object()));
-        builder.Services.AddRemoteServerModule(() => new OpenAIServerModule(config));
+        builder.Services.AddHubconClient()
+                        .AddRemoteServerModule<TestModule>()
+                        .AddRemoteServerModule(() => new OpenAIServerModule(config));
 
         builder.Logging.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
         builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
-
 
         var app = builder.Build();
         var scope = app.Services.CreateScope();

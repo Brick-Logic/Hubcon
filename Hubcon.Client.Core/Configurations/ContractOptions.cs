@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -37,11 +38,16 @@ namespace Hubcon.Client.Core.Configurations
             return OperationOptions.GetOrAdd(operationName, name => new OperationOptions(memberInfo));
         }
 
-        public IContractConfigurator<T> ConfigureOperations(Action<Shared.Abstractions.Interfaces.IOperationSelector<T>> configure)
+        public IContractConfigurator<T> ConfigureOperations(Action<IOperationSelector<T>> configure)
         {
             var options = new GlobalOperationConfigurator<T>(OperationOptions);
             configure?.Invoke(options);
             return this;
+        }
+
+        public IOperationConfigurator ForOperation<TDelegate>(Expression<Func<T, TDelegate>> expression)
+        {
+           return new GlobalOperationConfigurator<T>(OperationOptions).Configure(expression);
         }
 
         public IContractConfigurator<T> AddHook(HookType hookType, Func<IInvocationContext, Task> hookDelegate)

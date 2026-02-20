@@ -2,6 +2,6 @@
 {
     public interface IRemoteServerModule
     {
-        void Configure(IServerModuleConfiguration configuration);
+        void Configure(IServerModuleConfiguration server);
     }
 }

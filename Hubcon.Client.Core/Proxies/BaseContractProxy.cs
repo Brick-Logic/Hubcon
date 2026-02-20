@@ -11,6 +11,7 @@ using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
