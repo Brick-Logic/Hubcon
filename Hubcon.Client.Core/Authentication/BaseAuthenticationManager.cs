@@ -79,7 +79,7 @@ namespace Hubcon
         {
             get
             {
-                if (string.IsNullOrEmpty(AccessToken) || string.IsNullOrEmpty(RefreshToken) || !ExpiresAt.HasValue)
+                if (string.IsNullOrEmpty(AccessToken) || !ExpiresAt.HasValue)
                     return false;
 
                 long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -129,7 +129,7 @@ namespace Hubcon
                 AccessToken = auth.AccessToken;
                 RefreshToken = auth.RefreshToken;
                 ExpiresAt = auth.ExpiresAt;
-
+                refreshTimer?.Start();
                 await SaveSessionAsync();
                 OnSessionIsActive?.Invoke();
 
@@ -175,7 +175,7 @@ namespace Hubcon
                 RefreshToken = auth.RefreshToken;
                 ExpiresAt = auth.ExpiresAt;
                 TokenType = auth.TokenType;
-
+                refreshTimer?.Start();
                 await SaveSessionAsync();
                 OnSessionIsActive?.Invoke();
 
@@ -218,6 +218,7 @@ namespace Hubcon
                 RefreshToken = refresh.RefreshToken;
                 ExpiresAt = refresh.ExpiresAt;
                 OnTokenRefreshed?.Invoke(refresh);
+                refreshTimer?.Start();
 
                 await SaveSessionAsync();
                 OnSessionIsActive?.Invoke();
@@ -247,6 +248,7 @@ namespace Hubcon
                 TokenType = null;
                 ExpiresAt = null;
                 await ClearSessionAsync();
+                refreshTimer?.Stop();
                 OnSessionIsInactive?.Invoke();
             }
             finally
@@ -276,6 +278,8 @@ namespace Hubcon
                     AccessToken = session.AccessToken;
                     RefreshToken = session.RefreshToken;
                     ExpiresAt = session.ExpiresAt;
+                    TokenType = session.TokenType;
+                    refreshTimer?.Start();
                     OnSessionIsActive?.Invoke();
                     return Result.Success();
                 }
@@ -363,11 +367,11 @@ namespace Hubcon
         {
             if (refreshTimer != null) return;
 
-            shouldRefreshSessionMargin = margin.Seconds;
+            shouldRefreshSessionMargin = (long)margin.TotalSeconds;
             refreshTimer = new System.Timers.Timer();
             refreshTimer.Enabled = true;
             refreshTimer.AutoReset = true;
-            refreshTimer.Interval = margin.TotalMilliseconds;
+            refreshTimer.Interval = interval.TotalMilliseconds;
             refreshTimer.Elapsed += async (object sender, System.Timers.ElapsedEventArgs e) =>
             {
                 if (ShouldRefreshSession) 
