@@ -97,8 +97,11 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             if (GlobalMiddlewaresFirst)
             {
-                middlewares.Add(GlobalExceptionMiddleware);
-                middlewares.Add(ExceptionMiddleware);
+                if (GlobalExceptionMiddleware != null)
+                    middlewares.Add(GlobalExceptionMiddleware);
+
+                if (ExceptionMiddleware != null)
+                    middlewares.Add(ExceptionMiddleware);
 
                 middlewares.AddRange(GlobalTelemetryMiddlewares);
 
@@ -114,7 +117,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 middlewares.AddRange(GlobalAuthorizationMiddlewares);
                 middlewares.AddRange(AuthorizationMiddlewares);
 
-                middlewares.Add(GlobalRoutingMiddleware);
+                if (GlobalRoutingMiddleware != null)
+                    middlewares.Add(GlobalRoutingMiddleware);
 
                 middlewares.AddRange(GlobalPostRequestMiddlewares);
                 middlewares.AddRange(PostRequestMiddlewares);
@@ -124,8 +128,11 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             }
             else
             {
-                middlewares.Add(ExceptionMiddleware);
-                middlewares.Add(GlobalExceptionMiddleware);
+                if(ExceptionMiddleware != null)
+                    middlewares.Add(ExceptionMiddleware);
+
+                if(GlobalExceptionMiddleware != null)
+                    middlewares.Add(GlobalExceptionMiddleware);
 
                 middlewares.AddRange(GlobalTelemetryMiddlewares);
 

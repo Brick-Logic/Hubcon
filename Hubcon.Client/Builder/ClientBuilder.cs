@@ -221,7 +221,7 @@ namespace Hubcon.Client.Builder
 
             AuthenticationManagerType = typeof(T);
 
-            if (typeof(BaseAuthenticationManager).IsAssignableFrom(AuthenticationManagerType) && AuthenticationManagerType != typeof(BaseAuthenticationManager))
+            if (!typeof(BaseAuthenticationManager).IsAssignableFrom(AuthenticationManagerType) || AuthenticationManagerType == typeof(BaseAuthenticationManager))
                 throw new ArgumentException($"The provided authentication manager ('{AuthenticationManagerType.FullName}') does not derive from the {nameof(BaseAuthenticationManager)} class and cannot be registered.");
 
             AuthenticationManagerFactory = new LazyWrapper<T>();
@@ -236,7 +236,7 @@ namespace Hubcon.Client.Builder
 
             AuthenticationManagerType = typeof(T);
 
-            if (typeof(BaseAuthenticationManager).IsAssignableFrom(AuthenticationManagerType) && AuthenticationManagerType != typeof(BaseAuthenticationManager))
+            if (!typeof(BaseAuthenticationManager).IsAssignableFrom(AuthenticationManagerType) || AuthenticationManagerType == typeof(BaseAuthenticationManager))
                 throw new ArgumentException($"The provided authentication manager ('{AuthenticationManagerType.FullName}') does not derive from the {nameof(BaseAuthenticationManager)} class and cannot be registered.");
 
             AuthenticationManagerFactory = new LazyWrapper<T>(x =>
