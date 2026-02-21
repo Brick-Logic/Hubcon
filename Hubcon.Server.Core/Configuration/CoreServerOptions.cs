@@ -26,8 +26,8 @@ namespace Hubcon.Server.Core.Configuration
         private Action<IEndpointConventionBuilder>? endpointConventions;
         private Action<RouteHandlerBuilder>? routeHandlerBuilderConfig;
         private bool? throttlingIsDisabled;
-        private Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? websocketTokenHandler;
-        private bool? websocketRequiresAuthorization;
+        private Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? tokenHandler;
+        private bool? requiresAuthorization;
         private bool? websocketLoggingEnabled;
         private bool? httpLoggingEnabled;
         private TimeSpan? ingestTimeout;
@@ -161,9 +161,9 @@ namespace Hubcon.Server.Core.Configuration
 
         public bool ThrottlingIsDisabled => throttlingIsDisabled ?? false;
 
-        public Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? WebsocketTokenHandler => websocketTokenHandler;
+        public Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? TokenHandler => tokenHandler;
 
-        public bool WebsocketRequiresAuthorization => websocketRequiresAuthorization ?? false;
+        public bool WebsocketRequiresAuthorization => requiresAuthorization ?? false;
 
         public bool WebsocketLoggingEnabled => websocketLoggingEnabled ?? false;
 
@@ -295,10 +295,10 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
 
-        public ICoreServerOptions UseWebsocketTokenHandler(Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? tokenHandler)
+        public ICoreServerOptions UseTokenHandler(Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? tokenHandler)
         {
-            websocketTokenHandler ??= tokenHandler;
-            websocketRequiresAuthorization ??= true;
+            this.tokenHandler ??= tokenHandler;
+            requiresAuthorization ??= true;
             return this;
         }
 

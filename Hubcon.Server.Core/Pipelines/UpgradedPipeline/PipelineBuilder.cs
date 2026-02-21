@@ -33,6 +33,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         private List<Type> BuiltMiddlewares { get; } = new();
 
+        private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+
         public IPipelineBuilder AddMiddleware<T>() where T : IMiddleware => AddMiddleware(typeof(T));
         public IPipelineBuilder AddMiddleware(Type middlewareType)
         {
@@ -88,6 +90,11 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         private List<Type> GetMiddlewares()
         {
+            if (BuiltMiddlewares.Count > 0)
+                return BuiltMiddlewares;
+
+            semaphore.Wait();
+
             if (BuiltMiddlewares.Count > 0)
                 return BuiltMiddlewares;
 
@@ -160,7 +167,9 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             var result = middlewares.Where(x => x != null);
 
             if (result.Any() && BuiltMiddlewares.Count == 0)
-                BuiltMiddlewares.AddRange(result);
+                BuiltMiddlewares.AddRange(result.ToHashSet().Reverse());
+
+            semaphore.Release();
 
             return BuiltMiddlewares;
         }
@@ -171,7 +180,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             PipelineDelegate currentDelegate = () => { return Task.FromResult(context); };
 
-            foreach (Type middlewareType in middlewares.AsEnumerable().Reverse())
+            foreach (Type middlewareType in middlewares)
             {
                 var next = currentDelegate;
 

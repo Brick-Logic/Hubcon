@@ -98,15 +98,6 @@ namespace HubconTest
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
             };
 
-            builder.Services.AddSingleton(tokenValidationParameters);
-
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-               .AddJwtBearer(options =>
-               {
-                   options.TokenValidationParameters = tokenValidationParameters;
-               });
-
-            builder.Services.AddAuthorization();
             builder.Services.AddOpenApi();
             builder.AddHubconServer();
             builder.ConfigureHubconServer(serverOptions =>
@@ -150,7 +141,7 @@ namespace HubconTest
                 {
                     config.SetMaxConcurrentOperations(5000000);
 
-                    config.UseWebsocketTokenHandler((token, serviceProvider) =>
+                    config.UseTokenHandler((token, serviceProvider) =>
                     {
                         var user = JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
 

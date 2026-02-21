@@ -1,8 +1,4 @@
-﻿using Hubcon.Server.Abstractions.Delegates;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
-
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
@@ -11,17 +7,15 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
-            var httpContext = context.HttpContext;
-            var user = httpContext?.User;
+            var user = context?.User;
 
-            // 2. Si no requiere autorización, seguimos sin tocar nada
-            if (!context.Blueprint.RequiresAuthorization)
+            if (!context!.Blueprint.RequiresAuthorization)
             {
                 await next();
                 return;
             }
         
-            if (user == null)
+            if (user == null || user.Identity?.IsAuthenticated == false)
             {
                 SetUnauthorized(context);
                 return;
@@ -38,7 +32,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 }
             }
 
-            // 4. Chequeo de Roles (Zero-allocation loop)
             var roles = context.Blueprint.PrecomputedRoles;
             foreach (var role in roles)
             {

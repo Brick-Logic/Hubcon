@@ -156,7 +156,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// <param name="tokenHandler">A function that returns a <see cref="ClaimsPrincipal"/> representing the authenticated user,  or <see
         /// langword="null"/> if authentication fails.</param>
         /// <returns>The <see cref="ICoreServerOptions"/> instance, allowing for method chaining.</returns>
-        ICoreServerOptions UseWebsocketTokenHandler(Func<string, IServiceProvider, (ClaimsPrincipal?, DateTime expirationDate)?> tokenHandler);
+        ICoreServerOptions UseTokenHandler(Func<string, IServiceProvider, (ClaimsPrincipal?, DateTime expirationDate)?> tokenHandler);
 
         /// <summary>
         /// Sets a delay for websocket ingest message reception.
@@ -323,7 +323,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// <summary>
         /// The websocket handler for authentication tokens.
         /// </summary>
-        public Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? WebsocketTokenHandler { get; }
+        public Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? TokenHandler { get; }
 
         /// <summary>
         /// Delay for a websocket client receive loop.

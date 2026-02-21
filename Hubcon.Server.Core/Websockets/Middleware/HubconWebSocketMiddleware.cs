@@ -591,12 +591,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return false;
                 }
 
-                if (options.WebsocketTokenHandler != null)
+                if (options.TokenHandler != null)
                 {
                     try
                     {
                         var extractedToken = JwtHelper.ExtractTokenFromHeader(token!);
-                        var claimsPrincipal = options.WebsocketTokenHandler.Invoke(extractedToken!, context.RequestServices)!;
+                        var claimsPrincipal = options.TokenHandler.Invoke(extractedToken!, context.RequestServices)!;
 
                         if (claimsPrincipal is null)
                         {
@@ -1157,7 +1157,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             using var localCts = new CancellationTokenSource();
             using var registration = cancellationToken.Register(localCts.Cancel);
 
-            var user = options.WebsocketTokenHandler?.Invoke(tokenUpdateMessage.Token!, context.RequestServices)!;
+            var user = options.TokenHandler?.Invoke(tokenUpdateMessage.Token!, context.RequestServices)!;
 
             try
             {

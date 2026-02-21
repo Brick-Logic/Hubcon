@@ -9,6 +9,7 @@ using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
+using System.Security.Claims;
 
 namespace Hubcon.Server.Core.Pipelines
 {
@@ -17,15 +18,18 @@ namespace Hubcon.Server.Core.Pipelines
     {
         private readonly IOperationRegistry _operationRegistry;
         private readonly IDynamicConverter _converter;
+        private readonly IInternalServerOptions internalServerOptions;
         private readonly IServiceProvider _serviceProvider;
 
         public RequestHandler(
             IOperationRegistry operationRegistry,
             IDynamicConverter dynamicConverter,
+            IInternalServerOptions internalServerOptions,
             IServiceProvider serviceProvider)
         {
             _operationRegistry = operationRegistry;
             _converter = dynamicConverter;
+            this.internalServerOptions = internalServerOptions;
             _serviceProvider = serviceProvider;
         }
 
@@ -167,6 +171,19 @@ namespace Hubcon.Server.Core.Pipelines
 
         private IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
+            var context = _serviceProvider.GetRequiredService<IHttpContextAccessor>()?.HttpContext;
+            (ClaimsPrincipal? user, DateTime? expiration)? user = null;
+            if (blueprint.RequiresAuthorization)
+            {
+                try
+                {
+                    user = internalServerOptions.TokenHandler?.Invoke(JwtHelper.ExtractTokenFromHeader(context)!, context!.RequestServices);
+                }
+                finally
+                {
+                }
+            }
+
             return new OperationContext()
             {
                 OperationName = request.OperationName,
@@ -174,6 +191,7 @@ namespace Hubcon.Server.Core.Pipelines
                 Blueprint = blueprint,
                 HttpContext = _serviceProvider.GetRequiredService<IHttpContextAccessor>()?.HttpContext,
                 Request = request,
+                User = user.HasValue ? user.Value.user : null,
                 WrappedRequest = wrappedRequest,
                 RequestAborted = cancellationToken,
             };

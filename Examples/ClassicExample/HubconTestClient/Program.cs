@@ -38,7 +38,7 @@ internal class Program
         long coreMask = 0;
 
         int minCore = 0;
-        int? maxCore = 0;
+        int? maxCore = 11;
 
         int cores = maxCore ?? Environment.ProcessorCount - 1;
 
