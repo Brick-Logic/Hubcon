@@ -72,6 +72,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MainProjects", "MainProject
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleMicroservices.Shared", "Examples\MicroservicesExample\ExampleMicroservices.Shared\ExampleMicroservices.Shared.csproj", "{13D9E1EC-2236-4563-9107-7FC9273BD6B8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hubcon", "Hubcon\Hubcon.csproj", "{3091A841-9DE3-4348-9EB5-674BEC4FA721}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -178,6 +180,10 @@ Global
 		{13D9E1EC-2236-4563-9107-7FC9273BD6B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{13D9E1EC-2236-4563-9107-7FC9273BD6B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{13D9E1EC-2236-4563-9107-7FC9273BD6B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3091A841-9DE3-4348-9EB5-674BEC4FA721}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3091A841-9DE3-4348-9EB5-674BEC4FA721}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3091A841-9DE3-4348-9EB5-674BEC4FA721}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3091A841-9DE3-4348-9EB5-674BEC4FA721}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -204,6 +210,7 @@ Global
 		{9D16F037-3CB4-4C3E-E64D-9F75B32441F4} = {54E578AE-AFE8-44CC-882E-3F1553647A54}
 		{9F232A3C-8B77-8005-AE3C-BEC4C58BC2A7} = {FD864E60-D8EF-4BA0-ACF4-58C748092E7D}
 		{13D9E1EC-2236-4563-9107-7FC9273BD6B8} = {AD1B4179-F737-48AE-A61C-941F2759E05E}
+		{3091A841-9DE3-4348-9EB5-674BEC4FA721} = {9AF7EB63-E5AE-4213-9A4C-850325476635}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1B50F528-C46C-4120-AEAF-8768F535DD28}

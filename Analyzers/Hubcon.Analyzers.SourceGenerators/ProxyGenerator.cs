@@ -21,6 +21,38 @@ namespace HubconAnalyzers.SourceGenerators
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
+            var hasCallToInitializer = context.SyntaxProvider
+                .CreateSyntaxProvider(
+                    predicate: (node, _) => node is InvocationExpressionSyntax,
+                    transform: (ctx, _) =>
+                    {
+                        var invocation = (InvocationExpressionSyntax)ctx.Node;
+
+                        // 1a. Filtro rápido por nombre (No gasta CPU)
+                        var name = "";
+
+                        if (invocation.Expression is MemberAccessExpressionSyntax m)
+                            name = m.Name.Identifier.Text;
+                        else if (invocation.Expression is IdentifierNameSyntax i)
+                            name = i.Identifier.Text;
+                        else
+                            name = null;
+
+
+                        if (name != "AddHubconClient") return false;
+
+                        // 1b. Validación Semántica (La verdad absoluta)
+                        var symbol = ctx.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
+                        if (symbol == null) return false;
+
+                        // Verificamos: Namespace == "Hubcon" && Clase == "DependencyInjection"
+                        return symbol.ContainingType?.Name == "DependencyInjection" &&
+                               symbol.ContainingNamespace?.ToDisplayString() == "Hubcon";
+                    })
+                .Where(found => found)
+                .Collect()
+                .Select((calls, _) => calls.Any());
+
             // Capturamos interfaces del proyecto actual
             var localInterfaces = context.SyntaxProvider
                 .CreateSyntaxProvider(
@@ -64,11 +96,16 @@ namespace HubconAnalyzers.SourceGenerators
                     return local.Concat(referenced).Distinct(SymbolEqualityComparer.Default).ToArray();
                 });
 
-            var finalProvider = allInterfaces.Combine(context.CompilationProvider.Select((c, _) => c.AssemblyName));
+            var finalProvider = allInterfaces
+                .Combine(context.CompilationProvider.Select((c, _) => c.AssemblyName))
+                .Combine(hasCallToInitializer);
 
             context.RegisterSourceOutput(finalProvider, (spc, data) =>
             {
-                var (interfaceList, assemblyName) = data;
+                var ((interfaceList, assemblyName), shouldGenerate) = data;
+
+                if (!shouldGenerate) 
+                    return;
 
                 if (assemblyName == "Hubcon.Client")
                     return;

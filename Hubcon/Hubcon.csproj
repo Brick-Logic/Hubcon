@@ -1,0 +1,110 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+	  <ImplicitUsings>enable</ImplicitUsings>
+	  <Nullable>enable</Nullable>
+
+	  <AssemblyName>$(AssemblyName)</AssemblyName>
+	  <RootNamespace>$(AssemblyName)</RootNamespace>
+	  <PackageId>$(AssemblyName)</PackageId>
+	  <PackageOutputPath>../nupkgs</PackageOutputPath>
+	  <IsPackable>true</IsPackable>
+	  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	  <Description>A .NET RPC framework to build APIs using shared interfaces as contracts.</Description>
+	  <PackageTags>http;websockets;rpc</PackageTags>
+	  <Version>1.0.0-rc5</Version>
+	  <Authors>$(Authors)</Authors>
+	  <Company>$(Company)</Company>
+	  <RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
+	  
+	  <!-- Desactivar generación automática de nuspec -->
+	  <GenerateNuspecDependsOn></GenerateNuspecDependsOn>
+	  <RepositoryType>git</RepositoryType>
+	  <RepositoryBranch>main</RepositoryBranch>
+  </PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DebugType>embedded</DebugType>
+		<Deterministic>True</Deterministic>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DebugType>embedded</DebugType>
+		<Deterministic>True</Deterministic>
+	</PropertyGroup>
+
+	<!-- Development -->
+	<ItemGroup Condition="'$(UsePackages)' != 'true'">
+		<ProjectReference Include="..\Hubcon.Client\Hubcon.Client.csproj" />
+		<ProjectReference Include="..\Hubcon.Shared\Hubcon.Shared.csproj" />
+	</ItemGroup>
+
+	<!-- Nuget -->
+	<ItemGroup Condition="'$(UsePackages)' == 'true'">
+		<PackageReference Include="Hubcon.Client" Version="1.0.0-rc*" />
+		<PackageReference Include="Hubcon.Shared" Version="1.0.0-rc*" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="build\Hubcon.targets" Pack="true" PackagePath="build\" />
+	</ItemGroup>
+
+	<Choose>
+		<When Condition="'$(UsePackages)' != 'true' And ('$(IsHubconServer)' == 'true' Or '$(UsingMicrosoftNETSdkWeb)' == 'true')">
+			<ItemGroup>
+				<ProjectReference Include="..\Hubcon.Server\Hubcon.Server.csproj" />
+			</ItemGroup>
+		</When>
+	</Choose>
+
+	<Choose>
+		<When Condition="'$(UsePackages)' == 'true' And ('$(IsHubconServer)' == 'true' Or '$(UsingMicrosoftNETSdkWeb)' == 'true')">
+			<ItemGroup>
+				<PackageReference Include="Hubcon.Server" Version="1.0.0-rc*" />
+			</ItemGroup>
+		</When>
+	</Choose>
+
+	<ItemGroup>
+		<PackageReference Include="Hubcon.Analyzers" Version="[1.0.162, 2.0.0)" />
+		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="[1.0.162, 2.0.0)" />
+		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="[1.0.162, 2.0.0)" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[1.0.168, 2.0.0)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="README.md">
+			<PackagePath></PackagePath>
+			<Pack>true</Pack>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="build\" />
+	</ItemGroup>
+
+	<!--<Target Name="HubconRefCleaner" BeforeTargets="ResolveAssemblyReferences">
+		<ItemGroup Condition="'$(IsHubconServer)' != 'true' And '$(UsingMicrosoftNETSdkWeb)' != 'true'">
+			<FrameworkReference Include="Microsoft.AspNetCore.App"
+					  BeforeTargets="_CheckForUnsupportedRuntimeIdentifier"
+                      PrivateAssets="All"
+				      Pack="false"
+                      Publish="false" />
+
+			<FrameworkReference Remove="Microsoft.AspNetCore.App" />
+			<TransitiveFrameworkReference Remove="Microsoft.AspNetCore.App" />
+		</ItemGroup>
+
+		<ItemGroup Condition="'$(RuntimeIdentifier)' == 'browser-wasm'">
+			<FrameworkReference Include="Microsoft.AspNetCore.App"
+					  BeforeTargets="_CheckForUnsupportedRuntimeIdentifier"
+                      PrivateAssets="All"
+					  Pack="false"
+                      Publish="false" />
+
+			<FrameworkReference Remove="Microsoft.AspNetCore.App" />
+			<TransitiveFrameworkReference Remove="Microsoft.AspNetCore.App" />
+		</ItemGroup>
+	</Target>-->
+</Project>

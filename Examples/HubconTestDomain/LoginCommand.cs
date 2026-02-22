@@ -1,4 +1,7 @@
-﻿namespace HubconTestDomain
+﻿using Hubcon;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace HubconTestDomain
 {
     public record LoginCommand
     {

@@ -27,8 +27,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.*" />					  
-		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="1.0.0-rc*" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.168" />					  
+		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="1.0.*" />
 		<ProjectReference Include="..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
 		<ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
 	</ItemGroup>

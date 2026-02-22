@@ -7,10 +7,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Shared" Version="[1.0.0-rc*,2.0.0)" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\..\Hubcon.Shared\Hubcon.Shared.csproj" />
+		<PackageReference Include="Hubcon" Version="1.0.0-rc5" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.168" />
 	</ItemGroup>
 </Project>

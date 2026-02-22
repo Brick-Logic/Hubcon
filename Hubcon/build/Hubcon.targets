@@ -1,0 +1,5 @@
+<Project>
+  <ItemGroup Condition="'$(IsHubconServer)' == 'true'">
+    <PackageReference Include="Hubcon.Server" Version="1.0.0-rc*" />
+  </ItemGroup>
+</Project>

@@ -47,16 +47,11 @@
 
 	<!-- Nuget -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-rc*" PrivateAssets="True" />
-		<PackageReference Include="Hubcon.Client.Core" Version="1.0.0-rc*" PrivateAssets="True" />
-		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="1.0.0-rc*" PrivateAssets="True" />
-		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-rc*" PrivateAssets="True" />
-		<PackageReference Include="Hubcon.Shared.Abstractions" Version="1.0.0-rc*" PrivateAssets="True" />
+		<PackageReference Include="Hubcon.Client" Version="1.0.0-rc*" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.*" />					  
-		<PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)" />		
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[1.0.168, 2.0.0)" />					  
 	</ItemGroup>
 
 	<ItemGroup>

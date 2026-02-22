@@ -60,7 +60,7 @@ namespace BlazorTestServer
                     coreOptions.SetWebSocketTimeout(TimeSpan.FromSeconds(15));
 
                     coreOptions
-                        .UseWebsocketTokenHandler((token, serviceProvider) =>
+                        .UseTokenHandler((token, serviceProvider) =>
                         {
                             var user = JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
 
