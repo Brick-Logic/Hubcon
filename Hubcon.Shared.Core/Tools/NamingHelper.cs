@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace Hubcon.Shared.Core.Tools
+namespace Hubcon
 {
     public static class NamingHelper
     {

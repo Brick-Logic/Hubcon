@@ -1,6 +1,7 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
+using Hubcon.Server.Core.Security;
 using Hubcon.Shared.Abstractions.Standard.Interceptor;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -48,7 +49,7 @@ namespace Hubcon.Server.Injection
 
         public void AddAuthentication()
         {
-            HubconServerBuilder.AddGlobalMiddleware<AuthenticationMiddleware>((services, middleware) => services.AddSingleton(middleware));
+            HubconServerBuilder.AddGlobalMiddleware<InternalAuthorizationMiddleware>((services, middleware) => services.AddSingleton(middleware));
         }
 
         public void AddTelemetry()

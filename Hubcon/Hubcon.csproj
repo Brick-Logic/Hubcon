@@ -13,7 +13,7 @@
 	  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	  <Description>A high-performance, zero-alloc RPC framework for .NET where interfaces define contracts, combining transport-agnostic architecture, a production-grade middleware pipeline, and developer-first design.</Description>
 	  <PackageTags>http;websockets;rpc</PackageTags>
-	  <Version>1.0.0-rc10</Version>
+	  <Version>1.0.0-rc26</Version>
 	  <Authors>$(Authors)</Authors>
 	  <Company>$(Company)</Company>
 	  <RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
@@ -49,23 +49,6 @@
 	<ItemGroup>
 		<None Include="build\Hubcon.targets" Pack="true" PackagePath="build\" />
 	</ItemGroup>
-
-	<Choose>
-		<When Condition="'$(UsePackages)' != 'true' And ('$(IsHubconServer)' == 'true' Or '$(UsingMicrosoftNETSdkWeb)' == 'true')">
-			<ItemGroup>
-				<ProjectReference Include="..\Hubcon.Server\Hubcon.Server.csproj" />
-			</ItemGroup>
-		</When>
-	</Choose>
-
-	<Choose>
-		<When Condition="'$(UsePackages)' == 'true' And ('$(IsHubconServer)' == 'true' Or '$(UsingMicrosoftNETSdkWeb)' == 'true')">
-			<ItemGroup>
-				<PackageReference Include="Hubcon.Server" Version="1.0.0-rc*" />
-			</ItemGroup>
-		</When>
-	</Choose>
-
 	<ItemGroup>
 		<PackageReference Include="Hubcon.Analyzers" Version="[1.0.162, 2.0.0)" />
 		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="[1.0.162, 2.0.0)" />
@@ -83,28 +66,4 @@
 	<ItemGroup>
 	  <Folder Include="build\" />
 	</ItemGroup>
-
-	<!--<Target Name="HubconRefCleaner" BeforeTargets="ResolveAssemblyReferences">
-		<ItemGroup Condition="'$(IsHubconServer)' != 'true' And '$(UsingMicrosoftNETSdkWeb)' != 'true'">
-			<FrameworkReference Include="Microsoft.AspNetCore.App"
-					  BeforeTargets="_CheckForUnsupportedRuntimeIdentifier"
-                      PrivateAssets="All"
-				      Pack="false"
-                      Publish="false" />
-
-			<FrameworkReference Remove="Microsoft.AspNetCore.App" />
-			<TransitiveFrameworkReference Remove="Microsoft.AspNetCore.App" />
-		</ItemGroup>
-
-		<ItemGroup Condition="'$(RuntimeIdentifier)' == 'browser-wasm'">
-			<FrameworkReference Include="Microsoft.AspNetCore.App"
-					  BeforeTargets="_CheckForUnsupportedRuntimeIdentifier"
-                      PrivateAssets="All"
-					  Pack="false"
-                      Publish="false" />
-
-			<FrameworkReference Remove="Microsoft.AspNetCore.App" />
-			<TransitiveFrameworkReference Remove="Microsoft.AspNetCore.App" />
-		</ItemGroup>
-	</Target>-->
 </Project>

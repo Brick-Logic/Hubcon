@@ -97,10 +97,9 @@ namespace HubconTest
                 ValidAudience = "clave",
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
             };
-
+            builder.Services.AddSingleton(tokenValidationParameters);
             builder.Services.AddOpenApi();
-            builder.AddHubconServer();
-            builder.ConfigureHubconServer(serverOptions =>
+            builder.AddHubconServer(serverOptions =>
             {
                 serverOptions.AddAuthentication();
                 serverOptions.AddTelemetry();
@@ -139,35 +138,12 @@ namespace HubconTest
 
                 serverOptions.ConfigureCore(config =>
                 {
-                    config.SetMaxConcurrentOperations(5000000);
-
-                    config.UseTokenHandler((token, serviceProvider) =>
-                    {
-                        var user = JwtHelper.ValidateJwtToken(token, tokenValidationParameters, out var validatedToken);
-
-                        DateTime? expiration = null;
-
-                        var expClaim = user?.FindFirst("exp")?.Value;
-
-                        if (expClaim == null)
-                            return null;
-
-                        // Convierte de segundos desde epoch a DateTime
-                        if (long.TryParse(expClaim, out var expSeconds))
-                        {
-                            var dateTime = DateTimeOffset.FromUnixTimeSeconds(expSeconds).UtcDateTime;
-                            expiration = dateTime;
-                        }
-
-                        if (user == null || expiration == null)
-                            return null;
-
-                        return (user, expiration.Value);
-                    });
-
-                    config.EnableWebsocketsLogging()
-                    .DisableAllRateLimiters()
-                    .EnableRequestDetailedErrors();
+                    config
+                        .SetMaxConcurrentOperations(5000000)
+                        .SetGlobalRateLimiter(100)
+                        .EnableWebsocketsLogging()
+                        .DisableAllRateLimiters()
+                        .EnableRequestDetailedErrors();
                 });
 
                 serverOptions.AutoRegisterControllers();

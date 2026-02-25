@@ -7,7 +7,7 @@ namespace Hubcon.Server.Core.Configuration
     {
         public T GetSettings<T>(IOperationEndpoint operationRequest, HubconTransportAttribute transportAttribute, Func<T> onNull)
         {
-            if (!operationRegistry.GetOperationBlueprint(operationRequest, transportAttribute, out var blueprint))
+            if (!operationRegistry.TryGetOperationBlueprint(operationRequest, transportAttribute, out var blueprint))
                 return onNull.Invoke();
 
             if (blueprint!.ConfigurationAttributes.TryGetValue(typeof(T), out Attribute? value)

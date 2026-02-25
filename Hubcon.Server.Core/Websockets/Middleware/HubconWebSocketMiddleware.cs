@@ -128,7 +128,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             Interlocked.Increment(ref clientCount);
 
             IOperationConfigRegistry operationConfigRegistry = context.RequestServices.GetRequiredService<IOperationConfigRegistry>();
-            IRateLimiterManager rateLimiterManager = context.RequestServices.GetRequiredService<IRateLimiterManager>();
+            IScopedRateLimiterManager rateLimiterManager = context.RequestServices.GetRequiredService<IScopedRateLimiterManager>();
 
             TimeSpan timeoutSeconds = options.WebSocketTimeout;
             HeartbeatWatcher _heartbeatWatcher = null!;
@@ -691,7 +691,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingestRouters,
             ISettingsManager settingsManager,
             IOperationConfigRegistry operationConfigRegistry,
-            IRateLimiterManager rateLimiterManager,
+            IScopedRateLimiterManager rateLimiterManager,
             CancellationToken cancellationToken)
         {
             Dictionary<Guid, object> sources = new();
@@ -704,7 +704,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 var operationRequest = converter.DeserializeData<OperationRequest>(ingestInitMessage!.Payload)!;
 
-                if (!operationRegistry.GetOperationBlueprint(operationRequest, HubconTransportAttribute.GetDefault<WebSocketTransport>(), out var blueprint))
+                if (!operationRegistry.TryGetOperationBlueprint(operationRequest, HubconTransportAttribute.GetDefault<WebSocketTransport>(), out var blueprint))
                     return;
 
                 bool shareLimiter = blueprint!.Attributes.Any(x => x is IngestShareLimiter);
@@ -954,7 +954,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels,
             WebSocketMessageSender sender,
             SubscriptionInitMessage subscribeMessage,
-            IRateLimiterManager rateLimiterManager,
+            IScopedRateLimiterManager rateLimiterManager,
             CancellationToken cancellationToken)
         {
             if (subscribeMessage == null || subscribeMessage.Id == Guid.Empty) return;
@@ -1044,7 +1044,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             WebSocketMessageSender sender,
             StreamInitMessage streamInitMessage,
             WebSocket webSocket,
-            IRateLimiterManager rateLimiterManager,
+            IScopedRateLimiterManager rateLimiterManager,
             CancellationToken cancellationToken)
         {
             using var localCts = new CancellationTokenSource();

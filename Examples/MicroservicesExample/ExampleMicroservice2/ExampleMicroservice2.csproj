@@ -11,8 +11,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
-		<ProjectReference Include="..\..\..\Hubcon.Server\Hubcon.Server.csproj" />
+		<PackageReference Include="Hubcon" Version="1.0.0-rc25" />
 		<PackageReference Include="Scalar.AspNetCore" Version="2.6.3" />
 		<ProjectReference Include="..\ExampleMicroservices.Shared\ExampleMicroservices.Shared.csproj" />
 		<ProjectReference Include="..\ExampleMicroservicesDomain\ExampleMicroservicesDomain.csproj" />

@@ -1,5 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.IdentityModel.Tokens;
 using System.ComponentModel;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
@@ -36,6 +37,7 @@ namespace Hubcon.Server.Core.Configuration
         private bool? methodOverloadingIsEnabled;
         private int? maxConcurrentOperations;
         private Dictionary<Type, HubconTransportAttribute> defaultTransportAttributes = new Dictionary<Type, HubconTransportAttribute>();
+        private TokenBucketRateLimiterOptions? _globalRateLimiterOptions;
 
 
         private Func<TokenBucketRateLimiterOptions> websocketReaderRateLimiter = () => new TokenBucketRateLimiterOptions
@@ -193,6 +195,16 @@ namespace Hubcon.Server.Core.Configuration
 
         public IReadOnlyDictionary<Type, HubconTransportAttribute> DefaultTransports => defaultTransportAttributes;
 
+        public TokenBucketRateLimiterOptions GlobalRateLimiterOptions => _globalRateLimiterOptions ?? new TokenBucketRateLimiterOptions()
+        {
+            AutoReplenishment = true,
+            QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            TokenLimit = 999999999,
+            TokensPerPeriod = 999999999
+        };
+
         public ICoreServerOptions SetMaxWebSocketMessageSize(int bytes)
         {
             maxWsSize ??= bytes;
@@ -295,12 +307,6 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
 
-        public ICoreServerOptions UseTokenHandler(Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? tokenHandler)
-        {
-            this.tokenHandler ??= tokenHandler;
-            requiresAuthorization ??= true;
-            return this;
-        }
 
         public ICoreServerOptions EnableWebsocketsLogging(bool enabled = true)
         {
@@ -402,6 +408,27 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions AddTransport<T>(T transportAttribute) where T : HubconTransportAttribute
         {
             defaultTransportAttributes.TryAdd(typeof(T), transportAttribute);
+            return this;
+        }
+
+        public ICoreServerOptions SetGlobalRateLimiter(TokenBucketRateLimiterOptions options)
+        {
+            _globalRateLimiterOptions ??= options;
+            return this;
+        }
+
+        public ICoreServerOptions SetGlobalRateLimiter(int requestsPerSecond)
+        {
+            _globalRateLimiterOptions ??= new TokenBucketRateLimiterOptions()
+            {
+                AutoReplenishment = true,
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                TokenLimit = requestsPerSecond,
+                TokensPerPeriod = requestsPerSecond
+            };
+
             return this;
         }
     }

@@ -6,12 +6,12 @@ using System.Threading.RateLimiting;
 
 namespace Hubcon.Server.Core.RateLimiting
 {
-    public class RateLimiterManager(
+    public class ScopedRateLimiterManager(
         ISettingsManager settingsManager, 
         IInternalServerOptions options, 
         IOperationConfigRegistry operationConfigRegistry,
         IOperationRegistry operationRegistry
-        ) : IRateLimiterManager, IAsyncDisposable
+        ) : IScopedRateLimiterManager, IAsyncDisposable
     {
         private readonly ConcurrentDictionary<MessageType, RateLimiter> _typeLimiters = new();
 
@@ -109,7 +109,7 @@ namespace Hubcon.Server.Core.RateLimiting
 
         public ValueTask Link(Guid id, HubconTransportAttribute transportAttribute, IOperationRequest request)
         {
-            operationRegistry.GetOperationBlueprint(request, transportAttribute, out var value);
+            operationRegistry.TryGetOperationBlueprint(request, transportAttribute, out var value);
             operationConfigRegistry.Link(id, value!);
             linkedSettings.TryAdd(id, request);
             return ValueTask.CompletedTask;

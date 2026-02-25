@@ -3,7 +3,7 @@ using Hubcon.Shared.Core.Websockets;
 
 namespace Hubcon
 {
-    public interface IRateLimiterManager
+    public interface IScopedRateLimiterManager
     {
         ValueTask DisposeAsync();
         ValueTask Link(Guid id, HubconTransportAttribute transportAttribute, IOperationRequest request);

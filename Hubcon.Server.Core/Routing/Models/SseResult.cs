@@ -31,7 +31,7 @@ namespace Hubcon.Server.Core.Routing.Models
 
         public async Task ExecuteAsync(HttpContext httpContext)
         {
-            IRateLimiterManager rateLimiter = null!;
+            IScopedRateLimiterManager rateLimiter = null!;
             var id = Guid.NewGuid();
             PipeWriter writer = null!;
             try
@@ -45,7 +45,7 @@ namespace Hubcon.Server.Core.Routing.Models
                 response.Headers.Connection = "keep-alive";
                 response.Headers["X-Accel-Buffering"] = "no";
 
-                rateLimiter = services.GetRequiredService<IRateLimiterManager>();
+                rateLimiter = services.GetRequiredService<IScopedRateLimiterManager>();
 
                 await rateLimiter.Link(id, HubconTransportAttribute.GetDefault<HttpTransport>(), request);
 

@@ -7,8 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+	  <PackageReference Include="Hubcon" Version="1.0.0-rc25" />
+	  <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.15" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Hubcon.Blazor.Client\Hubcon.Blazor.Client.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.15" />
   </ItemGroup>
 
 </Project>

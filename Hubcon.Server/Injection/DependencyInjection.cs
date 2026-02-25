@@ -38,7 +38,7 @@ namespace Hubcon
 
     public static class DependencyInjection
     {
-        public static WebApplicationBuilder AddHubconServer(this WebApplicationBuilder builder, Action<IServiceCollection>? additionalServices = null)
+        public static WebApplicationBuilder AddHubconServer(this WebApplicationBuilder builder, Action<IServerOptions>? controllerOptions = null)
         {
             builder.Services.AddControllers();
             builder.Services.ConfigureHttpJsonOptions(options =>
@@ -71,10 +71,12 @@ namespace Hubcon
                 });
             });
 
-            ServerBuilder.Current.AddHubconServer(builder, additionalServices, container =>
+            ServerBuilder.Current.AddHubconServer(builder, null, container =>
             {
                 container.AddTransient(typeof(ISubscription<>), typeof(ServerSubscriptionHandler<>));
             });
+
+            ConfigureHubconServer(builder, controllerOptions);
 
             return builder;
         }

@@ -1,4 +1,6 @@
 ﻿using Hubcon;
+using Hubcon.Server.Core.Security.DefaultHandlers.ApiKey;
+using Hubcon.Server.Core.Security.DefaultHandlers.Jwt;
 using HubconTest.Filters;
 using HubconTest.Middlewares;
 using HubconTestDomain;
@@ -12,8 +14,9 @@ namespace HubconTest.ContractHandlers
 {
     //[UseHttpEndpointFilter(typeof(ClassLoggingEndpointFilter))]
     //[UseMiddleware(typeof(ClassLoggingMiddleware))]
+    //[UseJwt]
+    [UseApiKey("API-KEY", overrideAuthorization: true)]
     [Authorize(Roles = "Manager")]
-    [UseHttpRateLimiter("contract")]
     public class UserController(ILogger<UserController> logger) : IUserContract
     {
         [UseHttpEndpointFilter(typeof(LoggingEndpointFilter))]

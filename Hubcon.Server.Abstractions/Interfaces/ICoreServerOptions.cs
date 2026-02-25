@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 
@@ -10,14 +12,14 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Sets the maximum incoming message size for websockets. Default value is 16384 bytes.
         /// </summary>
         /// <param name="bytes"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetMaxWebSocketMessageSize(int bytes);
 
         /// <summary>
         /// Sets the maximum incoming message size for HTTP.
         /// </summary>
         /// <param name="bytes"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetMaxHttpMessageSize(int bytes);
 
         /// <summary>
@@ -25,14 +27,14 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// The client should send a ping message to keep the connection alive. Default is 30 seconds.
         /// </summary>
         /// <param name="timeout"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetWebSocketTimeout(TimeSpan timeout);
 
         /// <summary>
         /// Set the timeout for HTTP connections. If a request takes longer than the specified time, the operation is cancelled. Default is 15 seconds.
         /// </summary>
         /// <param name="timeout"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetHttpTimeout(TimeSpan timeout);
 
         /// <summary>
@@ -40,28 +42,28 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Use Timespan.Zero to disable the timeout. The default is 30 seconds.
         /// </summary>
         /// <param name="timeout"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetWebSocketIngestTimeout(TimeSpan timeout);
 
         /// <summary>
         /// Determines if the server should send a pong message to the client.
         /// </summary>
         /// <param name="enabled"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebSocketPong(bool enabled = true);
 
         /// <summary>
         /// Sets the path prefix that the websocket will be listening on.
         /// </summary>
         /// <param name="prefix"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetWebSocketPathPrefix(string prefix);
 
         /// <summary>
         /// Sets the path prefix that the HTTP endpoints will be bound to.
         /// </summary>
         /// <param name="prefix"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetHttpPathPrefix(string prefix);
 
         /// <summary>
@@ -69,7 +71,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// </summary>
         /// <param name="disabled">A boolean value indicating whether WebSocket ingest should be disabled.  Pass <see langword="true"/> to
         /// disable WebSocket ingest; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.</param>
-        /// <returns>An <see cref="ICoreServerOptions"/> instance representing the updated server configuration.</returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebSocketIngest(bool disabled = true);
 
         /// <summary>
@@ -80,7 +82,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// restricted.</remarks>
         /// <param name="disabled">A boolean value indicating whether WebSocket subscriptions should be disabled.  Pass <see langword="true"/>
         /// to disable WebSocket subscriptions; otherwise, <see langword="false"/>.</param>
-        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing for method chaining.</returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebSocketSubscriptions(bool disabled = true);
 
         /// <summary>
@@ -88,7 +90,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// </summary>
         /// <param name="disabled">A boolean value indicating whether WebSocket methods should be disabled.  Pass <see langword="true"/> to
         /// disable WebSocket methods; otherwise, <see langword="false"/>.</param>
-        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing for method chaining.</returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebSocketMethods(bool disabled = true);
 
         /// <summary>
@@ -96,7 +98,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// </summary>
         /// <param name="disabled">A value indicating whether WebSocket ping should be disabled.  Pass <see langword="true"/> to disable
         /// WebSocket ping; otherwise, <see langword="false"/>.</param>
-        /// <returns>The current instance of <see cref="ICoreServerOptions"/>, allowing for method chaining.</returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebsocketPing(bool disabled = true);
 
         /// <summary>
@@ -104,7 +106,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// </summary>
         /// <param name="enabled">A boolean value indicating whether retryable messages should be disabled.  <see langword="true"/> to disable
         /// retryable messages; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.</param>
-        /// <returns>An instance of <see cref="ICoreServerOptions"/> to allow for method chaining.</returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisabledRetryableMessages(bool enabled = true);
 
         /// <summary>
@@ -115,7 +117,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// production environments, as it may expose  sensitive information.</remarks>
         /// <param name="enabled">A value indicating whether detailed error messages should be enabled.  The default is <see
         /// langword="true"/>.</param>
-        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing for method chaining.</returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions EnableRequestDetailedErrors(bool enabled = true);
 
         /// <summary>
@@ -123,109 +125,181 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// </summary>
         /// <param name="disabled">A boolean value indicating whether to disable the WebSocket stream.  Pass <see langword="true"/> to disable
         /// the WebSocket stream; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.</param>
-        /// <returns>An instance of <see cref="ICoreServerOptions"/> to allow method chaining for further configuration.</returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebSocketStream(bool disabled = true);
 
         /// <summary>
         /// Enables or disables the WebSocket logging feature.
         /// </summary>
         /// <param name="enabled"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions EnableWebsocketsLogging(bool enabled = true);
 
         /// <summary>
         /// Enables or disables the WebSocket logging feature.
         /// </summary>
         /// <param name="enabled"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions EnableHttpLogging(bool enabled = true);
 
         /// <summary>
         /// Defines how many operations can be processed concurrently for a single websocket client.
         /// </summary>
         /// <param name="enabled"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetMaxConcurrentOperations(int count);
-
-        /// <summary>
-        /// Configures a handler to process WebSocket token authentication.
-        /// </summary>
-        /// <remarks>The provided <paramref name="tokenHandler"/> is invoked to validate and extract user
-        /// information  from a WebSocket token. Ensure the handler is thread-safe if used in a multi-threaded
-        /// environment.</remarks>
-        /// <param name="tokenHandler">A function that returns a <see cref="ClaimsPrincipal"/> representing the authenticated user,  or <see
-        /// langword="null"/> if authentication fails.</param>
-        /// <returns>The <see cref="ICoreServerOptions"/> instance, allowing for method chaining.</returns>
-        ICoreServerOptions UseTokenHandler(Func<string, IServiceProvider, (ClaimsPrincipal?, DateTime expirationDate)?> tokenHandler);
 
         /// <summary>
         /// Sets a delay for websocket ingest message reception.
         /// </summary>
         /// <param name="delay"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions LimitWebsocketIngest(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
         /// Sets a delay for websocket methods message reception.
         /// </summary>
         /// <param name="delay"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions LimitWebsocketRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
         /// Sets a delay for sending websocket subscriptions messages.
         /// </summary>
         /// <param name="delay"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions LimitWebsocketSubscription(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
         /// Sets a delay for sending websocket streaming messages.
         /// </summary>
         /// <param name="delay"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions LimitWebsocketStreaming(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
         /// Disables all rate limiter options.
         /// </summary>
         /// <param name="delay"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableAllRateLimiters();
 
         /// <summary>
         /// Configures a client-limited rate limiter for the server's websocket.
         /// </summary>
         /// <param name="rateLimiterOptionsFactory"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions ConfigureWebsocketRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
         /// Configures a client-limited ping rate limiter for the server's websocket.
         /// </summary>
         /// <param name="rateLimiterOptionsFactory"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions ConfigureWebsocketPingRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
         /// Configures a client-limited ping rate limiter for the server's websocket.
         /// </summary>
         /// <param name="rateLimiterOptionsFactory"></param>
-        /// <returns></returns>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions ConfigureWebsocketTokenUpdateRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
+        /// <summary>
+        /// Configures a global route handler for the server using the specified builder action.
+        /// </summary>
+        /// <remarks>Use this method to apply routing conventions or middleware to all routes in the
+        /// application. The configuration provided will affect every endpoint registered after this call.</remarks>
+        /// <param name="configure">An action that receives a RouteHandlerBuilder to configure global routing behavior for all endpoints. Cannot
+        /// be null.</param>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions UseGlobalRouteHandlerBuilder(Action<RouteHandlerBuilder> configure);
+
+        /// <summary>
+        /// Configures global HTTP endpoint conventions for the application.
+        /// </summary>
+        /// <remarks>Use this method to apply consistent HTTP settings or behaviors across all endpoints,
+        /// such as adding middleware, setting default headers, or enforcing policies.</remarks>
+        /// <param name="configure">An action that defines the conventions to apply to all HTTP endpoints. Cannot be null.</param>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure);
+
+        /// <summary>
+        /// Configures HTTP round-trip rate limiting using the specified token bucket rate limiter options.
+        /// </summary>
+        /// <remarks>Use this method to prevent excessive HTTP request rates and protect server resources.
+        /// Ensure that the provided options are tuned to match your application's expected traffic patterns and
+        /// performance requirements.</remarks>
+        /// <param name="rateLimiterOptionsFactory">A factory function that returns a configured instance of TokenBucketRateLimiterOptions to control the rate
+        /// limiting behavior. Cannot be null.</param>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions LimitHttpRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
+
+        /// <summary>
+        /// Configures the server options to allow remote cancellation of tokens.
+        /// </summary>
+        /// <remarks>Enabling remote token cancellation is useful in distributed or multi-service
+        /// environments where cancellation tokens may need to be signaled across process or network boundaries. Use
+        /// this method to permit such cross-boundary cancellation scenarios.</remarks>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions AllowRemoteTokenCancellation();
+
+        /// <summary>
+        /// Disables the expiration check for tokens in web service message processing.
+        /// </summary>
+        /// <remarks>Use this method when token expiration validation is not required for web service
+        /// messages. Disabling this check may reduce security by allowing expired tokens to be accepted during message
+        /// processing.</remarks>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableTokenExpirationCheckOnWSMessage();
 
         /// <summary>
-        /// Not implemented, will throw on use. Enables support for endpoint overloading, allowing multiple identical endpoints with diferent parameters to be used.
+        /// Not implemented, will throw an exception on use. Enables support for endpoint overloading, allowing multiple identical endpoints with diferent parameters to be used.
         /// </summary>
         ICoreServerOptions EnableEndpointOverloading();
+
+        /// <summary>
+        /// Adds a transport of the specified type to the server options configuration.
+        /// </summary>
+        /// <remarks>Use this method to dynamically extend the server's supported transport mechanisms.
+        /// Ensure that the transport type provided is properly configured and compatible with the server's
+        /// architecture.</remarks>
+        /// <typeparam name="T">The type of transport to add. Must inherit from HubconTransportAttribute and have a parameterless
+        /// constructor.</typeparam>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions AddTransport<T>() where T : HubconTransportAttribute, new();
+
+        /// <summary>
+        /// Adds a transport attribute to the server options, enabling support for the specified transport mechanism.
+        /// </summary>
+        /// <remarks>Use this method to extend server communication capabilities by registering additional
+        /// transport mechanisms. Ensure that the provided transport attribute is properly configured before adding
+        /// it.</remarks>
+        /// <typeparam name="T">The type of transport attribute to add. Must derive from HubconTransportAttribute.</typeparam>
+        /// <param name="transportAttribute">The transport attribute that configures the transport mechanism to be added. Cannot be null.</param>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions AddTransport<T>(T transportAttribute) where T : HubconTransportAttribute;
+
+        /// <summary>
+        /// Configures the global rate limiter for the server using the specified options.
+        /// </summary>
+        /// <remarks>Use this method to control how the server handles incoming requests under high load
+        /// or to prevent abuse. Proper configuration can help maintain server responsiveness and reliability.</remarks>
+        /// <param name="options">The rate limiter configuration options that define request limits and behavior. Cannot be null.</param>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
+        ICoreServerOptions SetGlobalRateLimiter(TokenBucketRateLimiterOptions options);
+
+        /// <summary>
+        /// Sets the global rate limiter for the server, specifying the maximum number of requests that can be processed
+        /// per second.
+        /// </summary>
+        /// <remarks>Use this method to control server load and ensure fair resource allocation among
+        /// clients. Adjusting the rate limiter can help prevent server overload during periods of high
+        /// demand.</remarks>
+        /// <param name="requestsPerSecond">The maximum number of requests allowed per second. Must be a positive integer.</param>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
+        ICoreServerOptions SetGlobalRateLimiter(int requestsPerSecond);
+
     }
 
     public interface IInternalServerOptions
@@ -409,6 +483,15 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Defines how many operations can be processed at the same time for a single client.
         /// </summary>
         int MaxConcurrentOperations { get; }
+
+        /// <summary>
+        /// Gets a read-only dictionary that maps transport types to their associated HubconTransport attributes.
+        /// </summary>
         IReadOnlyDictionary<Type, HubconTransportAttribute> DefaultTransports { get; }
+
+        /// <summary>
+        /// Global rate limiter options.
+        /// </summary>
+        TokenBucketRateLimiterOptions GlobalRateLimiterOptions { get; }
     }
 }

@@ -1,6 +1,7 @@
 using Hubcon.Blazor.Client.Modules;
 using Hubcon.Blazor.Components;
 
+
 namespace Hubcon.Blazor
 {
     public class Program

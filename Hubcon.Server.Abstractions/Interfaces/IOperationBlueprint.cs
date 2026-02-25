@@ -125,7 +125,7 @@ namespace Hubcon
         /// <summary>
         /// Gets the array of precomputed policies for the operation.
         /// </summary>
-        string?[] PrecomputedPolicies { get; }
+        HashSet<string> PrecomputedPolicies { get; }
 
         /// <summary>
         /// Gets the simplified name of the contract.
@@ -151,6 +151,7 @@ namespace Hubcon
         /// Gets or sets the factory used to create controller instances.
         /// </summary>
         ObjectFactory ControllerFactory { get; }
+        CompiledSecurityPolicy SecurityPolicy { get; }
 
         /// <summary>
         /// Determines whether a specific transport attribute type is supported by the operation.

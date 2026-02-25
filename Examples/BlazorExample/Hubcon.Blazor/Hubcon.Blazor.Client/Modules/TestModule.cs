@@ -1,11 +1,5 @@
 ﻿using Hubcon.Blazor.Client.Auth;
-using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Builder;
-using Hubcon.Client.Integration.Client;
-using Hubcon.Shared.Core.Websockets.Interfaces;
 using HubconTestDomain;
-using Microsoft.AspNetCore.Components.WebAssembly.Http;
-using System.Net.Http.Headers;
 
 namespace Hubcon.Blazor.Client.Modules
 {

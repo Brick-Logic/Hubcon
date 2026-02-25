@@ -15,6 +15,6 @@ namespace Hubcon
         CancellationToken RequestAborted { get; init; }
         IServiceProvider RequestServices { get; init; }
         IHubconResponse Response { get; set; }
-        ClaimsPrincipal? User { get; init; }
+        ClaimsPrincipal? User { get; set; }
     }
 }

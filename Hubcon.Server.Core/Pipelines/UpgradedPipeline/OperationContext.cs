@@ -11,7 +11,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public string OperationName { get; init; }
         public IServiceProvider RequestServices { get; init; }
         public IOperationBlueprint Blueprint { get; init; }
-        public ClaimsPrincipal? User { get; init; }
+        public ClaimsPrincipal? User { get; set; }
         public IDictionary<string, object> Items { get; } = new Dictionary<string, object>();
         public IOperationRequest Request { get; init; }
         public HttpContext? HttpContext { get; init; }

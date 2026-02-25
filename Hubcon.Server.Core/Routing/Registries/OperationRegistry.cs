@@ -3,16 +3,12 @@ using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
-using Hubcon.Shared.Abstractions.Attributes;
-using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Extensions;
-using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using System;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.ComponentModel;
@@ -28,7 +24,6 @@ namespace Hubcon.Server.Core.Routing.Registries
 
         private ConcurrentDictionary<string, IOperationBlueprint> _availableOperations = new ConcurrentDictionary<string, IOperationBlueprint>();
 
-        //private ConcurrentDictionary<string, ConcurrentDictionary<string, IOperationBlueprint>> AvailableOperations = new();
         private ConcurrentDictionary<Type, bool> RegisteredControllers = new();
         private readonly bool useHashedNames;
 
@@ -66,24 +61,6 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                 if (methods.Length == 0)
                     continue;
-
-                // Obtenemos atributos de transporte
-                //List<HubconTransportAttribute> contractTransportAttributes = interfaceType.GetCustomAttributes()
-                //    .Where(x => x is HubconTransportAttribute)
-                //    .Select(x => x as HubconTransportAttribute)
-                //    .ToList()!;
-
-                //var controllerTransportAttributes = controllerType.GetCustomAttributes()
-                //    .Where(x => x is HubconTransportAttribute)
-                //    .Select(x => x as HubconTransportAttribute)
-                //    .ToList()!;
-
-                //contractTransportAttributes.AddRange(controllerTransportAttributes!);
-
-                //if (contractTransportAttributes.Count == 0)
-                //{
-                //    contractTransportAttributes = serverOptions.DefaultTransports.Values.ToList();
-                //}
 
                 var classFilters = controllerType.GetCustomAttributes()
                         .Where(x => x is UseMiddlewareAttribute)
@@ -201,42 +178,15 @@ namespace Hubcon.Server.Core.Routing.Registries
                         action!
                     );
 
+                    foreach (var item in descriptor.SecurityPolicy.Handlers)
+                    {
+                        servicesToInject.Add(x => x.TryAddSingleton(item.HandlerType));
+                    }
+
                     _availableOperations.GetOrAdd(GetOperationKey(interfaceType.Name, descriptor.OperationName), descriptor);
                  
                     OnOperationRegistered?.Invoke(descriptor);
                 }
-
-                //var subscriptions = interfaceType
-                //    .GetProperties()
-                //    .Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription)));
-
-                //foreach (var propertyInfo in subscriptions)
-                //{
-                //    if (!serverOptions.WebSocketSubscriptionIsAllowed)
-                //        continue;
-
-                //    var pipelineBuilder = new PipelineBuilder();
-                //    var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);
-
-                //    var controllerProperty = controllerType.GetProperty(propertyInfo.Name)!;
-
-                //    options?.Invoke(middlewareOptions);
-
-                //    var descriptor = new OperationBlueprint(
-                //        propertyInfo.Name,
-                //        interfaceType,
-                //        controllerType,
-                //        propertyInfo,
-                //        controllerProperty,
-                //        OperationKind.Subscription,
-                //        pipelineBuilder,
-                //        serverOptions
-                //    );
-
-                //     _availableOperations.GetOrAdd(GetOperationKey(interfaceType.Name, descriptor.OperationName), descriptor);
-                 
-                //    OnOperationRegistered?.Invoke(descriptor);
-                //}
 
                 RegisteredControllers.TryAdd(controllerType, true);
             }
@@ -289,7 +239,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             endpointRegisterer?.Invoke(tempCache, app);         
         }
 
-        public bool GetOperationBlueprint(IOperationEndpoint request, HubconTransportAttribute transportAttribute, out IOperationBlueprint? value)
+        public bool TryGetOperationBlueprint(IOperationEndpoint request, HubconTransportAttribute transportAttribute, out IOperationBlueprint? value)
         {
             if (request == null)
             {

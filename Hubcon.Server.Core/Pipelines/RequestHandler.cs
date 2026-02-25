@@ -35,7 +35,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IHubconResponse> HandleWithoutResultAsync(IOperationRequest request, HubconTransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.CallMethod))
+            if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.CallMethod))
             {
                 return HubconResponse.NotFound();
             }
@@ -49,7 +49,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IHubconResponse> HandleSynchronousResult(IOperationRequest request, HubconTransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint)
+            if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint)
                 && blueprint?.Kind == OperationKind.InvokeMethod))
             {
                 return HubconResponse.NotFound();
@@ -65,7 +65,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IHubconResponse> HandleSynchronous(IOperationRequest request, HubconTransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.CallMethod))
+            if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.CallMethod))
                 return HubconResponse.NotFound();
 
             IOperationContext context = BuildContext(request, blueprint, wrappedRequest, cancellationToken);
@@ -77,7 +77,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IHubconResponse> GetStream(IOperationRequest request, HubconTransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Stream))
+            if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Stream))
                 return HubconResponse.NotFound();
 
             IOperationContext context = BuildContext(request, blueprint, wrappedRequest, cancellationToken);
@@ -94,7 +94,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IHubconResponse> GetSubscription(IOperationRequest request, HubconTransportAttribute transportAttribute, CancellationToken cancellationToken = default)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Subscription))
+            if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Subscription))
                 return HubconResponse.NotFound();
 
             IOperationContext context = BuildContext(request, blueprint, null, cancellationToken);
@@ -111,7 +111,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IHubconResponse> HandleWithResultAsync(IOperationRequest request, HubconTransportAttribute transportAttribute, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.InvokeMethod))
+            if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.InvokeMethod))
                 return HubconResponse.NotFound();
 
             var context = BuildContext(request, blueprint, wrappedRequest, cancellationToken);
@@ -123,7 +123,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         public async Task<IHubconResponse> HandleIngest(IOperationRequest request, HubconTransportAttribute transportAttribute, Dictionary<Guid, object> sources, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
-            if (!(_operationRegistry.GetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Ingest))
+            if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Ingest))
                 return HubconResponse.NotFound();
 
             var dict = request.Arguments.ToDictionary();
@@ -171,19 +171,6 @@ namespace Hubcon.Server.Core.Pipelines
 
         private IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
-            var context = _serviceProvider.GetRequiredService<IHttpContextAccessor>()?.HttpContext;
-            (ClaimsPrincipal? user, DateTime? expiration)? user = null;
-            if (blueprint.RequiresAuthorization)
-            {
-                try
-                {
-                    user = internalServerOptions.TokenHandler?.Invoke(JwtHelper.ExtractTokenFromHeader(context)!, context!.RequestServices);
-                }
-                finally
-                {
-                }
-            }
-
             return new OperationContext()
             {
                 OperationName = request.OperationName,
@@ -191,10 +178,9 @@ namespace Hubcon.Server.Core.Pipelines
                 Blueprint = blueprint,
                 HttpContext = _serviceProvider.GetRequiredService<IHttpContextAccessor>()?.HttpContext,
                 Request = request,
-                User = user.HasValue ? user.Value.user : null,
                 WrappedRequest = wrappedRequest,
                 RequestAborted = cancellationToken,
-            };
+            }; 
         }
     }
 }

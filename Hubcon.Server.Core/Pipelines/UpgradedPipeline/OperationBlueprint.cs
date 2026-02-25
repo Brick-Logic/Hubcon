@@ -1,6 +1,8 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.CustomAttributes;
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Extensions;
 using Hubcon.Shared.Core.Extensions;
+using Hubcon.Shared.Core.Lazy;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,7 +33,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public bool RequiresAuthorization { get; }
         public IEnumerable<AuthorizeAttribute> AuthorizationAttributes { get; }
         public HashSet<string> PrecomputedRoles { get; private set; }
-        public string?[] PrecomputedPolicies { get; private set; }
+        public HashSet<string> PrecomputedPolicies { get; private set; }
         public IList<Attribute> Attributes { get; }
         public ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         public ConcurrentDictionary<Type, Attribute> TransportAttributes { get; }
@@ -48,13 +50,14 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public bool HasSubscriptions { get; }
         public ObjectFactory ControllerFactory { get; }
         public bool ReturnsHubconResponse { get; }
+        public CompiledSecurityPolicy SecurityPolicy { get; }
 
         public OperationBlueprint(
             string operationName,
             Type contractType,
             Type controllerType,
             MemberInfo intefaceMemberInfo,
-            MemberInfo? controllerMemberInfo,
+            MemberInfo controllerMemberInfo,
             OperationKind kind,
             IPipelineBuilder pipelineBuilder,
             IInternalServerOptions options,
@@ -181,7 +184,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             PrecomputedPolicies = AuthorizationAttributes
                 .Where(a => !string.IsNullOrWhiteSpace(a.Policy))
                 .Select(a => a.Policy)
-                .ToArray();
+                .ToHashSet()!;
 
             ConfigurationAttributes = new();
 
@@ -230,6 +233,17 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             PipelineBuilder = pipelineBuilder;
             InvokeDelegate = invokeDelegate;
+
+            var handlerTypes = controllerType.GetCustomAttributes()
+                .Concat(controllerMemberInfo!.GetCustomAttributes())
+                .OfType<IUseAuthAttribute>();
+
+            SecurityPolicy = new CompiledSecurityPolicy(
+                handlerTypes.ToList(), 
+                PrecomputedRoles.ToArray(), 
+                PrecomputedPolicies.ToArray(), 
+                !RequiresAuthorization
+            );
         }
     }
 }

@@ -1,8 +1,4 @@
 ﻿using Hubcon;
-using Hubcon.Server.Abstractions.Delegates;
-using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
 using Microsoft.Extensions.Logging;
 
 namespace ExampleMicroservices.Shared.Middlewares
@@ -12,7 +8,7 @@ namespace ExampleMicroservices.Shared.Middlewares
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
             try
-            {
+            {     
                 await next();
             }
             catch (Exception ex)
