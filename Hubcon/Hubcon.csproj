@@ -11,9 +11,9 @@
 	  <PackageOutputPath>../nupkgs</PackageOutputPath>
 	  <IsPackable>true</IsPackable>
 	  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-	  <Description>A .NET RPC framework to build APIs using shared interfaces as contracts.</Description>
+	  <Description>A high-performance, zero-alloc RPC framework for .NET where interfaces define contracts, combining transport-agnostic architecture, a production-grade middleware pipeline, and developer-first design.</Description>
 	  <PackageTags>http;websockets;rpc</PackageTags>
-	  <Version>1.0.0-rc6</Version>
+	  <Version>1.0.0-rc10</Version>
 	  <Authors>$(Authors)</Authors>
 	  <Company>$(Company)</Company>
 	  <RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
@@ -70,7 +70,7 @@
 		<PackageReference Include="Hubcon.Analyzers" Version="[1.0.162, 2.0.0)" />
 		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="[1.0.162, 2.0.0)" />
 		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="[1.0.162, 2.0.0)" />
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[1.0.168, 2.0.0)" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[1.0.175, 2.0.0)" />
 	</ItemGroup>
 
 	<ItemGroup>

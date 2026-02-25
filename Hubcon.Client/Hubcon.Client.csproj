@@ -51,7 +51,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[1.0.168, 2.0.0)" />					  
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[1.0.175, 2.0.0)" />					  
 	</ItemGroup>
 
 	<ItemGroup>

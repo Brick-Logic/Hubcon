@@ -1,34 +1,31 @@
 ﻿# Hubcon
 
-A high-performance, contract-based RPC framework for .NET that provides seamless communication over HTTP/WebSocket with
-interfaces, GraphQL-style subscriptions and real-time bidirectional data streaming capabilities.
+A high-performance, zero-alloc RPC framework for .NET where interfaces define contracts, 
+combining transport-agnostic architecture, a production-grade middleware pipeline, and developer-first design.
 
 Hubcon enables you, as a developer, to very easily implement strongly-typed and fast communications between clients and
 servers through HTTP and/or Websockets by just injecting your own interfaces anywhere you need.
 
 ## 🚀 Key Features
 
-- **Contract-Based Architecture**: Share interfaces between client and server - implement on server as controllers, use
+- **Contract-Based Architecture**: Share interfaces between client and server - implement on server as Controllers/ContractHandlers, use
   directly on client
-- **Dual Transport Support**: HTTP and WebSocket with automatic fallback and reconnection
-- **GraphQL-Style Subscriptions**: Bidirectional subscriptions (client-to-server and server-to-client)
-- **Real-Time Data Ingestion**: Multiple simultaneous data streams using multiple `IAsyncEnumerable<T>` on a single
-  call.
-- **Advanced Subscription Model**: Dedicated `ISubscription<T>` interface for contract properties
-- **Automatic Proxy Generation**: Source generators create client proxies automatically
+- **Transport Agnostic**: Easy multi-transport support. Integrated HTTP and WebSockets, add your own transport.
+- **Non-Hubcon REST HTTP Support**: Integrate to any REST-compliant API using only interfaces in a Refit-like style.
+- **Bidirectional Data Streaming**: Send multiple data streams to your server on a single
+  call, or stream contents from your server by using `IAsyncEnumerable<T>`.
 - **Dependency Injection**: Full DI support for contracts on both client and server
-- **Middleware Pipeline**: Compatible with ASP.NET Core middleware + custom middleware with DI, featuring an extended
-  operation context.
+- **Custom Middlewares**: Lightweight custom ASP.NET-like middlewares with an extended operation context featuring all the pre-processed data about your operation, with full DI support.
 - **Plug & Play**: Minimalistic configuration setup, extensive customization options.
 - **High Performance**: Optimized for high throughput, high concurrency stability and low latency.
-- **Rate Limiting**: Built-in throttling to prevent overload and ensure fair resource usage.
+- **Integrated Rate Limiting**: Built-in throttling to prevent overload and ensure fair resource usage, in both client and server.
 - **Optional remote cancellation**: Client-side tokens can optionally cancel local and remote operations using simple
   cancellation tokens.
 - **Memory Optimized**: Made to sustain a very high throughput with minimal memory footprint. Leak-free, minimal alloc
-  architecture.
-- **OpenAPI Compatible**: Partial compatibility with OpenAPI specifications and partial automatic documentation.
-- **Working examples**: This project includes a classic Client-Server example used as test-bench and benchmark, a
-  BlazorWasm-Server example and a triple microservice loop example.
+  architecture, confirmed by over 5 billion requests tests.
+- **OpenAPI Compatible**: Compatibility with OpenAPI through Minimal API.
+- **Working examples**: This project includes a classic Client + Server example used as test-bench and benchmark, a
+  BlazorWasm + Server example and a triple microservice loop example.
 
 ## Features implementation state
 
@@ -70,7 +67,6 @@ servers through HTTP and/or Websockets by just injecting your own interfaces any
 | Manual unsubscription           | Client can unsubscribe explicitly via `ISubscription<T>`    | ✅ Complete |
 | Cleanup on disconnect           | All server-side handlers cleaned automatically              | ✅ Complete |
 | Server-only cancellation token  | Server operations receive `HubconContext.CancellationToken` | ✅ Complete |
-| Channel<T> bridge support       | Support for bidirectional data streaming using Channel<T>   | 🔜 Coming  |
 
 ### 🧩 Shared – Cross Transport Features
 

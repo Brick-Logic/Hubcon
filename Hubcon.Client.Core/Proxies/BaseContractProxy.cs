@@ -82,7 +82,7 @@ namespace Hubcon.Client.Core.Proxies
 
             foreach (var method in methods)
             {
-                var signature = method.GetMethodSignature(false);
+                var signature = method.GetMethodSignature();
                 IClientOperationContext context = new ClientOperationContext(method, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType, transports);
                 tempOperations.Add(signature, context);
             }

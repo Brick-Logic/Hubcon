@@ -199,7 +199,7 @@ namespace Hubcon.Server.Core.Helpers
 
             if (returnType == typeof(void) || returnType == typeof(Task) || returnType == typeof(ValueTask))
             {
-                builder.Produces(200, typeof(IHubconResponse));
+                builder.Produces(200, typeof(IResponse));
             }
             else if(returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
             {
@@ -207,7 +207,7 @@ namespace Hubcon.Server.Core.Helpers
                     .Produces(200, typeof(List<>).MakeGenericType(returnType.GenericTypeArguments[0]), "text/event-stream")
                     .WithOpenApi(operation => SetDefaultExample(operation, Defaults.DefaultSuccessStatusCode.ToString(), returnType));
             }
-            else if (returnType == typeof(IResult) || returnType.IsAssignableTo(typeof(IResult)))
+            else if (returnType == typeof(IResponse) || returnType.IsAssignableTo(typeof(IResponse)))
             {
                 builder.Produces(Defaults.DefaultSuccessStatusCode);
             }
@@ -346,9 +346,14 @@ namespace Hubcon.Server.Core.Helpers
             if (returnType.IsGenericType)
             {
                 var genericType = returnType.GetGenericTypeDefinition();
-                if (genericType == typeof(Task<>) || genericType == typeof(ValueTask<>))
+                if (genericType == typeof(Task<>) || genericType == typeof(ValueTask<>) || genericType == typeof(HubconResponse<>))
                 {
                     returnType = returnType.GetGenericArguments()[0];
+
+                    if(returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(HubconResponse<>))
+                    {
+                        returnType = returnType.GetGenericArguments()[0];
+                    }
                 }
             }
 

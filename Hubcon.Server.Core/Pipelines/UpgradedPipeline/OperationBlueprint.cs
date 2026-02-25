@@ -141,10 +141,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
                 Attributes = ControllerType.GetMethod(propertyInfo.Name)?.GetCustomAttributes().ToList() ?? new List<Attribute>();
                 ContractType.GetMethod(propertyInfo.Name)?.GetCustomAttributes().ToList().ForEach(x => Attributes.Add(x));
-
-                endpointAttributes = Attributes
-                    .Where(x => x is SubscriptionAuthorizeAttribute || x is AllowAnonymousAttribute)
-                    .ToList();
             }
             else
             {

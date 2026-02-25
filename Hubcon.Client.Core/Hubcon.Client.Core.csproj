@@ -29,6 +29,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Managers\**" />
+	  <EmbeddedResource Remove="Managers\**" />
+	  <None Remove="Managers\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <PackageReference Include="System.Reactive" Version="[5.0.0, 7.0.0)" />
 	  <PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)" />
 	</ItemGroup>
@@ -48,8 +54,5 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
 	  <ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Managers\" />
 	</ItemGroup>
 </Project>

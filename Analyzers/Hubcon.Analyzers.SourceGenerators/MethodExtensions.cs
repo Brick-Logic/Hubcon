@@ -55,9 +55,8 @@ namespace Hubcon.Shared.Abstractions.Standard.Extensions
 
         public static string GetMethodSignature(this MethodInfo method, bool useHashed = true)
         {
-            return _signatureCache.GetOrAdd((method, useHashed), static m =>
+            return _signatureCache.GetOrAdd((method, useHashed), m =>
             {
-                var (method, useHashed) = m;
                 var parametersInfo = method.GetParameters();
 
                 string parameters = string.Empty;
@@ -80,7 +79,7 @@ namespace Hubcon.Shared.Abstractions.Standard.Extensions
                             else
                                 builder.Append("ref ");
 
-                            builder.Append(GetRuntimeTypeString(param.ParameterType.GetElementType()!));
+                            builder.Append(GetRuntimeTypeString(param.ParameterType.GetElementType()));
                         }
                         else
                         {
@@ -100,13 +99,13 @@ namespace Hubcon.Shared.Abstractions.Standard.Extensions
         private static string GetRuntimeTypeString(Type type)
         {
             if (type.IsByRef)
-                return GetRuntimeTypeString(type.GetElementType()!);
+                return GetRuntimeTypeString(type.GetElementType());
 
             if (type.IsArray)
             {
                 var rank = type.GetArrayRank();
                 var commas = new string(',', rank - 1);
-                return $"{GetRuntimeTypeString(type.GetElementType()!)}[{commas}]";
+                return $"{GetRuntimeTypeString(type.GetElementType())}[{commas}]";
             }
 
             if (type.IsGenericType)
@@ -114,14 +113,14 @@ namespace Hubcon.Shared.Abstractions.Standard.Extensions
                 var genericDef = type.GetGenericTypeDefinition();
                 var genericArgs = type.GetGenericArguments();
 
-                var name = genericDef.FullName!;
+                var name = genericDef.FullName;
                 name = name.Substring(0, name.IndexOf('`'));
                 name = name.Replace('+', '.'); // Nested types fix
 
                 return $"{name}<{string.Join(", ", genericArgs.Select(GetRuntimeTypeString))}>";
             }
 
-            return type.FullName!.Replace('+', '.');
+            return type.FullName.Replace('+', '.');
         }
 
         public static string GetContractName(this MethodInfo method)

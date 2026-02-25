@@ -1,4 +1,5 @@
 ﻿using Hubcon;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System.Threading.Tasks;
 
 namespace HubconTestDomain.Interfaces

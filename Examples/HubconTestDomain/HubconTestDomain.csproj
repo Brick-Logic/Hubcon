@@ -1,13 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<LangVersion>9.0</LangVersion>
 		<Nullable>enable</Nullable>
+		<IsHubconServer>false</IsHubconServer>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon" Version="1.0.0-rc5" />
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.168" />
+		<PackageReference Include="Hubcon" Version="1.0.0-rc10" />
 	</ItemGroup>
 </Project>
