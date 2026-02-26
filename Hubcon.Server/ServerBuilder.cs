@@ -1,5 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core;
+using Hubcon.Server.Core.Cache;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Server.Core.Pipelines;
@@ -12,7 +13,9 @@ using Hubcon.Shared.Core.Injection;
 using Hubcon.Shared.Core.Serialization;
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Hubcon.Server
 {
@@ -72,10 +75,11 @@ namespace Hubcon.Server
             Services.AddSingleton<IDynamicConverter, DynamicConverter>();
             Services.AddSingleton(OperationRegistry);
             Services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
-            Services.AddScoped<ISettingsManager, SettingsManager>();
-            Services.AddScoped<IOperationConfigRegistry, OperationConfigRegistry>();
-            Services.AddScoped<IScopedRateLimiterManager, ScopedRateLimiterManager>();
+            Services.AddSingleton<IOperationConfigRegistry, OperationConfigRegistry>();
+            Services.AddSingleton<IGlobalRateLimiterManager, GlobalRateLimiterManager>();
             Services.AddScoped<IRequestHandler, RequestHandler>();
+            Services.TryAddSingleton<IMemoryCache, MemoryCache>();
+            Services.TryAddSingleton<IOperationCache, DefaultMemoryCache>();
 
             foreach (var services in additionalServices)
                 services?.Invoke(Services);

@@ -14,20 +14,17 @@ namespace HubconTest.ContractHandlers
 {
     //[UseHttpEndpointFilter(typeof(ClassLoggingEndpointFilter))]
     //[UseMiddleware(typeof(ClassLoggingMiddleware))]
-    //[UseJwt]
+    [UseJwt]
     [UseApiKey("API-KEY", overrideAuthorization: true)]
     [Authorize(Roles = "Manager")]
     public class UserController(ILogger<UserController> logger) : IUserContract
     {
-        [UseHttpEndpointFilter(typeof(LoggingEndpointFilter))]
         [UseMiddleware(typeof(LocalLoggingMiddleware))]
-        [UseHttpRateLimiter("endpoint")]
         public async Task CreateUser(CancellationToken cancellationToken)
         {
 
         }
 
-        [UseHttpRateLimiter("endpoint")]
         //[Authorize(Roles = "Admin")]
         public Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken)
         {

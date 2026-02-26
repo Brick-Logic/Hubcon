@@ -300,6 +300,30 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetGlobalRateLimiter(int requestsPerSecond);
 
+        /// <summary>
+        /// Configures the server to use transport authentication with the specified transport attribute and
+        /// authentication handler types.
+        /// </summary>
+        /// <remarks>Use this method to integrate custom transport authentication logic by specifying both
+        /// the transport attribute and the corresponding authentication handler. This enables flexible authentication
+        /// strategies for different transport layers.</remarks>
+        /// <typeparam name="TTransportAttribute">The transport attribute type that derives from <see cref="HubconTransportAttribute"/> and defines transport-specific
+        /// authentication requirements.</typeparam>
+        /// <typeparam name="TAuthHandler">The authentication handler type that implements <see cref="IUseAuthAttribute"/> and processes authentication for the
+        /// specified transport.</typeparam>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
+        ICoreServerOptions AddTransportAuth<TTransportAttribute, TAuthHandler>() 
+            where TTransportAttribute : HubconTransportAttribute, new()
+            where TAuthHandler : class, IAuthHandler;
+
+        /// <summary>
+        /// Allows anonymous WebSocket clients to connect to the server.
+        /// </summary>
+        /// <remarks>This method is useful for scenarios where unauthenticated clients need to establish
+        /// WebSocket connections. Ensure that appropriate security measures are in place when allowing anonymous
+        /// access.</remarks>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
+        ICoreServerOptions AllowAnonymousWebSocketClients();
     }
 
     public interface IInternalServerOptions
@@ -412,57 +436,57 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// <summary>
         /// Allows configuring extra some global settings for HTTP endpoints.
         /// </summary>
-        public Action<RouteHandlerBuilder> RouteHandlerBuilderConfig { get; }
+        public Action<RouteHandlerBuilder>? RouteHandlerBuilderConfig { get; }
 
         /// <summary>
         /// Allows configuring the rate limiter options for the server websocket.
         /// </summary>
-        Func<TokenBucketRateLimiterOptions> WebsocketReaderRateLimiter { get; }
+        Func<TokenBucketRateLimiterOptions>? WebsocketReaderRateLimiter { get; }
 
         /// <summary>
         /// Allows configuring the ping rate limiter options for the server websocket.
         /// </summary>
-        Func<TokenBucketRateLimiterOptions> WebsocketPingRateLimiter { get; }
+        Func<TokenBucketRateLimiterOptions>? WebsocketPingRateLimiter { get; }
 
         /// <summary>
         /// Rate limiter options applied to round-trip (Task<T>) WebSocket methods.
         /// </summary>
-        Func<TokenBucketRateLimiterOptions> HttpRoundTripMethodRateLimiter { get; }
+        Func<TokenBucketRateLimiterOptions>? HttpRoundTripMethodRateLimiter { get; }
 
         /// <summary>
         /// Rate limiter options applied to fire-and-forget WebSocket methods (void or taks methods).
         /// </summary>
-        Func<TokenBucketRateLimiterOptions> HttpFireAndForgetMethodLimiter { get; }
+        Func<TokenBucketRateLimiterOptions>? HttpFireAndForgetMethodLimiter { get; }
 
         /// <summary>
         /// Rate limiter options applied to round-trip (Task<T>) WebSocket methods.
         /// </summary>
-        Func<TokenBucketRateLimiterOptions> WebsocketRoundTripMethodRateLimiter { get; }
+        Func<TokenBucketRateLimiterOptions>? WebsocketRoundTripMethodRateLimiter { get; }
 
         /// <summary>
         /// Rate limiter options applied to fire-and-forget WebSocket methods (void or taks methods).
         /// </summary>
-        Func<TokenBucketRateLimiterOptions> WebsocketFireAndForgetMethodLimiter { get; }
+        Func<TokenBucketRateLimiterOptions>? WebsocketFireAndForgetMethodLimiter { get; }
 
         /// <summary>
         /// Rate limiter options for ingest messages in the websocket channel.
         /// </summary>
-        Func<TokenBucketRateLimiterOptions> WebsocketIngestRateLimiter { get; }
+        Func<TokenBucketRateLimiterOptions>? WebsocketIngestRateLimiter { get; }
 
         /// <summary>
         /// Rate limiter options for subscription messages in the websocket channel.
         /// </summary>
-        Func<TokenBucketRateLimiterOptions> WebsocketSubscriptionRateLimiter { get; }
+        Func<TokenBucketRateLimiterOptions>? WebsocketSubscriptionRateLimiter { get; }
 
         /// <summary>
         /// Default rate limiter options for streaming messages in the websocket channel.
         /// </summary>
-        Func<TokenBucketRateLimiterOptions> WebsocketStreamingRateLimiter { get; }
+        Func<TokenBucketRateLimiterOptions>? WebsocketStreamingRateLimiter { get; }
 
         /// <summary>
         /// Rate limiter options for websocket token updates.
         /// </summary>
-        Func<TokenBucketRateLimiterOptions> WebsocketTokenUpdateRateLimiter { get; }
+        Func<TokenBucketRateLimiterOptions>? WebsocketTokenUpdateRateLimiter { get; }
 
         /// <summary>
         /// Defines if remote operation cancellation through cancellation token is allowed.
@@ -493,5 +517,14 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Global rate limiter options.
         /// </summary>
         TokenBucketRateLimiterOptions GlobalRateLimiterOptions { get; }
+
+        /// <summary>
+        /// Gets a read-only dictionary that maps transport attributes to their corresponding authentication handler
+        /// types.
+        /// </summary>
+        /// <remarks>Use this property to retrieve the authentication handler type associated with a
+        /// specific transport attribute. This enables dynamic selection of authentication logic based on the transport
+        /// method in use. The returned dictionary is read-only and cannot be modified.</remarks>
+        IReadOnlyDictionary<HubconTransportAttribute, Type> AuthHandlerTypes { get; }
     }
 }

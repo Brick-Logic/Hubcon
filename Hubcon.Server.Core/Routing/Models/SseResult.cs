@@ -31,7 +31,7 @@ namespace Hubcon.Server.Core.Routing.Models
 
         public async Task ExecuteAsync(HttpContext httpContext)
         {
-            IScopedRateLimiterManager rateLimiter = null!;
+            IGlobalRateLimiterManager rateLimiter = null!;
             var id = Guid.NewGuid();
             PipeWriter writer = null!;
             try
@@ -39,22 +39,20 @@ namespace Hubcon.Server.Core.Routing.Models
                 var response = httpContext.Response;
                 var services = httpContext.RequestServices;
 
-                // 1. Configuración de Headers obligatorios
                 response.ContentType = "text/event-stream";
                 response.Headers.CacheControl = "no-cache";
                 response.Headers.Connection = "keep-alive";
                 response.Headers["X-Accel-Buffering"] = "no";
 
-                rateLimiter = services.GetRequiredService<IScopedRateLimiterManager>();
+                rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
+                var remoteAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                await rateLimiter.Link(remoteAddress, id, HubconTransportAttribute.GetDefault<HttpTransport>(), request);
 
-                await rateLimiter.Link(id, HubconTransportAttribute.GetDefault<HttpTransport>(), request);
-
-                // 2. Usamos el BodyWriter para máxima performance (Zero-copy)
                 writer = response.BodyWriter;
                 var converter = httpContext.RequestServices.GetRequiredService<IDynamicConverter>();
                 await foreach (var item in _stream.WithCancellation(httpContext.RequestAborted))
                 {
-                    await rateLimiter.TryAcquireAsync(MessageType.stream_data, id);
+                    await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.stream_data, id);
 
                     if (item is null) continue;
 
@@ -78,11 +76,6 @@ namespace Hubcon.Server.Core.Routing.Models
             }
             catch
             {
-            }
-            finally
-            {
-                if (rateLimiter != null)
-                    await rateLimiter.Unlink(id);
             }
         }
     }

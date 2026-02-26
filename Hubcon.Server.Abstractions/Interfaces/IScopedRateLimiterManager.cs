@@ -5,10 +5,10 @@ namespace Hubcon
 {
     public interface IScopedRateLimiterManager
     {
-        ValueTask DisposeAsync();
-        ValueTask Link(Guid id, HubconTransportAttribute transportAttribute, IOperationRequest request);
-        ValueTask<bool> TryAcquireAsync(MessageType type, HubconTransportAttribute transportAttribute, IOperationRequest? operation = null);
-        ValueTask<bool> TryAcquireAsync(MessageType type, Guid messageId);
-        ValueTask Unlink(Guid id);
+        //ValueTask DisposeAsync();
+        //ValueTask Link(Guid id, HubconTransportAttribute transportAttribute, IOperationRequest request);
+        //ValueTask<bool> TryAcquireAsync(MessageType type, HubconTransportAttribute transportAttribute, IOperationRequest? operation = null);
+        //ValueTask<bool> TryAcquireAsync(MessageType type, Guid messageId);
+        //ValueTask Unlink(Guid id);
     }
 }

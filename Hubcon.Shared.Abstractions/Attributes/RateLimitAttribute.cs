@@ -12,7 +12,7 @@ namespace Hubcon
     /// Endpoint rate limiters will override the contract's one. Clients will automatically use this to limit itself.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Interface)]
-    public class RateLimitAttribute : Attribute
+    public class RateLimitAttribute : Attribute, IConfigurationAttribute
     {
         /// <summary>
         /// Gets the token bucket rate limiter instance configured for this attribute.
@@ -47,10 +47,10 @@ namespace Hubcon
         /// <param name="rateTokenLimit">The maximum number of tokens in the bucket; defaults to individual request limit if set to 0.</param>
         /// <param name="queueLimit">The maximum number of requests that can be queued; defaults to individual request limit if set to 0.</param>
         public RateLimitAttribute(
-            int requests = 1000,
+            int requests = 5,
             int millisecondsToReplenish = 1000,
             int rateTokenLimit = 0,
-            int queueLimit = 0)
+            int queueLimit = 10)
         {
             static int GetOrDefault(int limit, int defaultLimit)
             {
@@ -64,11 +64,11 @@ namespace Hubcon
             // Initializes the token bucket rate limiter with configured parameters.
             RateBucket = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
             {
-                TokenLimit = GetOrDefault(rateTokenLimit, requests),
-                TokensPerPeriod = requests,
+                TokenLimit = GetOrDefault(rateTokenLimit == 0 ? requests : rateTokenLimit, 5),
+                TokensPerPeriod = GetOrDefault(requests, 5),
                 ReplenishmentPeriod = millisecondsToReplenish == 0 ? TimeSpan.FromSeconds(1) : TimeSpan.FromMilliseconds(millisecondsToReplenish),
                 AutoReplenishment = true,
-                QueueLimit = GetOrDefault(queueLimit, requests),
+                QueueLimit = GetOrDefault(queueLimit, 10),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst
             });
 

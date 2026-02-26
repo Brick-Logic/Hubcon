@@ -1,11 +1,9 @@
 using Hubcon;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-using System.Threading.RateLimiting;
 
 namespace HubconTest
 {
@@ -99,50 +97,18 @@ namespace HubconTest
             };
             builder.Services.AddSingleton(tokenValidationParameters);
             builder.Services.AddOpenApi();
+
             builder.AddHubconServer(serverOptions =>
             {
                 serverOptions.AddAuthentication();
                 serverOptions.AddTelemetry();
 
-                serverOptions.AddHttpRateLimiter(options =>
-                {
-                    options.AddPolicy("contract", httpContext =>
-                    {
-                        return RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                            factory: x => new FixedWindowRateLimiterOptions
-                            {
-                                PermitLimit = 5,
-                                Window = TimeSpan.FromSeconds(1),
-                                AutoReplenishment = true,
-                                QueueLimit = 20,
-                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
-                            });
-                    });
-
-                    options.AddPolicy("endpoint", httpContext =>
-                    {
-                        return RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                            factory: x => new FixedWindowRateLimiterOptions
-                            {
-                                PermitLimit = 5,
-                                Window = TimeSpan.FromSeconds(1),
-                                AutoReplenishment = true,
-                                QueueLimit = 20,
-                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
-                            });
-                    });
-                });
-
-
                 serverOptions.ConfigureCore(config =>
                 {
                     config
+                        .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
                         .SetMaxConcurrentOperations(5000000)
-                        .SetGlobalRateLimiter(100)
                         .EnableWebsocketsLogging()
-                        .DisableAllRateLimiters()
                         .EnableRequestDetailedErrors();
                 });
 
@@ -158,8 +124,6 @@ namespace HubconTest
                 app.MapOpenApi();
                 app.MapScalarApiReference();
             }
-
-            app.UseRateLimiter();
 
             app.UseAuthentication(); // debe ir antes de UseAuthorization
             app.UseAuthorization();

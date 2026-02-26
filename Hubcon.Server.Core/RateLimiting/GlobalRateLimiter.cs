@@ -1,29 +1,20 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
-using Hubcon.Server.Core.Routing.Registries;
+using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Websockets;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Microsoft.Extensions.Caching.Memory;
+using System.Reflection;
 using System.Threading.RateLimiting;
 
 namespace Hubcon.Server.Core.RateLimiting
 {
     public class GlobalRateLimiterManager(
-        IMemoryCache cache,
+        IOperationCache cache,
         IInternalServerOptions options,
-        ISettingsManager settingsManager,
         IOperationConfigRegistry operationConfigRegistry,
         IOperationRegistry operationRegistry) : IGlobalRateLimiterManager
     {
-        // Las opciones de expiración: si un cliente no envía mensajes por 10 min, liberamos sus limiters
-        private readonly MemoryCacheEntryOptions _cacheOptions = new MemoryCacheEntryOptions()
-            .SetSlidingExpiration(TimeSpan.FromMinutes(10))
-            .RegisterPostEvictionCallback((key, value, reason, state) =>
-            {
-                if (value is IDisposable disposable) disposable.Dispose();
-            });
-
         private readonly RateLimiter globalRateLimiter = new TokenBucketRateLimiter(options.GlobalRateLimiterOptions);
+        private readonly SettingsManager settingsManager = new SettingsManager(operationRegistry, operationConfigRegistry);
 
         public async ValueTask<bool> TryAcquireAsync(string anchorKey, MessageType type, HubconTransportAttribute transport, IOperationRequest? operation = null, CancellationToken cancellationToken = default)
         {
@@ -31,28 +22,35 @@ namespace Hubcon.Server.Core.RateLimiting
 
             try
             {
-                // 1. Capa Global (Configurada en el Singleton)
-                // Podrías tener un limiter estático aquí o sacarlo de las opciones
-                await globalRateLimiter.AcquireAsync(1, cancellationToken);
+                if(!(await globalRateLimiter.AcquireAsync(1, cancellationToken)).IsAcquired)
+                {
+                    return false;
+                }
 
-                // 2. Capa por Tipo de Mensaje (Websocket, Stream, Ingest, etc.)
                 var typeLimiter = GetOrCreateLimiter(anchorKey, type);
-                if(typeLimiter != null) await typeLimiter.AcquireAsync(1, cancellationToken);
+                if(typeLimiter != null && !(await typeLimiter.AcquireAsync(1, cancellationToken)).IsAcquired)
+                {
+                    return false;
+                }
 
                 if (operation != null)
                 {
                     var contractLimiter = GetOrCreateContractLimiter(anchorKey, operation, transport);
-                    if (contractLimiter != null)
-                        await contractLimiter.AcquireAsync(1, cancellationToken);
+                    if (contractLimiter != null && !(await contractLimiter.AcquireAsync(1, cancellationToken)).IsAcquired)
+                    {
+                        return false;
+                    }
 
                     var opLimiter = GetOrCreateOperationLimiter(anchorKey, operation, transport);
-                    if (opLimiter != null)
-                        await opLimiter.AcquireAsync(1, cancellationToken);
+                    if (opLimiter != null && !(await opLimiter.AcquireAsync(1, cancellationToken)).IsAcquired)
+                    {
+                        return false;
+                    }
                 }
                 
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return false;
             }
@@ -65,11 +63,11 @@ namespace Hubcon.Server.Core.RateLimiting
             try
             {
                 // 1. Capa Global
-                await globalRateLimiter.AcquireAsync(1, cancellationToken);
+                await globalRateLimiter.AcquireAsync(0, cancellationToken);
 
                 // 2. Capa por Tipo de Mensaje
                 var typeLimiter = GetOrCreateLimiter(anchorKey, type);
-                if (typeLimiter != null) await typeLimiter.AcquireAsync(1, cancellationToken);
+                if (typeLimiter != null) await typeLimiter.AcquireAsync(0, cancellationToken);
 
                 // 3. Capa vinculada por Guid (Link/Unlink)
                 if (resourceId != Guid.Empty)
@@ -84,7 +82,7 @@ namespace Hubcon.Server.Core.RateLimiting
 
                         if (settings?.RateBucket != null)
                         {
-                            await settings.RateBucket.AcquireAsync(1, cancellationToken);
+                            await settings.RateBucket.AcquireAsync(0, cancellationToken);
                         }
                     }
                 }
@@ -101,9 +99,8 @@ namespace Hubcon.Server.Core.RateLimiting
         {
             string key = $"limiter_{anchorKey}_{GetGroupKey(type)}";
 
-            return cache.GetOrCreate(key, entry =>
+            return cache.GetOrCreate(key, () =>
             {
-                entry.SetOptions(_cacheOptions);
                 return CreateLimiterByMessageType(type);
             });
         }
@@ -114,11 +111,10 @@ namespace Hubcon.Server.Core.RateLimiting
             {
                 string key = $"op_{anchorKey}:{blueprint!.SimpleContractName}";
 
-                return cache.GetOrCreate(key, entry =>
+                return cache.GetOrCreate(key, () =>
                 {
-                    entry.SetOptions(_cacheOptions);
-                    var settings = settingsManager.GetSettings(endpoint, transport, () => new RateLimitAttribute());
-                    return settings.RateBucket;
+                    var settings = blueprint.ContractType.GetCustomAttribute<RateLimitAttribute>() ?? blueprint.ControllerType.GetCustomAttribute<RateLimitAttribute>();
+                    return settings?.RateBucket;
                 });
             }
 
@@ -131,11 +127,10 @@ namespace Hubcon.Server.Core.RateLimiting
             {
                 string key = $"op_{anchorKey}:{blueprint!.SimpleContractName}:{blueprint.OperationName}";
 
-                return cache.GetOrCreate(key, entry =>
+                return cache.GetOrCreate(key, () =>
                 {
-                    entry.SetOptions(_cacheOptions);
-                    var settings = settingsManager.GetSettings(endpoint, transport, () => new RateLimitAttribute());
-                    return settings.RateBucket;
+                    var settings = settingsManager.GetSettings<RateLimitAttribute>(endpoint, transport, () => null!);
+                    return settings?.RateBucket;
                 });
             }
 
@@ -168,22 +163,22 @@ namespace Hubcon.Server.Core.RateLimiting
 
                 // Ping limiter (para evitar abuso)
                 MessageType.ping 
-                    => options.WebsocketPingRateLimiter.Invoke(),
+                    => options.WebsocketPingRateLimiter?.Invoke(),
 
                 // Operation messages (round-trip)
                 MessageType.operation_invoke
-                    => options.WebsocketRoundTripMethodRateLimiter.Invoke(),
+                    => options.WebsocketRoundTripMethodRateLimiter?.Invoke(),
 
                 // Operation call (fire and forget)
                 MessageType.operation_call
-                    => options.WebsocketRoundTripMethodRateLimiter.Invoke(),
+                    => options.WebsocketRoundTripMethodRateLimiter?.Invoke(),
 
                 // Subscription group (comparten el mismo limiter)
                 MessageType.subscription_init
                 or MessageType.subscription_data
                 or MessageType.subscription_data_with_ack
                 or MessageType.subscription_complete
-                    => options.WebsocketSubscriptionRateLimiter.Invoke(),
+                    => options.WebsocketSubscriptionRateLimiter?.Invoke(),
 
                 // Stream group (todos comparten)
                 MessageType.stream_init
@@ -191,7 +186,7 @@ namespace Hubcon.Server.Core.RateLimiting
                 or MessageType.stream_data
                 or MessageType.stream_data_ack
                 or MessageType.stream_data_with_ack
-                    => options.WebsocketStreamingRateLimiter.Invoke(),
+                    => options.WebsocketStreamingRateLimiter?.Invoke(),
 
                 // Ingest group (comparten)
                 MessageType.ingest_init
@@ -199,10 +194,10 @@ namespace Hubcon.Server.Core.RateLimiting
                 or MessageType.ingest_data_with_ack
                 or MessageType.ingest_complete
                 or MessageType.ingest_result
-                    => options.WebsocketRoundTripMethodRateLimiter.Invoke(),
+                    => options.WebsocketRoundTripMethodRateLimiter?.Invoke(),
 
                 MessageType.token_update 
-                    => options.WebsocketTokenUpdateRateLimiter.Invoke(),
+                    => options.WebsocketTokenUpdateRateLimiter?.Invoke(),
 
                 _ => null,
             };
@@ -210,7 +205,7 @@ namespace Hubcon.Server.Core.RateLimiting
             return bucketOptions != null ? new TokenBucketRateLimiter(bucketOptions) : null;
         }
 
-        public ValueTask LinkLimiter(string anchorKey, Guid id, HubconTransportAttribute transportAttribute, IOperationRequest request)
+        public ValueTask Link(string anchorKey, Guid id, HubconTransportAttribute transportAttribute, IOperationRequest request)
         {
             // 1. Obtenemos el blueprint como hacías antes
             if (!operationRegistry.TryGetOperationBlueprint(request, transportAttribute, out var blueprint))
@@ -226,18 +221,15 @@ namespace Hubcon.Server.Core.RateLimiting
             // Esto evita que si el cliente desaparece, la entrada quede "viva" para siempre
             string linkKey = $"link_{anchorKey}_{id}";
 
-            cache.Set(linkKey, request, new MemoryCacheEntryOptions()
-                .SetSlidingExpiration(TimeSpan.FromMinutes(30)) // Tiempo de gracia
-                .RegisterPostEvictionCallback((key, value, reason, state) =>
-                {
-                    // Limpieza automática en cascada si expira por inactividad
-                    operationConfigRegistry.Unlink(id);
-                }));
+            cache.Set(linkKey, request, () =>
+            {
+                operationConfigRegistry.Unlink(id);
+            });
 
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask UnlinkLimiter(string anchorKey, Guid operationId)
+        public ValueTask Unlink(string anchorKey, Guid operationId)
         {
             // 1. Desvinculamos del registro de configuración
             operationConfigRegistry.Unlink(operationId);

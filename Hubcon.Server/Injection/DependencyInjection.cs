@@ -71,10 +71,7 @@ namespace Hubcon
                 });
             });
 
-            ServerBuilder.Current.AddHubconServer(builder, null, container =>
-            {
-                container.AddTransient(typeof(ISubscription<>), typeof(ServerSubscriptionHandler<>));
-            });
+            ServerBuilder.Current.AddHubconServer(builder);
 
             ConfigureHubconServer(builder, controllerOptions);
 

@@ -17,10 +17,10 @@ namespace HubconTestClient.Modules
             server.EnableWebsocketAutoReconnect(true);
             server.GlobalLimit(200000000);
             server.EnableLogging();
-
+            server.DisableAllLimiters();
             server.AddHeaderProvider("key", x => "value");
 
-            server.DisableAllLimiters();
+            //server.DisableAllLimiters();
 
             server.Implements<IUserContract>(contractConfigurator =>
             {

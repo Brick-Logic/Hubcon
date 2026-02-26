@@ -7,7 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Server.Core.Security.DefaultHandlers.Jwt
+namespace Hubcon
 {
     public class JwtAuthHandler : IAuthHandler
     {

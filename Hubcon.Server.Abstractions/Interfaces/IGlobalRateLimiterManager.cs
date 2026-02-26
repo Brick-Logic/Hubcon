@@ -9,9 +9,9 @@ namespace Hubcon
 {
     public interface IGlobalRateLimiterManager
     {
-        ValueTask LinkLimiter(string anchorKey, Guid id, HubconTransportAttribute transportAttribute, IOperationRequest request);
+        ValueTask Link(string anchorKey, Guid id, HubconTransportAttribute transportAttribute, IOperationRequest request);
         ValueTask<bool> TryAcquireAsync(string anchorKey, MessageType type, HubconTransportAttribute transport, IOperationRequest? operation = null, CancellationToken cancellationToken = default);
         ValueTask<bool> TryAcquireAsync(string anchorKey, MessageType type, Guid resourceId, CancellationToken cancellationToken = default);
-        ValueTask UnlinkLimiter(string anchorKey, Guid operationId);
+        ValueTask Unlink(string anchorKey, Guid operationId);
     }
 }
