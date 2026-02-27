@@ -1,10 +1,12 @@
 ﻿using ExampleMicroservices.Shared.Middlewares;
 using ExampleMicroservicesDomain;
 using Hubcon;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ExampleMicroservice3.ContractHandlers
 {
     [UseMiddleware<ExceptionMiddleware>]
+    [AllowAnonymous]
     public class ExampleMicroservice3ContractHandler(
         IExampleMicroservice1Contract microservice1,
         ILogger<ExampleMicroservice3ContractHandler> logger) : IExampleMicroservice3Contract

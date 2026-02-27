@@ -1,7 +1,4 @@
 ﻿using Hubcon;
-using Hubcon.Server.Core.Security.DefaultHandlers.ApiKey;
-using Hubcon.Server.Core.Security.DefaultHandlers.Jwt;
-using HubconTest.Filters;
 using HubconTest.Middlewares;
 using HubconTestDomain;
 using Microsoft.AspNetCore.Authorization;

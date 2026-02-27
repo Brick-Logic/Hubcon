@@ -2,7 +2,6 @@
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Entrypoint;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
-using Hubcon.Server.Core.Security.DefaultHandlers.Jwt;
 using Hubcon.Server.Core.Websockets.Helpers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;

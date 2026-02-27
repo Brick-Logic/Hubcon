@@ -3,18 +3,9 @@ using HubconTestDomain;
 
 namespace BlazorTestServer.Controllers
 {
+    [UseJwt]
     public class TestController(ILogger<TestController> logger) : IUserContract
     {
-        public ISubscription<int?>? OnUserCreated { get; }
-
-        public ISubscription<int?>? OnUserCreated2 { get; }
-
-        public ISubscription<int?>? OnUserCreated3 { get; }
-
-        public ISubscription<int?>? OnUserCreated4 { get; }
-
-        public ISubscription<IEnumerable<int>>? OnEnumerableTest { get; }
-
         public async Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
             => await Task.Run(() => new Random().Next(-10, 50));
 
@@ -41,7 +32,6 @@ namespace BlazorTestServer.Controllers
         public async Task CreateUser(CancellationToken cancellationToken)
         {
             var number = Random.Shared.Next(-10, 50);
-            await OnUserCreated.Emit(number);
             await Task.CompletedTask;
         }
 

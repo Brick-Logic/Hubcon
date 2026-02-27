@@ -6,14 +6,13 @@
 		<RootNamespace>Hubcon.Analyzers</RootNamespace>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 
-
 		<AssemblyName>$(AssemblyName)</AssemblyName>
 		<RootNamespace>$(AssemblyName)</RootNamespace>
 		<PackageId>$(AssemblyName)</PackageId>
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageOutputPath>../../nupkgs</PackageOutputPath>
-		<Version>1.0.162</Version>
+		<Version>2.0.0-rc1</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<Description>Code analyzers for Hubcon.</Description>

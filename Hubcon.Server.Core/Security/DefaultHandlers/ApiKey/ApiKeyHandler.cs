@@ -5,7 +5,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Server.Core.Security.DefaultHandlers.ApiKey
+namespace Hubcon
 {
     public sealed class ApiKeyHandler : IAuthHandler
     {

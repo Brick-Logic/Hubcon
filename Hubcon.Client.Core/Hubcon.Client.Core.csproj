@@ -13,7 +13,7 @@
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Description>Core client-side implementations for Hubcon.</Description>
 		<PackageTags>http;websockets;rpc</PackageTags>
-		<Version>1.0.0-rc1</Version>
+		<Version>2.0.0-rc1</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 	</PropertyGroup>
@@ -47,9 +47,9 @@
 
 	<!-- Nuget -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Client.Abstractions" Version="1.0.0-rc*" />
-		<PackageReference Include="Hubcon.Shared.Core" Version="1.0.0-rc*" />
-		<PackageReference Include="Hubcon.Shared" Version="1.0.0-rc*" />
+		<PackageReference Include="Hubcon.Client.Abstractions" Version="2.0.0-rc1" />
+		<PackageReference Include="Hubcon.Shared.Core" Version="2.0.0-rc1" />
+		<PackageReference Include="Hubcon.Shared" Version="2.0.0-rc1" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />

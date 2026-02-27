@@ -52,11 +52,11 @@
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.0.34" />
 
-	  <PackageReference Include="Hubcon.Analyzers" Version="1.0.*" />
+	  <PackageReference Include="Hubcon.Analyzers" Version="2.0.0-rc*" />
 	  <!--<PackageReference Include="Hubcon" Version="1.0.0-rc9" />-->
-	  <PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="1.0.*" />
-	  <PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="1.0.*" />
-	  <PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="1.0.*" />
+	  <PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="2.0.0-rc*" />
+	  <PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="2.0.0-rc*" />
+	  <PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="2.0.0-rc*" />
   </ItemGroup>
 
   <ItemGroup>

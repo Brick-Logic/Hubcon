@@ -1,7 +1,9 @@
-﻿using HubconTestDomain;
+﻿using Hubcon;
+using HubconTestDomain;
 
 namespace BlazorTestServer.Controllers
 {
+    [UseJwt]
     public class TestSignalRController : IServerHubContract
     {
         public async IAsyncEnumerable<string> GetMessages(int count)

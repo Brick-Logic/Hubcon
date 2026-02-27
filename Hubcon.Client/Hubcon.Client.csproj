@@ -21,7 +21,7 @@
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryBranch>main</RepositoryBranch>
-		<Version>1.0.0-rc1</Version>
+		<Version>2.0.0-rc1</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 	</PropertyGroup>
@@ -47,11 +47,11 @@
 
 	<!-- Nuget -->
 	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Client" Version="1.0.0-rc*" />
+		<PackageReference Include="Hubcon.Client" Version="2.0.0-rc1" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[1.0.175, 2.0.0)" />					  
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="2.0.0-rc1" />					  
 	</ItemGroup>
 
 	<ItemGroup>

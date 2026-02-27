@@ -1,4 +1,5 @@
-﻿using HubconTestDomain;
+﻿using Hubcon;
+using HubconTestDomain;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -6,6 +7,7 @@ using System.Text;
 
 namespace BlazorTestServer.Controllers
 {
+    [UseJwt]
     public class SecondTestController(ILogger<SecondTestController> logger) : ISecondTestContract
     {
         public async Task TestMethod()

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hubcon.Server.Core.Security.DefaultHandlers.Jwt
+namespace Hubcon
 {
     public sealed class UseJwtAttribute : UseAuthAttribute<JwtAuthHandler>
     {
