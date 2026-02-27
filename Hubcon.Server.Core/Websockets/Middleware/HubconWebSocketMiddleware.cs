@@ -744,8 +744,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                         var observer = AsyncObserver.Create<JsonElement>(converter, bufferOptions);
                         observable.Subscribe(observer);
-                        var handlerCts = new CancellationTokenSource();
-                        var handlerRegistration = localCts.Token.Register(handlerCts.Cancel);
 
                         var hw = new HeartbeatWatcher(options.IngestTimeout, async () =>
                         {
@@ -754,14 +752,13 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             complete.Item2?.CancelAsync();
                             complete.Item2?.Dispose();
                             complete.Item4?.RateBucket.Dispose();
-                            handlerRegistration.Dispose();
                             await rateLimiterManager.Unlink(connectionId, id);
                         });
 
                         watchers.Add(hw);
                         await rateLimiterManager.Link(connectionId, id, HubconTransportAttribute.GetDefault<WebSocketTransport>(), operationRequest);
-                        _ingestRouters.TryAdd(id, (observable, handlerCts, hw, settings));
-                        sources.TryAdd(id, observer.GetAsyncEnumerable(handlerCts.Token));
+                        _ingestRouters.TryAdd(id, (observable, localCts, hw, settings));
+                        sources.TryAdd(id, observer.GetAsyncEnumerable());
                     }
 
                     using var scope = context.RequestServices.CreateScope();
@@ -818,7 +815,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     }
 
                     _ingestHandlers.TryRemove(ingestInitMessage.Id, out _);
-                    await localCts.CancelAsync();
+                    localCts.Cancel();
                     ingestInitMessage.Dispose();
                 }
             }

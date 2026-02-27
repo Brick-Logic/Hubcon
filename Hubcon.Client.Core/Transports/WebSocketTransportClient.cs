@@ -38,7 +38,7 @@ namespace Hubcon.Client.Core.Transports
 
             var observer = AsyncObserver.Create<JsonElement>(context.Converter);
             var disposable = observable.Subscribe(observer);
-            var enumerable = observer.GetAsyncEnumerable(cancellationToken, () => disposable.Dispose());
+            var enumerable = observer.GetAsyncEnumerable(() => disposable.Dispose());
 
             await context.SetResponse(HubconResponse.OkT(enumerable));
             return enumerable;

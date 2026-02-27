@@ -38,10 +38,12 @@ namespace HubconTest.ContractHandlers
             {
                 await Task.Delay(1000);
 
-                if (i > 9)
+                if (i > 90)
                 {
                     break;
                 }
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 i++;
             }

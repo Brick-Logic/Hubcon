@@ -262,7 +262,7 @@ namespace Hubcon.Client.Core.Websockets
                         var obj = kvp.Value;
                         var id = Guid.NewGuid();
                         dict[kvp.Key] = id;
-                        var stream = EnumerableTools.Wrap(obj, cts.Token);
+                        var stream = EnumerableTools.Wrap(obj, cancellationToken);
                         sources.TryAdd(id, stream!);
                     }
                 }
@@ -300,9 +300,9 @@ namespace Hubcon.Client.Core.Websockets
                                 ? new TokenBucketRateLimiter(operationOptions!.RateBucketOptions!)
                                 : null);
 
-                            await foreach (var item in source.Value.WithCancellation(cts.Token))
+                            await foreach (var item in source.Value.WithCancellation(cancellationToken))
                             {
-                                if (generalTcs.Task.IsCompleted || cts.IsCancellationRequested)
+                                if (generalTcs.Task.IsCompleted || cancellationToken.IsCancellationRequested)
                                     break;
 
                                 var message = new IngestDataMessage(source.Key, item);
@@ -310,8 +310,7 @@ namespace Hubcon.Client.Core.Websockets
                                 try
                                 {
                                     await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.IngestRateBucket, limiter);
-
-                                    await SendMessageAsync(message, cts.Token);
+                                    await SendMessageAsync(message, cancellationToken);
                                 }
                                 catch (Exception ex)
                                 {
@@ -321,7 +320,7 @@ namespace Hubcon.Client.Core.Websockets
                                     _errorStream.OnNext(ex);
                                 }
 
-                                if (generalTcs.Task.IsCompleted || cts.IsCancellationRequested)
+                                if (generalTcs.Task.IsCompleted || cancellationToken.IsCancellationRequested)
                                     break;
                             }
                         }
@@ -331,10 +330,9 @@ namespace Hubcon.Client.Core.Websockets
                                 logger?.LogError(ex, $"Error en ingest stream {source.Key}");
 
                             _errorStream.OnNext(ex);
-                            cts.Cancel();
                         }
                     },
-                    cts.Token,
+                    cancellationToken,
                     TaskCreationOptions.LongRunning,
                     TaskScheduler.Default).Unwrap();
 
@@ -363,7 +361,6 @@ namespace Hubcon.Client.Core.Websockets
                         logger?.LogError(ex, "Error al enviar IngestInitMessage");
 
                     _errorStream.OnNext(ex);
-                    cts.Cancel();
                 }
 
                 var receiver = Receive(initialAckId, TimeSpan.FromDays(23), cancellationToken);
@@ -420,7 +417,6 @@ namespace Hubcon.Client.Core.Websockets
                 _ingests.TryRemove(initialAckId, out var removedIngest);
                 removedIngest.Item1?.TrySetCanceled();
                 removedIngest.Item2?.Cancel();
-                cts.Cancel();
             }
         }
 

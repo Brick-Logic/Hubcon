@@ -44,6 +44,10 @@ namespace Hubcon.Shared.Core.Tools
             {
                 return default!;
             }
+            catch (Exception)
+            {
+                return default!;
+            }
         }
 
         public static async ValueTask WaitWithTimeoutAsync(Func<TimeSpan, TimeProvider, CancellationToken, Task> taskFactory, TimeSpan timeout)
@@ -55,6 +59,9 @@ namespace Hubcon.Shared.Core.Tools
                 await taskFactory(timeout, TimeProvider.System, cts.Token);
             }
             catch (OperationCanceledException)
+            {
+            }
+            catch (Exception)
             {
             }
         }

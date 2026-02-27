@@ -361,19 +361,16 @@ internal class Program
         logger.LogWarning("Probando cancelacion remota...");
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         bool temp2 = false;
-        try
+
+        var result = await client.Execute(x => x.GetTemperatureFromServerBlocking(cts.Token));
+        if (result.Failure)
         {
-            var result = await client.Execute(x => x.GetTemperatureFromServerBlocking(cts.Token));
-            temp2 = result.Data;
+            logger.LogInformation($"Cancelación remota exitosa. Resultado: {result.Error}");
+            temp2 = true;
         }
-        catch (Exception e)
+        else
         {
-            if (e is OperationCanceledException)
-                logger.LogInformation("Cancelacion OK.");
-            else
-            {
-                throw new Exception($"Error en la cancelación: {e}");
-            }
+            throw new Exception($"La operación no fue cancelada como se esperaba. Resultado: {result.Data}");
         }
     }
 
@@ -490,7 +487,7 @@ internal class Program
         if (result.Success)
             logger.LogInformation($"Ingest OK.");
         else
-            throw new Exception($"Ingest FAILED.");
+            throw new Exception($"Ingest FAILED: {result.Message} | Error: {result.Error} | Exception: {result.Exception?.ToString()}");
     }
 
     private static async Task TestValidations(IUserContract client, ILogger<IUserContract> logger)

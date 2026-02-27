@@ -74,11 +74,11 @@ namespace Hubcon.Shared.Core.Websockets.Events
             return converter.DeserializeData<T>(item)!;
         }
 
-        public IAsyncEnumerable<T> GetAsyncEnumerable(CancellationToken cancellationToken, Action? disposeAction = null)
+        public IAsyncEnumerable<T> GetAsyncEnumerable(Action? disposeAction = null)
         {
             try
             {
-                return ReadAsync(cancellationToken, disposeAction);
+                return ReadAsync(disposeAction);
             }
             catch (Exception ex)
             {
@@ -87,12 +87,14 @@ namespace Hubcon.Shared.Core.Websockets.Events
             }
         }
 
-        private async IAsyncEnumerable<T> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken, Action? disposeAction = null)
-        {       
-            await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
+        private async IAsyncEnumerable<T> ReadAsync(Action? disposeAction = null)
+        {
+            await foreach (var item in _channel.Reader.ReadAllAsync())
             {
                 yield return item;
             }
+
+            disposeAction?.Invoke();
         }
 
         public async Task<T> ReadItemAsync(CancellationToken cancellationToken = default)
