@@ -11,12 +11,17 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Operation
     {
         private JsonElement? _payload;
 
+        public OperationInvokeMessage(BaseMessage baseMessage) : base(baseMessage)
+        {
+            
+        }
+
         public OperationInvokeMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 
         [JsonConstructor]
-        public OperationInvokeMessage(Guid id, JsonElement payload) : base(MessageType.operation_invoke, id)
+        public OperationInvokeMessage(Guid id, JsonElement payload, string? error = null) : base(MessageType.operation_invoke, id, error)
         {
             _payload = payload;
         }

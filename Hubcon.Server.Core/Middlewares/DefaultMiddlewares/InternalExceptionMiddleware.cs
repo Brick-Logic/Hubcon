@@ -109,7 +109,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     var createdLogMessage = logMsg!.ToString();
                     var createdResponseMsg = responseMsg!.ToString();
 
-                    HubconResponse result = (context.Response as HubconResponse)!;
+                    HubconResponse result = (context.Response as HubconResponse)! ?? HubconResponse.InternalError();
 
                     result.Error = options.DetailedErrorsEnabled ? createdResponseMsg : result.Error;
                     context.Response = result;

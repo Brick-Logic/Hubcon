@@ -129,7 +129,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                     });
 
                     var wrapperMapper = BuildMapper(wrapperType);
-                    Func<object?, object, object?> action = BuildWrapperInvoker(method, wrapperType);
+                    Func<object?, object, CancellationToken, object?> action = BuildWrapperInvoker(method, wrapperType);
 
                     var pipelineBuilder = new PipelineBuilder();
                     var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);
@@ -311,68 +311,67 @@ namespace Hubcon.Server.Core.Routing.Registries
             return lambda.Compile();
         }
 
-        public static Func<object?, object[], object?> BuildInvoker(MethodInfo method)
+        //public static Func<object?, object[], object?> BuildInvoker(MethodInfo method)
+        //{
+        //    // Parámetros de la función: (object? target, object[] args)
+        //    var targetExp = Expression.Parameter(typeof(object), "target");
+        //    var argsExp = Expression.Parameter(typeof(object[]), "args");
+
+        //    // Obtener los parámetros del método y convertir cada uno
+        //    var methodParams = method.GetParameters();
+        //    var paramExps = new Expression[methodParams.Length];
+
+        //    for (int i = 0; i < methodParams.Length; i++)
+        //    {
+        //        // args[i]
+        //        var argAccess = Expression.ArrayIndex(argsExp, Expression.Constant(i));
+
+        //        // Convertir object a tipo esperado (puede ser value type o ref type)
+        //        var argCast = Expression.Convert(argAccess, methodParams[i].ParameterType);
+
+        //        paramExps[i] = argCast;
+        //    }
+
+        //    // Expresión para la instancia (o null para estático)
+        //    Expression instanceExp;
+        //    if (method.IsStatic)
+        //    {
+        //        instanceExp = null; // para métodos estáticos no hay instancia
+        //    }
+        //    else
+        //    {
+        //        // Convertir object target a tipo del método (declaring type)
+        //        instanceExp = Expression.Convert(targetExp, method.DeclaringType!);
+        //    }
+
+        //    // Crear la llamada al método
+        //    MethodCallExpression callExp = Expression.Call(instanceExp, method, paramExps);
+
+        //    // Si el método devuelve void, debemos devolver null
+        //    if (method.ReturnType == typeof(void))
+        //    {
+        //        // Crear un bloque con la llamada y return null
+        //        var block = Expression.Block(callExp, Expression.Constant(null, typeof(object)));
+
+        //        return Expression.Lambda<Func<object?, object[], object?>>(block, targetExp, argsExp).Compile();
+        //    }
+        //    else
+        //    {
+        //        // Si devuelve valor, convertirlo a object
+        //        var castCallExp = Expression.Convert(callExp, typeof(object));
+
+        //        return Expression.Lambda<Func<object?, object[], object?>>(castCallExp, targetExp, argsExp).Compile();
+        //    }
+        //}
+
+        public static Func<object?, object, CancellationToken, object?> BuildWrapperInvoker(MethodInfo method, Type wrapperType)
         {
-            // Parámetros de la función: (object? target, object[] args)
-            var targetExp = Expression.Parameter(typeof(object), "target");
-            var argsExp = Expression.Parameter(typeof(object[]), "args");
-
-            // Obtener los parámetros del método y convertir cada uno
-            var methodParams = method.GetParameters();
-            var paramExps = new Expression[methodParams.Length];
-
-            for (int i = 0; i < methodParams.Length; i++)
-            {
-                // args[i]
-                var argAccess = Expression.ArrayIndex(argsExp, Expression.Constant(i));
-
-                // Convertir object a tipo esperado (puede ser value type o ref type)
-                var argCast = Expression.Convert(argAccess, methodParams[i].ParameterType);
-
-                paramExps[i] = argCast;
-            }
-
-            // Expresión para la instancia (o null para estático)
-            Expression instanceExp;
-            if (method.IsStatic)
-            {
-                instanceExp = null; // para métodos estáticos no hay instancia
-            }
-            else
-            {
-                // Convertir object target a tipo del método (declaring type)
-                instanceExp = Expression.Convert(targetExp, method.DeclaringType!);
-            }
-
-            // Crear la llamada al método
-            MethodCallExpression callExp = Expression.Call(instanceExp, method, paramExps);
-
-            // Si el método devuelve void, debemos devolver null
-            if (method.ReturnType == typeof(void))
-            {
-                // Crear un bloque con la llamada y return null
-                var block = Expression.Block(callExp, Expression.Constant(null, typeof(object)));
-
-                return Expression.Lambda<Func<object?, object[], object?>>(block, targetExp, argsExp).Compile();
-            }
-            else
-            {
-                // Si devuelve valor, convertirlo a object
-                var castCallExp = Expression.Convert(callExp, typeof(object));
-
-                return Expression.Lambda<Func<object?, object[], object?>>(castCallExp, targetExp, argsExp).Compile();
-            }
-        }
-
-        public static Func<object?, object, object?> BuildWrapperInvoker(MethodInfo method, Type wrapperType)
-        {
-            // Parámetros de la función: (object? target, object wrapper)
             var targetExp = Expression.Parameter(typeof(object), "target");
             var wrapperExp = Expression.Parameter(typeof(object), "wrapper");
+            // 1. Agregamos el parámetro del token a la expresión
+            var tokenExp = Expression.Parameter(typeof(CancellationToken), "ct");
 
-            // Convertir el object wrapper al tipo específico generado por IL
             var typedWrapper = Expression.Convert(wrapperExp, wrapperType);
-
             var methodParams = method.GetParameters();
             var paramExps = new Expression[methodParams.Length];
 
@@ -380,37 +379,41 @@ namespace Hubcon.Server.Core.Routing.Registries
             {
                 var param = methodParams[i];
 
-                // No necesitás buscar PropertyInfo ni FieldInfo. 
-                // PropertyOrField busca en el wrapperType (que está en typedWrapper) 
-                // un miembro que se llame igual que el parámetro.
+                // 2. Si el parámetro es CancellationToken, inyectamos el 'tokenExp' directamente
+                if (param.ParameterType == typeof(CancellationToken))
+                {
+                    paramExps[i] = tokenExp;
+                    continue;
+                }
+
                 try
                 {
                     paramExps[i] = Expression.PropertyOrField(typedWrapper, param.Name!);
                 }
                 catch (ArgumentException)
                 {
-                    throw new InvalidOperationException($"El parámetro '{param.Name}' no se encontró como Propiedad ni como Field en el wrapper {wrapperType.Name}");
+                    throw new InvalidOperationException($"El parámetro '{param.Name}' no se encontró en el wrapper {wrapperType.Name}");
                 }
             }
 
-            // Expresión para la instancia
             Expression? instanceExp = method.IsStatic
                 ? null
                 : Expression.Convert(targetExp, method.DeclaringType!);
 
-            // Crear la llamada al método: target.Method(wrapper.Prop1, wrapper.Prop2...)
             MethodCallExpression callExp = Expression.Call(instanceExp, method, paramExps);
 
-            // Manejo de retorno (void vs object)
+            // 3. Compilamos la Lambda con el nuevo parámetro 'tokenExp'
             if (method.ReturnType == typeof(void))
             {
                 var block = Expression.Block(callExp, Expression.Constant(null, typeof(object)));
-                return Expression.Lambda<Func<object?, object, object?>>(block, targetExp, wrapperExp).Compile();
+                return Expression.Lambda<Func<object?, object, CancellationToken, object?>>(
+                    block, targetExp, wrapperExp, tokenExp).Compile();
             }
             else
             {
                 var castCallExp = Expression.Convert(callExp, typeof(object));
-                return Expression.Lambda<Func<object?, object, object?>>(castCallExp, targetExp, wrapperExp).Compile();
+                return Expression.Lambda<Func<object?, object, CancellationToken, object?>>(
+                    castCallExp, targetExp, wrapperExp, tokenExp).Compile();
             }
         }
 

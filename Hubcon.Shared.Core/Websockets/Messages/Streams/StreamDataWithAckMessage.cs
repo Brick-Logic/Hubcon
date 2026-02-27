@@ -11,12 +11,16 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Streams
         private JsonElement? _data;
         private Guid? _ackId;
 
+        public StreamDataWithAckMessage(BaseMessage baseMessage) : base(baseMessage)
+        {
+            
+        }
         public StreamDataWithAckMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 
         [JsonConstructor]
-        public StreamDataWithAckMessage(Guid id, JsonElement data, Guid ackId) : base(MessageType.stream_data_with_ack, id)
+        public StreamDataWithAckMessage(Guid id, JsonElement data, Guid ackId, string? error = null) : base(MessageType.stream_data_with_ack, id, error)
         {
             _data = data;
             _ackId = ackId;

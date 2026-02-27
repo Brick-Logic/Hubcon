@@ -172,6 +172,7 @@ namespace Hubcon.Client.Builder
         public HubconTransportAttribute TransportType { get; set; } = HubconTransportAttribute.GetDefault<HttpTransport>();
 
         public Dictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; } = new();
+        public bool RemoteCancellationIsAllowed { get; set; }
 
         public T GetOrCreateClient<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(IServiceProvider services, bool useCached = true) where T : IControllerContract
         {
@@ -299,6 +300,10 @@ namespace Hubcon.Client.Builder
             UseHttpEndpointOverloading = true;
         }
 
+        public void AllowRemoteCancellation(bool allowed)
+        {
+            RemoteCancellationIsAllowed = allowed;
+        }
     }
 
     public static class SubscriptionFactory

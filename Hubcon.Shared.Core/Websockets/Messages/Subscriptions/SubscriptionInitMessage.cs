@@ -11,12 +11,16 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
     {
         private JsonElement? _payload;
 
+        public SubscriptionInitMessage(BaseMessage baseMessage) : base(baseMessage)
+        {
+            
+        }
         public SubscriptionInitMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 
         [JsonConstructor]
-        public SubscriptionInitMessage(Guid id, JsonElement payload) : base(MessageType.subscription_init, id)
+        public SubscriptionInitMessage(Guid id, JsonElement payload, string? error = null) : base(MessageType.subscription_init, id, error)
         {
             _payload = payload;
         }

@@ -13,7 +13,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         public Type ContractType { get; }
         ConcurrentDictionary<string, IOperationOptions> OperationOptions { get; }
         IReadOnlyDictionary<HookType, Func<IInvocationContext, Task>> Hooks { get; }
-        bool RemoteCancellationIsAllowed { get; }
+        bool? RemoteCancellationIsAllowed { get; }
 
         Task CallHook(HookType hookType, IInvocationContext context);
         IOperationOptions GetOperationOptions(string operationName, MemberInfo memberInfo);

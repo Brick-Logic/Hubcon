@@ -10,12 +10,16 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
     {
         private JsonElement? _data;
 
+        public IngestDataMessage(BaseMessage baseMessage) : base(baseMessage)
+        {
+            
+        }
         public IngestDataMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
         {
         }
 
         [JsonConstructor]
-        public IngestDataMessage(Guid id, JsonElement data) : base(MessageType.ingest_data, id)
+        public IngestDataMessage(Guid id, JsonElement data, string? error = null) : base(MessageType.ingest_data, id, error)
         {
             _data = data;
         }

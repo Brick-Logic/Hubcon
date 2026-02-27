@@ -21,7 +21,7 @@ namespace Hubcon.Client.Core.Configurations
         ConcurrentDictionary<HookType, Func<IInvocationContext, Task>> _hooks = new();
         public IReadOnlyDictionary<HookType, Func<IInvocationContext, Task>> Hooks => _hooks;
 
-        public bool RemoteCancellationIsAllowed { get; private set; }
+        public bool? RemoteCancellationIsAllowed { get; private set; }
 
         public HubconTransportAttribute? TransportType { get; private set; }
 

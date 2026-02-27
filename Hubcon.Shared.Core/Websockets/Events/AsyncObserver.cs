@@ -1,4 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -103,21 +104,35 @@ namespace Hubcon.Shared.Core.Websockets.Events
             }
             catch (ChannelClosedException)
             {
-                return default;
+                return default!;
             }
         }
 
         public void OnCompleted()
         {
-            _channel.Writer.Complete();
-            _completed.SetResult(true);
+            try
+            {
+                var completed = _channel.Writer.TryComplete();
+            }
+            catch (Exception ex)
+            {
+            }
+
+            _completed.TrySetResult(true);
             Completed?.Invoke();
         }
 
         public void OnError(Exception error)
         {
-            _channel.Writer.Complete();
-            _completed.SetException(error);
+            try
+            {
+                var completed = _channel.Writer.TryComplete();
+            }
+            catch (Exception ex)
+            {
+            }
+
+            _completed.TrySetException(error);
             Error?.Invoke();
         }
 

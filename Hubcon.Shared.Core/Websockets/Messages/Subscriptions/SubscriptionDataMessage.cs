@@ -14,8 +14,13 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Subscriptions
         {
         }
 
+        public SubscriptionDataMessage(BaseMessage baseMessage) : base(baseMessage)
+        {
+            
+        }
+
         [JsonConstructor]
-        public SubscriptionDataMessage(Guid id, JsonElement data) : base(MessageType.subscription_data, id)
+        public SubscriptionDataMessage(Guid id, JsonElement data, string? error = null) : base(MessageType.subscription_data, id, error)
         {
             _data = data;
         }

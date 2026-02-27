@@ -359,7 +359,7 @@ internal class Program
     private static async Task TestRemoteCancellation(IUserContract client, ILogger<IUserContract> logger)
     {
         logger.LogWarning("Probando cancelacion remota...");
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         bool temp2 = false;
         try
         {

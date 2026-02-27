@@ -18,15 +18,14 @@ namespace HubconTestClient.Modules
             server.GlobalLimit(200000000);
             server.EnableLogging();
             server.DisableAllLimiters();
+            server.AllowRemoteCancellation();
             server.AddHeaderProvider("key", x => "value");
 
             //server.DisableAllLimiters();
 
             server.Implements<IUserContract>(contractConfigurator =>
             {
-                contractConfigurator.AddHeaderProvider("key", x => "value");
-
-
+                contractConfigurator.AddHeaderProvider("key", x => "value2");
                 contractConfigurator
                     .ForOperation(x => x.GetTemperatureFromServer(default!, default!))
                     .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
@@ -39,7 +38,6 @@ namespace HubconTestClient.Modules
                     });
 
                 contractConfigurator
-                    .AllowRemoteCancellation(false)
                     .AddHook(HookType.OnSend, async ctx => { })
                     .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
                     .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })

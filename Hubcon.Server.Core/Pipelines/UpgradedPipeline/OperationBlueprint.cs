@@ -37,7 +37,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public IList<Attribute> Attributes { get; }
         public ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         public ConcurrentDictionary<Type, Attribute> TransportAttributes { get; }
-        public Func<object?, object, object?>? InvokeDelegate { get; }
         public IPipelineBuilder PipelineBuilder { get; }
 
         public string? HttpRoute { get; }
@@ -51,6 +50,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public ObjectFactory ControllerFactory { get; }
         public bool ReturnsHubconResponse { get; }
         public CompiledSecurityPolicy SecurityPolicy { get; }
+        public Func<object?, object, CancellationToken, object?>? InvokeDelegate { get; }
 
         public OperationBlueprint(
             string operationName,
@@ -64,7 +64,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             HttpMethod? httpMethod = null,
             Type? callWrapperType = null,
             Action<IDictionary<string, object>, object, CancellationToken>? wrapperMapper = null,
-            Func<object?, object, object?>? invokeDelegate = null)
+            Func<object?, object, CancellationToken, object?>? invokeDelegate = null)
         {
             ArgumentException.ThrowIfNullOrEmpty(operationName);
             ArgumentNullException.ThrowIfNull(contractType);

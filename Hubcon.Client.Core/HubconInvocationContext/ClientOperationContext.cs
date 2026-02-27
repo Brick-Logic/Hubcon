@@ -144,7 +144,7 @@ namespace Hubcon.Client.Core.HubconInvocationContext
             // Authentication
             this.RequiresAuthentication = OperationOptions?.AuthIsEnabled ?? ContractOptions.AuthIsEnabled ?? ClientOptions.AuthIsEnabled;
 
-            RemoteCancellationIsAllowed = OperationOptions?.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed;
+            RemoteCancellationIsAllowed = OperationOptions?.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed ?? ClientOptions.RemoteCancellationIsAllowed;
 
             Uri = ClientOptions.BaseUri ?? throw new ArgumentNullException("Base uri can't be null.");
             string baseRestHttpUrl = string.Empty;

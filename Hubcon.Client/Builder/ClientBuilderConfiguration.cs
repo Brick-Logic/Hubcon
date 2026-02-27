@@ -387,5 +387,11 @@ namespace Hubcon.Client.Builder
             builder.HeaderProviders.TryAdd(key, valueProvider);
             return this;
         }
+
+        public IServerModuleConfiguration AllowRemoteCancellation()
+        {
+            builder.AllowRemoteCancellation(true); 
+            return this;
+        }
     }
 }

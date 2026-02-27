@@ -71,7 +71,7 @@ namespace Hubcon.Client.Core.Transports
                         if (context.ClientOptions.LoggingEnabled)
                             logger.LogInformation("Refreshing token in WebSocketTransport...");
 
-                        var response = await _client.TryRefreshToken(authenticationManager.AccessToken!);
+                        var response = await _client.TryRefreshToken(authenticationManager.TokenType + " " + authenticationManager.AccessToken);
 
                         if (context.ClientOptions.LoggingEnabled)
                             logger.LogInformation($"Token refresh response: {response.Success} | Message: {response.Message}");

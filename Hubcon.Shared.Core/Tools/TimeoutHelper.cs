@@ -33,7 +33,7 @@ namespace Hubcon.Shared.Core.Tools
         //    }
         //}
 
-        public static async ValueTask<T> WaitWithTimeoutAsync<T>(Func<TimeSpan, TimeProvider, CancellationToken, Task<T>> taskFactory, TimeSpan timeout)
+        public static async ValueTask<T?> WaitWithTimeoutAsync<T>(Func<TimeSpan, TimeProvider, CancellationToken, Task<T>> taskFactory, TimeSpan timeout)
         {
             using var cts = new CancellationTokenSource(timeout);
             try

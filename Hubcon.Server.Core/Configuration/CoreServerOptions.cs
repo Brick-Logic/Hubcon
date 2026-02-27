@@ -341,16 +341,32 @@ namespace Hubcon.Server.Core.Configuration
             return this;
         }
 
-        public ICoreServerOptions SetGlobalRateLimiter(int requestsPerSecond)
+        public ICoreServerOptions SetGlobalRateLimiter(int requests, int millisecondsToReplenish = 1000, int queueLimit = 0, int rateTokenLimit = 0)
         {
+            static int GetOrDefault(int limit, int defaultLimit)
+            {
+                return limit switch
+                {
+                    0 => defaultLimit,
+                    var l => l
+                };
+            }
+
             _globalRateLimiterOptions ??= new TokenBucketRateLimiterOptions()
             {
+                TokenLimit = GetOrDefault(rateTokenLimit == 0 
+                    ? requests : 
+                    rateTokenLimit, 999999999),
+
+                TokensPerPeriod = GetOrDefault(requests, 999999999),
+
+                ReplenishmentPeriod = millisecondsToReplenish == 0 
+                    ? TimeSpan.FromSeconds(1) 
+                    : TimeSpan.FromMilliseconds(millisecondsToReplenish),
+
                 AutoReplenishment = true,
-                QueueLimit = 0,
-                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
-                TokenLimit = requestsPerSecond,
-                TokensPerPeriod = requestsPerSecond
+                QueueLimit = GetOrDefault(queueLimit, requests * 2),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
             };
 
             return this;

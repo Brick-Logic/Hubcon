@@ -298,7 +298,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// demand.</remarks>
         /// <param name="requestsPerSecond">The maximum number of requests allowed per second. Must be a positive integer.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
-        ICoreServerOptions SetGlobalRateLimiter(int requestsPerSecond);
+        ICoreServerOptions SetGlobalRateLimiter(int requests, int millisecondsToReplenish = 1000, int queueLimit = 0, int rateTokenLimit = 0);
 
         /// <summary>
         /// Configures the server to use transport authentication with the specified transport attribute and

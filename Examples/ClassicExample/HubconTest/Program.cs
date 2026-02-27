@@ -106,8 +106,10 @@ namespace HubconTest
                 serverOptions.ConfigureCore(config =>
                 {
                     config
+                        .SetGlobalRateLimiter(5)
                         .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
                         .SetMaxConcurrentOperations(5000000)
+                        .AllowRemoteTokenCancellation()
                         .EnableWebsocketsLogging()
                         .EnableRequestDetailedErrors();
                 });

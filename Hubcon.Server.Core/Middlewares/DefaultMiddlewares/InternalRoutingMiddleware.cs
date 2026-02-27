@@ -70,32 +70,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 var controller = context.Blueprint!.ControllerFactory.Invoke(serviceProvider, null);
 
-                //if (context.Blueprint.HasSubscriptions)
-                //{
-                //    var subRegistry = context.RequestServices.GetRequiredService<ILiveSubscriptionRegistry>();
-
-                //    string identity = "anonymous";
-                //    if (context.Blueprint.RequiresAuthorization)
-                //    {
-                //        if (context.HttpContext!.Request.Headers.TryGetValue("Authorization", out var authHeader))
-                //        {
-                //            var token = JwtHelper.ExtractTokenFromHeader(context.HttpContext);
-                //            identity = token!;
-                //        }
-                //    }
-
-                //    foreach (var sub in context.Blueprint.SubscriptionProperties)
-                //    {
-                //        if (!operationRegistry.GetOperationBlueprint(context.Blueprint.SimpleContractName, sub.PropInfo.Name, HubconTransportAttribute.GetDefault<WebSocketTransport>(), out IOperationBlueprint? blueprint))
-                //            continue;
-
-                //        object? subInstance = null;
-                //        var descriptor = subRegistry.GetHandler(identity, context.Blueprint.SimpleContractName, blueprint!.OperationName);
-                //        subInstance = descriptor?.Subscription;
-                //        sub.FastSetter.Invoke(controller, subInstance);
-                //    }
-                //}
-
                 var wrapper = Activator.CreateInstance(context.Blueprint!.CallWrapperType!)!;
                 context.Blueprint!.WrapperMapper!.Invoke(dict, wrapper, context.RequestAborted);
 
@@ -103,7 +77,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 var validationContext = new ValidationContext(wrapper);
                 if (!Validator.TryValidateObject(wrapper, validationContext, validationResults, true))
                 {
-                    // Si hay errores, devolvemos un 400 Bad Request con los detalles
                     var errors = validationResults.ToDictionary(
                         k => k.MemberNames.FirstOrDefault() ?? "error",
                         v => new[] { v.ErrorMessage ?? "Invalid value" }
@@ -123,7 +96,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                 try
                 {
-                    result = context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper);
+                    result = context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper, context.RequestAborted);
                 }
                 catch (Exception ex) when (RecordDiagnostics(ex, context))
                 {

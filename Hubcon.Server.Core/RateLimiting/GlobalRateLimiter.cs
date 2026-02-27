@@ -16,19 +16,19 @@ namespace Hubcon.Server.Core.RateLimiting
         private readonly RateLimiter globalRateLimiter = new TokenBucketRateLimiter(options.GlobalRateLimiterOptions);
         private readonly SettingsManager settingsManager = new SettingsManager(operationRegistry, operationConfigRegistry);
 
-        public async ValueTask<bool> TryAcquireAsync(string anchorKey, MessageType type, HubconTransportAttribute transport, IOperationRequest? operation = null, CancellationToken cancellationToken = default)
+        public async ValueTask<bool> TryAcquireAsync(string anchorKey, MessageType type, HubconTransportAttribute transport, IOperationRequest? operation = null, int permits = 1, CancellationToken cancellationToken = default)
         {
             if (options.ThrottlingIsDisabled) return true;
 
             try
             {
-                if(!(await globalRateLimiter.AcquireAsync(1, cancellationToken)).IsAcquired)
+                if(!(await globalRateLimiter.AcquireAsync(permits, cancellationToken)).IsAcquired)
                 {
                     return false;
                 }
 
                 var typeLimiter = GetOrCreateLimiter(anchorKey, type);
-                if(typeLimiter != null && !(await typeLimiter.AcquireAsync(1, cancellationToken)).IsAcquired)
+                if(typeLimiter != null && !(await typeLimiter.AcquireAsync(permits, cancellationToken)).IsAcquired)
                 {
                     return false;
                 }
@@ -36,13 +36,13 @@ namespace Hubcon.Server.Core.RateLimiting
                 if (operation != null)
                 {
                     var contractLimiter = GetOrCreateContractLimiter(anchorKey, operation, transport);
-                    if (contractLimiter != null && !(await contractLimiter.AcquireAsync(1, cancellationToken)).IsAcquired)
+                    if (contractLimiter != null && !(await contractLimiter.AcquireAsync(permits, cancellationToken)).IsAcquired)
                     {
                         return false;
                     }
 
                     var opLimiter = GetOrCreateOperationLimiter(anchorKey, operation, transport);
-                    if (opLimiter != null && !(await opLimiter.AcquireAsync(1, cancellationToken)).IsAcquired)
+                    if (opLimiter != null && !(await opLimiter.AcquireAsync(permits, cancellationToken)).IsAcquired)
                     {
                         return false;
                     }
@@ -56,18 +56,18 @@ namespace Hubcon.Server.Core.RateLimiting
             }
         }
 
-        public async ValueTask<bool> TryAcquireAsync(string anchorKey, MessageType type, Guid resourceId, CancellationToken cancellationToken = default)
+        public async ValueTask<bool> TryAcquireAsync(string anchorKey, MessageType type, Guid resourceId, int permits = 1, CancellationToken cancellationToken = default)
         {
             if (options.ThrottlingIsDisabled) return true;
 
             try
             {
                 // 1. Capa Global
-                await globalRateLimiter.AcquireAsync(0, cancellationToken);
+                await globalRateLimiter.AcquireAsync(permits, cancellationToken);
 
                 // 2. Capa por Tipo de Mensaje
                 var typeLimiter = GetOrCreateLimiter(anchorKey, type);
-                if (typeLimiter != null) await typeLimiter.AcquireAsync(0, cancellationToken);
+                if (typeLimiter != null) await typeLimiter.AcquireAsync(permits, cancellationToken);
 
                 // 3. Capa vinculada por Guid (Link/Unlink)
                 if (resourceId != Guid.Empty)
@@ -82,7 +82,7 @@ namespace Hubcon.Server.Core.RateLimiting
 
                         if (settings?.RateBucket != null)
                         {
-                            await settings.RateBucket.AcquireAsync(0, cancellationToken);
+                            await settings.RateBucket.AcquireAsync(permits, cancellationToken);
                         }
                     }
                 }

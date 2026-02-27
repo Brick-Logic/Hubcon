@@ -59,5 +59,6 @@ namespace Hubcon.Client.Abstractions.Interfaces
         Task CallInterceptor(InterceptorType interceptorType, IInvocationContext context);
         HubconTransportAttribute TransportType { get; }
         Dictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; }
+        bool RemoteCancellationIsAllowed { get; }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Entrypoint;
+using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
+using Hubcon.Server.Core.Security.DefaultHandlers.Jwt;
 using Hubcon.Server.Core.Websockets.Helpers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
@@ -27,19 +29,6 @@ using System.Net.WebSockets;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Channels;
-
-using System.Net.Http;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Immutable;
-using System.IO;
-using Hubcon.Server.Core.Security.DefaultHandlers.Jwt;
-using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 
 namespace Hubcon.Server.Core.Websockets.Middleware
 {
@@ -146,11 +135,13 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
 
             SettingsManager settingsManager = new SettingsManager(operationRegistry, operationConfigRegistry);
+            WebSocketMessageSender sender = null!;
+            WebSocketMessageReceiver receiver = null!;
 
             try
             {
-                var receiver = new WebSocketMessageReceiver(webSocket, options);
-                var sender = new WebSocketMessageSender(webSocket, converter);
+                receiver = new WebSocketMessageReceiver(webSocket, options);
+                sender = new WebSocketMessageSender(webSocket, converter);
                 TrimmedMemoryOwner? firstMessageJson = null;
 
                 CancellationTokenSource fmCts = new CancellationTokenSource(5000);
@@ -237,63 +228,23 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     {
                         case MessageType.ping:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ping, message.Id);                             
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ping, message.Id, 0);
 
                             if (!options.WebsocketRequiresPing)
                             {
-                                await HandleNotAllowed(message.Id, "Ping is disabled.", "", sender);
                                 break;
                             }
 
-                            _ = HandlePing(webSocket, sender, lastPingId, _heartbeatWatcher, new PingMessage(tmo, message.Id, message.Type));
+                            _ = HandlePing(webSocket, connectionId, sender, lastPingId, _heartbeatWatcher, new PingMessage(tmo, message.Id, message.Type), rateLimiterManager);
                             break;
-
-                        //case MessageType.subscription_init:
-
-                        //    await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.subscription_init, message.Id);
-
-                        //    if (!options.WebSocketSubscriptionIsAllowed)
-                        //    {
-                        //        await HandleNotAllowed(message.Id, "Websocket subscriptions are disabled.", "", sender);
-                        //        break;
-                        //    }
-
-                        //    _ = HandleSubscribe(
-                        //        context,
-                        //        MessageType.subscription_init,
-                        //        _subscriptions,
-                        //        _ackChannels,
-                        //        sender,
-                        //        new SubscriptionInitMessage(tmo, message.Id, message.Type),
-                        //        rateLimiterManager,
-                        //        cts.Token);
-
-                        //    break;
-
-                        //case MessageType.subscription_complete:
-
-                        //    await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.subscription_complete, message.Id);
-
-                        //    if (!options.WebSocketSubscriptionIsAllowed)
-                        //    {
-                        //        await HandleNotAllowed(message.Id, "Websocket subscriptions are disabled.", "", sender);
-                        //        break;
-                        //    }
-
-                        //    _ = HandleUnsubscribe(
-                        //        _subscriptions,
-                        //        context,
-                        //        new SubscriptionCompleteMessage(tmo, message.Id, message.Type));
-
-                        //    break;
 
                         case MessageType.stream_init:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.stream_init, message.Id);
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.stream_init, message.Id, 0);
 
                             if (!options.WebSocketSubscriptionIsAllowed)
                             {
-                                await HandleNotAllowed(message.Id, "Websocket streaming is disabled.", "", sender);
+                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
                                 break;
                             }
 
@@ -312,82 +263,90 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                         case MessageType.stream_complete:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.stream_complete, message.Id);
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.stream_complete, message.Id, 0);
 
                             if (!options.WebSocketSubscriptionIsAllowed)
                             {
-                                await HandleNotAllowed(message.Id, "Websocket subscriptions are disabled.", "", sender);
+                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
                                 break;
                             }
 
                             _ = HandleUnsubscribe(
                                 _subscriptions,
+                                connectionId,
                                 context,
-                                new SubscriptionCompleteMessage(tmo, message.Id, message.Type));
+                                new SubscriptionCompleteMessage(tmo, message.Id, message.Type),
+                                rateLimiterManager);
 
                             break;
 
                         case MessageType.ack:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ack, message.Id);
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ack, message.Id, 0);
 
                             if (!options.MessageRetryIsEnabled)
                             {
-                                await HandleNotAllowed(message.Id, "Message ack is disabled.", "", sender);
+                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
                                 break;
                             }
 
                             _ = HandleAck(
                                 _ackChannels,
-                                new AckMessage(tmo, message.Id, message.Type));
+                                connectionId,
+                                new Shared.Core.Websockets.Messages.Generic.AckMessage(tmo, message.Id, message.Type),
+                                rateLimiterManager);
 
                             break;
 
                         case MessageType.operation_invoke:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.operation_invoke, message.Id);
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.operation_invoke, message.Id, 0);
 
                             if (!options.WebSocketMethodsIsAllowed)
                             {
-                                await HandleNotAllowed(message.Id, "Websocket methods are disabled.", "", sender);
+                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
                                 break;
                             }
 
                             _ = HandleOperationInvoke(
                                 context,
+                                connectionId,
                                 sender,
                                 new OperationInvokeMessage(tmo, message.Id, message.Type),
                                 _tasks,
                                 webSocket,
+                                rateLimiterManager,
                                 cts.Token);
 
                             break;
 
                         case MessageType.operation_call:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.operation_call, message.Id);
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.operation_call, message.Id, 0);
 
                             if (!options.WebSocketMethodsIsAllowed)
                             {
-                                await HandleNotAllowed(message.Id, "Websocket controller methods are disabled.", "", sender);
+                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
                                 break;
                             }
 
                             _ = HandleOperationCall(
                                 context,
+                                connectionId,
                                 new OperationCallMessage(tmo, message.Id, message.Type),
                                 _tasks,
+                                rateLimiterManager,
                                 cts.Token);
 
                             break;
 
                         case MessageType.ingest_init:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_init, message.Id);
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_init, message.Id, 0);
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleNotAllowed(message.Id, "Websocket ingest is disabled.", "", sender);
+                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
                                 break;
                             }
 
@@ -407,60 +366,60 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                         case MessageType.ingest_data:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_data, message.Id);
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_data, message.Id, 0);
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleNotAllowed(message.Id, "Websocket ingest is disabled.", "", sender);
+                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
                                 break;
                             }
 
-                            _ = HandleIngestData(_ingestRouters, new IngestDataMessage(tmo, message.Id, message.Type));
+                            _ = HandleIngestData(_ingestRouters, connectionId, new IngestDataMessage(tmo, message.Id, message.Type), rateLimiterManager);
 
                             break;
 
                         case MessageType.ingest_data_with_ack:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_data_with_ack, message.Id);
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_data_with_ack, message.Id, 0);
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleNotAllowed(message.Id, "Websocket ingest is disabled.", "", sender);
+                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
                                 break;
                             }
 
-                            _ = HandleIngestDataWithAck(_ingestRouters, sender, new IngestDataWithAckMessage(tmo, message.Id, message.Type));
+                            _ = HandleIngestDataWithAck(_ingestRouters, connectionId, sender, new IngestDataWithAckMessage(tmo, message.Id, message.Type), rateLimiterManager);
 
                             break;
 
                         case MessageType.ingest_complete:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_complete, message.Id);
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_complete, message.Id, 0);
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleNotAllowed(message.Id, "Websocket ingest is disabled.", "", sender);
+                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
                                 break;
                             }
 
-                            _ = HandleIngestComplete(_ingestRouters, new IngestCompleteMessage(tmo, message.Id, message.Type));
+                            _ = HandleIngestComplete(_ingestRouters, connectionId, new IngestCompleteMessage(tmo, message.Id, message.Type), rateLimiterManager);
 
                             break;
                         case MessageType.cancel:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.cancel, message.Id);
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.cancel, message.Id, 0);
 
                             if (!options.RemoteCancellationIsAllowed)
                             {
                                 break;
                             }
 
-                            _ = CancelTask(message.Id, _tasks);
+                            _ = CancelTask(message.Id, connectionId, _tasks, rateLimiterManager);
 
                             break;
                         case MessageType.token_update:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.token_update, message.Id);
+                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.token_update, message.Id, 0);
 
                             _ = HandleTokenRefresh(
                                 context,
@@ -469,6 +428,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 _tasks,
                                 new TokenUpdateMessage(tmo, message.Id, message.Type),
                                 webSocket,
+                                rateLimiterManager,
                                 cts.Token);
 
                             break;
@@ -571,670 +531,777 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 Interlocked.Decrement(ref clientCount);
             }
-        }
 
-        static bool LogException(Exception ex, ILogger logger, WebSocket webSocket)
-        {
-            logger.LogError(ex, "Error crítico en el transporte Hubcon. Conexion abortada.");
-            webSocket?.Abort();
-            return false;
-        }
 
-        private async ValueTask<(ClaimsPrincipal ClaimsPrincipal, DateTime ExpirationTime, string AccessToken)?> IsAuthorized(HttpContext context)
-        {
-            if (options.WebsocketRequiresAuthorization)
+            bool LogException(Exception ex, ILogger logger, WebSocket webSocket)
             {
-                var token = context.Request.Query["access_token"];
-                context.Request.Headers.Authorization = token;
+                logger.LogError(ex, "Error crítico en el transporte Hubcon. Conexion abortada.");
+                webSocket?.Abort();
+                return false;
+            }
 
-                var authProvider = options.AuthHandlerTypes.TryGetValue(HubconTransportAttribute.GetDefault<WebSocketTransport>(), out Type? authHandlerType)
-                    ? authHandlerType
-                    : typeof(JwtAuthHandler);
-
-                if (string.IsNullOrWhiteSpace(token))
+            async ValueTask<(ClaimsPrincipal ClaimsPrincipal, DateTime ExpirationTime, string AccessToken)?> IsAuthorized(HttpContext context)
+            {
+                if (options.WebsocketRequiresAuthorization)
                 {
-                    return null;
-                }
+                    var token = context.Request.Query["access_token"];
+                    context.Request.Headers.Authorization = token;
 
-                if (context.RequestServices.GetService(authProvider) is IAuthHandler provider)
-                {
-                    try
+                    var authProvider = options.AuthHandlerTypes.TryGetValue(HubconTransportAttribute.GetDefault<WebSocketTransport>(), out Type? authHandlerType)
+                        ? authHandlerType
+                        : typeof(JwtAuthHandler);
+
+                    if (string.IsNullOrWhiteSpace(token))
                     {
-                        var operationContext = new OperationContext()
+                        return null;
+                    }
+
+                    if (context.RequestServices.GetService(authProvider) is IAuthHandler provider)
+                    {
+                        try
                         {
-                            RequestServices = context.RequestServices,
-                            HttpContext = context,
-                            RequestAborted = context.RequestAborted,
-                            IsTransportCalled = true
-                        };
+                            var operationContext = new OperationContext()
+                            {
+                                RequestServices = context.RequestServices,
+                                HttpContext = context,
+                                RequestAborted = context.RequestAborted,
+                                IsTransportCalled = true
+                            };
 
-                        var claimsPrincipal = await provider.AuthenticateAsync(operationContext, new UseJwtAttribute())!;
+                            var claimsPrincipal = await provider.AuthenticateAsync(operationContext, new UseJwtAttribute())!;
 
-                        if (claimsPrincipal is null)
+                            if (claimsPrincipal is null)
+                            {
+                                return null;
+                            }
+
+                            var exp = claimsPrincipal.FindFirst("exp");
+
+                            if (exp is null)
+                                return null;
+
+                            long.TryParse(exp?.Value, out long longExpiration);
+                            DateTime expiration = DateTimeOffset.FromUnixTimeSeconds(longExpiration).DateTime;
+
+                            return (claimsPrincipal, expiration, token)!;
+                        }
+                        catch (Exception)
                         {
                             return null;
                         }
-
-                        var exp = claimsPrincipal.FindFirst("exp");
-
-                        if (exp is null)
-                            return null;
-
-                        long.TryParse(exp?.Value, out long longExpiration);
-                        DateTime expiration = DateTimeOffset.FromUnixTimeSeconds(longExpiration).DateTime;
-
-                        return (claimsPrincipal, expiration, token)!;
                     }
-                    catch (Exception)
+                    else
                     {
                         return null;
                     }
                 }
                 else
                 {
-                    return null;
+                    var token = context.Request.Headers.Authorization = Guid.NewGuid().ToString("N");
+                    return (new ClaimsPrincipal(), DateTime.UtcNow.AddYears(50), token)!;
                 }
             }
-            else
+
+            async Task CancelTask(Guid id, string connectionId, ConcurrentDictionary<Guid, CancellationTokenSource> tasks, IGlobalRateLimiterManager rateLimiterManager)
             {
-                var token = context.Request.Headers.Authorization = Guid.NewGuid().ToString("N");
-                return (new ClaimsPrincipal(), DateTime.UtcNow.AddYears(50), token)!;
-            }
-        }
-
-        private async Task CancelTask(Guid id, ConcurrentDictionary<Guid, CancellationTokenSource> tasks)
-        {
-            if (!tasks.TryRemove(id, out var task)) return;
-            await task.CancelAsync();
-            task.Dispose();
-        }
-
-        private async Task HandleNotAllowed(Guid id, string messageJson, object? payload, WebSocketMessageSender sender)
-        {
-            await sender.SendAsync(new ErrorMessage(id, converter.SerializeToElement(HubconResponse.Unauthorized())));
-        }
-
-        private async Task HandleIngestComplete(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingests, IngestCompleteMessage ingestCompleteMessage)
-        {
-            foreach (var id in ingestCompleteMessage.StreamIds)
-            {
-                _ingests.TryRemove(id, out var complete);
-
-                complete.Item1?.OnCompleted();
-                complete.Item2?.CancelAsync();
-                complete.Item4?.RateBucket.Dispose();
-
-                if (complete.Item3 != null)
-                    await complete.Item3.DisposeAsync();
-
+                if (!tasks.TryRemove(id, out var task)) return;
+                await task.CancelAsync();
             }
 
-            ingestCompleteMessage.Dispose();
-        }
-
-        private async Task HandleIngestDataWithAck(
-            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingests,
-            WebSocketMessageSender sender,
-            IngestDataWithAckMessage ingestDataWithAckMessage
-            )
-        {
-            if (ingestDataWithAckMessage == null || !_ingests.TryGetValue(ingestDataWithAckMessage.Id, out var ingestWithAck))
-                return;
-
-            ingestWithAck.Item3.NotifyHeartbeat();
-            ingestWithAck.Item1.OnNextObject(ingestDataWithAckMessage.Data);
-
-            var ingestDataAckMessage = new IngestDataAckMessage(ingestDataWithAckMessage.Id);
-            await sender.SendAsync(ingestDataAckMessage);
-            ingestDataWithAckMessage.Dispose();
-        }
-
-        private async Task HandleIngestData(ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingests, IngestDataMessage ingestDataMessage)
-        {
-            if (ingestDataMessage == null || !_ingests.TryGetValue(ingestDataMessage.Id, out var ingest))
-                return;
-
-            ingest.Item3.NotifyHeartbeat();
-            ingest.Item1.OnNextElement(ingestDataMessage.Data);
-            ingestDataMessage.Dispose();
-        }
-
-        private async Task HandleIngestInit(
-            HttpContext context,
-            string connectionId,
-            WebSocketMessageSender sender,
-            IngestInitMessage ingestInitMessage,
-            ConcurrentDictionary<Guid, (CancellationTokenSource, CancellationTokenRegistration)> _ingestHandlers,
-            ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingestRouters,
-            ISettingsManager settingsManager,
-            IOperationConfigRegistry operationConfigRegistry,
-            IGlobalRateLimiterManager rateLimiterManager,
-            CancellationToken cancellationToken)
-        {
-            Dictionary<Guid, object> sources = new();
-            using var localCts = new CancellationTokenSource();
-            using var registration = cancellationToken.Register(localCts.Cancel);
-
-            List<HeartbeatWatcher> watchers = new();
-
-            try
+            async Task HandleIngestComplete(
+                ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingests,
+                string connectionId,
+                IngestCompleteMessage ingestCompleteMessage,
+                IGlobalRateLimiterManager rateLimiterManager)
             {
-                var operationRequest = converter.DeserializeData<OperationRequest>(ingestInitMessage!.Payload)!;
-
-                if (!operationRegistry.TryGetOperationBlueprint(operationRequest, HubconTransportAttribute.GetDefault<WebSocketTransport>(), out var blueprint))
-                    return;
-
-                bool shareLimiter = blueprint!.Attributes.Any(x => x is IngestShareLimiter);
-                RateLimitAttribute? sharedSettings = null;
-                if (shareLimiter) sharedSettings = settingsManager.GetSettings(operationRequest, HubconTransportAttribute.GetDefault<WebSocketTransport>(), () => new RateLimitAttribute()); ;
-
-                _ingestHandlers.TryAdd(ingestInitMessage.Id, (localCts, registration));
-
-                foreach (var id in ingestInitMessage!.StreamIds)
+                if(!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_complete, ingestCompleteMessage.Id, 1))
                 {
-                    RateLimitAttribute settings = sharedSettings ?? settingsManager.GetSettings(operationRequest, HubconTransportAttribute.GetDefault<WebSocketTransport>(), () => new RateLimitAttribute());
-
-                    if (_ingestRouters.TryGetValue(id, out _))
-                        return;
-
-                    var observable = new GenericObservable<JsonElement>(converter);
-
-                    var bufferOptions = new BoundedChannelOptions(settings.QueueLimit)
-                    {
-                        FullMode = BoundedChannelFullMode.Wait,
-                        Capacity = settings.QueueLimit,
-                        SingleReader = true,
-                        SingleWriter = false,
-                        AllowSynchronousContinuations = false,
-                    };
-
-                    var observer = AsyncObserver.Create<JsonElement>(converter, bufferOptions);
-                    observable.Subscribe(observer);
-                    var handlerCts = new CancellationTokenSource();
-                    var handlerRegistration = localCts.Token.Register(handlerCts.Cancel);
-
-                    var hw = new HeartbeatWatcher(options.IngestTimeout, async () =>
-                    {
-                        observable.OnCompleted();
-                        _ingestRouters.TryRemove(id, out var complete);
-                        complete.Item2?.CancelAsync();
-                        complete.Item2?.Dispose();
-                        complete.Item4?.RateBucket.Dispose();
-                        handlerRegistration.Dispose();
-                        await rateLimiterManager.Unlink(connectionId, id);
-                    });
-
-                    watchers.Add(hw);
-                    await rateLimiterManager.Link(connectionId, id, HubconTransportAttribute.GetDefault<WebSocketTransport>(), operationRequest);
-                    _ingestRouters.TryAdd(id, (observable, handlerCts, hw, settings));
-                    sources.TryAdd(id, observer.GetAsyncEnumerable(handlerCts.Token));
+                    await HandleError(ingestCompleteMessage.Id, HubconResponse.TooManyRequests<string>());
+                    return;
                 }
 
-                using var scope = context.RequestServices.CreateScope();
-
-                var ingestTask = DefaultEntrypoint.HandleIngest(
-                    operationRequest,
-                    HubconTransportAttribute.GetDefault<WebSocketTransport>(),
-                    scope.ServiceProvider,
-                    sources,
-                    null,
-                    localCts.Token);
-
-                await sender.SendAsync(new IngestInitAckMessage(ingestInitMessage.Id));
-                await Task.Delay(100);
-                var result = await ingestTask;
-
-                if (result.Failure)
+                if (ingestCompleteMessage.StreamIds == null)
                 {
-                    await sender.SendAsync(new IngestResultMessage(ingestInitMessage.Id, converter.SerializeToElement(result)));
+                    await HandleError(ingestCompleteMessage.Id, HubconResponse.BadRequest<string>("StreamIds cannot be null"));
                     return;
                 }
 
-                if (sender.State != WebSocketState.Open)
+                foreach (var id in ingestCompleteMessage.StreamIds)
+                {
+                    _ingests.TryRemove(id, out var complete);
+
+                    complete.Item2?.CancelAsync();
+                    complete.Item1?.OnCompleted();
+                    complete.Item4?.RateBucket.Dispose();
+
+                    if (complete.Item3 != null)
+                        await complete.Item3.DisposeAsync();
+
+                }
+
+                ingestCompleteMessage.Dispose();
+            }
+
+            async Task HandleIngestDataWithAck(
+                ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingests,
+                string connectionId,
+                WebSocketMessageSender sender,
+                IngestDataWithAckMessage ingestDataWithAckMessage
+    ,
+                IGlobalRateLimiterManager rateLimiterManager)
+            {
+                if (ingestDataWithAckMessage == null || !_ingests.TryGetValue(ingestDataWithAckMessage.Id, out var ingestWithAck))
                     return;
 
-                await sender.SendAsync(new IngestResultMessage(ingestInitMessage.Id, converter.SerializeToElement(result)));
-            }
-            catch (Exception ex)
-            {
-                logger?.LogError(ex.Message);
+                if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_data_with_ack, ingestDataWithAckMessage.Id, 1))
+                {
+                    await HandleError(ingestDataWithAckMessage.Id, HubconResponse.TooManyRequests<string>());
+                    return;
+                }
 
-                if (sender.State != WebSocketState.Open)
+                ingestWithAck.Item3.NotifyHeartbeat();
+                ingestWithAck.Item1.OnNextObject(ingestDataWithAckMessage.Data);
+
+                var ingestDataAckMessage = new IngestDataAckMessage(ingestDataWithAckMessage.Id);
+                await sender.SendAsync(ingestDataAckMessage);
+                ingestDataWithAckMessage.Dispose();
+            }
+
+            async Task HandleIngestData(
+                ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingests, 
+                string connectionId, 
+                IngestDataMessage ingestDataMessage, 
+                IGlobalRateLimiterManager rateLimiterManager)
+            {
+                if (ingestDataMessage == null || !_ingests.TryGetValue(ingestDataMessage.Id, out var ingest))
                     return;
 
-                await sender.SendAsync(new IngestResultMessage(ingestInitMessage.Id, converter.SerializeToElement(ex.Message)));
+                if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_data, ingestDataMessage.Id, 1))
+                {
+                    await HandleError(ingestDataMessage.Id, HubconResponse.TooManyRequests<string>());
+                    return;
+                }
+
+                ingest.Item3.NotifyHeartbeat();
+                ingest.Item1.OnNextElement(ingestDataMessage.Data);
+                ingestDataMessage.Dispose();
             }
-            finally
+
+            async Task HandleIngestInit(
+                HttpContext context,
+                string connectionId,
+                WebSocketMessageSender sender,
+                IngestInitMessage ingestInitMessage,
+                ConcurrentDictionary<Guid, (CancellationTokenSource, CancellationTokenRegistration)> _ingestHandlers,
+                ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, RateLimitAttribute)> _ingestRouters,
+                ISettingsManager settingsManager,
+                IOperationConfigRegistry operationConfigRegistry,
+                IGlobalRateLimiterManager rateLimiterManager,
+                CancellationToken cancellationToken)
             {
+                Dictionary<Guid, object> sources = new();
+                using var localCts = new CancellationTokenSource();
+                using var registration = cancellationToken.Register(localCts.Cancel);
+
+                List<HeartbeatWatcher> watchers = new();
 
                 try
                 {
-                    foreach (var watcher in watchers)
+                    var operationRequest = converter.DeserializeData<OperationRequest>(ingestInitMessage!.Payload)!;
+
+                    if (!operationRegistry.TryGetOperationBlueprint(operationRequest, HubconTransportAttribute.GetDefault<WebSocketTransport>(), out var blueprint))
+                        return;
+
+                    if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_init, ingestInitMessage.Id, 1))
                     {
-                        await watcher.DisposeAsync();
+                        await HandleError(ingestInitMessage.Id, HubconResponse.TooManyRequests<string>());
+                        return;
                     }
+
+                    bool shareLimiter = blueprint!.Attributes.Any(x => x is IngestShareLimiter);
+                    RateLimitAttribute? sharedSettings = null;
+                    if (shareLimiter) sharedSettings = settingsManager.GetSettings(operationRequest, HubconTransportAttribute.GetDefault<WebSocketTransport>(), () => new RateLimitAttribute()); ;
+
+                    _ingestHandlers.TryAdd(ingestInitMessage.Id, (localCts, registration));
+
+                    foreach (var id in ingestInitMessage!.StreamIds)
+                    {
+                        RateLimitAttribute settings = sharedSettings ?? settingsManager.GetSettings(operationRequest, HubconTransportAttribute.GetDefault<WebSocketTransport>(), () => new RateLimitAttribute());
+
+                        if (_ingestRouters.TryGetValue(id, out _))
+                            return;
+
+                        var observable = new GenericObservable<JsonElement>(converter);
+
+                        var bufferOptions = new BoundedChannelOptions(settings.QueueLimit)
+                        {
+                            FullMode = BoundedChannelFullMode.Wait,
+                            Capacity = settings.QueueLimit,
+                            SingleReader = true,
+                            SingleWriter = false,
+                            AllowSynchronousContinuations = false,
+                        };
+
+                        var observer = AsyncObserver.Create<JsonElement>(converter, bufferOptions);
+                        observable.Subscribe(observer);
+                        var handlerCts = new CancellationTokenSource();
+                        var handlerRegistration = localCts.Token.Register(handlerCts.Cancel);
+
+                        var hw = new HeartbeatWatcher(options.IngestTimeout, async () =>
+                        {
+                            observable.OnCompleted();
+                            _ingestRouters.TryRemove(id, out var complete);
+                            complete.Item2?.CancelAsync();
+                            complete.Item2?.Dispose();
+                            complete.Item4?.RateBucket.Dispose();
+                            handlerRegistration.Dispose();
+                            await rateLimiterManager.Unlink(connectionId, id);
+                        });
+
+                        watchers.Add(hw);
+                        await rateLimiterManager.Link(connectionId, id, HubconTransportAttribute.GetDefault<WebSocketTransport>(), operationRequest);
+                        _ingestRouters.TryAdd(id, (observable, handlerCts, hw, settings));
+                        sources.TryAdd(id, observer.GetAsyncEnumerable(handlerCts.Token));
+                    }
+
+                    using var scope = context.RequestServices.CreateScope();
+
+                    var ingestTask = DefaultEntrypoint.HandleIngest(
+                        operationRequest,
+                        HubconTransportAttribute.GetDefault<WebSocketTransport>(),
+                        scope.ServiceProvider,
+                        sources,
+                        null,
+                        localCts.Token);
+
+                    await sender.SendAsync(new IngestInitAckMessage(ingestInitMessage.Id));
+                    await Task.Delay(100);
+                    var result = await ingestTask;
+
+                    if (sender.State != WebSocketState.Open)
+                        return;
+
+                    if (result.Failure)
+                    {
+                        await HandleError(ingestInitMessage.Id, result);
+                        return;
+                    }
+
+                    await sender.SendAsync(new IngestResultMessage(ingestInitMessage.Id, converter.SerializeToElement(result)));
                 }
                 catch (Exception ex)
                 {
                     logger?.LogError(ex.Message);
+
+                    if (sender.State != WebSocketState.Open)
+                        return;
+
+                    await sender.SendAsync(new IngestResultMessage(ingestInitMessage.Id, converter.SerializeToElement(ex.Message)));
                 }
                 finally
                 {
-                    watchers.Clear();
-                }
 
-                _ingestHandlers.TryRemove(ingestInitMessage.Id, out _);
-                await localCts.CancelAsync();
-                ingestInitMessage.Dispose();
-            }
-        }
-
-        private class State
-        {
-            public Guid Id = Guid.Empty!;
-            public CancellationTokenSource Cts = null!;
-            public ConcurrentDictionary<Guid, CancellationTokenSource> Tasks = null!;
-        }
-
-        private async Task HandleOperationInvoke(
-            HttpContext context,
-            WebSocketMessageSender sender,
-            OperationInvokeMessage operationInvokeMessage,
-            ConcurrentDictionary<Guid, CancellationTokenSource> _tasks,
-            WebSocket webSocket,
-            CancellationToken cancellationToken)
-        {
-            using var localCts = new CancellationTokenSource();
-            using var registration = cancellationToken.Register(localCts.Cancel);
-            IOperationRequest? operationRequest = null;
-
-            try
-            {
-                if (!_tasks.TryAdd(operationInvokeMessage.Id, localCts))
-                    return;
-
-                if (operationInvokeMessage == null) return;
-
-                operationRequest = converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload)!;
-
-                using var scope = context.RequestServices.CreateScope();
-
-                var response = await DefaultEntrypoint.HandleMethodWithResult(
-                    operationRequest,
-                    HubconTransportAttribute.GetDefault<WebSocketTransport>(),
-                    scope.ServiceProvider,
-                    null,
-                    localCts.Token);
-
-                if (webSocket.State == WebSocketState.Open)
-                {
-                    var message = new OperationResponseMessage(
-                        operationInvokeMessage.Id,
-                        converter.SerializeToElement(response)
-                    );
-
-                    await sender.SendAsync(message);
-                }
-            }
-            finally
-            {
-                _tasks.TryRemove(operationInvokeMessage.Id, out _);
-                await localCts.CancelAsync();
-                operationInvokeMessage.Dispose();
-            }
-        }
-
-        private async Task HandleOperationCall(
-            HttpContext context,
-            OperationCallMessage operationCallMessage,
-            ConcurrentDictionary<Guid, CancellationTokenSource> tasks,
-            CancellationToken cancellationToken)
-        {
-            using var localCts = new CancellationTokenSource();
-            using var registration = cancellationToken.Register(localCts.Cancel);
-
-            try
-            {
-                if (!tasks.TryAdd(operationCallMessage.Id, localCts))
-                    return;
-
-                IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(operationCallMessage.Payload)!;
-
-                using var scope = context.RequestServices.CreateScope();
-
-                var response = await DefaultEntrypoint.HandleMethodVoid(
-                    operationRequest,
-                    HubconTransportAttribute.GetDefault<WebSocketTransport>(),
-                    scope.ServiceProvider,
-                    null,
-                    localCts.Token);
-
-                if (response.Failure)
-                {
-                    logger?.LogError(response.Message);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger?.LogError("{}", ex.Message);
-            }
-            finally
-            {
-                tasks.TryRemove(operationCallMessage.Id, out _);
-                await localCts.CancelAsync();
-                operationCallMessage.Dispose();
-            }
-        }
-
-        private async Task HandleUnsubscribe(
-            ConcurrentDictionary<Guid, CancellationTokenSource> subscriptions,
-            HttpContext context,
-            SubscriptionCompleteMessage subscriptionCompletemessage)
-        {
-            try
-            {
-                if (subscriptionCompletemessage == null) return;
-
-                if (subscriptions.TryRemove(subscriptionCompletemessage.Id, out var tokenSource))
-                {
-                    await tokenSource.CancelAsync();
-                    tokenSource.Dispose();
-                }
-            }
-            catch (Exception ex)
-            {
-                logger?.LogError("{Message}", ex.Message);
-            }
-            finally
-            {
-                subscriptionCompletemessage.Dispose();
-            }
-        }
-
-        private static async Task HandleAck(
-            ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels,
-            AckMessage ackMessage)
-        {
-            if (_ackChannels.TryGetValue(ackMessage.Id, out IRetryableMessage? value))
-            {
-                await value.AckAsync();
-                _ackChannels.TryRemove(ackMessage.Id, out _);
-            }
-
-            ackMessage.Dispose();
-        }
-
-        private async Task HandleSubscribe(
-            HttpContext context,
-            string connectionId,
-            MessageType type,
-            ConcurrentDictionary<Guid, CancellationTokenSource> _subscriptions,
-            ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels,
-            WebSocketMessageSender sender,
-            SubscriptionInitMessage subscribeMessage,
-            IGlobalRateLimiterManager rateLimiterManager,
-            CancellationToken cancellationToken)
-        {
-            if (subscribeMessage == null || subscribeMessage.Id == Guid.Empty) return;
-
-            if (_subscriptions.ContainsKey(subscribeMessage.Id)) return;
-
-            using var localCts = new CancellationTokenSource();
-            using var registration = cancellationToken.Register(localCts.Cancel);
-
-            try
-            {
-                _subscriptions.TryAdd(subscribeMessage.Id, localCts);
-
-                IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(subscribeMessage.Payload)!;
-
-                using var scope = context.RequestServices.CreateScope();
-
-                var streamResult = await DefaultEntrypoint.HandleSubscription(
-                    operationRequest,
-                    HubconTransportAttribute.GetDefault<WebSocketTransport>(),
-                    scope.ServiceProvider,
-                    localCts.Token);
-
-                if (streamResult.Failure)
-                {
-                    await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, converter.SerializeToElement(streamResult)));
-                    return;
-                }
-
-                var stream = streamResult.Data! as IAsyncEnumerable<object?>;
-
-                await foreach (var item in stream.WithCancellation(localCts.Token))
-                {
-                    if (item != null && item.GetType().IsAssignableTo(typeof(IRetryableMessage)))
+                    try
                     {
-                        IRetryableMessage? retryable = item as IRetryableMessage;
-                        var ackId = Guid.NewGuid();
-                        _ackChannels.TryAdd(ackId, retryable!);
-
-                        while (await retryable!.CanRetry() && !localCts.IsCancellationRequested)
+                        foreach (var watcher in watchers)
                         {
-                            retryable.GetPayload(out object? message);
-                            var edwa = new SubscriptionDataWithAckMessage(subscribeMessage.Id, converter.SerializeToElement(message), ackId);
-                            await sender.SendAsync(edwa);
-                        }
-
-                        if (_ackChannels.TryRemove(ackId, out IRetryableMessage? channel))
-                            await channel.FailedAckAsync();
-                    }
-                    else
-                    {
-                        if (!localCts.IsCancellationRequested)
-                        {
-                            var response = new SubscriptionDataMessage(
-                                subscribeMessage.Id,
-                                converter.SerializeToElement(item)
-                            );
-
-                            await sender.SendAsync(response);
+                            await watcher.DisposeAsync();
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        logger?.LogError(ex.Message);
+                    }
+                    finally
+                    {
+                        watchers.Clear();
+                    }
 
-                    await rateLimiterManager.TryAcquireAsync(connectionId, type, HubconTransportAttribute.GetDefault<WebSocketTransport>(), operationRequest);
+                    _ingestHandlers.TryRemove(ingestInitMessage.Id, out _);
+                    await localCts.CancelAsync();
+                    ingestInitMessage.Dispose();
                 }
             }
-            catch (OperationCanceledException)
+
+            async Task HandleOperationInvoke(
+                HttpContext context,
+                string connectionId,
+                WebSocketMessageSender sender,
+                OperationInvokeMessage operationInvokeMessage,
+                ConcurrentDictionary<Guid, CancellationTokenSource> _tasks,
+                WebSocket webSocket,
+                IGlobalRateLimiterManager rateLimiterManager,
+                CancellationToken cancellationToken)
             {
-                // Cancelado normalmente
-            }
-            catch (Exception)
-            {
-                // TODO: Revisar
-                await sender.SendAsync(new ErrorMessage(subscribeMessage.Id, converter.SerializeToElement(HubconResponse.InternalError())));
-            }
-            finally
-            {
-                _subscriptions.TryRemove(subscribeMessage.Id, out _);
-                await localCts.CancelAsync();
-                subscribeMessage.Dispose();
-            }
-        }
+                using var localCts = new CancellationTokenSource();
+                using var registration = cancellationToken.Register(localCts.Cancel);
+                IOperationRequest? operationRequest = null;
 
-        private async Task HandleStream(
-            HttpContext context,
-            string connectionId,
-            ConcurrentDictionary<Guid, CancellationTokenSource> _streams,
-            ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels,
-            WebSocketMessageSender sender,
-            StreamInitMessage streamInitMessage,
-            WebSocket webSocket,
-            IGlobalRateLimiterManager rateLimiterManager,
-            CancellationToken cancellationToken)
-        {
-            using var localCts = new CancellationTokenSource();
-            using var registration = cancellationToken.Register(localCts.Cancel);
-            IOperationRequest operationRequest = null!;
-            try
-            {
-                if (streamInitMessage == null || streamInitMessage.Id == Guid.Empty) return;
-
-                if (_streams.ContainsKey(streamInitMessage.Id)) return;
-
-                _streams.TryAdd(streamInitMessage.Id, localCts);
-
-                operationRequest = converter.DeserializeData<OperationRequest>(streamInitMessage.Payload)!;
-
-                using var scope = context.RequestServices.CreateScope();
-
-                var streamResult = await DefaultEntrypoint.HandleMethodStream(
-                    operationRequest,
-                    HubconTransportAttribute.GetDefault<WebSocketTransport>(),
-                    scope.ServiceProvider,
-                    null,
-                    localCts.Token);
-
-                if (streamResult.Failure)
+                try
                 {
-                    await sender.SendAsync(new ErrorMessage(streamInitMessage.Id, converter.SerializeToElement(streamResult)));
+                    if (!_tasks.TryAdd(operationInvokeMessage.Id, localCts))
+                        return;
+
+                    if (operationInvokeMessage == null) return;
+
+                    if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.operation_invoke, operationInvokeMessage.Id, 1))
+                    {
+                        await HandleError(operationInvokeMessage.Id, HubconResponse.TooManyRequests<string>());
+                        return;
+                    }
+
+                    operationRequest = converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload)!;
+
+                    using var scope = context.RequestServices.CreateScope();
+
+                    var response = await DefaultEntrypoint.HandleMethodWithResult(
+                        operationRequest,
+                        HubconTransportAttribute.GetDefault<WebSocketTransport>(),
+                        scope.ServiceProvider,
+                        null,
+                        localCts.Token);
+
+                    if (webSocket.State == WebSocketState.Open)
+                    {
+                        var message = new OperationResponseMessage(
+                            operationInvokeMessage.Id,
+                            converter.SerializeToElement(response)
+                        );
+
+                        await sender.SendAsync(message);
+                    }
+                }
+                finally
+                {
+                    _tasks.TryRemove(operationInvokeMessage.Id, out _);
+                    await localCts.CancelAsync();
+                    operationInvokeMessage.Dispose();
+                }
+            }
+
+            async Task HandleOperationCall(
+                HttpContext context,
+                string connectionId,
+                OperationCallMessage operationCallMessage,
+                ConcurrentDictionary<Guid, CancellationTokenSource> tasks,
+                IGlobalRateLimiterManager rateLimiterManager,
+                CancellationToken cancellationToken)
+            {
+                using var localCts = new CancellationTokenSource();
+                using var registration = cancellationToken.Register(localCts.Cancel);
+
+                try
+                {
+                    if (!tasks.TryAdd(operationCallMessage.Id, localCts))
+                        return;
+
+                    if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.operation_call, operationCallMessage.Id, 1))
+                    {
+                        await HandleError(operationCallMessage.Id, HubconResponse.TooManyRequests<string>());
+                        return;
+                    }
+
+                    IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(operationCallMessage.Payload)!;
+
+                    using var scope = context.RequestServices.CreateScope();
+
+                    var response = await DefaultEntrypoint.HandleMethodVoid(
+                        operationRequest,
+                        HubconTransportAttribute.GetDefault<WebSocketTransport>(),
+                        scope.ServiceProvider,
+                        null,
+                        localCts.Token);
+
+                    if (response.Failure)
+                    {
+                        logger?.LogError(response.Message);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogError("{}", ex.Message);
+                }
+                finally
+                {
+                    tasks.TryRemove(operationCallMessage.Id, out _);
+                    await localCts.CancelAsync();
+                    operationCallMessage.Dispose();
+                }
+            }
+
+            async Task HandleUnsubscribe(
+                ConcurrentDictionary<Guid, CancellationTokenSource> subscriptions,
+                string connectionId,
+                HttpContext context,
+                SubscriptionCompleteMessage subscriptionCompletemessage,
+                IGlobalRateLimiterManager rateLimiterManager)
+            {
+                try
+                {
+                    if (subscriptionCompletemessage == null) return;
+
+                    if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.subscription_complete, subscriptionCompletemessage.Id, 1))
+                    {
+                        await HandleError(subscriptionCompletemessage.Id, HubconResponse.TooManyRequests<string>());
+                        return;
+                    }
+
+                    if (subscriptions.TryRemove(subscriptionCompletemessage.Id, out var tokenSource))
+                    {
+                        await tokenSource.CancelAsync();
+                        tokenSource.Dispose();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogError("{Message}", ex.Message);
+                }
+                finally
+                {
+                    subscriptionCompletemessage.Dispose();
+                }
+            }
+
+            async Task HandleAck(
+                ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels,
+                string connectionId,
+                Shared.Core.Websockets.Messages.Generic.AckMessage ackMessage,
+                IGlobalRateLimiterManager rateLimiterManager)
+            {
+                if (_ackChannels.TryGetValue(ackMessage.Id, out IRetryableMessage? value))
+                {
+                    await value.AckAsync();
+
+                    _ackChannels.TryRemove(ackMessage.Id, out _);
+
+                    if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ack, ackMessage.Id, 1))
+                    {
+                        await HandleError(ackMessage.Id, HubconResponse.TooManyRequests<string>());
+                        return;
+                    }
+                }
+
+                ackMessage.Dispose();
+            }
+
+            async Task HandleSubscribe(
+                HttpContext context,
+                string connectionId,
+                MessageType type,
+                ConcurrentDictionary<Guid, CancellationTokenSource> _subscriptions,
+                ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels,
+                WebSocketMessageSender sender,
+                SubscriptionInitMessage subscribeMessage,
+                IGlobalRateLimiterManager rateLimiterManager,
+                CancellationToken cancellationToken)
+            {
+                if (subscribeMessage == null || subscribeMessage.Id == Guid.Empty) return;
+
+                if (_subscriptions.ContainsKey(subscribeMessage.Id)) return;
+
+                if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.subscription_init, subscribeMessage.Id, 1))
+                {
+                    await HandleError(subscribeMessage.Id, HubconResponse.TooManyRequests<string>());
                     return;
                 }
 
-                await rateLimiterManager.Link(connectionId, streamInitMessage.Id, HubconTransportAttribute.GetDefault<WebSocketTransport>(), operationRequest);
+                using var localCts = new CancellationTokenSource();
+                using var registration = cancellationToken.Register(localCts.Cancel);
 
-                var stream = streamResult.Data! as IAsyncEnumerable<object?>;
-
-                await foreach (var item in stream!.WithCancellation(localCts.Token))
+                try
                 {
-                    await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.stream_init, streamInitMessage.Id);
+                    _subscriptions.TryAdd(subscribeMessage.Id, localCts);
 
-                    if (item != null && item.GetType().IsAssignableTo(typeof(IRetryableMessage)))
+                    IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(subscribeMessage.Payload)!;
+
+                    using var scope = context.RequestServices.CreateScope();
+
+                    var streamResult = await DefaultEntrypoint.HandleSubscription(
+                        operationRequest,
+                        HubconTransportAttribute.GetDefault<WebSocketTransport>(),
+                        scope.ServiceProvider,
+                        localCts.Token);
+
+                    if (streamResult.Failure)
                     {
-                        IRetryableMessage? retryable = item as IRetryableMessage;
-                        var ackId = Guid.NewGuid();
-                        _ackChannels.TryAdd(ackId, retryable!);
+                        await HandleError(subscribeMessage.Id, HubconResponse.Unauthorized<string>());
+                        return;
+                    }
 
-                        while (await retryable!.CanRetry() && !localCts.IsCancellationRequested)
+                    var stream = streamResult.Data! as IAsyncEnumerable<object?>;
+
+                    await foreach (var item in stream.WithCancellation(localCts.Token))
+                    {
+                        if (item != null && item.GetType().IsAssignableTo(typeof(IRetryableMessage)))
                         {
-                            retryable.GetPayload(out object? message);
-                            var edwa = new StreamDataWithAckMessage(streamInitMessage.Id, converter.SerializeToElement(message), ackId);
-                            await sender.SendAsync(edwa);
+                            IRetryableMessage? retryable = item as IRetryableMessage;
+                            var ackId = Guid.NewGuid();
+                            _ackChannels.TryAdd(ackId, retryable!);
 
-                            if (!options.MessageRetryIsEnabled)
+                            while (await retryable!.CanRetry() && !localCts.IsCancellationRequested)
                             {
-                                break;
+                                retryable.GetPayload(out object? message);
+                                var edwa = new SubscriptionDataWithAckMessage(subscribeMessage.Id, converter.SerializeToElement(message), ackId);
+                                await sender.SendAsync(edwa);
+                            }
+
+                            if (_ackChannels.TryRemove(ackId, out IRetryableMessage? channel))
+                                await channel.FailedAckAsync();
+                        }
+                        else
+                        {
+                            if (!localCts.IsCancellationRequested)
+                            {
+                                var response = new SubscriptionDataMessage(
+                                    subscribeMessage.Id,
+                                    converter.SerializeToElement(item)
+                                );
+
+                                await sender.SendAsync(response);
                             }
                         }
 
-                        if (_ackChannels.TryRemove(ackId, out IRetryableMessage? channel))
-                            await channel.AckAsync();
+                        await rateLimiterManager.TryAcquireAsync(connectionId, type, HubconTransportAttribute.GetDefault<WebSocketTransport>(), operationRequest, 0);
+                        await rateLimiterManager.TryAcquireAsync(connectionId, type, HubconTransportAttribute.GetDefault<WebSocketTransport>(), operationRequest, 1);
                     }
-                    else
-                    {
-                        if (!localCts.IsCancellationRequested)
-                        {
-                            var response = new StreamDataMessage(
-                                streamInitMessage.Id,
-                                converter.SerializeToElement(item)
-                            );
+                }
+                catch (OperationCanceledException)
+                {
+                    // Cancelado normalmente
+                }
+                catch (Exception)
+                {
+                    await HandleError(subscribeMessage.Id, HubconResponse.Unauthorized<string>());
+                    return;
+                }
+                finally
+                {
+                    _subscriptions.TryRemove(subscribeMessage.Id, out _);
+                    await localCts.CancelAsync();
+                    subscribeMessage.Dispose();
+                }
+            }
 
-                            await sender.SendAsync(response);
+            async Task HandleStream(
+                HttpContext context,
+                string connectionId,
+                ConcurrentDictionary<Guid, CancellationTokenSource> _streams,
+                ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels,
+                WebSocketMessageSender sender,
+                StreamInitMessage streamInitMessage,
+                WebSocket webSocket,
+                IGlobalRateLimiterManager rateLimiterManager,
+                CancellationToken cancellationToken)
+            {
+                using var localCts = new CancellationTokenSource();
+                using var registration = cancellationToken.Register(localCts.Cancel);
+                IOperationRequest operationRequest = null!;
+                try
+                {
+                    if (streamInitMessage == null || streamInitMessage.Id == Guid.Empty) return;
+
+                    if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.stream_init, streamInitMessage.Id, 1))
+                    {
+                        await HandleError(streamInitMessage.Id, HubconResponse.TooManyRequests<string>());
+                        return;
+                    }
+
+                    if (_streams.ContainsKey(streamInitMessage.Id)) return;
+
+                    _streams.TryAdd(streamInitMessage.Id, localCts);
+
+                    operationRequest = converter.DeserializeData<OperationRequest>(streamInitMessage.Payload)!;
+
+                    using var scope = context.RequestServices.CreateScope();
+
+                    var streamResult = await DefaultEntrypoint.HandleMethodStream(
+                        operationRequest,
+                        HubconTransportAttribute.GetDefault<WebSocketTransport>(),
+                        scope.ServiceProvider,
+                        null,
+                        localCts.Token);
+
+                    if (streamResult.Failure)
+                    {
+                        await HandleError(streamInitMessage.Id, HubconResponse.Unauthorized<string>());
+                        return;
+                    }
+
+                    await rateLimiterManager.Link(connectionId, streamInitMessage.Id, HubconTransportAttribute.GetDefault<WebSocketTransport>(), operationRequest);
+
+                    var stream = streamResult.Data! as IAsyncEnumerable<object?>;
+
+                    await foreach (var item in stream!.WithCancellation(localCts.Token))
+                    {
+                        await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.stream_init, streamInitMessage.Id, 0);
+                        await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.stream_init, streamInitMessage.Id, 1);
+
+                        if (item != null && item.GetType().IsAssignableTo(typeof(IRetryableMessage)))
+                        {
+                            IRetryableMessage? retryable = item as IRetryableMessage;
+                            var ackId = Guid.NewGuid();
+                            _ackChannels.TryAdd(ackId, retryable!);
+
+                            while (await retryable!.CanRetry() && !localCts.IsCancellationRequested)
+                            {
+                                retryable.GetPayload(out object? message);
+                                var edwa = new StreamDataWithAckMessage(streamInitMessage.Id, converter.SerializeToElement(message), ackId);
+                                await sender.SendAsync(edwa);
+
+                                if (!options.MessageRetryIsEnabled)
+                                {
+                                    break;
+                                }
+                            }
+
+                            if (_ackChannels.TryRemove(ackId, out IRetryableMessage? channel))
+                                await channel.AckAsync();
+                        }
+                        else
+                        {
+                            if (!localCts.IsCancellationRequested)
+                            {
+                                var response = new StreamDataMessage(
+                                    streamInitMessage.Id,
+                                    converter.SerializeToElement(item)
+                                );
+
+                                await sender.SendAsync(response);
+                            }
                         }
                     }
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                // Cancelado normalmente
-            }
-            catch (Exception)
-            {
-                if (webSocket.State == WebSocketState.Open)
+                catch (OperationCanceledException)
                 {
-                    await sender.SendAsync(new ErrorMessage(streamInitMessage.Id, converter.SerializeToElement(HubconResponse.InternalError())));
+                    // Cancelado normalmente
+                }
+                catch (Exception)
+                {
+                    if (webSocket.State == WebSocketState.Open)
+                    {
+                        await HandleError(streamInitMessage.Id, HubconResponse.InternalError<string>());
+                    }
+                }
+                finally
+                {
+                    _streams.TryRemove(streamInitMessage.Id, out _);
+                    await localCts.CancelAsync();
+
+                    if (webSocket.State == WebSocketState.Open)
+                    {
+                        await sender.SendAsync(new StreamCompleteMessage(streamInitMessage.Id));
+                    }
+
+                    streamInitMessage.Dispose();
+
+                    await rateLimiterManager.Unlink(connectionId, streamInitMessage.Id);
                 }
             }
-            finally
+
+            async Task HandleTokenRefresh(
+                HttpContext context,
+                WebSocketMessageSender sender,
+                string connectionId,
+                ConcurrentDictionary<Guid, CancellationTokenSource> _tasks,
+                TokenUpdateMessage tokenUpdateMessage,
+                WebSocket webSocket,
+                IGlobalRateLimiterManager rateLimiterManager,
+                CancellationToken cancellationToken)
             {
-                _streams.TryRemove(streamInitMessage.Id, out _);
-                await localCts.CancelAsync();
+                using var localCts = new CancellationTokenSource();
+                using var registration = cancellationToken.Register(localCts.Cancel);
 
-                if (webSocket.State == WebSocketState.Open)
+                if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.token_update, tokenUpdateMessage.Id, 1))
                 {
-                    await sender.SendAsync(new StreamCompleteMessage(streamInitMessage.Id));
-                }
-
-                streamInitMessage.Dispose();
-
-                await rateLimiterManager.Unlink(connectionId, streamInitMessage.Id);
-            }
-        }
-
-        private async Task HandleTokenRefresh(
-            HttpContext context,
-            WebSocketMessageSender sender,
-            string connectionId,
-            ConcurrentDictionary<Guid, CancellationTokenSource> _tasks,
-            TokenUpdateMessage tokenUpdateMessage,
-            WebSocket webSocket,
-            CancellationToken cancellationToken)
-        {
-            using var localCts = new CancellationTokenSource();
-            using var registration = cancellationToken.Register(localCts.Cancel);
-
-            var user = await IsAuthorized(context);
-
-            try
-            {
-                if (!_tasks.TryAdd(tokenUpdateMessage.Id, localCts))
-                    return;
-
-                if (tokenUpdateMessage == null) return;
-
-                if (user is null)
-                {
-                    await sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id, false, "Token refresh failed."));
-                    await webSocket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Unauthorized", localCts.Token);
-                    logger?.LogInformation("Websocket re-authentication failed.");
+                    await HandleError(tokenUpdateMessage.Id, HubconResponse.TooManyRequests<string>());
                     return;
                 }
 
-                context.Request.Headers.Authorization = tokenUpdateMessage.Token;
-                context.User = user.Value.ClaimsPrincipal;
-                connectionSupervisor.UpdateExpiration(connectionId, user.Value.ExpirationTime);
-                await sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id, true, "Token refresh OK."));
-            }
-            catch (OperationCanceledException)
-            {
-                await sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id, false, "Operation cancelled."));
-                await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Operation cancelled.", localCts.Token);
-                logger.LogInformation("Token refresh update: Operation cancelled.");
-            }
-            catch (Exception ex)
-            {
-                await sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id, false, "Internal server error."));
-                await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Internal server error.", localCts.Token);
-                logger?.LogError(ex.Message);
-            }
-            finally
-            {
-                _tasks.TryRemove(tokenUpdateMessage.Id, out _);
-                await localCts.CancelAsync();
-                tokenUpdateMessage.Dispose();
-            }
-        }
+                var user = await IsAuthorized(context);
 
-        private static async Task HandlePing(
-            WebSocket webSocket,
-            WebSocketMessageSender sender,
-            Guid lastPingId,
-            HeartbeatWatcher heartbeatWatcher,
-            PingMessage pingMessage)
-        {
-            if (lastPingId == pingMessage!.Id)
-            {
-                await webSocket.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "Ping error", default);
-                return;
+                try
+                {
+                    if (!_tasks.TryAdd(tokenUpdateMessage.Id, localCts))
+                        return;
+
+                    if (tokenUpdateMessage == null) return;
+
+                    if (user is null)
+                    {
+                        await sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id, false, "Token refresh failed."));
+                        await webSocket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Unauthorized", localCts.Token);
+                        logger?.LogInformation("Websocket re-authentication failed.");
+                        return;
+                    }
+
+                    context.Request.Headers.Authorization = tokenUpdateMessage.Token;
+                    context.User = user.Value.ClaimsPrincipal;
+                    connectionSupervisor.UpdateExpiration(connectionId, user.Value.ExpirationTime);
+                    await sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id, true, "Token refresh OK."));
+                }
+                catch (OperationCanceledException)
+                {
+                    await sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id, false, "Operation cancelled."));
+                    await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Operation cancelled.", localCts.Token);
+                    logger.LogInformation("Token refresh update: Operation cancelled.");
+                }
+                catch (Exception ex)
+                {
+                    await sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id, false, "Internal server error."));
+                    await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Internal server error.", localCts.Token);
+                    logger?.LogError(ex.Message);
+                }
+                finally
+                {
+                    _tasks.TryRemove(tokenUpdateMessage.Id, out _);
+                    await localCts.CancelAsync();
+                    tokenUpdateMessage.Dispose();
+                }
             }
 
-            heartbeatWatcher.NotifyHeartbeat();
+            async Task HandleError(Guid id, IResponse error)
+            {
+                if(webSocket.State != WebSocketState.Open)
+                    return;
 
-            await sender.SendAsync(new PongMessage(pingMessage.Id));
-            pingMessage.Dispose();
+                var localMessage = new ErrorMessage(id, default!);
+
+                localMessage.Error = converter.Serialize(new HubconResponse<string>(
+                    error.Success,
+                    error.Failure, 
+                    error.Message, 
+                    error.Error,
+                    error.StatusCode,
+                    null!));
+
+                await sender.SendAsync(localMessage);
+            }
+
+            async Task HandlePing(
+                WebSocket webSocket,
+                string connectionId,
+                WebSocketMessageSender sender,
+                Guid lastPingId,
+                HeartbeatWatcher heartbeatWatcher,
+                PingMessage pingMessage,
+                IGlobalRateLimiterManager rateLimiterManager)
+            {
+                if (lastPingId == pingMessage!.Id)
+                {
+                    await webSocket.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "Ping error", default);
+                    return;
+                }
+
+                if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ping, pingMessage.Id, 1))
+                {
+                    await HandleError(pingMessage.Id, HubconResponse.TooManyRequests<string>());
+                    return;
+                }
+
+                heartbeatWatcher.NotifyHeartbeat();
+                await sender.SendAsync(new PongMessage(pingMessage.Id));
+                pingMessage.Dispose();
+            }
         }
     }
 }

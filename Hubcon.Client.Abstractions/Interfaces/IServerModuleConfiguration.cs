@@ -321,5 +321,16 @@ namespace Hubcon
         /// <param name="valueProvider">A lambda function to provide the header value as a string.</param>
         /// <returns>The current instance of <see cref="IServerModuleConfiguration"/> for method chaining.</returns>
         IServerModuleConfiguration AddHeaderProvider(string key, Func<IServiceProvider, string> valueProvider);
+
+        /// <summary>
+        /// Configures whether the server module allows cancellation requests from remote clients.
+        /// </summary>
+        /// <remarks>Enabling remote cancellation allows server modules to respond to cancellation
+        /// requests initiated by remote clients. This can be useful for managing long-running operations and improving
+        /// responsiveness in distributed environments.</remarks>
+        /// <param name="v">A value indicating whether remote cancellation is enabled. Specify <see langword="true"/> to permit remote
+        /// clients to cancel operations; otherwise, <see langword="false"/>.</param>
+        /// <returns>The current instance of <see cref="IServerModuleConfiguration"/> for method chaining.</returns>
+        IServerModuleConfiguration AllowRemoteCancellation();
     }
 }

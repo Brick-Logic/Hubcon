@@ -67,6 +67,9 @@ namespace Hubcon
         public static HubconResponse<T> RequestTooLarge<T>(Exception exception = null, string error = "Request too large", object originalData = null)
             => new HubconResponse<T>(false, true, null!, error, 413, default!, originalData, exception);
 
+        public static HubconResponse<T> BadRequest<T>(object data = null, Exception exception = null, string error = "Bad request", object originalData = null)
+            => new HubconResponse<T>(false, true, null!, error, 413, default!, originalData, exception);
+
         public static HubconResponse<T> TooManyRequests<T>(Exception exception = null, string error = "Too many requests", object originalData = null)
             => new HubconResponse<T>(false, true, null!, error, 429, default!, originalData, exception);
 

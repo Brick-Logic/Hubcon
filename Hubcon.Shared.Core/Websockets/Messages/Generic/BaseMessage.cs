@@ -39,7 +39,11 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
     {
         private readonly TrimmedMemoryOwner? _buffer;
         private Guid? _id;
+        private string? _error;
         private MessageType? _type;
+
+        [JsonIgnore]
+        public TrimmedMemoryOwner? Buffer => _buffer;
 
         [JsonPropertyName("id")]
         public Guid Id => _id ??= Extract<Guid>("id");
@@ -47,16 +51,31 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
         [JsonPropertyName("type")]
         public MessageType Type => _type ??= Extract<MessageType>("type");
 
+        [JsonPropertyName("error")]
+        public string? Error
+        {
+            get => _error ??= Extract<string?>("error");
+            set => _error = value;
+        }
+
         public BaseMessage()
         {
 
         }
 
+        public BaseMessage(BaseMessage baseMessage)
+        {
+            _type = baseMessage.Type;
+            _id = baseMessage.Id;
+            _buffer = baseMessage.Buffer;
+        }
+
         [JsonConstructor]
-        public BaseMessage(MessageType type, Guid id)
+        public BaseMessage(MessageType type, Guid id, string? error = null)
         {
             _type = type;
             _id = id;
+            _error = error;
         }
 
         public BaseMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null)

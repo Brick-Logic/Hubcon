@@ -58,5 +58,6 @@ namespace Hubcon.Client.Abstractions.Interfaces
         void ConfigureContract<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(Action<IContractConfigurator<T>>? configure) where T : IControllerContract;
         void AddInterceptor(InterceptorType interceptorType, Func<IInvocationContext, Task> interceptorDelegate);
         void EnableHttpEndpointOverloading();
+        void AllowRemoteCancellation(bool allowed);
     }
 }

@@ -85,7 +85,7 @@ namespace Hubcon
         /// <summary>
         /// Gets the delegate used to invoke the operation.
         /// </summary>
-        Func<object?, object, object?>? InvokeDelegate { get; }
+        Func<object?, object, CancellationToken, object?>? InvokeDelegate { get; }
 
         /// <summary>
         /// Gets the pipeline builder used for the operation.
