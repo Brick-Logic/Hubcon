@@ -1,4 +1,5 @@
-﻿using System;
+﻿#pragma warning disable CS1591 // Falta el comentario XML para el tipo o miembro visible públicamente
+using System;
 using System.Reflection;
 
 namespace Hubcon.Shared.Core.Tools
@@ -31,7 +32,7 @@ namespace Hubcon.Shared.Core.Tools
                 var setMethod = type.GetProperty(propName).GetSetMethod();
                 if (setMethod != null)
                 {
-                    setMethod.Invoke(instance, new object[] { value });
+                    setMethod.Invoke(instance, new object[] { value! });
                 }
                 else
                 {
@@ -50,3 +51,4 @@ namespace Hubcon.Shared.Core.Tools
         }
     }
 }
+#pragma warning restore CS1591 // Falta el comentario XML para el tipo o miembro visible públicamente

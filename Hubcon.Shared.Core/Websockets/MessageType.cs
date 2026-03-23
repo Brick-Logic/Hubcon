@@ -1,4 +1,5 @@
-﻿namespace Hubcon.Shared.Core.Websockets
+﻿#pragma warning disable CS1591
+namespace Hubcon.Shared.Core.Websockets
 {
     public enum MessageType
     {
@@ -33,3 +34,4 @@
         disconnect
     }
 }
+#pragma warning restore CS1591

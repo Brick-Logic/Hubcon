@@ -14,6 +14,7 @@
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<PackageTags>http;websockets;rpc</PackageTags>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

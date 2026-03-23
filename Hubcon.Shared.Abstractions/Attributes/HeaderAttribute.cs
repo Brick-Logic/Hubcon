@@ -9,8 +9,19 @@ namespace Hubcon
     /// </summary>
     public sealed class HeaderAttribute : Attribute
     {
+        /// <summary>
+        /// Indicates if this header is static.
+        /// </summary>
         public bool IsStatic { get; private set; }
+
+        /// <summary>
+        /// The header key.
+        /// </summary>
         public string Key { get; }
+
+        /// <summary>
+        /// The header value. Can be null.
+        /// </summary>
         public string? Value { get; }
 
         /// <summary>

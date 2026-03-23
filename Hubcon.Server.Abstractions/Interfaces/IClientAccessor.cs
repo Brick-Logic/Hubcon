@@ -2,6 +2,7 @@
 
 namespace Hubcon.Server.Abstractions.Interfaces
 {
+#pragma warning disable CS1591
     public interface IClientAccessor
     {
         TICommunicationContract GetClient<TICommunicationContract>(string instanceId) where TICommunicationContract : IControllerContract;
@@ -17,3 +18,4 @@ namespace Hubcon.Server.Abstractions.Interfaces
         TICommunicationContract GetOrCreateClient(string instanceId);
     }
 }
+#pragma warning restore CS1591

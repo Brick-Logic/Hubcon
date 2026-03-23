@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Standard.Extensions;
+﻿#pragma warning disable CS1591
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.ComponentModel;
 using System.Reflection;

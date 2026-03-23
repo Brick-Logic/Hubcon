@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
+#pragma warning disable CS1591
 
 
 namespace Hubcon.Client.Core.Configurations

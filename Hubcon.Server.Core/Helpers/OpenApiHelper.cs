@@ -1,7 +1,4 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
-
+﻿#pragma warning disable CS1591
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

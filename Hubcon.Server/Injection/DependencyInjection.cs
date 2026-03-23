@@ -2,7 +2,6 @@
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.EndpointDocumentation;
 using Hubcon.Server.Core.Routing;
-using Hubcon.Server.Core.Subscriptions;
 using Hubcon.Server.Core.Websockets.Middleware;
 using Hubcon.Server.Injection;
 using Hubcon.Shared.Abstractions.Attributes;
@@ -13,6 +12,7 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Reflection;
 using System.Text.Json.Serialization;
+#pragma warning disable CS1591
 
 namespace Hubcon
 {

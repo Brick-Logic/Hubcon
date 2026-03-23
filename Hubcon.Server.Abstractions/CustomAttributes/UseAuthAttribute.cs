@@ -7,9 +7,16 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Server.Abstractions.CustomAttributes
 {
+    /// <summary>
+    /// Base attribute class for hubcon auth attributes
+    /// </summary>
+    /// <typeparam name="THandler"></typeparam>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
-    public class UseAuthAttribute<THandler> : Attribute, IUseAuthAttribute where THandler : IAuthHandler
+    public abstract class UseAuthAttribute<THandler> : Attribute, IUseAuthAttribute where THandler : IAuthHandler
     {
+        /// <summary>
+        /// The auth handler type
+        /// </summary>
         public Type HandlerType => typeof(THandler);
     }
 }

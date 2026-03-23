@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+#pragma warning disable CS1591
 
 namespace Hubcon.Client.Core.Registries
 {

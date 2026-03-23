@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http;
 using System.Text;
 using System.Text.Json;
 
+#pragma warning disable CS1591
+
 namespace Hubcon.Server.Core.Extensions
 {
     public static class HttpContextExtensions

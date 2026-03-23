@@ -16,6 +16,7 @@
 		<Company>$(Company)</Company>
 		<Description>Shared core implementations for Hubcon.</Description>
 		<PackageTags>http;websockets;rpc</PackageTags>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

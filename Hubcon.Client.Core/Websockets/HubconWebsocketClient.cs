@@ -15,7 +15,6 @@ using Hubcon.Shared.Core.Websockets.Messages.Ingest;
 using Hubcon.Shared.Core.Websockets.Messages.Operation;
 using Hubcon.Shared.Core.Websockets.Messages.Ping;
 using Hubcon.Shared.Core.Websockets.Messages.Streams;
-using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Hubcon.Shared.Core.Websockets.Messages.Token;
 using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.Extensions.Logging;
@@ -35,10 +34,11 @@ using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 using System.Timers;
 
+#pragma warning disable CS1591
 
 namespace Hubcon.Client.Core.Websockets
 {
-    public sealed class HubconWebSocketClient : IAsyncDisposable, IUnsubscriber
+    public sealed class HubconWebSocketClient : IAsyncDisposable
     {
         private readonly TransportContext context;
         private readonly IDynamicConverter converter;
@@ -161,10 +161,10 @@ namespace Hubcon.Client.Core.Websockets
             });
 
             var observable = new GenericObservable<T>(
-                this,
+                null!,
                 request.Id,
                 converter.SerializeToElement(request),
-                RequestType.Subscription,
+                RequestType.Stream,
                 converter,
                 async () => await hw.DisposeAsync(),
                 options.ReconnectStreams);
@@ -1066,26 +1066,6 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        public async Task Unsubscribe(IRequest request)
-        {
-            try
-            {
-                switch (request.Type)
-                {
-                    case RequestType.Subscription:
-                        await SendMessageAsync(new SubscriptionCompleteMessage(request.Id));
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                if (LoggingEnabled)
-                    logger?.LogError(ex, ex.Message);
-
-                _errorStream.OnNext(ex);
-            }
-        }
-
         public async ValueTask DisposeAsync()
         {
             if (_disposed) return;
@@ -1133,3 +1113,5 @@ namespace Hubcon.Client.Core.Websockets
         }
     }
 }
+
+#pragma warning restore CS1591

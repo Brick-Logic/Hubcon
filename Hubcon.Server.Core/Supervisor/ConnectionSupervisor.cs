@@ -1,11 +1,12 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using System.Collections.Concurrent;
+#pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.Supervisor
 {
     public class ConnectionSupervisor : IConnectionSupervisor, IDisposable
     {
-        private readonly ConcurrentDictionary<string, (DateTime Expiration, Action cancellationCallback)> _connections = new();
+        private readonly ConcurrentDictionary<string, (long Expiration, Action cancellationCallback)> _connections = new();
 
         private readonly SemaphoreSlim _cleanupSemaphore = new(1, 1);
         private readonly Timer _timer;
@@ -19,20 +20,20 @@ namespace Hubcon.Server.Core.Supervisor
 
         public bool IsExpired(string id)
         {
-            if (_connections.TryGetValue(id, out (DateTime Expiration, Action cancellationCallback) connection))
+            if (_connections.TryGetValue(id, out (long Expiration, Action cancellationCallback) connection))
             {
-                return connection.Expiration > DateTime.Now;
+                return connection.Expiration > DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             }
 
             return true;
         }
 
-        public void Register(string id, DateTime expiration, Action cancellationCallback)
+        public void Register(string id, long expiration, Action cancellationCallback)
         {
             _connections[id] = (expiration, cancellationCallback);
         }
 
-        public void UpdateExpiration(string id, DateTime newExpiration)
+        public void UpdateExpiration(string id, long newExpiration)
         {
             if (_connections.TryGetValue(id, out var entry))
             {
@@ -63,7 +64,7 @@ namespace Hubcon.Server.Core.Supervisor
 
         private async Task CleanupExpiredAsync()
         {
-            var now = DateTime.UtcNow;
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var expiredIds = _connections
                 .Where(kv => kv.Value.Expiration <= now)
                 .Select(kv => kv.Key)

@@ -16,6 +16,7 @@
 		<Version>2.0.0-rc1</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -54,5 +55,8 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
 	  <ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Subscriptions\" />
 	</ItemGroup>
 </Project>

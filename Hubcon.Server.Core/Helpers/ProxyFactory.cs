@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+#pragma warning disable CS1591
 using System.Reflection.Emit;
 
 namespace Hubcon.Server.Core.Helpers

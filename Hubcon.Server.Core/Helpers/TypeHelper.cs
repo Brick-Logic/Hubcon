@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿#pragma warning disable CS1591
+using System.ComponentModel;
 using System.Reflection;
 using System.Reflection.Emit;
 

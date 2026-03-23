@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Core.Websockets.Interfaces;
+﻿#pragma warning disable CS1591
+using Hubcon.Shared.Core.Websockets.Interfaces;
 using Hubcon.Shared.Core.Websockets.Models;
 using System;
 using System.Collections.Generic;
@@ -42,7 +43,7 @@ namespace Hubcon.Shared.Core.Websockets.Events
         public Type DataType => _dataType;
 
         public GenericObservable(
-            IUnsubscriber client,
+            IUnsubscriber? client,
             Guid id,
             JsonElement request,
             RequestType type,
@@ -126,15 +127,14 @@ namespace Hubcon.Shared.Core.Websockets.Events
 
         private void UnsubscribeObserver(IObserver<TMessage> observer)
         {
-            if (_client == null || RequestData == null)
-                return;
 
             lock (_observersLock)
             {
                 _observers.Remove(observer);
                 if (_observers.Count == 0)
                 {
-                    // No quedan observers, remover la subscripción completa
+                    if (_client == null || RequestData == null)
+                        return;
 
                     _client.Unsubscribe(RequestData);
                 }

@@ -45,8 +45,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public Type? CallWrapperType { get; }
         public Action<IDictionary<string, object>, object, CancellationToken>? WrapperMapper { get; }
         public HttpMethod? HttpVerb { get; }
-        public IReadOnlyList<(PropertyInfo PropInfo, Action<object, object?> FastSetter)> SubscriptionProperties { get; }
-        public bool HasSubscriptions { get; }
         public ObjectFactory ControllerFactory { get; }
         public bool ReturnsHubconResponse { get; }
         public CompiledSecurityPolicy SecurityPolicy { get; }
@@ -85,14 +83,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             List<Attribute> endpointAttributes = [];
             HttpVerb = httpMethod;
             ControllerFactory = ActivatorUtilities.CreateFactory(controllerType, Type.EmptyTypes);
-
-            SubscriptionProperties = controllerType
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.PropertyType.IsGenericType && p.PropertyType.GetGenericTypeDefinition() == typeof(ISubscription<>))
-                .Select(prop => (prop, prop.CreateFastSetter()))
-                .ToList();
-
-            HasSubscriptions = SubscriptionProperties.Count > 0;
 
             if (intefaceMemberInfo is MethodInfo methodInfo)
             {
@@ -133,17 +123,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 endpointAttributes = Attributes
                     .Where(x => x is AuthorizeAttribute || x is AllowAnonymousAttribute)
                     .ToList();
-            }
-            else if (intefaceMemberInfo is PropertyInfo propertyInfo)
-            {
-                ReturnType = propertyInfo.PropertyType;
-                RawReturnType = propertyInfo.PropertyType;
-                HasReturnType = true;
-
-                Kind = OperationKind.Subscription;
-
-                Attributes = ControllerType.GetMethod(propertyInfo.Name)?.GetCustomAttributes().ToList() ?? new List<Attribute>();
-                ContractType.GetMethod(propertyInfo.Name)?.GetCustomAttributes().ToList().ForEach(x => Attributes.Add(x));
             }
             else
             {

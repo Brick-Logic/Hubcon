@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using System.Reflection;
 
 namespace Hubcon.Server.Injection
@@ -103,6 +104,11 @@ namespace Hubcon.Server.Injection
         public void AddTransport<T>(T attribute) where T : HubconTransportAttribute, new()
         {
             HubconServerBuilder.AddTransport<T>(attribute);
+        }
+
+        public void UseTokenValidationParameters(TokenValidationParameters tokenValidationParameters)
+        {
+            HubconServerBuilder.AddTokenValidationParameters(tokenValidationParameters);
         }
     }
 }

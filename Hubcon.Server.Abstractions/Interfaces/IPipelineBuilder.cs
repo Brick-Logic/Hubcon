@@ -1,4 +1,5 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
+#pragma warning disable CS1591
 using Hubcon.Shared.Abstractions.Interfaces;
 
 namespace Hubcon.Server.Abstractions.Interfaces

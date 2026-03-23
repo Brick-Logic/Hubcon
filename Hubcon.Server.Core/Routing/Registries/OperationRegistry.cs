@@ -17,9 +17,15 @@ using System.Reflection;
 
 namespace Hubcon.Server.Core.Routing.Registries
 {
+    /// <summary>
+    /// The operation registry implementation.
+    /// </summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class OperationRegistry : IOperationRegistry
     {
+        /// <summary>
+        /// An event called when an operation is registered.
+        /// </summary>
         public event Action<IOperationBlueprint>? OnOperationRegistered;
 
         private ConcurrentDictionary<string, IOperationBlueprint> _availableOperations = new ConcurrentDictionary<string, IOperationBlueprint>();
@@ -29,14 +35,21 @@ namespace Hubcon.Server.Core.Routing.Registries
 
         private FrozenDictionary<string, IOperationBlueprint>? _blueprintCache;
 
+        /// <summary>
+        /// Determines if the registry is built. Once built it cannot be modified.
+        /// </summary>
         public bool IsBuilt => _blueprintCache != null;
 
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
         public OperationRegistry()
         {
             var env = Environment.GetEnvironmentVariable("HUBCON_OPNAME_DEBUG_ENABLED");
             useHashedNames = !bool.TryParse(env, out var parsed) ? true : !parsed;
         }
 
+        ///<inheritdoc/>
         public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<IServiceCollection>> servicesToInject)
         {
             if (_blueprintCache != null)
@@ -117,7 +130,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                     }
 
                     var httpVerb = verb != null
-                        ? HttpMethod.Post
+                        ? HttpMethod.Get
                         : (parameters.Length - parameters.Count(x => x.ParameterType == typeof(CancellationToken)) > 0 ? HttpMethod.Post : HttpMethod.Get);
 
                     var wrapperType = ParameterWrapHelper.CreateWrapperType(controllerMethod, x =>
@@ -208,7 +221,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             typeof(TimeSpan), typeof(Guid), typeof(Uri), typeof(byte[])
         };
 
-        public static bool IsQuerySupported(Type type)
+        private static bool IsQuerySupported(Type type)
         {
             // 1. Descartar explícitamente tipos de infraestructura conocidos
             if (type == typeof(CancellationToken) || typeof(IProgress<>).IsAssignableFrom(type))
@@ -231,6 +244,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             return false;
         }
 
+        ///<inheritdoc/>
         public void MapTransport<T>(WebApplication app, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication>? endpointRegisterer = null) where T : HubconTransportAttribute, new()
         {
             var transport = HubconTransportAttribute.GetDefault<T>();
@@ -239,6 +253,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             endpointRegisterer?.Invoke(tempCache, app);         
         }
 
+        ///<inheritdoc/>
         public bool TryGetOperationBlueprint(IOperationEndpoint request, HubconTransportAttribute transportAttribute, out IOperationBlueprint? value)
         {
             if (request == null)
@@ -250,6 +265,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             return GetOperationBlueprint(request.ContractName, request.OperationName, transportAttribute, out value);
         }
 
+        ///<inheritdoc/>
         public bool GetOperationBlueprint(string contractName, string operationName, HubconTransportAttribute transportAttribute, out IOperationBlueprint? value)
         {
             if (_blueprintCache != null)
@@ -281,90 +297,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             return tempOperations;
         }
 
-        private Delegate CreateMethodDescriptor(MethodInfo method)
-        {
-            var instanceParam = Expression.Parameter(typeof(object), "instance");
-            var argsParam = Expression.Parameter(typeof(object[]), "args");
-
-            var parameters = method.GetParameters();
-            var arguments = new Expression[parameters.Length];
-
-            for (int i = 0; i < parameters.Length; i++)
-            {
-                var index = Expression.Constant(i);
-                var paramType = parameters[i].ParameterType;
-
-                var argAccess = Expression.ArrayIndex(argsParam, index);
-                var argCast = Expression.Convert(argAccess, paramType);
-
-                arguments[i] = argCast;
-            }
-
-            var instanceCast = method.IsStatic ? null : Expression.Convert(instanceParam, method.DeclaringType!);
-            var call = Expression.Call(instanceCast, method, arguments);
-
-            Expression body = method.ReturnType == typeof(void)
-                ? Expression.Block(call, Expression.Constant(null, typeof(object)))
-                : Expression.Convert(call, typeof(object));
-
-            var lambda = Expression.Lambda<MethodDelegate>(body, instanceParam, argsParam);
-            return lambda.Compile();
-        }
-
-        //public static Func<object?, object[], object?> BuildInvoker(MethodInfo method)
-        //{
-        //    // Parámetros de la función: (object? target, object[] args)
-        //    var targetExp = Expression.Parameter(typeof(object), "target");
-        //    var argsExp = Expression.Parameter(typeof(object[]), "args");
-
-        //    // Obtener los parámetros del método y convertir cada uno
-        //    var methodParams = method.GetParameters();
-        //    var paramExps = new Expression[methodParams.Length];
-
-        //    for (int i = 0; i < methodParams.Length; i++)
-        //    {
-        //        // args[i]
-        //        var argAccess = Expression.ArrayIndex(argsExp, Expression.Constant(i));
-
-        //        // Convertir object a tipo esperado (puede ser value type o ref type)
-        //        var argCast = Expression.Convert(argAccess, methodParams[i].ParameterType);
-
-        //        paramExps[i] = argCast;
-        //    }
-
-        //    // Expresión para la instancia (o null para estático)
-        //    Expression instanceExp;
-        //    if (method.IsStatic)
-        //    {
-        //        instanceExp = null; // para métodos estáticos no hay instancia
-        //    }
-        //    else
-        //    {
-        //        // Convertir object target a tipo del método (declaring type)
-        //        instanceExp = Expression.Convert(targetExp, method.DeclaringType!);
-        //    }
-
-        //    // Crear la llamada al método
-        //    MethodCallExpression callExp = Expression.Call(instanceExp, method, paramExps);
-
-        //    // Si el método devuelve void, debemos devolver null
-        //    if (method.ReturnType == typeof(void))
-        //    {
-        //        // Crear un bloque con la llamada y return null
-        //        var block = Expression.Block(callExp, Expression.Constant(null, typeof(object)));
-
-        //        return Expression.Lambda<Func<object?, object[], object?>>(block, targetExp, argsExp).Compile();
-        //    }
-        //    else
-        //    {
-        //        // Si devuelve valor, convertirlo a object
-        //        var castCallExp = Expression.Convert(callExp, typeof(object));
-
-        //        return Expression.Lambda<Func<object?, object[], object?>>(castCallExp, targetExp, argsExp).Compile();
-        //    }
-        //}
-
-        public static Func<object?, object, CancellationToken, object?> BuildWrapperInvoker(MethodInfo method, Type wrapperType)
+        private static Func<object?, object, CancellationToken, object?> BuildWrapperInvoker(MethodInfo method, Type wrapperType)
         {
             var targetExp = Expression.Parameter(typeof(object), "target");
             var wrapperExp = Expression.Parameter(typeof(object), "wrapper");
@@ -417,7 +350,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             }
         }
 
-        public static Action<IDictionary<string, object>, object, CancellationToken> BuildMapper(Type wrapperType)
+        private static Action<IDictionary<string, object>, object, CancellationToken> BuildMapper(Type wrapperType)
         {
             var dictParam = Expression.Parameter(typeof(IDictionary<string, object>), "dict");
             var wrapperParam = Expression.Parameter(typeof(object), "wrapperObj");
@@ -449,6 +382,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                 body, dictParam, wrapperParam, tokenParam).Compile();
         }
 
+        ///<inheritdoc/>
         public bool ControllerExists(Type controllerType)
         {
             return RegisteredControllers.ContainsKey(controllerType);

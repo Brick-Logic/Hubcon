@@ -5,7 +5,7 @@ using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.Text.Json;
-
+#pragma warning disable CS1591
 namespace Hubcon.Server.Core.Extensions;
 
 public static class OpenApiExtensions

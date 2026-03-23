@@ -1,4 +1,5 @@
-﻿using Hubcon.Client.Abstractions.Interfaces;
+﻿#pragma warning disable CS1591
+using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System;

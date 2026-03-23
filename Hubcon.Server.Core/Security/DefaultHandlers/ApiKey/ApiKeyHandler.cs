@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+#pragma warning disable CS1591
 
 namespace Hubcon
 {

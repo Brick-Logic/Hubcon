@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
+#pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.Routing.Models
 {

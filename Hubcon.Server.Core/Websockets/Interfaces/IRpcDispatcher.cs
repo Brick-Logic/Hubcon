@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
+#pragma warning disable CS1591
 
-namespace Hubcon.Server.Core.Websockets.Interfaces
+namespace Hubcon.Experimental
 {
     public interface IRpcDispatcher
     {

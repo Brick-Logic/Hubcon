@@ -1,29 +1,21 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.Configurations;
 using Hubcon.Client.Core.Proxies;
-using Hubcon.Client.Core.Subscriptions;
-using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Lazy;
-using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Net.Http;
 using System.Net.WebSockets;
-using System.Reflection;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
+#pragma warning disable CS1591
 
 namespace Hubcon.Client.Builder
 {
@@ -198,15 +190,6 @@ namespace Hubcon.Client.Builder
             var converter = scopedServices.GetRequiredService<IDynamicConverter>();
 
             IImmutableDictionary<string, IClientOperationContext> operations = null!;
-   
-
-            static IEnumerable<PropertyInfo> CheckType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type x)
-                => x.GetProperties().Where(CheckProperty);
-
-            static bool CheckProperty([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] PropertyInfo x)
-                => typeof(ISubscription).IsAssignableFrom(x.PropertyType);
-
-            Func<Type, IEnumerable<PropertyInfo>> typeGetter = CheckType;
 
             if (useCached) _clients.TryAdd(contractType, newClient!);
 

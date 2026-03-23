@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
-
+#pragma warning disable CS1591
 
 namespace Hubcon.Client.Core.Configurations
 {

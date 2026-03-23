@@ -93,7 +93,6 @@ internal class Program
         //    var data = responseTemp.Data;
         //    // Hago algo con data
         //}
-
         await TestValidations(client, logger);
         await Task.Delay(100);
         await TestIngest(client, logger);

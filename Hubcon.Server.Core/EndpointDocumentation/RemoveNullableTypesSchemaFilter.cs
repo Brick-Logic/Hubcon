@@ -5,12 +5,15 @@ using System.ComponentModel;
 
 namespace Hubcon.Server.Core.EndpointDocumentation
 {
+    /// <summary>
+    /// Operation filter to remove nullable types.
+    /// </summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class RemoveNullableTypesOperationFilter : IOperationFilter
     {
+        /// <inheritdoc/>
         public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
-            // Procesar respuestas
             foreach (var response in operation.Responses.Values)
             {
                 foreach (var content in response.Content.Values)

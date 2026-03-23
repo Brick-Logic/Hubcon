@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Core.Websockets.Models;
+﻿#pragma warning disable CS1591
+using Hubcon.Shared.Core.Websockets.Models;
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;

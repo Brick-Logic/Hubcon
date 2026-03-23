@@ -16,10 +16,14 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Transports
 {
+    /// <summary>
+    /// Hubcon's 'non-hubcon' http transport client.
+    /// </summary>
     public sealed class NonHubconHttpTransportClient : TransportClient<NonHubconHttpTransport>
     {
         HttpClient _httpClient = null!;
 
+        /// <inheritdoc/>
         public override async ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {         
             StringContent? content = null;
@@ -60,14 +64,14 @@ namespace Hubcon.Client.Core.Transports
                     "",
                     (int)response.StatusCode,
                     true,
-                    response.Content.ToString()
+                    response.Content
                 );
 
                 await context.SetResponse(methodReponse);
             }
             catch (Exception ex)
             {
-                await context.SetResponse(HubconResponse.InternalError(ex, originalData: response?.Content?.ToString()));
+                await context.SetResponse(HubconResponse.InternalError(ex, originalData: response?.Content?.ToString()!));
             }
             finally
             {
@@ -77,7 +81,8 @@ namespace Hubcon.Client.Core.Transports
             }
         }
 
-        public override async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        /// <inheritdoc/>
+        public override async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {          
             StringContent? content = null;
             HttpRequestMessage? httpRequest = null;
@@ -120,7 +125,7 @@ namespace Hubcon.Client.Core.Transports
                     "",
                     (int)response.StatusCode,
                     enumerable,
-                    response.Content.ToString()
+                    response.Content
                 );
 
                 await context.SetResponse(methodReponse);
@@ -129,7 +134,7 @@ namespace Hubcon.Client.Core.Transports
             }
             catch (Exception ex)
             {
-                await context.SetResponse(HubconResponse.InternalError(ex, originalData: response?.Content?.ToString()));
+                await context.SetResponse(HubconResponse.InternalError(ex, originalData: response?.Content?.ToString()!));
                 return default!;
             }
             finally
@@ -139,11 +144,13 @@ namespace Hubcon.Client.Core.Transports
             }
         }
 
+        /// <inheritdoc/>
         public override ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc/>
         public override async ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
@@ -187,15 +194,15 @@ namespace Hubcon.Client.Core.Transports
                     "",
                     "",
                     (int)response.StatusCode,
-                    context.Converter.DeserializeJsonElement<T>(result),
-                    response.Content.ToString()
+                    context.Converter.DeserializeJsonElement<T>(result)!,
+                    response.Content
                 );
 
                 await context.SetResponse(methodReponse);
             }
             catch(Exception ex)
             {
-                await context.SetResponse(HubconResponse.InternalError<T>(ex, originalData:response?.Content?.ToString()));
+                await context.SetResponse(HubconResponse.InternalError<T>(ex, originalData:response?.Content?.ToString()!));
             }
             finally
             {
@@ -205,6 +212,7 @@ namespace Hubcon.Client.Core.Transports
             }
         }
 
+        /// <inheritdoc/>
         protected override void Build(TransportContext configuration)
         {
             _httpClient = configuration.ClientOptions.HttpClientFactory.Invoke(configuration.ProxyServiceProvider);

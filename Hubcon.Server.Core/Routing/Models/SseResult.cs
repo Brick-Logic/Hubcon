@@ -15,6 +15,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
+#pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.Routing.Models
 {
@@ -70,9 +71,6 @@ namespace Hubcon.Server.Core.Routing.Models
 
                 // Opcional: Mandar el [DONE] para cerrar el ciclo
                 await response.WriteAsync("[DONE]\n\n");
-            }
-            catch (OperationCanceledException)
-            {
             }
             catch
             {

@@ -1,4 +1,5 @@
-﻿namespace System.Diagnostics.CodeAnalysis
+﻿#pragma warning disable CS1591
+namespace System.Diagnostics.CodeAnalysis
 {
     [AttributeUsage(AttributeTargets.GenericParameter | AttributeTargets.Parameter | AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
     public sealed class DynamicallyAccessedMembersAttribute : Attribute

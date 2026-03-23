@@ -16,6 +16,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using System.Reflection;
+#pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.Routing
 {

@@ -1,5 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
+#pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.Routing.Registries
 {

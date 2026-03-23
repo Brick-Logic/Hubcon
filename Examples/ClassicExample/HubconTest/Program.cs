@@ -95,13 +95,14 @@ namespace HubconTest
                 ValidAudience = "clave",
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
             };
-            builder.Services.AddSingleton(tokenValidationParameters);
+
             builder.Services.AddOpenApi();
 
             builder.AddHubconServer(serverOptions =>
             {
                 serverOptions.AddAuthentication();
                 serverOptions.AddTelemetry();
+                serverOptions.UseTokenValidationParameters(tokenValidationParameters);
 
                 serverOptions.ConfigureCore(config =>
                 {
@@ -143,6 +144,8 @@ namespace HubconTest
                 Console.Title = $" RPS: {rps.RequestsPerSecond.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | Total requests: {TotalRequests.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | CPU: {telemetry.CurrentCPU} | Threads: {telemetry.CurrentThreads} | WS clients: {telemetry.CurrentWebSocketClients} | WS req/s: {rps.WebSocketsRequestsPerSecond} | HTTP req/s: {rps.HttpRequestsPerSecond}";
                 Interlocked.Add(ref TotalRequests, rps.RequestsPerSecond);
             };
+
+
 
             app.Run();
         }

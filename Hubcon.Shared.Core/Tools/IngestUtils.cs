@@ -1,4 +1,6 @@
-﻿using System;
+﻿#pragma warning disable CS1591 // Falta el comentario XML para el tipo o miembro visible públicamente
+
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.Json;
@@ -33,3 +35,4 @@ namespace Hubcon.Shared.Core.Tools
         }
     }
 }
+#pragma warning restore CS1591 // Falta el comentario XML para el tipo o miembro visible públicamente

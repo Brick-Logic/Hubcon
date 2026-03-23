@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿#pragma warning disable CS1591
+using System.Collections.Concurrent;
 
 namespace Hubcon
 {

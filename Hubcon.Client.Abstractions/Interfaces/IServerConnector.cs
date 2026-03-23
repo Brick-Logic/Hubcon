@@ -1,9 +1,10 @@
 ﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
-
-namespace Hubcon.Client.Abstractions.Interfaces
+#pragma warning disable CS1591
+namespace Hubcon.Experimental
 {
     public interface IServerConnector
     {
         public TICommunicationContract GetClient<TICommunicationContract>() where TICommunicationContract : IControllerContract;
     }
 }
+#pragma warning restore CS1591

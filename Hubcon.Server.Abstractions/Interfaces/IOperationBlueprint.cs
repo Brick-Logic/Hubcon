@@ -143,14 +143,13 @@ namespace Hubcon
         HttpMethod? HttpVerb { get; }
 
         /// <summary>
-        /// Indicates whether the operation has any subscriptions.
-        /// </summary>
-        bool HasSubscriptions { get; }
-
-        /// <summary>
-        /// Gets or sets the factory used to create controller instances.
+        /// Gets the factory used to create controller instances.
         /// </summary>
         ObjectFactory ControllerFactory { get; }
+
+        /// <summary>
+        /// The compiled security policy. This contains all auth handlers defined for the current endpoint.
+        /// </summary>
         CompiledSecurityPolicy SecurityPolicy { get; }
 
         /// <summary>

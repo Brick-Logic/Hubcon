@@ -16,6 +16,7 @@
 		<Version>2.0.0-rc1</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -47,6 +48,10 @@
 		<PackageReference Include="Hubcon.Server.Abstractions" Version="2.0.0-rc1" />
 		<PackageReference Include="Hubcon.Shared.Core" Version="2.0.0-rc1" />
 		<PackageReference Include="Hubcon.Shared" Version="2.0.0-rc1" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Injectors\" />
+	  <Folder Include="Subscriptions\" />
 	</ItemGroup>
 
 </Project>

@@ -3,6 +3,8 @@ using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+#pragma warning disable CS1591
+
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {

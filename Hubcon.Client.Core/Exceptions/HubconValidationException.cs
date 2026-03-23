@@ -1,6 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
-
+#pragma warning disable CS1591
 namespace Hubcon.Client.Core.Exceptions
 {
     [EditorBrowsable(EditorBrowsableState.Never)]

@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿#pragma warning disable CS1591
+using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Attributes;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System.Collections.Concurrent;
@@ -13,14 +14,6 @@ namespace Hubcon.Server.Core.Extensions
         private static readonly ConcurrentDictionary<Type, Type> _contractCache = new();
         private static readonly ConcurrentDictionary<PropertyInfo, bool> _isSubCache = new();
 
-        private static bool IsSub(PropertyInfo prop)
-        {
-            return _isSubCache.GetOrAdd(prop, t =>
-            {
-                return prop.PropertyType.IsAssignableTo(typeof(ISubscription))
-                        && prop.ReflectedType!.IsAssignableTo(typeof(IControllerContract));
-            });
-        }
 
         public static Action<object, object?> CreateFastSetter(this PropertyInfo prop)
         {
@@ -54,36 +47,7 @@ namespace Hubcon.Server.Core.Extensions
             // 4. Crear el delegado
             return (Action<object, object?>)method.CreateDelegate(typeof(Action<object, object?>));
         }
-
-        private static List<PropertyInfo> GetProps(Type type)
-        {
-            return _propertyCache.GetOrAdd(type, t =>
-            {
-                var allProps = new List<PropertyInfo>();
-
-                // Propiedades del propio tipo
-                allProps.AddRange(t
-                    .GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
-                    .Where(prop =>
-                        Attribute.IsDefined(prop, typeof(HubconInjectAttribute)) ||
-                        prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
-                );
-
-                // Propiedades explícitas de la base (si existe)
-                if (t.BaseType != null)
-                {
-                    allProps.AddRange(t.BaseType
-                        .GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy)
-                        .Where(prop =>
-                            Attribute.IsDefined(prop, typeof(HubconInjectAttribute)) ||
-                            prop.PropertyType.IsAssignableTo(typeof(ISubscription)))
-                    );
-                }
-
-                return allProps;
-            });
-        }
-
+   
         private static Type GetContractType(Type type)
         {
             return _contractCache.GetOrAdd(type, t =>

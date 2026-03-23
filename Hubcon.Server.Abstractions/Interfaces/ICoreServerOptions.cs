@@ -6,525 +6,503 @@ using System.Threading.RateLimiting;
 
 namespace Hubcon.Server.Abstractions.Interfaces
 {
+    /// <summary>
+    /// Defines the configuration interface for the Hubcon server core.
+    /// Provides methods to tune protocol behavior, timeouts, limits, and security settings.
+    /// </summary>
     public interface ICoreServerOptions
     {
         /// <summary>
-        /// Sets the maximum incoming message size for websockets. Default value is 16384 bytes.
+        /// Sets the maximum incoming message size for WebSockets.
         /// </summary>
-        /// <param name="bytes"></param>
+        /// <param name="bytes">The maximum size in bytes. The default value is 16384 bytes.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetMaxWebSocketMessageSize(int bytes);
 
         /// <summary>
-        /// Sets the maximum incoming message size for HTTP.
+        /// Sets the maximum incoming message size for HTTP requests.
         /// </summary>
-        /// <param name="bytes"></param>
+        /// <param name="bytes">The maximum size in bytes.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetMaxHttpMessageSize(int bytes);
 
         /// <summary>
-        /// Set the timeout for websocket connections. If the connection remains silent for the specified time, the connection will automatically be closed.
-        /// The client should send a ping message to keep the connection alive. Default is 30 seconds.
+        /// Sets the timeout for WebSocket connections. If the connection remains silent for the specified time, 
+        /// it will be automatically closed.
         /// </summary>
-        /// <param name="timeout"></param>
+        /// <remarks>
+        /// The client should send a ping message to keep the connection alive. The default is 30 seconds.
+        /// </remarks>
+        /// <param name="timeout">The duration of the timeout.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetWebSocketTimeout(TimeSpan timeout);
 
         /// <summary>
-        /// Set the timeout for HTTP connections. If a request takes longer than the specified time, the operation is cancelled. Default is 15 seconds.
+        /// Sets the timeout for HTTP connections. If a request takes longer than the specified time, the operation is cancelled.
         /// </summary>
-        /// <param name="timeout"></param>
+        /// <param name="timeout">The duration of the timeout. The default is 15 seconds.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetHttpTimeout(TimeSpan timeout);
 
         /// <summary>
-        /// Set the timeout for websocket ingest connections. If the connection remains silent for the specified time, the connection will automatically be closed.
-        /// Use Timespan.Zero to disable the timeout. The default is 30 seconds.
+        /// Sets the timeout for WebSocket ingest connections. If the connection remains silent for the specified time, 
+        /// it will be automatically closed.
         /// </summary>
-        /// <param name="timeout"></param>
+        /// <param name="timeout">The duration of the timeout. Use <see cref="TimeSpan.Zero"/> to disable. The default is 30 seconds.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetWebSocketIngestTimeout(TimeSpan timeout);
 
         /// <summary>
-        /// Determines if the server should send a pong message to the client.
+        /// Configures whether the server should automatically send a "pong" response when a "ping" is received from a client.
         /// </summary>
-        /// <param name="enabled"></param>
+        /// <param name="enabled"><see langword="true"/> to disable the pong response; otherwise, <see langword="false"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebSocketPong(bool enabled = true);
 
         /// <summary>
-        /// Sets the path prefix that the websocket will be listening on.
+        /// Sets the path prefix that the WebSocket will listen on.
         /// </summary>
-        /// <param name="prefix"></param>
+        /// <param name="prefix">The URL path prefix.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetWebSocketPathPrefix(string prefix);
 
         /// <summary>
         /// Sets the path prefix that the HTTP endpoints will be bound to.
         /// </summary>
-        /// <param name="prefix"></param>
+        /// <param name="prefix">The URL path prefix.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetHttpPathPrefix(string prefix);
 
         /// <summary>
         /// Disables or enables WebSocket ingest functionality for the server.
         /// </summary>
-        /// <param name="disabled">A boolean value indicating whether WebSocket ingest should be disabled.  Pass <see langword="true"/> to
-        /// disable WebSocket ingest; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.</param>
+        /// <param name="disabled"><see langword="true"/> to disable WebSocket ingest; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebSocketIngest(bool disabled = true);
 
         /// <summary>
         /// Disables or enables WebSocket subscriptions for the server.
         /// </summary>
-        /// <remarks>Use this method to control whether the server should allow WebSocket subscriptions. 
-        /// This can be useful in scenarios where subscriptions are not required or should be
-        /// restricted.</remarks>
-        /// <param name="disabled">A boolean value indicating whether WebSocket subscriptions should be disabled.  Pass <see langword="true"/>
-        /// to disable WebSocket subscriptions; otherwise, <see langword="false"/>.</param>
+        /// <param name="disabled"><see langword="true"/> to disable WebSocket subscriptions; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebSocketSubscriptions(bool disabled = true);
 
         /// <summary>
-        /// Disables or enables WebSocket methods for the server.
+        /// Disables or enables standard WebSocket controller methods for the server.
         /// </summary>
-        /// <param name="disabled">A boolean value indicating whether WebSocket methods should be disabled.  Pass <see langword="true"/> to
-        /// disable WebSocket methods; otherwise, <see langword="false"/>.</param>
+        /// <param name="disabled"><see langword="true"/> to disable methods; otherwise, <see langword="false"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebSocketMethods(bool disabled = true);
 
         /// <summary>
-        /// Disables or enables the WebSocket ping functionality.
+        /// Disables or enables the WebSocket ping requirement.
         /// </summary>
-        /// <param name="disabled">A value indicating whether WebSocket ping should be disabled.  Pass <see langword="true"/> to disable
-        /// WebSocket ping; otherwise, <see langword="false"/>.</param>
+        /// <param name="disabled"><see langword="true"/> to disable pings; otherwise, <see langword="false"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebsocketPing(bool disabled = true);
 
         /// <summary>
         /// Configures whether retryable messages are disabled for the server.
         /// </summary>
-        /// <param name="enabled">A boolean value indicating whether retryable messages should be disabled.  <see langword="true"/> to disable
-        /// retryable messages; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.</param>
+        /// <param name="enabled"><see langword="true"/> to disable retryable messages; otherwise, <see langword="false"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisabledRetryableMessages(bool enabled = true);
 
         /// <summary>
-        /// Enables or disables detailed error messages for requests.
+        /// Enables or disables detailed error messages in the operation responses.
         /// </summary>
-        /// <remarks>When detailed error messages are enabled, additional information about errors  may be
-        /// included in responses, which can be useful for debugging purposes.  Use caution when enabling this in
-        /// production environments, as it may expose  sensitive information.</remarks>
-        /// <param name="enabled">A value indicating whether detailed error messages should be enabled.  The default is <see
-        /// langword="true"/>.</param>
+        /// <remarks>
+        /// When enabled, additional diagnostic information may be included in error responses. 
+        /// Use caution in production as it may expose internal system details.
+        /// </remarks>
+        /// <param name="enabled"><see langword="true"/> to enable detailed errors; otherwise, <see langword="false"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions EnableRequestDetailedErrors(bool enabled = true);
 
         /// <summary>
         /// Disables or enables the WebSocket stream feature for the server.
         /// </summary>
-        /// <param name="disabled">A boolean value indicating whether to disable the WebSocket stream.  Pass <see langword="true"/> to disable
-        /// the WebSocket stream; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.</param>
+        /// <param name="disabled"><see langword="true"/> to disable streaming; otherwise, <see langword="false"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableWebSocketStream(bool disabled = true);
 
         /// <summary>
-        /// Enables or disables the WebSocket logging feature.
+        /// Enables or disables internal logging for WebSocket activities.
         /// </summary>
-        /// <param name="enabled"></param>
+        /// <param name="enabled"><see langword="true"/> to enable logging; otherwise, <see langword="false"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions EnableWebsocketsLogging(bool enabled = true);
 
         /// <summary>
-        /// Enables or disables the WebSocket logging feature.
+        /// Enables or disables internal logging for HTTP activities.
         /// </summary>
-        /// <param name="enabled"></param>
+        /// <param name="enabled"><see langword="true"/> to enable logging; otherwise, <see langword="false"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions EnableHttpLogging(bool enabled = true);
 
         /// <summary>
-        /// Defines how many operations can be processed concurrently for a single websocket client.
+        /// Defines the maximum number of operations that can be processed concurrently for a single WebSocket client.
         /// </summary>
-        /// <param name="enabled"></param>
+        /// <param name="count">The maximum number of concurrent operations.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetMaxConcurrentOperations(int count);
 
         /// <summary>
-        /// Sets a delay for websocket ingest message reception.
+        /// Configures the rate limiter for WebSocket ingest messages.
         /// </summary>
-        /// <param name="delay"></param>
+        /// <param name="rateLimiterOptionsFactory">A factory function returning the <see cref="TokenBucketRateLimiterOptions"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions LimitWebsocketIngest(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
-        /// Sets a delay for websocket methods message reception.
+        /// Configures the rate limiter for WebSocket round-trip (request/response) messages.
         /// </summary>
-        /// <param name="delay"></param>
+        /// <param name="rateLimiterOptionsFactory">A factory function returning the <see cref="TokenBucketRateLimiterOptions"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions LimitWebsocketRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
-        /// Sets a delay for sending websocket subscriptions messages.
+        /// Configures the rate limiter for sending WebSocket subscription updates.
         /// </summary>
-        /// <param name="delay"></param>
+        /// <param name="rateLimiterOptionsFactory">A factory function returning the <see cref="TokenBucketRateLimiterOptions"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions LimitWebsocketSubscription(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
-        /// Sets a delay for sending websocket streaming messages.
+        /// Configures the rate limiter for WebSocket streaming messages.
         /// </summary>
-        /// <param name="delay"></param>
+        /// <param name="rateLimiterOptionsFactory">A factory function returning the <see cref="TokenBucketRateLimiterOptions"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions LimitWebsocketStreaming(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
-        /// Disables all rate limiter options.
+        /// Disables all configured rate limiters on the server.
         /// </summary>
-        /// <param name="delay"></param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableAllRateLimiters();
 
         /// <summary>
-        /// Configures a client-limited rate limiter for the server's websocket.
+        /// Configures a client-specific rate limiter for the general WebSocket reader.
         /// </summary>
-        /// <param name="rateLimiterOptionsFactory"></param>
+        /// <param name="rateLimiterOptionsFactory">A factory function returning the <see cref="TokenBucketRateLimiterOptions"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions ConfigureWebsocketRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
-        /// Configures a client-limited ping rate limiter for the server's websocket.
+        /// Configures a client-specific rate limiter for WebSocket ping messages.
         /// </summary>
-        /// <param name="rateLimiterOptionsFactory"></param>
+        /// <param name="rateLimiterOptionsFactory">A factory function returning the <see cref="TokenBucketRateLimiterOptions"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions ConfigureWebsocketPingRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
-        /// Configures a client-limited ping rate limiter for the server's websocket.
+        /// Configures a client-specific rate limiter for WebSocket token update requests.
         /// </summary>
-        /// <param name="rateLimiterOptionsFactory"></param>
+        /// <param name="rateLimiterOptionsFactory">A factory function returning the <see cref="TokenBucketRateLimiterOptions"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions ConfigureWebsocketTokenUpdateRateLimiter(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
-        /// Configures a global route handler for the server using the specified builder action.
+        /// Configures a global route handler builder to be applied to all registered routes.
         /// </summary>
-        /// <remarks>Use this method to apply routing conventions or middleware to all routes in the
-        /// application. The configuration provided will affect every endpoint registered after this call.</remarks>
-        /// <param name="configure">An action that receives a RouteHandlerBuilder to configure global routing behavior for all endpoints. Cannot
-        /// be null.</param>
+        /// <param name="configure">An action to configure the <see cref="RouteHandlerBuilder"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions UseGlobalRouteHandlerBuilder(Action<RouteHandlerBuilder> configure);
 
         /// <summary>
-        /// Configures global HTTP endpoint conventions for the application.
+        /// Configures global settings and conventions for all HTTP endpoints.
         /// </summary>
-        /// <remarks>Use this method to apply consistent HTTP settings or behaviors across all endpoints,
-        /// such as adding middleware, setting default headers, or enforcing policies.</remarks>
-        /// <param name="configure">An action that defines the conventions to apply to all HTTP endpoints. Cannot be null.</param>
+        /// <param name="configure">An action to configure the <see cref="IEndpointConventionBuilder"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions UseGlobalHttpConfigurations(Action<IEndpointConventionBuilder> configure);
 
         /// <summary>
-        /// Configures HTTP round-trip rate limiting using the specified token bucket rate limiter options.
+        /// Configures rate limiting for HTTP round-trip requests.
         /// </summary>
-        /// <remarks>Use this method to prevent excessive HTTP request rates and protect server resources.
-        /// Ensure that the provided options are tuned to match your application's expected traffic patterns and
-        /// performance requirements.</remarks>
-        /// <param name="rateLimiterOptionsFactory">A factory function that returns a configured instance of TokenBucketRateLimiterOptions to control the rate
-        /// limiting behavior. Cannot be null.</param>
+        /// <param name="rateLimiterOptionsFactory">A factory function returning the <see cref="TokenBucketRateLimiterOptions"/>.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions LimitHttpRoundTrip(Func<TokenBucketRateLimiterOptions> rateLimiterOptionsFactory);
 
         /// <summary>
-        /// Configures the server options to allow remote cancellation of tokens.
+        /// Enables the ability for clients to remotely signal the cancellation of server-side tokens.
         /// </summary>
-        /// <remarks>Enabling remote token cancellation is useful in distributed or multi-service
-        /// environments where cancellation tokens may need to be signaled across process or network boundaries. Use
-        /// this method to permit such cross-boundary cancellation scenarios.</remarks>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions AllowRemoteTokenCancellation();
 
         /// <summary>
-        /// Disables the expiration check for tokens in web service message processing.
+        /// Disables the expiration check for tokens when a WebSocket message is received.
         /// </summary>
-        /// <remarks>Use this method when token expiration validation is not required for web service
-        /// messages. Disabling this check may reduce security by allowing expired tokens to be accepted during message
-        /// processing.</remarks>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions DisableTokenExpirationCheckOnWSMessage();
 
         /// <summary>
-        /// Not implemented, will throw an exception on use. Enables support for endpoint overloading, allowing multiple identical endpoints with diferent parameters to be used.
+        /// <b>Not Implemented:</b> Enables support for endpoint overloading, allowing multiple endpoints 
+        /// with the same name but different parameters. Throws an exception if used.
         /// </summary>
         ICoreServerOptions EnableEndpointOverloading();
 
         /// <summary>
-        /// Adds a transport of the specified type to the server options configuration.
+        /// Adds a transport mechanism of the specified type.
         /// </summary>
-        /// <remarks>Use this method to dynamically extend the server's supported transport mechanisms.
-        /// Ensure that the transport type provided is properly configured and compatible with the server's
-        /// architecture.</remarks>
-        /// <typeparam name="T">The type of transport to add. Must inherit from HubconTransportAttribute and have a parameterless
-        /// constructor.</typeparam>
+        /// <typeparam name="T">A type deriving from <see cref="HubconTransportAttribute"/> with a parameterless constructor.</typeparam>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions AddTransport<T>() where T : HubconTransportAttribute, new();
 
         /// <summary>
-        /// Adds a transport attribute to the server options, enabling support for the specified transport mechanism.
+        /// Adds a transport mechanism using a specific attribute instance.
         /// </summary>
-        /// <remarks>Use this method to extend server communication capabilities by registering additional
-        /// transport mechanisms. Ensure that the provided transport attribute is properly configured before adding
-        /// it.</remarks>
-        /// <typeparam name="T">The type of transport attribute to add. Must derive from HubconTransportAttribute.</typeparam>
-        /// <param name="transportAttribute">The transport attribute that configures the transport mechanism to be added. Cannot be null.</param>
+        /// <typeparam name="T">A type deriving from <see cref="HubconTransportAttribute"/>.</typeparam>
+        /// <param name="transportAttribute">The transport configuration attribute.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions AddTransport<T>(T transportAttribute) where T : HubconTransportAttribute;
 
         /// <summary>
-        /// Configures the global rate limiter for the server using the specified options.
+        /// Sets a global token bucket rate limiter for the entire server.
         /// </summary>
-        /// <remarks>Use this method to control how the server handles incoming requests under high load
-        /// or to prevent abuse. Proper configuration can help maintain server responsiveness and reliability.</remarks>
-        /// <param name="options">The rate limiter configuration options that define request limits and behavior. Cannot be null.</param>
+        /// <param name="options">The <see cref="TokenBucketRateLimiterOptions"/> configuration.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetGlobalRateLimiter(TokenBucketRateLimiterOptions options);
 
         /// <summary>
-        /// Sets the global rate limiter for the server, specifying the maximum number of requests that can be processed
-        /// per second.
+        /// Configures a global token bucket rate limiter for the server with the specified parameters.
         /// </summary>
-        /// <remarks>Use this method to control server load and ensure fair resource allocation among
-        /// clients. Adjusting the rate limiter can help prevent server overload during periods of high
-        /// demand.</remarks>
-        /// <param name="requestsPerSecond">The maximum number of requests allowed per second. Must be a positive integer.</param>
+        /// <param name="requests">The number of tokens added per replenishment period.</param>
+        /// <param name="millisecondsToReplenish">The interval in milliseconds between replenishment periods. Defaults to 1000ms.</param>
+        /// <param name="queueLimit">Maximum number of requests that can be queued. Defaults to 0.</param>
+        /// <param name="rateTokenLimit">Maximum total tokens allowed in the bucket. Defaults to 0.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions SetGlobalRateLimiter(int requests, int millisecondsToReplenish = 1000, int queueLimit = 0, int rateTokenLimit = 0);
 
         /// <summary>
-        /// Configures the server to use transport authentication with the specified transport attribute and
-        /// authentication handler types.
+        /// Registers a specialized authentication handler for a specific transport type.
         /// </summary>
-        /// <remarks>Use this method to integrate custom transport authentication logic by specifying both
-        /// the transport attribute and the corresponding authentication handler. This enables flexible authentication
-        /// strategies for different transport layers.</remarks>
-        /// <typeparam name="TTransportAttribute">The transport attribute type that derives from <see cref="HubconTransportAttribute"/> and defines transport-specific
-        /// authentication requirements.</typeparam>
-        /// <typeparam name="TAuthHandler">The authentication handler type that implements <see cref="IUseAuthAttribute"/> and processes authentication for the
-        /// specified transport.</typeparam>
+        /// <typeparam name="TTransportAttribute">The transport attribute type.</typeparam>
+        /// <typeparam name="TAuthHandler">The handler type implementing <see cref="IAuthHandler"/>.</typeparam>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
-        ICoreServerOptions AddTransportAuth<TTransportAttribute, TAuthHandler>() 
+        ICoreServerOptions AddTransportAuth<TTransportAttribute, TAuthHandler>()
             where TTransportAttribute : HubconTransportAttribute, new()
             where TAuthHandler : class, IAuthHandler;
 
         /// <summary>
-        /// Allows anonymous WebSocket clients to connect to the server.
+        /// Configures the server to allow connections from unauthenticated WebSocket clients.
         /// </summary>
-        /// <remarks>This method is useful for scenarios where unauthenticated clients need to establish
-        /// WebSocket connections. Ensure that appropriate security measures are in place when allowing anonymous
-        /// access.</remarks>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
         ICoreServerOptions AllowAnonymousWebSocketClients();
+
+        /// <summary>
+        /// Configures the <see cref="TokenValidationParameters"/> used by the server's authentication 
+        /// and authorization mechanisms to validate incoming security tokens.
+        /// </summary>
+        /// <param name="tokenValidationParameters">The <see cref="TokenValidationParameters"/> containing the rules for signature, issuer, and lifetime validation.</param>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance for fluent configuration.</returns>
+        ICoreServerOptions SetTokenValidationParameters(TokenValidationParameters tokenValidationParameters);
     }
 
+    /// <summary>
+    /// Defines the internal configuration and runtime constraints for the Hubcon server.
+    /// This interface provides read-only access to protocol-specific limits, timeouts, and feature flags.
+    /// </summary>
     public interface IInternalServerOptions
     {
         /// <summary>
-        /// Determines the maximum incoming websocket message size in bytes.
+        /// Gets the maximum allowed size, in bytes, for an incoming WebSocket message.
         /// </summary>
         public int MaxWebSocketMessageSize { get; }
 
         /// <summary>
-        /// Disabled. Determines the maximum incoming http message size in bytes.
+        /// Gets the maximum allowed size, in bytes, for an incoming HTTP message.
+        /// <remarks>This property is currently disabled.</remarks>
         /// </summary>
         public int MaxHttpMessageSize { get; }
 
         /// <summary>
-        /// Websocket connection timeout when the
+        /// Gets the timeout duration for a WebSocket connection.
         /// </summary>
         public TimeSpan WebSocketTimeout { get; }
 
         /// <summary>
-        /// Disabled. Http message processing timeout.
+        /// Gets the timeout duration for processing an HTTP message.
+        /// <remarks>This property is currently disabled.</remarks>
         /// </summary>
         public TimeSpan HttpTimeout { get; }
 
         /// <summary>
-        /// Websocket ingest timeout.
+        /// Gets the timeout duration for WebSocket ingest operations.
         /// </summary>
         public TimeSpan IngestTimeout { get; }
 
         /// <summary>
-        /// Determines if clients need to send ping messages to keep the connection alive.
+        /// Gets a value indicating whether clients are required to send periodic ping messages to maintain the connection.
         /// </summary>
         public bool WebsocketRequiresPing { get; }
 
         /// <summary>
-        /// Determines if the websocket should handle RetryableMessage.
+        /// Gets a value indicating whether the WebSocket handler should process <c>RetryableMessage</c> types.
         /// </summary>
         public bool MessageRetryIsEnabled { get; }
 
         /// <summary>
-        /// Determines if "pong" message is sent to the client when a ping message is received.
+        /// Gets a value indicating whether the server automatically sends a "pong" response upon receiving a "ping" from a client.
         /// </summary>
         public bool WebSocketPongEnabled { get; }
 
         /// <summary>
-        /// Websocket prefix to bind to.
+        /// Gets the URL path prefix used for WebSocket endpoint binding.
         /// </summary>
         public string WebSocketPathPrefix { get; }
 
         /// <summary>
-        /// HTTP prefix to bind to.
+        /// Gets the URL path prefix used for HTTP endpoint binding.
         /// </summary>
         public string HttpPathPrefix { get; }
 
         /// <summary>
-        /// Determines if ingest methods are allowed.
+        /// Gets a value indicating whether ingest-style methods are permitted over WebSocket connections.
         /// </summary>
         public bool WebSocketIngestIsAllowed { get; }
 
         /// <summary>
-        /// Determines if subscriptions are allowed.
+        /// Gets a value indicating whether subscription-based patterns are permitted over WebSocket connections.
         /// </summary>
         public bool WebSocketSubscriptionIsAllowed { get; }
 
         /// <summary>
-        /// Determines if websocket streams are allowed.
+        /// Gets a value indicating whether streaming operations are permitted over WebSocket connections.
         /// </summary>
         public bool WebSocketStreamIsAllowed { get; }
 
         /// <summary>
-        /// Determines if typical controller methods are allowed.
+        /// Gets a value indicating whether standard controller methods are permitted over WebSocket connections.
         /// </summary>
         public bool WebSocketMethodsIsAllowed { get; }
 
         /// <summary>
-        /// Determines if responses should include detailed error messages.
+        /// Gets a value indicating whether responses should include detailed exception information and stack traces.
         /// </summary>
         public bool DetailedErrorsEnabled { get; }
 
         /// <summary>
-        /// The websocket handler for authentication tokens.
+        /// Gets a value indicating whether WebSocket connections require a valid authorization token.
         /// </summary>
         public bool WebsocketRequiresAuthorization { get; }
 
         /// <summary>
-        /// Determines if the WebSocket ping feature is disabled.
+        /// Gets a value indicating whether logging is enabled for WebSocket-specific events.
         /// </summary>
         public bool WebsocketLoggingEnabled { get; }
 
         /// <summary>
-        /// Determines if the HTTP logging feature is enabled.
+        /// Gets a value indicating whether logging is enabled for HTTP-specific events.
         /// </summary>
         public bool HttpLoggingEnabled { get; }
 
         /// <summary>
-        /// The websocket handler for authentication tokens.
-        /// </summary>
-        public Func<string, IServiceProvider, (ClaimsPrincipal, DateTime expirationDate)?>? TokenHandler { get; }
-
-        /// <summary>
-        /// Delay for a websocket client receive loop.
+        /// Gets a value indicating whether request throttling is disabled for the server.
         /// </summary>
         public bool ThrottlingIsDisabled { get; }
 
         /// <summary>
-        /// Allows configuring extra some global settings for HTTP endpoints.
+        /// Gets a delegate used to configure additional global metadata or conventions for HTTP endpoints.
         /// </summary>
         public Action<IEndpointConventionBuilder>? EndpointConventions { get; }
 
         /// <summary>
-        /// Allows configuring extra some global settings for HTTP endpoints.
+        /// Gets a delegate used to configure the <see cref="RouteHandlerBuilder"/> for HTTP-based routes.
         /// </summary>
         public Action<RouteHandlerBuilder>? RouteHandlerBuilderConfig { get; }
 
         /// <summary>
-        /// Allows configuring the rate limiter options for the server websocket.
+        /// Gets the factory for the rate limiter applied to general WebSocket reading operations.
         /// </summary>
         Func<TokenBucketRateLimiterOptions>? WebsocketReaderRateLimiter { get; }
 
         /// <summary>
-        /// Allows configuring the ping rate limiter options for the server websocket.
+        /// Gets the factory for the rate limiter applied specifically to WebSocket ping messages.
         /// </summary>
         Func<TokenBucketRateLimiterOptions>? WebsocketPingRateLimiter { get; }
 
         /// <summary>
-        /// Rate limiter options applied to round-trip (Task<T>) WebSocket methods.
+        /// Gets the factory for the rate limiter applied to synchronous or Task-returning HTTP methods (Round-Trip).
         /// </summary>
         Func<TokenBucketRateLimiterOptions>? HttpRoundTripMethodRateLimiter { get; }
 
         /// <summary>
-        /// Rate limiter options applied to fire-and-forget WebSocket methods (void or taks methods).
+        /// Gets the factory for the rate limiter applied to asynchronous or void-returning HTTP methods (Fire-and-Forget).
         /// </summary>
         Func<TokenBucketRateLimiterOptions>? HttpFireAndForgetMethodLimiter { get; }
 
         /// <summary>
-        /// Rate limiter options applied to round-trip (Task<T>) WebSocket methods.
+        /// Gets the factory for the rate limiter applied to synchronous or Task-returning WebSocket methods (Round-Trip).
         /// </summary>
         Func<TokenBucketRateLimiterOptions>? WebsocketRoundTripMethodRateLimiter { get; }
 
         /// <summary>
-        /// Rate limiter options applied to fire-and-forget WebSocket methods (void or taks methods).
+        /// Gets the factory for the rate limiter applied to asynchronous or void-returning WebSocket methods (Fire-and-Forget).
         /// </summary>
         Func<TokenBucketRateLimiterOptions>? WebsocketFireAndForgetMethodLimiter { get; }
 
         /// <summary>
-        /// Rate limiter options for ingest messages in the websocket channel.
+        /// Gets the factory for the rate limiter applied to ingest-style messages over WebSocket.
         /// </summary>
         Func<TokenBucketRateLimiterOptions>? WebsocketIngestRateLimiter { get; }
 
         /// <summary>
-        /// Rate limiter options for subscription messages in the websocket channel.
+        /// Gets the factory for the rate limiter applied to subscription-related messages over WebSocket.
         /// </summary>
         Func<TokenBucketRateLimiterOptions>? WebsocketSubscriptionRateLimiter { get; }
 
         /// <summary>
-        /// Default rate limiter options for streaming messages in the websocket channel.
+        /// Gets the factory for the rate limiter applied to streaming data over WebSocket.
         /// </summary>
         Func<TokenBucketRateLimiterOptions>? WebsocketStreamingRateLimiter { get; }
 
         /// <summary>
-        /// Rate limiter options for websocket token updates.
+        /// Gets the factory for the rate limiter applied to WebSocket token update requests.
         /// </summary>
         Func<TokenBucketRateLimiterOptions>? WebsocketTokenUpdateRateLimiter { get; }
 
         /// <summary>
-        /// Defines if remote operation cancellation through cancellation token is allowed.
+        /// Gets a value indicating whether the server supports remote operation cancellation via <see cref="CancellationToken"/>.
         /// </summary>
         bool RemoteCancellationIsAllowed { get; }
 
         /// <summary>
-        /// Defines if token expiration should be checked when a websocket message is received.
+        /// Gets a value indicating whether the server should validate token expiration every time a new WebSocket message is received.
         /// </summary>
         bool CheckTokenExpirationOnMsgReceived { get; }
 
         /// <summary>
-        /// Defines if method overloading is enabled for endpoints.
+        /// Gets a value indicating whether method overloading is supported for server endpoints.
         /// </summary>
         bool MethodOverloadingIsEnabled { get; }
 
         /// <summary>
-        /// Defines how many operations can be processed at the same time for a single client.
+        /// Gets the maximum number of concurrent operations allowed for a single client connection.
         /// </summary>
         int MaxConcurrentOperations { get; }
 
         /// <summary>
-        /// Gets a read-only dictionary that maps transport types to their associated HubconTransport attributes.
+        /// Gets a read-only dictionary mapping transport types to their associated <see cref="HubconTransportAttribute"/>.
         /// </summary>
         IReadOnlyDictionary<Type, HubconTransportAttribute> DefaultTransports { get; }
 
         /// <summary>
-        /// Global rate limiter options.
+        /// Gets the global rate limiting configuration applied to the entire server instance.
         /// </summary>
         TokenBucketRateLimiterOptions GlobalRateLimiterOptions { get; }
 
         /// <summary>
-        /// Gets a read-only dictionary that maps transport attributes to their corresponding authentication handler
-        /// types.
+        /// Gets a read-only dictionary that maps transport attributes to their corresponding authentication handler types.
         /// </summary>
-        /// <remarks>Use this property to retrieve the authentication handler type associated with a
-        /// specific transport attribute. This enables dynamic selection of authentication logic based on the transport
-        /// method in use. The returned dictionary is read-only and cannot be modified.</remarks>
+        /// <remarks>
+        /// Use this property to retrieve the authentication handler type associated with a specific transport attribute, 
+        /// enabling dynamic selection of authentication logic based on the transport method in use.
+        /// </remarks>
         IReadOnlyDictionary<HubconTransportAttribute, Type> AuthHandlerTypes { get; }
+
+        /// <summary>
+        /// Registered validation token parameters for authentication.
+        /// </summary>
+        TokenValidationParameters? TokenValidationParameters { get; }
     }
 }

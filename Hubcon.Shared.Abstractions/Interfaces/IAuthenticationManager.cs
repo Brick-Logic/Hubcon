@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿#pragma warning disable CS1591
+using Hubcon.Shared.Abstractions.Interfaces;
 using System;
 using System.Threading.Tasks;
 
@@ -33,7 +34,6 @@ namespace Hubcon
         /// <summary>
         /// Occurs when the access token has been successfully refreshed.
         /// </summary>
-        /// <param name="result">The result of the refresh operation containing details of the new token.</param>
         public abstract event Action<IAuthResult>? OnTokenRefreshed;
 
         /// <summary>

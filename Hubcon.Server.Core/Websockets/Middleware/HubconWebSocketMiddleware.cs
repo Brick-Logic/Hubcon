@@ -15,7 +15,6 @@ using Hubcon.Shared.Core.Websockets.Messages.Ingest;
 using Hubcon.Shared.Core.Websockets.Messages.Operation;
 using Hubcon.Shared.Core.Websockets.Messages.Ping;
 using Hubcon.Shared.Core.Websockets.Messages.Streams;
-using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Hubcon.Shared.Core.Websockets.Messages.Token;
 using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.AspNetCore.Cors.Infrastructure;
@@ -31,6 +30,9 @@ using System.Threading.Channels;
 
 namespace Hubcon.Server.Core.Websockets.Middleware
 {
+    /// <summary>
+    /// The hubcon websocket middleware, used to handle hubcon websocket connections.
+    /// </summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class HubconWebSocketMiddleware
     {
@@ -42,6 +44,16 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         private readonly IInternalServerOptions options;
         int clientCount = 0;
 
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        /// <param name="next"></param>
+        /// <param name="converter"></param>
+        /// <param name="operationRegistry"></param>
+        /// <param name="logger"></param>
+        /// <param name="connectionSupervisor"></param>
+        /// <param name="options"></param>
+        /// <param name="telemetryProvider"></param>
         public HubconWebSocketMiddleware(
             RequestDelegate next,
             IDynamicConverter converter,
@@ -61,6 +73,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             telemetryProvider.RegisterProvider(x => x.GetCurrentWebsocketClients, () => clientCount);
         }
 
+        /// <summary>
+        /// Begins the execution of the pipeline.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="serviceProvider"></param>
+        /// <returns></returns>
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
         {
             if (!context.WebSockets.IsWebSocketRequest || !(context.Request.Path == options.WebSocketPathPrefix))
@@ -87,7 +105,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 corsService.ApplyResult(corsResult, context.Response);
             }
 
-            DateTime lastTokenExpirationDate = DateTime.MinValue;
+            long lastTokenExpirationDate = 0;
             string connectionId = Guid.NewGuid().ToString();
             WebSocket webSocket = null!;
 
@@ -209,7 +227,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         return;
                     }
 
-                    if (options.CheckTokenExpirationOnMsgReceived && lastTokenExpirationDate != DateTime.MinValue && lastTokenExpirationDate < DateTime.Now)
+                    if (options.CheckTokenExpirationOnMsgReceived && lastTokenExpirationDate > 0 && lastTokenExpirationDate < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
                     {
                         webSocket.Abort();
                         return;
@@ -243,7 +261,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             if (!options.WebSocketSubscriptionIsAllowed)
                             {
-                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
+                                await HandleError(message.Id, HubconResponse.Unauthorized());
                                 break;
                             }
 
@@ -260,39 +278,20 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             break;
 
-                        case MessageType.stream_complete:
-
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.stream_complete, message.Id, 0);
-
-                            if (!options.WebSocketSubscriptionIsAllowed)
-                            {
-                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
-                                break;
-                            }
-
-                            _ = HandleUnsubscribe(
-                                _subscriptions,
-                                connectionId,
-                                context,
-                                new SubscriptionCompleteMessage(tmo, message.Id, message.Type),
-                                rateLimiterManager);
-
-                            break;
-
                         case MessageType.ack:
 
                             await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ack, message.Id, 0);
 
                             if (!options.MessageRetryIsEnabled)
                             {
-                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
+                                await HandleError(message.Id, HubconResponse.Unauthorized());
                                 break;
                             }
 
                             _ = HandleAck(
                                 _ackChannels,
                                 connectionId,
-                                new Shared.Core.Websockets.Messages.Generic.AckMessage(tmo, message.Id, message.Type),
+                                new AckMessage(tmo, message.Id, message.Type),
                                 rateLimiterManager);
 
                             break;
@@ -303,7 +302,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             if (!options.WebSocketMethodsIsAllowed)
                             {
-                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
+                                await HandleError(message.Id, HubconResponse.Unauthorized());
                                 break;
                             }
 
@@ -325,7 +324,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             if (!options.WebSocketMethodsIsAllowed)
                             {
-                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
+                                await HandleError(message.Id, HubconResponse.Unauthorized());
                                 break;
                             }
 
@@ -345,7 +344,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
+                                await HandleError(message.Id, HubconResponse.Unauthorized());
                                 break;
                             }
 
@@ -369,7 +368,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
+                                await HandleError(message.Id, HubconResponse.Unauthorized());
                                 break;
                             }
 
@@ -383,7 +382,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
+                                await HandleError(message.Id, HubconResponse.Unauthorized());
                                 break;
                             }
 
@@ -397,7 +396,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
-                                await HandleError(message.Id, HubconResponse.Unauthorized<string>());
+                                await HandleError(message.Id, HubconResponse.Unauthorized());
                                 break;
                             }
 
@@ -539,7 +538,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 return false;
             }
 
-            async ValueTask<(ClaimsPrincipal ClaimsPrincipal, DateTime ExpirationTime, string AccessToken)?> IsAuthorized(HttpContext context)
+            async ValueTask<(ClaimsPrincipal ClaimsPrincipal, long ExpirationTime, string AccessToken)?> IsAuthorized(HttpContext context)
             {
                 if (options.WebsocketRequiresAuthorization)
                 {
@@ -567,7 +566,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 IsTransportCalled = true
                             };
 
-                            var claimsPrincipal = await provider.AuthenticateAsync(operationContext, new UseJwtAttribute())!;
+                            var claimsPrincipal = await provider.AuthenticateAsync(operationContext, default!)!;
 
                             if (claimsPrincipal is null)
                             {
@@ -580,9 +579,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 return null;
 
                             long.TryParse(exp?.Value, out long longExpiration);
-                            DateTime expiration = DateTimeOffset.FromUnixTimeSeconds(longExpiration).DateTime;
-
-                            return (claimsPrincipal, expiration, token)!;
+                            return (claimsPrincipal, longExpiration, token)!;
                         }
                         catch (Exception)
                         {
@@ -597,7 +594,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 else
                 {
                     var token = context.Request.Headers.Authorization = Guid.NewGuid().ToString("N");
-                    return (new ClaimsPrincipal(), DateTime.UtcNow.AddYears(50), token)!;
+                    return (new ClaimsPrincipal(), long.MaxValue, token)!;
                 }
             }
 
@@ -615,13 +612,13 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 if(!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_complete, ingestCompleteMessage.Id, 1))
                 {
-                    await HandleError(ingestCompleteMessage.Id, HubconResponse.TooManyRequests<string>());
+                    await HandleError(ingestCompleteMessage.Id, HubconResponse.TooManyRequests());
                     return;
                 }
 
                 if (ingestCompleteMessage.StreamIds == null)
                 {
-                    await HandleError(ingestCompleteMessage.Id, HubconResponse.BadRequest<string>("StreamIds cannot be null"));
+                    await HandleError(ingestCompleteMessage.Id, HubconResponse.BadRequest("StreamIds cannot be null"));
                     return;
                 }
 
@@ -654,7 +651,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_data_with_ack, ingestDataWithAckMessage.Id, 1))
                 {
-                    await HandleError(ingestDataWithAckMessage.Id, HubconResponse.TooManyRequests<string>());
+                    await HandleError(ingestDataWithAckMessage.Id, HubconResponse.TooManyRequests());
                     return;
                 }
 
@@ -677,7 +674,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_data, ingestDataMessage.Id, 1))
                 {
-                    await HandleError(ingestDataMessage.Id, HubconResponse.TooManyRequests<string>());
+                    await HandleError(ingestDataMessage.Id, HubconResponse.TooManyRequests());
                     return;
                 }
 
@@ -713,7 +710,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ingest_init, ingestInitMessage.Id, 1))
                     {
-                        await HandleError(ingestInitMessage.Id, HubconResponse.TooManyRequests<string>());
+                        await HandleError(ingestInitMessage.Id, HubconResponse.TooManyRequests());
                         return;
                     }
 
@@ -833,6 +830,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 using var registration = cancellationToken.Register(localCts.Cancel);
                 IOperationRequest? operationRequest = null;
 
+                IHubconResponse? response = null;
+
                 try
                 {
                     if (!_tasks.TryAdd(operationInvokeMessage.Id, localCts))
@@ -842,7 +841,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.operation_invoke, operationInvokeMessage.Id, 1))
                     {
-                        await HandleError(operationInvokeMessage.Id, HubconResponse.TooManyRequests<string>());
+                        await HandleError(operationInvokeMessage.Id, HubconResponse.TooManyRequests());
                         return;
                     }
 
@@ -850,7 +849,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     using var scope = context.RequestServices.CreateScope();
 
-                    var response = await DefaultEntrypoint.HandleMethodWithResult(
+                    response = await DefaultEntrypoint.HandleMethodWithResult(
                         operationRequest,
                         HubconTransportAttribute.GetDefault<WebSocketTransport>(),
                         scope.ServiceProvider,
@@ -893,7 +892,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.operation_call, operationCallMessage.Id, 1))
                     {
-                        await HandleError(operationCallMessage.Id, HubconResponse.TooManyRequests<string>());
+                        await HandleError(operationCallMessage.Id, HubconResponse.TooManyRequests());
                         return;
                     }
 
@@ -925,43 +924,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 }
             }
 
-            async Task HandleUnsubscribe(
-                ConcurrentDictionary<Guid, CancellationTokenSource> subscriptions,
-                string connectionId,
-                HttpContext context,
-                SubscriptionCompleteMessage subscriptionCompletemessage,
-                IGlobalRateLimiterManager rateLimiterManager)
-            {
-                try
-                {
-                    if (subscriptionCompletemessage == null) return;
-
-                    if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.subscription_complete, subscriptionCompletemessage.Id, 1))
-                    {
-                        await HandleError(subscriptionCompletemessage.Id, HubconResponse.TooManyRequests<string>());
-                        return;
-                    }
-
-                    if (subscriptions.TryRemove(subscriptionCompletemessage.Id, out var tokenSource))
-                    {
-                        await tokenSource.CancelAsync();
-                        tokenSource.Dispose();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger?.LogError("{Message}", ex.Message);
-                }
-                finally
-                {
-                    subscriptionCompletemessage.Dispose();
-                }
-            }
-
             async Task HandleAck(
                 ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels,
                 string connectionId,
-                Shared.Core.Websockets.Messages.Generic.AckMessage ackMessage,
+                AckMessage ackMessage,
                 IGlobalRateLimiterManager rateLimiterManager)
             {
                 if (_ackChannels.TryGetValue(ackMessage.Id, out IRetryableMessage? value))
@@ -972,110 +938,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ack, ackMessage.Id, 1))
                     {
-                        await HandleError(ackMessage.Id, HubconResponse.TooManyRequests<string>());
+                        await HandleError(ackMessage.Id, HubconResponse.TooManyRequests());
                         return;
                     }
                 }
 
                 ackMessage.Dispose();
-            }
-
-            async Task HandleSubscribe(
-                HttpContext context,
-                string connectionId,
-                MessageType type,
-                ConcurrentDictionary<Guid, CancellationTokenSource> _subscriptions,
-                ConcurrentDictionary<Guid, IRetryableMessage> _ackChannels,
-                WebSocketMessageSender sender,
-                SubscriptionInitMessage subscribeMessage,
-                IGlobalRateLimiterManager rateLimiterManager,
-                CancellationToken cancellationToken)
-            {
-                if (subscribeMessage == null || subscribeMessage.Id == Guid.Empty) return;
-
-                if (_subscriptions.ContainsKey(subscribeMessage.Id)) return;
-
-                if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.subscription_init, subscribeMessage.Id, 1))
-                {
-                    await HandleError(subscribeMessage.Id, HubconResponse.TooManyRequests<string>());
-                    return;
-                }
-
-                using var localCts = new CancellationTokenSource();
-                using var registration = cancellationToken.Register(localCts.Cancel);
-
-                try
-                {
-                    _subscriptions.TryAdd(subscribeMessage.Id, localCts);
-
-                    IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(subscribeMessage.Payload)!;
-
-                    using var scope = context.RequestServices.CreateScope();
-
-                    var streamResult = await DefaultEntrypoint.HandleSubscription(
-                        operationRequest,
-                        HubconTransportAttribute.GetDefault<WebSocketTransport>(),
-                        scope.ServiceProvider,
-                        localCts.Token);
-
-                    if (streamResult.Failure)
-                    {
-                        await HandleError(subscribeMessage.Id, HubconResponse.Unauthorized<string>());
-                        return;
-                    }
-
-                    var stream = streamResult.Data! as IAsyncEnumerable<object?>;
-
-                    await foreach (var item in stream.WithCancellation(localCts.Token))
-                    {
-                        if (item != null && item.GetType().IsAssignableTo(typeof(IRetryableMessage)))
-                        {
-                            IRetryableMessage? retryable = item as IRetryableMessage;
-                            var ackId = Guid.NewGuid();
-                            _ackChannels.TryAdd(ackId, retryable!);
-
-                            while (await retryable!.CanRetry() && !localCts.IsCancellationRequested)
-                            {
-                                retryable.GetPayload(out object? message);
-                                var edwa = new SubscriptionDataWithAckMessage(subscribeMessage.Id, converter.SerializeToElement(message), ackId);
-                                await sender.SendAsync(edwa);
-                            }
-
-                            if (_ackChannels.TryRemove(ackId, out IRetryableMessage? channel))
-                                await channel.FailedAckAsync();
-                        }
-                        else
-                        {
-                            if (!localCts.IsCancellationRequested)
-                            {
-                                var response = new SubscriptionDataMessage(
-                                    subscribeMessage.Id,
-                                    converter.SerializeToElement(item)
-                                );
-
-                                await sender.SendAsync(response);
-                            }
-                        }
-
-                        await rateLimiterManager.TryAcquireAsync(connectionId, type, HubconTransportAttribute.GetDefault<WebSocketTransport>(), operationRequest, 0);
-                        await rateLimiterManager.TryAcquireAsync(connectionId, type, HubconTransportAttribute.GetDefault<WebSocketTransport>(), operationRequest, 1);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    // Cancelado normalmente
-                }
-                catch (Exception)
-                {
-                    await HandleError(subscribeMessage.Id, HubconResponse.Unauthorized<string>());
-                    return;
-                }
-                finally
-                {
-                    _subscriptions.TryRemove(subscribeMessage.Id, out _);
-                    await localCts.CancelAsync();
-                    subscribeMessage.Dispose();
-                }
             }
 
             async Task HandleStream(
@@ -1098,7 +966,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.stream_init, streamInitMessage.Id, 1))
                     {
-                        await HandleError(streamInitMessage.Id, HubconResponse.TooManyRequests<string>());
+                        await HandleError(streamInitMessage.Id, HubconResponse.TooManyRequests());
                         return;
                     }
 
@@ -1119,7 +987,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     if (streamResult.Failure)
                     {
-                        await HandleError(streamInitMessage.Id, HubconResponse.Unauthorized<string>());
+                        await HandleError(streamInitMessage.Id, HubconResponse.Unauthorized());
                         return;
                     }
 
@@ -1209,7 +1077,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.token_update, tokenUpdateMessage.Id, 1))
                 {
-                    await HandleError(tokenUpdateMessage.Id, HubconResponse.TooManyRequests<string>());
+                    await HandleError(tokenUpdateMessage.Id, HubconResponse.TooManyRequests());
                     return;
                 }
 
@@ -1290,7 +1158,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ping, pingMessage.Id, 1))
                 {
-                    await HandleError(pingMessage.Id, HubconResponse.TooManyRequests<string>());
+                    await HandleError(pingMessage.Id, HubconResponse.TooManyRequests());
                     return;
                 }
 

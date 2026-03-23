@@ -7,24 +7,39 @@ using System.Runtime.InteropServices;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
+    /// <summary>
+    /// A special counter slot for telemetry.
+    /// </summary>
     [StructLayout(LayoutKind.Explicit, Size = 64)] // Evita False Sharing
     public struct CounterSlot
     {
+        /// <summary>
+        /// Counter value.
+        /// </summary>
         [FieldOffset(0)] public long Value;
     }
 
+    /// <summary>
+    /// A specialized counter for telemetry.
+    /// </summary>
     public class StripedCounter
     {
         private readonly CounterSlot[] _slots = new CounterSlot[Environment.ProcessorCount];
 
-        // Incrementar es ultra rápido: cada hilo a su slot
+        /// <summary>
+        /// Increment the counter.
+        /// </summary>
+        /// <param name="count"></param>
         public void Add(int count)
         {
             int slotIdx = Thread.GetCurrentProcessorId() % _slots.Length;
             Interlocked.Add(ref _slots[slotIdx].Value, count);
         }
 
-        // El "Reset" ocurre aquí: extraemos el valor y ponemos a cero en un paso atómico
+        /// <summary>
+        /// Extracts the value and resets the counter.
+        /// </summary>
+        /// <returns></returns>
         public long GetAndReset()
         {
             long total = 0;
@@ -37,6 +52,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
         }
     }
 
+    /// <inheritdoc/>
     public class InternalTelemetryMiddleware : ITelemetryMiddleware
     {
         private int currentSubscriptionCount = 0;
@@ -66,6 +82,10 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
         private int currentHttpCallRequestsPerSecond = 0;
         private int currentHttpRoundTripRequestsPerSecond = 0;
 
+        /// <summary>
+        /// Default middleware constructor.
+        /// </summary>
+        /// <param name="telemetryProvider"></param>
         public InternalTelemetryMiddleware(ITelemetryProvider telemetryProvider)
         {
             _matrix = new StripedCounter[5, 2];
@@ -182,6 +202,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             //}
         }
 
+        /// <inheritdoc/>
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
             ChangeCounts(1, context);

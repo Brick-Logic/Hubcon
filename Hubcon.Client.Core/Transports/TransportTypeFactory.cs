@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
+#pragma warning disable CS1591
+
 namespace Hubcon.Client.Core.Transports
 {
     public static class TransportTypeResolver

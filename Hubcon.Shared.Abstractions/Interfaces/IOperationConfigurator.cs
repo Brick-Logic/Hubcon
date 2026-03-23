@@ -1,58 +1,92 @@
 ﻿using Hubcon.Shared.Abstractions.Enums;
 using Hubcon.Shared.Abstractions.Models;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Abstractions.Interfaces
 {
+    /// <summary>
+    /// Defines the fluent configuration interface for a specific Hubcon operation.
+    /// Allows for granular overrides of transport, security, rate limiting, and lifecycle hooks.
+    /// </summary>
     public interface IOperationConfigurator : Hubcon.Shared.Abstractions.Standard.Interfaces.IOperationConfigurator
     {
         /// <summary>
-        /// Adds a hook to be triggered during the operation lifecycle.
+        /// Registers a custom asynchronous hook to be triggered at a specific point in the operation lifecycle.
         /// </summary>
-        /// <param name="onSend">The type of hook to add, specifying when it should be triggered.</param>
-        /// <param name="hookDelegate">The delegate to execute when the hook is triggered.</param>
-        /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
+        /// <param name="onSend">The lifecycle stage (e.g., BeforeSend, AfterReceive) that triggers the hook.</param>
+        /// <param name="hookDelegate">The asynchronous delegate to execute.</param>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator AddHook(HookType onSend, Func<IInvocationContext, Task> hookDelegate);
 
         /// <summary>
-        /// Adds a validation hook to validate the request before execution.
+        /// Adds a validation delegate that is executed before the request is dispatched to the transport.
         /// </summary>
-        /// <param name="value">The delegate to execute for request validation.</param>
-        /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
+        /// <param name="value">The asynchronous delegate responsible for inspecting and validating the <see cref="RequestValidationContext"/>.</param>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator AddValidationHook(Func<RequestValidationContext, Task> value);
 
         /// <summary>
-        /// Limits the number of requests per second for the operation.
+        /// Configures a simple rate limiter for this specific operation to throttle the execution frequency.
         /// </summary>
-        /// <param name="requestsPerSecond">The maximum number of requests allowed per second.</param>
-        /// <param name="rateLimiterIsShared">Indicates whether the rate limiter is shared across operations. Defaults to true.</param>
-        /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
+        /// <param name="requestsPerSecond">The maximum number of permits allowed per second.</param>
+        /// <param name="rateLimiterIsShared">If <see langword="true"/>, uses a shared bucket across instances; otherwise, uses a dedicated bucket for this operation.</param>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true);
 
         /// <summary>
-        /// Specifies the transport type to use for the operation.
+        /// Explicitly sets the transport protocol (e.g., WebSocket, HTTP) for this operation via a transport attribute.
         /// </summary>
-        /// <param name="transportType">The transport type to use (e.g., HTTP, WebSockets).</param>
-        /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
+        /// <typeparam name="T">The type of <see cref="HubconTransportAttribute"/> to apply.</typeparam>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator UseTransport<T>() where T : HubconTransportAttribute, new();
 
         /// <summary>
-        /// Allows or disallows remote cancellation of the operation.
+        /// Configures whether the client-side <see cref="CancellationToken"/> should be propagated to the server to cancel remote execution.
         /// </summary>
-        /// <param name="value">True to allow remote cancellation; false to disallow. Defaults to true.</param>
-        /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
+        /// <param name="value"><see langword="true"/> to enable remote cancellation; <see langword="false"/> to ignore client-side cancellation on the server.</param>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator AllowRemoteCancellation(bool value = true);
 
         /// <summary>
-        /// Disables HTTP authentication for the operation.
+        /// Disables authentication requirements specifically for this operation, overriding higher-level security policies.
         /// </summary>
-        /// <returns>The current instance of <see cref="IOperationConfigurator"/> for method chaining.</returns>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator DisableHttpAuthentication();
+
+        /// <summary>
+        /// Configures advanced rate limiting behavior using a specialized <see cref="RateLimitAttribute"/>.
+        /// </summary>
+        /// <param name="rateLimitAttribute">The attribute containing complex rate-limiting rules (e.g., burst size, replenishment rate).</param>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator ConfigureRateBucket(RateLimitAttribute rateLimitAttribute);
+
+        /// <summary>
+        /// Forces the operation to use the WebSocket transport layer.
+        /// </summary>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator UseWebSockets();
+
+        /// <summary>
+        /// Forces the operation to use the standard Hubcon HTTP transport layer.
+        /// </summary>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator UseHttp();
+
+        /// <summary>
+        /// Configures the operation to use a non-standard HTTP transport, typically used for external REST APIs 
+        /// that do not follow the Hubcon response envelope structure.
+        /// </summary>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator UseNonHubconHttp();
+
+        /// <summary>
+        /// Registers a dynamic header provider for this specific operation.
+        /// </summary>
+        /// <param name="key">The HTTP header name.</param>
+        /// <param name="valueProvider">A delegate that resolves the header value from the <see cref="IServiceProvider"/> at runtime.</param>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator AddHeaderProvider(string key, Func<IServiceProvider, string> valueProvider);
     }
 }

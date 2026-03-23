@@ -3,7 +3,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 
 namespace Hubcon.Server.Core.Configuration
 {
-    public sealed class SettingsManager(IOperationRegistry operationRegistry, IOperationConfigRegistry operationConfigRegistry) : ISettingsManager
+    internal sealed class SettingsManager(IOperationRegistry operationRegistry, IOperationConfigRegistry operationConfigRegistry) : ISettingsManager
     {
         public T GetSettings<T>(IOperationEndpoint operationRequest, HubconTransportAttribute transportAttribute, Func<T> onNull)
         {

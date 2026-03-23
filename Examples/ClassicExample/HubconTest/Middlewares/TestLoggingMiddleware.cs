@@ -11,14 +11,6 @@ namespace HubconTest.Middlewares
         {
             var user = context.HttpContext?.User;
 
-            if ((context.Blueprint.Kind == OperationKind.Subscription || context.Blueprint.Kind == OperationKind.Stream) && user?.Identity?.IsAuthenticated != true)
-            {
-                logger.LogError($"Server: Subscriptions are required to be authenticated. Source IP: {context.HttpContext?.Connection.RemoteIpAddress}.");
-                context.Response = HubconResponse.Unauthorized();
-                context.HttpContext?.Connection.RequestClose();
-                return;
-            }
-
             bool allowed = true;
 
             if (context.Blueprint.RequiresAuthorization)

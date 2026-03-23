@@ -1,10 +1,7 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Core.Registries;
-using Hubcon.Client.Core.Subscriptions;
 using Hubcon.Client.Core.Transports;
 using Hubcon.Client.Integration.Client;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Hubcon.Shared.Core.Attributes;
 using Hubcon.Shared.Core.Injection;
 using Hubcon.Shared.Core.Serialization;
@@ -14,8 +11,8 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
-using System.Text.Json;
 using System.Threading.Tasks;
+#pragma warning disable CS1591
 
 namespace Hubcon.Client.Builder
 {
@@ -41,7 +38,7 @@ namespace Hubcon.Client.Builder
             }
         }
 
-        public IServiceCollection Services { get; internal set; }
+        public IServiceCollection? Services { get; internal set; }
 
         public IServiceCollection AddHubconClient(IServiceCollection services)
         {

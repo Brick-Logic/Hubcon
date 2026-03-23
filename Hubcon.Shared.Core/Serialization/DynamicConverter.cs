@@ -8,7 +8,6 @@ using Hubcon.Shared.Core.Websockets.Messages.Ingest;
 using Hubcon.Shared.Core.Websockets.Messages.Operation;
 using Hubcon.Shared.Core.Websockets.Messages.Ping;
 using Hubcon.Shared.Core.Websockets.Messages.Streams;
-using Hubcon.Shared.Core.Websockets.Messages.Subscriptions;
 using Hubcon.Shared.Core.Websockets.Messages.Token;
 using Microsoft.Extensions.Logging;
 using System;
@@ -28,11 +27,13 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Shared.Core.Serialization
 {
+    /// <summary>
+    /// Hubcon's internal json serializer context.
+    /// </summary>
     [JsonSerializable(typeof(JsonElement))]
     [JsonSerializable(typeof(IReadOnlyDictionary<string, object>))]
     [JsonSerializable(typeof(IOperationRequest))]
     [JsonSerializable(typeof(OperationRequest))]
-    [JsonSerializable(typeof(SubscriptionRequest))]
     [JsonSerializable(typeof(Dictionary<string, object>))]
     [JsonSerializable(typeof(JsonObject))]
     [JsonSerializable(typeof(JsonArray))]
@@ -56,9 +57,6 @@ namespace Hubcon.Shared.Core.Serialization
     [JsonSerializable(typeof(PongMessage))]
     [JsonSerializable(typeof(StreamCompleteMessage))]
     [JsonSerializable(typeof(StreamInitMessage))]
-    [JsonSerializable(typeof(SubscriptionCompleteMessage))]
-    [JsonSerializable(typeof(SubscriptionDataMessage))]
-    [JsonSerializable(typeof(SubscriptionInitMessage))]
     [JsonSerializable(typeof(TokenUpdateMessage))]
     [JsonSerializable(typeof(TokenUpdateResponseMessage))]
     [JsonSerializable(typeof(ConnectionInitMessage))]
@@ -95,15 +93,22 @@ namespace Hubcon.Shared.Core.Serialization
     {
     }
 
+    /// <inheritdoc/>
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class DynamicConverter : IDynamicConverter
     {
+        /// <inheritdoc/>
         public ConcurrentDictionary<Delegate, Type[]> TypeCache { get; private set; } = new();
 
+        /// <summary>
+        /// Hubcon's json serializer options.
+        /// </summary>
         public static JsonSerializerOptions JsonSerializerOptions { get; } = HubconJsonDefaults.Options;
 
+        /// <inheritdoc/>
         public static ConcurrentDictionary<Type, JsonTypeInfo> TypeInfoCache { get; private set; } = new();
 
+        /// <inheritdoc/>
         public IEnumerable<object?> DeserializeArgs(IEnumerable<Type> types, IEnumerable<object?> args)
         {
             if (!types.Any() || !args.Any())
@@ -143,11 +148,16 @@ namespace Hubcon.Shared.Core.Serialization
         private static ConcurrentDictionary<Delegate, Type[]> _delegateParametersCache = new();
         private readonly ILogger<DynamicConverter> logger;
 
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        /// <param name="logger"></param>
         public DynamicConverter(ILogger<DynamicConverter> logger)
         {
             this.logger = logger;
         }
 
+        /// <inheritdoc/>
         public IEnumerable<object?> DeserializedArgs(Delegate del, IEnumerable<object?> args)
         {
             if (!args.Any()) return Enumerable.Empty<object?>();
@@ -164,6 +174,7 @@ namespace Hubcon.Shared.Core.Serialization
             return DeserializeArgs(parameterTypes, args);
         }
 
+        /// <inheritdoc/>
         public T? DeserializeData<T>(object? data)
         {
             if (data == null)
@@ -193,6 +204,7 @@ namespace Hubcon.Shared.Core.Serialization
             return default;
         }
 
+        /// <inheritdoc/>
         public T? DeserializeFromString<T>(string? json)
         {
             if (string.IsNullOrEmpty(json))
@@ -201,18 +213,19 @@ namespace Hubcon.Shared.Core.Serialization
             return JsonSerializer.Deserialize<T>(json, JsonSerializerOptions);
         }
 
-        // 1. Convierte un objeto a JsonElement
+        /// <inheritdoc/>
         public JsonElement SerializeObject(object? value)
         {
             return JsonSerializer.SerializeToElement(value, JsonSerializerOptions);
         }
 
+        /// <inheritdoc/>
         public T DeserializeByteArray<T>(byte[] bytes)
         {
             return JsonSerializer.Deserialize<T>(bytes, JsonSerializerOptions)!;
         }
 
-        // 2. Convierte una colección de objetos a JsonElements
+        /// <inheritdoc/>
         public IEnumerable<JsonElement> SerializeArgsToJson(IEnumerable<object?> values)
         {
             List<JsonElement> results = new();
@@ -225,7 +238,7 @@ namespace Hubcon.Shared.Core.Serialization
             return results;
         }
 
-        // 3. Convierte un JsonElement a un objeto fuertemente tipado
+        /// <inheritdoc/>
         public object? DeserializeJsonElement(JsonElement element, Type targetType)
         {
             if (element.ValueKind == JsonValueKind.Null)
@@ -234,7 +247,7 @@ namespace Hubcon.Shared.Core.Serialization
             return element.Deserialize(targetType, JsonSerializerOptions);
         }
 
-        // 3. Convierte un JsonElement a un objeto fuertemente tipado
+        /// <inheritdoc/>
         public T? DeserializeJsonElement<T>(JsonElement element)
         {
             try
@@ -250,7 +263,7 @@ namespace Hubcon.Shared.Core.Serialization
             }
         }
 
-        // 4. Convierte una lista de JsonElements a objetos, según tipos dados
+        /// <inheritdoc/>
         public IEnumerable<object?> DeserializeJsonArgs(IEnumerable<JsonElement> elements, IEnumerable<Type> types)
         {
             List<object?> list = new();
@@ -275,6 +288,7 @@ namespace Hubcon.Shared.Core.Serialization
 
         }
 
+        /// <inheritdoc/>
         public async IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement> stream, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             await foreach (var item in stream.WithCancellation(cancellationToken))
@@ -290,6 +304,7 @@ namespace Hubcon.Shared.Core.Serialization
             }
         }
 
+        /// <inheritdoc/>
         public async IAsyncEnumerable<JsonElement> ConvertToJsonElementStream(IAsyncEnumerable<object?> stream, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             await foreach (var item in stream.WithCancellation(cancellationToken))
@@ -306,6 +321,7 @@ namespace Hubcon.Shared.Core.Serialization
             }
         }
 
+        /// <inheritdoc/>
         public string Serialize<T>(T value)
         {
             try
@@ -319,6 +335,7 @@ namespace Hubcon.Shared.Core.Serialization
             }
         }
 
+        /// <inheritdoc/>
         public JsonElement SerializeToElement<T>(T value)
         {
             if (value == null || (value is JsonElement element && (element.ValueKind == JsonValueKind.Undefined || element.ValueKind == JsonValueKind.Null)))
@@ -334,6 +351,7 @@ namespace Hubcon.Shared.Core.Serialization
             }
         }
 
+        /// <inheritdoc/>
         public ReadOnlySpan<byte> SerializeToSpan<T>(T value, ArrayBufferWriter<byte> bufferWriter)
         {
             bufferWriter.Clear();
@@ -343,12 +361,14 @@ namespace Hubcon.Shared.Core.Serialization
             return bufferWriter.WrittenSpan;
         }
 
+        /// <inheritdoc/>
         public void Serialize<T>(Utf8JsonWriter writer, T? message)
         {
             var typeInfo = TypeInfoCache.GetOrAdd(typeof(T), x => JsonSerializerOptions.TypeInfoResolver!.GetTypeInfo(x, JsonSerializerOptions)!) as JsonTypeInfo<T>;
             JsonSerializer.Serialize(writer, message, typeInfo!);
         }
 
+        /// <inheritdoc/>
         public JsonElement ToJsonElement(string rawData)
         {
             // Intentamos ver si ya es un JSON válido (objeto o array)
@@ -366,6 +386,9 @@ namespace Hubcon.Shared.Core.Serialization
         }
     }
 
+    /// <summary>
+    /// Defaults for hubcon json serializer options.
+    /// </summary>
     public static class HubconJsonDefaults
     {
         private static readonly Lazy<JsonSerializerOptions> _options = new Lazy<JsonSerializerOptions>(() =>
@@ -373,19 +396,32 @@ namespace Hubcon.Shared.Core.Serialization
             return HubconSerialization.GetOptions();
         });
 
+        /// <summary>
+        /// The default json serializer options.
+        /// </summary>
         public static JsonSerializerOptions Options => _options.Value;      
     }
 
+    /// <summary>
+    /// Hubcon serialization setup class
+    /// </summary>
     public static class HubconSerialization
     {
         private static JsonSerializerOptions? _options;
 
+        /// <summary>
+        /// Gets the json serializer options. Creates a new instance if the options are not set up.
+        /// </summary>
         public static JsonSerializerOptions GetOptions()
         {
             if (_options == null) SetupJsonSerializerOption(new JsonSerializerOptions());
             return _options!;
         }
 
+        /// <summary>
+        /// Method used to configure the internal json serializer options using source generators.
+        /// </summary>
+        /// <param name="options"></param>
         public static void SetupJsonSerializerOption(JsonSerializerOptions? options) 
         { 
             if(_options == null)

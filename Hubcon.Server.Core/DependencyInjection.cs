@@ -8,9 +8,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+#pragma warning disable CS1591
+
 
 namespace Hubcon.Server.Core
 {
+    /// <summary>
+    /// Internal
+    /// </summary>
     public static class DependencyInjection
     {
         private static System.Timers.Timer worker;
@@ -22,6 +27,11 @@ namespace Hubcon.Server.Core
         private static int threads;
         private static readonly Process _currentProcess = Process.GetCurrentProcess();
 
+        /// <summary>
+        /// Internal
+        /// </summary>
+        /// <param name="builder"></param>
+        /// <returns></returns>
         public static WebApplicationBuilder AddServerCore(this WebApplicationBuilder builder)
         {
             var telemetryProvider = new TelemetryProvider();

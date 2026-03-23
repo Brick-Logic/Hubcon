@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Web;
+#pragma warning disable CS1591
 
 namespace Hubcon.Client.Core.Extensions
 {

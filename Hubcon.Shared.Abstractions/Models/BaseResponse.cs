@@ -1,4 +1,5 @@
-﻿using Hubcon.Shared.Abstractions.Interfaces;
+﻿#pragma warning disable CS1591
+using Hubcon.Shared.Abstractions.Interfaces;
 
 namespace Hubcon.Shared.Abstractions.Models
 {

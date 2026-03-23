@@ -1,35 +1,10 @@
-﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Core.Configurations;
-using Hubcon.Client.Core.Helpers;
-using Hubcon.Client.Core.HubconInvocationContext;
-using Hubcon.Client.Core.Websockets;
-using Hubcon.Shared.Abstractions.Attributes;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Models;
-using Hubcon.Shared.Abstractions.Standard.Extensions;
-using Hubcon.Shared.Core.Context;
-using Hubcon.Shared.Core.Extensions;
-using Hubcon.Shared.Core.Websockets.Events;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
+﻿#pragma warning disable CS1591
+using Hubcon.Client.Abstractions.Interfaces;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Reactive.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 

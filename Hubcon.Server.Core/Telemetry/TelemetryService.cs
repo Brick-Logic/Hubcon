@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Text;
+#pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.Telemetry
 {

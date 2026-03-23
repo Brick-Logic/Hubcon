@@ -1,5 +1,6 @@
 ﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System.Threading.Channels;
+#pragma warning disable CS1591
 
 namespace Hubcon.Server.Abstractions.Interfaces
 {

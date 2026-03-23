@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Hubcon
 {
+    /// <summary>
+    /// Indicates that ingests should share the same rate limiter.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     public class IngestShareLimiter : Attribute
     {

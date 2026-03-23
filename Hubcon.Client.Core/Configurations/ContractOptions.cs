@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
-
+#pragma warning disable CS1591
 namespace Hubcon.Client.Core.Configurations
 {
     [EditorBrowsable(EditorBrowsableState.Never)]

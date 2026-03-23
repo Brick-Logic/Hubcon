@@ -2,6 +2,7 @@
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System.Collections.Concurrent;
 using System.ComponentModel;
+#pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.Routing.Registries
 {

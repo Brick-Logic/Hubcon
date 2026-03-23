@@ -73,6 +73,13 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// <param name="enabled">True to enable authentication; otherwise, false.</param>
         /// <returns>The current instance of <see cref="IContractConfigurator{T}"/> for method chaining.</returns>
         public IContractConfigurator<T> EnableAuth(bool enabled);
+
+        /// <summary>
+        /// Returns the configurator for a given operation.
+        /// </summary>
+        /// <typeparam name="TDelegate"></typeparam>
+        /// <param name="expression"></param>
+        /// <returns></returns>
         IOperationConfigurator ForOperation<TDelegate>(System.Linq.Expressions.Expression<Func<T, TDelegate>> expression);
     }
 }

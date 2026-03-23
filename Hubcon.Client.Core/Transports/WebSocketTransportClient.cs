@@ -15,22 +15,31 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Transports
 {
+    /// <summary>
+    /// Hubcon's websocket transport client implementations.
+    /// </summary>
     public sealed class WebSocketTransportClient : TransportClient<WebSocketTransport>, IRealTimeTransport
     {
         HubconWebSocketClient _client = null!;
         private readonly ILogger<HubconWebSocketClient> logger;
 
+        /// <summary>
+        /// Default transport.
+        /// </summary>
+        /// <param name="logger"></param>
         public WebSocketTransportClient(ILogger<HubconWebSocketClient> logger)
         {
             this.logger = logger;
         }
 
+        /// <inheritdoc/>
         public override async ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             await _client.SendAsync(request, context.RemoteCancellationIsAllowed, cancellationToken);
             await context.SetResponse(HubconResponse.OkT(true));
         }
 
+        /// <inheritdoc/>
         public override async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             IObservable<JsonElement> observable;
@@ -44,18 +53,21 @@ namespace Hubcon.Client.Core.Transports
             return enumerable;
         }
 
+        /// <inheritdoc/>
         public override async ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             var response = await _client.IngestMultiple<JsonElement>(request, context.RemoteCancellationIsAllowed, context.ClientOptions, context.OperationOptions, cancellationToken);
             await context.HandleResponse<T>(response);
         }
 
+        /// <inheritdoc/>
         public override async ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             var response = await _client.InvokeAsync<JsonElement>(request, context.RemoteCancellationIsAllowed, context.ExpectsHubconResponse, cancellationToken);
             await context.HandleResponse<T>(response);
         }
 
+        /// <inheritdoc/>
         protected override void Build(TransportContext context)
         {
             _client = new HubconWebSocketClient(new Uri(context.WebSocketUrl), context, logger);
@@ -83,6 +95,7 @@ namespace Hubcon.Client.Core.Transports
             }
         }
 
+        /// <inheritdoc/>
         public async Task<HubconResponse> Connect(string? url = null)
         {
             try
@@ -100,6 +113,7 @@ namespace Hubcon.Client.Core.Transports
             }
         }
 
+        /// <inheritdoc/>
         public async Task<HubconResponse> Reconnect(string url)
         {
             try
@@ -114,6 +128,7 @@ namespace Hubcon.Client.Core.Transports
             }
         }
 
+        /// <inheritdoc/>
         public async Task<HubconResponse> Disconnect()
         {
             try
@@ -127,6 +142,7 @@ namespace Hubcon.Client.Core.Transports
             }
         }
 
+        /// <inheritdoc/>
         public async Task<HubconResponse<bool>> IsConnected()
         {
             if (_client.IsConnected)

@@ -3,6 +3,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Websockets;
 using System.Collections.Concurrent;
 using System.Threading.RateLimiting;
+#pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.RateLimiting
 {

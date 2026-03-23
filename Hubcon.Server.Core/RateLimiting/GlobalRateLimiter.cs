@@ -4,7 +4,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Websockets;
 using System.Reflection;
 using System.Threading.RateLimiting;
-
+#pragma warning disable CS1591
 namespace Hubcon.Server.Core.RateLimiting
 {
     public class GlobalRateLimiterManager(

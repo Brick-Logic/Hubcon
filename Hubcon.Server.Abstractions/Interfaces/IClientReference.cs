@@ -1,5 +1,5 @@
 ﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
-
+#pragma warning disable CS1591
 namespace Hubcon.Server.Abstractions.Interfaces
 {
     public interface IClientReference
@@ -14,3 +14,4 @@ namespace Hubcon.Server.Abstractions.Interfaces
         public TICommunicationContract ClientController { get; init; }
     }
 }
+#pragma warning restore CS1591

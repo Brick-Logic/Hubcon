@@ -1,4 +1,5 @@
-﻿namespace Hubcon.Shared.Abstractions.Enums
+﻿#pragma warning disable CS1591
+namespace Hubcon.Shared.Abstractions.Enums
 {
     public enum MemberType
     {

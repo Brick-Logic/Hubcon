@@ -8,19 +8,27 @@ using System.Text;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
+    /// <inheritdoc/>
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class InternalExceptionMiddleware(IInternalServerOptions options, ILogger<InternalExceptionMiddleware> logger) : IInternalExceptionMiddleware
     {
         Exception? exception = null;
+        static readonly OperationCanceledException _operationCanceledException = new();
 
+        /// <inheritdoc/>
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
             try
             {
                 await next();
             }
-            catch (Exception ex) when (RecordDiagnostics(ex))
+            catch (OperationCanceledException)
             {
+                context.Exception = _operationCanceledException;
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
             }
             finally
             {
@@ -106,12 +114,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     context.Response = result;
                     logger?.LogError("{createdLogMessage}\n{request}\n{result}", createdLogMessage, request, result);
                 }
-            }
-
-            bool RecordDiagnostics(Exception ex)
-            {
-                exception = ex;
-                return false;
             }
         }
     }

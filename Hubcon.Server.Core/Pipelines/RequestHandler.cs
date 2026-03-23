@@ -1,15 +1,12 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
+﻿#pragma warning disable CS1591
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Pipelines.ResultHandlers;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
-using Hubcon.Shared.Abstractions.Enums;
-using Hubcon.Shared.Abstractions.Interfaces;
-using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
-using System.Security.Claims;
 
 namespace Hubcon.Server.Core.Pipelines
 {
@@ -81,23 +78,6 @@ namespace Hubcon.Server.Core.Pipelines
                 return HubconResponse.NotFound();
 
             IOperationContext context = BuildContext(request, blueprint, wrappedRequest, cancellationToken);
-            var pipeline = blueprint.PipelineBuilder.Build(request, context, PipelineResultHandlers.StreamResultHandler, _serviceProvider);
-            var pipelineTask = pipeline.Execute();
-            await pipelineTask;
-            var res = pipelineTask.Result.Response;
-
-            if (res == null)
-                return HubconResponse.InternalError();
-
-            return res;
-        }
-
-        public async Task<IHubconResponse> GetSubscription(IOperationRequest request, HubconTransportAttribute transportAttribute, CancellationToken cancellationToken = default)
-        {
-            if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute, out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Subscription))
-                return HubconResponse.NotFound();
-
-            IOperationContext context = BuildContext(request, blueprint, null, cancellationToken);
             var pipeline = blueprint.PipelineBuilder.Build(request, context, PipelineResultHandlers.StreamResultHandler, _serviceProvider);
             var pipelineTask = pipeline.Execute();
             await pipelineTask;

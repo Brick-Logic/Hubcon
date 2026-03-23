@@ -16,12 +16,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.Tokens;
+#pragma warning disable CS1591
 
 namespace Hubcon.Server
 {
     public class ServerBuilder
     {
-        private ILiveSubscriptionRegistry SubscriptionRegistry { get; } = new LiveSubscriptionRegistry();
         private IOperationRegistry OperationRegistry { get; } = new OperationRegistry();
         private CoreServerOptions ServerOptions { get; } = new();
         private IServiceCollection Services;
@@ -69,7 +70,6 @@ namespace Hubcon.Server
 
             Services.AddSingleton<IInternalServerOptions>(ServerOptions);
             Services.AddSingleton(OperationRegistry);
-            Services.AddSingleton(SubscriptionRegistry);
             Services.AddSingleton<IPermissionRegistry, PermissionRegistry>();
             Services.AddSingleton<IConnectionSupervisor, ConnectionSupervisor>();
             Services.AddSingleton<IDynamicConverter, DynamicConverter>();
@@ -174,6 +174,11 @@ namespace Hubcon.Server
         internal void ConfigureCore(Action<ICoreServerOptions> coreServerOptions)
         {
             coreServerOptions.Invoke(ServerOptions);
+        }
+
+        internal void AddTokenValidationParameters(TokenValidationParameters tokenValidationParameters)
+        {
+            ServerOptions.SetTokenValidationParameters(tokenValidationParameters);
         }
     }
 }

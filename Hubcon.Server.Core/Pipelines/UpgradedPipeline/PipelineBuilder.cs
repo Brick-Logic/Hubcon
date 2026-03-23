@@ -3,6 +3,7 @@ using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
+#pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 {
@@ -11,8 +12,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
     {
         private static bool GlobalMiddlewaresFirst { get; set; } = false;
 
-        private static Type GlobalInternalExceptionMiddleware { get; set; }
-        private static Type GlobalExceptionMiddleware { get; set; }
+        private static Type? GlobalInternalExceptionMiddleware { get; set; }
+        private static Type? GlobalExceptionMiddleware { get; set; }
         private static List<Type> GlobalTelemetryMiddlewares { get; } = new();
         private static List<Type> GlobalLoggingMiddlewares { get; } = new();
         private static List<Type> GlobalAuthenticationMiddlewares { get; } = new();
@@ -100,7 +101,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             var middlewares = new List<Type>();
 
-            middlewares.Add(GlobalInternalExceptionMiddleware);
+            if(GlobalInternalExceptionMiddleware != null) middlewares.Add(GlobalInternalExceptionMiddleware);
 
             if (GlobalMiddlewaresFirst)
             {
