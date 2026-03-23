@@ -461,15 +461,13 @@ namespace Hubcon.Client.Core.HubconInvocationContext
             {
                 try
                 {
-                    IHubconResponse<T>? result = Converter.DeserializeData<T>(response) as IHubconResponse<T>;
-
-                    if (result == null)
+                    if (Converter.DeserializeData<T>(response) is not IResponse result)
                     {
-                        await SetResponse<T>(HubconResponse.InternalError<T>(null!, "Parsing error.", response));
+                        result = HubconResponse.InternalError<T>(null!, "Parsing error.", response);
                         return;
                     }
 
-                    await SetResponse<T>(result!);
+                    await SetResponse(result!);
                 }
                 catch (Exception ex)
                 {

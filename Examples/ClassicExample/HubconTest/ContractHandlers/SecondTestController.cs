@@ -22,6 +22,12 @@ namespace HubconTest.ContractHandlers
             return message;
         }
 
+        public async Task<HubconResponse<bool>> TestHubconResponse()
+        {
+            var response = HubconResponse.OkT(true);
+            return response;
+        }
+
         public async Task TestVoid()
         {
             //logger.LogInformation("TestVoid called.");

@@ -14,5 +14,6 @@ namespace HubconTestDomain
 
         public Task<string> TestReturn(string message);
         public Task<string> TestReturn();
+        Task<HubconResponse<bool>> TestHubconResponse();
     }
 }

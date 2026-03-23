@@ -93,6 +93,8 @@ internal class Program
         //    var data = responseTemp.Data;
         //    // Hago algo con data
         //}
+        await TestHubconResponse(client2, logger);
+        await Task.Delay(100);
         await TestValidations(client, logger);
         await Task.Delay(100);
         await TestIngest(client, logger);
@@ -284,6 +286,15 @@ internal class Program
 
         // Esperamos a que todas las tareas terminen (esto ocurrirá cuando se cancele el ct)
         await Task.WhenAll(tasks);
+    }
+
+    private static async Task TestHubconResponse(ISecondTestContract client2, ILogger<IUserContract> logger)
+    {
+        var response = await client2.Execute(x => x.TestHubconResponse());
+        if (response.Success && response.Data == true)
+            logger.LogInformation($"Hubcon response OK.");
+        else
+            throw new Exception($"Error de test hubcon response: {response.Error}");
     }
 
     private static async Task TestOpenAiIntegration(ILogger<IUserContract> logger, IOpenAIContract openAi)
