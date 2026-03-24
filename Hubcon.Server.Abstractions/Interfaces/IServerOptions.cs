@@ -74,5 +74,11 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// </summary>
         /// <param name="tokenValidationParameters">An instance of <see cref="TokenValidationParameters"/> defining the validation rules.</param>
         public void UseTokenValidationParameters(TokenValidationParameters tokenValidationParameters);
+
+        /// <summary>
+        /// Configures hubcon to use the provided <typeparamref name="T"/> type as the main cache implementation for the <see cref="IGlobalRateLimiterManager"/> service.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        public void UseCache<T>() where T : class, IOperationCache;
     }
 }

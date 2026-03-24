@@ -1,6 +1,7 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Entrypoint;
+using Hubcon.Server.Core.Pipelines;
 using Hubcon.Server.Core.Pipelines.UpgradedPipeline;
 using Hubcon.Server.Core.Websockets.Helpers;
 using Hubcon.Shared.Abstractions.Interfaces;
@@ -566,7 +567,18 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 IsTransportCalled = true
                             };
 
-                            var claimsPrincipal = await provider.AuthenticateAsync(operationContext, default!)!;
+                            var claimsPrincipal = await Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    OperationContextProvider.SetContext(operationContext);
+                                    return await provider.AuthenticateAsync(operationContext, default!)!;
+                                }
+                                finally
+                                {
+                                    OperationContextProvider.ClearContext();
+                                }
+                            });
 
                             if (claimsPrincipal is null)
                             {

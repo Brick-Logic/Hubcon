@@ -41,5 +41,8 @@ namespace Hubcon
 
         /// <summary>Gets or sets the security principal (identity) associated with the request.</summary>
         ClaimsPrincipal? User { get; set; }
+
+        /// <summary>Indicates if this context is originated from a transport layer. If this property is True, the context will only be partially initialized.</summary>
+        bool IsTransportCalled { get; }
     }
 }

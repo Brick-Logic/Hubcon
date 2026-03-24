@@ -17,37 +17,6 @@ namespace HubconAnalyzers.SourceGenerators
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // 1. Buscador de "Disparador" más robusto
-            //var hasCallToInitializer = context.SyntaxProvider
-            //    .CreateSyntaxProvider(
-            //        predicate: (s, _) => s is InvocationExpressionSyntax, // Miramos todas las invocaciones
-            //        transform: (ctx, _) =>
-            //        {
-            //            var invocation = (InvocationExpressionSyntax)ctx.Node;
-
-            //            // Filtro rápido por nombre antes de pedir el modelo semántico (performance)
-            //            var methodName = "";
-
-            //            if (invocation.Expression is MemberAccessExpressionSyntax m)
-            //                methodName = m.Name.Identifier.Text;
-            //            else if (invocation.Expression is IdentifierNameSyntax i)
-            //                methodName = i.Identifier.Text;
-            //            else 
-            //                methodName = null;
-
-            //            if (methodName != "AddHubconClient") return false;
-
-            //            // Confirmación semántica: ¿Es realmente NUESTRO método?
-            //            var symbol = ctx.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
-            //            if (symbol == null) return false;
-
-            //            // Verificamos que el método pertenezca a tus namespaces de Hubcon
-            //            return symbol.ContainingNamespace.ToDisplayString().StartsWith("Hubcon");
-            //        })
-            //    .Where(isHit => isHit) // Solo nos quedamos con los "true"
-            //    .Collect()
-            //    .Select((calls, _) => calls.Any());
-
             // 1. Buscador del "Trigger" específico
             var hasCallToInitializer = context.SyntaxProvider
                 .CreateSyntaxProvider(
@@ -56,7 +25,7 @@ namespace HubconAnalyzers.SourceGenerators
                     {
                         var invocation = (InvocationExpressionSyntax)ctx.Node;
 
-                        // 1a. Filtro rápido por nombre (No gasta CPU)
+                        // 1a. Filtro rápido por nombre (no gasta CPU)
                         var name = "";
 
                         if (invocation.Expression is MemberAccessExpressionSyntax m)
@@ -69,11 +38,10 @@ namespace HubconAnalyzers.SourceGenerators
 
                         if (name != "AddHubconClient") return false;
 
-                        // 1b. Validación Semántica (La verdad absoluta)
+                        // 1b. Validación Semántica
                         var symbol = ctx.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
                         if (symbol == null) return false;
 
-                        // Verificamos: Namespace == "Hubcon" && Clase == "DependencyInjection"
                         return symbol.ContainingType?.Name == "DependencyInjection" &&
                                symbol.ContainingNamespace?.ToDisplayString() == "Hubcon";
                     })
@@ -81,15 +49,12 @@ namespace HubconAnalyzers.SourceGenerators
                 .Collect()
                 .Select((calls, _) => calls.Any());
 
-
-            // 1. Filtrado sintáctico
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: (s, _) => s is ClassDeclarationSyntax && ((ClassDeclarationSyntax)s).BaseList != null,
                     transform: (ctx, _) => (ClassDeclarationSyntax)ctx.Node)
                 .Where(m => m != null);
 
-            // 2. Análisis semántico
             var compilationAndClasses = context.CompilationProvider.
                 Combine(classDeclarations.Collect());
 
@@ -122,7 +87,6 @@ namespace HubconAnalyzers.SourceGenerators
                 Combine(context.CompilationProvider.Select((c, _) => c.AssemblyName))
                 .Combine(hasCallToInitializer);
 
-            // 3. Generación del código
             context.RegisterSourceOutput(finalProvider, (spc, data) =>
             {
                 var ((symbol, assemblyName), shouldGenerate) = data;

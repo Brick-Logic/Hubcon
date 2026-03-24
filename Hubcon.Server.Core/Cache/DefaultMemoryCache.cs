@@ -16,7 +16,7 @@ namespace Hubcon.Server.Core.Cache
         public T Set<T>(object key, T value, Action? postEvictionCallback = null) where T : class
         {
             return cache.Set(key, value, new MemoryCacheEntryOptions()
-                .SetSlidingExpiration(TimeSpan.FromMinutes(10))
+                .SetSlidingExpiration(TimeSpan.FromMinutes(15))
                 .RegisterPostEvictionCallback((_, value, _, _) =>
                 {
                     if (value is IDisposable disposable) disposable.Dispose();
@@ -34,7 +34,7 @@ namespace Hubcon.Server.Core.Cache
                 entry.Value = opEntry;
 
                 entry
-                .SetSlidingExpiration(TimeSpan.FromMinutes(30))
+                .SetSlidingExpiration(TimeSpan.FromMinutes(15))
                 .RegisterPostEvictionCallback((_, value, _, _) =>
                 {
                     if (value is IDisposable disposable) disposable.Dispose();

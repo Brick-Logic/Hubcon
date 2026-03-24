@@ -177,6 +177,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         public IPipelineExecutor Build(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, IServiceProvider serviceProvider)
         {
+
             var middlewares = GetMiddlewares();
 
             PipelineDelegate currentDelegate = () => { return Task.FromResult(context); };
@@ -205,7 +206,16 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             async Task<IOperationContext> executionDelegate()
             {
-                await currentDelegate.Invoke();
+                try
+                {
+                    OperationContextProvider.SetContext(context);
+                    await currentDelegate.Invoke();
+                }
+                finally
+                {
+                    OperationContextProvider.ClearContext();
+                }
+
                 return context;
             }
 

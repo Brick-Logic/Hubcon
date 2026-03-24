@@ -18,7 +18,7 @@ namespace Hubcon
             var jwtHandler = new JwtSecurityTokenHandler();
 
             if (!jwtHandler.CanReadToken(jwtToken))
-                throw new UnauthorizedAccessException();
+                return null;
 
             JwtSecurityToken? token = jwtHandler.ReadJwtToken(jwtToken);
             var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub");
@@ -72,20 +72,18 @@ namespace Hubcon
             {
                 return null;
             }
-
-            return null;
         }
 
         public static ClaimsPrincipal? ValidateJwtToken(string token, TokenValidationParameters validationParameters, out SecurityToken? validatedToken)
         {
             var handler = new JwtSecurityTokenHandler();
-
+            
             try
             {
                 var principal = handler.ValidateToken(token, validationParameters, out validatedToken);
                 return principal;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 validatedToken = null;
                 return null;

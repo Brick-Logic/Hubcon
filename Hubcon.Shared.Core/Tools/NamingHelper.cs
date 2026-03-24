@@ -13,16 +13,15 @@ namespace Hubcon
             {
                 var cleanedName = inputName;
 
-                if (inputName.EndsWith("Controller"))
+                if (inputName.Contains("Controller"))
                     cleanedName = inputName.Replace("Controller", "");
-                if (inputName.EndsWith("Service"))
+                if (inputName.Contains("Service"))
                     cleanedName = inputName.Replace("Service", "");
-                if (inputName.EndsWith("Contract"))
-                    cleanedName = inputName.Replace("Contract", "");
-                if (inputName.EndsWith("ContractHandler"))
+                if (inputName.Contains("ContractHandler"))
                     cleanedName = inputName.Replace("ContractHandler", "");
+                if (inputName.Contains("Contract"))
+                    cleanedName = inputName.Replace("Contract", "");
 
-                // Verificar si empieza con 'I' y tiene al menos 2 caracteres
                 if (cleanedName.Length >= 2 && cleanedName[0] == 'I' && char.IsUpper(cleanedName[1]))
                 {
                     cleanedName = cleanedName.Substring(1);

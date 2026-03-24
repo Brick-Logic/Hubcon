@@ -271,7 +271,8 @@ namespace Hubcon.Client.Core.HubconInvocationContext
             Transport = (ITransportClient)serviceProvider.GetRequiredService(transportType);
 
             // Authentication
-            this.RequiresAuthentication = OperationOptions?.AuthIsEnabled ?? ContractOptions.AuthIsEnabled ?? ClientOptions.AuthIsEnabled;
+
+            this.RequiresAuthentication = Attributes.Any(x => x is AnonymousAttribute) ? false : OperationOptions?.AuthIsEnabled ?? ContractOptions.AuthIsEnabled ?? ClientOptions.AuthIsEnabled;
 
             RemoteCancellationIsAllowed = OperationOptions?.RemoteCancellationIsAllowed ?? contractOptions.RemoteCancellationIsAllowed ?? ClientOptions.RemoteCancellationIsAllowed;
 
@@ -464,33 +465,29 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                     if (Converter.DeserializeData<T>(response) is not IResponse result)
                     {
                         result = HubconResponse.InternalError<T>(null!, "Parsing error.", response);
-                        return;
                     }
 
                     await SetResponse(result!);
                 }
                 catch (Exception ex)
                 {
-                    await SetResponse<T>(HubconResponse.Fail<T>(response.ToString(), ex, originalData: response));
+                    await SetResponse<T>(HubconResponse.InternalError<T>(ex, originalData: response));
                 }
             }
             else
             {
                 try
                 {
-                    IResponse result = Converter.DeserializeData<HubconResponse<T>>(response);
-
-                    if (result == null)
+                    if (Converter.DeserializeData<HubconResponse<T>>(response) is not IResponse result)
                     {
-                        await SetResponse<T>(HubconResponse.InternalError<T>(null!, "Parsing error.", response));
-                        return;
+                        result = HubconResponse.InternalError<T>(null!, "Parsing error.", response);
                     }
 
                     await SetResponse(result!);
                 }
                 catch (Exception ex)
                 {
-                    await SetResponse<T>(HubconResponse.Fail<T>(response.ToString(), ex, originalData: response));
+                    await SetResponse<T>(HubconResponse.InternalError<T>(ex, originalData: response));
                 }
             }
         }

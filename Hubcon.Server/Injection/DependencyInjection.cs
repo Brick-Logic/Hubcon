@@ -1,12 +1,15 @@
 ﻿using Hubcon.Server;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Cache;
 using Hubcon.Server.Core.EndpointDocumentation;
 using Hubcon.Server.Core.Routing;
 using Hubcon.Server.Core.Websockets.Middleware;
 using Hubcon.Server.Injection;
 using Hubcon.Shared.Abstractions.Attributes;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -51,11 +54,9 @@ namespace Hubcon
                 options.SupportNonNullableReferenceTypes();
                 options.SchemaGeneratorOptions.SupportNonNullableReferenceTypes = true;
 
-                // Esta es la clave - configurar para que no genere tipos nullable automáticamente
                 options.UseAllOfToExtendReferenceSchemas();
                 options.UseOneOfForPolymorphism();
 
-                // Filtro personalizado para limpiar los schemas
                 options.OperationFilter<RemoveNullableTypesOperationFilter>();
 
                 options.SchemaFilter<RemoveNullableSchemaFilter>();
@@ -74,6 +75,17 @@ namespace Hubcon
             ServerBuilder.Current.AddHubconServer(builder);
 
             ConfigureHubconServer(builder, controllerOptions);
+
+            ServerBuilder.Current.ConfigureServices(services =>
+            {
+                if(services.Any(x => x.ServiceType == typeof(IOperationCache)))
+                {
+                    return;
+                }
+
+                services.TryAddSingleton<IMemoryCache, MemoryCache>();
+                services.TryAddSingleton<IOperationCache, DefaultMemoryCache>();
+            });
 
             return builder;
         }

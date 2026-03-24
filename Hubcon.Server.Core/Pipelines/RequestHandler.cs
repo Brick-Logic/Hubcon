@@ -10,6 +10,25 @@ using System.ComponentModel;
 
 namespace Hubcon.Server.Core.Pipelines
 {
+    public static class OperationContextProvider
+    {
+        private static AsyncLocal<IOperationContext?> CurrentOperationContext { get; } = new();
+        private static AsyncLocal<bool> ContextIsSet { get; } = new();
+
+        public static void SetContext(IOperationContext context)
+        {
+            if (ContextIsSet.Value == true)
+                return;
+
+            ContextIsSet.Value = true;
+            CurrentOperationContext.Value = context;
+        }
+
+        public static IOperationContext? GetContext() => CurrentOperationContext.Value;
+
+        public static void ClearContext() => CurrentOperationContext.Value = null;
+    }
+
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class RequestHandler : IRequestHandler
     {
@@ -151,7 +170,7 @@ namespace Hubcon.Server.Core.Pipelines
 
         private IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint, object? wrappedRequest, CancellationToken cancellationToken = default)
         {
-            return new OperationContext()
+            var context = new OperationContext()
             {
                 OperationName = request.OperationName,
                 RequestServices = _serviceProvider,
@@ -160,7 +179,9 @@ namespace Hubcon.Server.Core.Pipelines
                 Request = request,
                 WrappedRequest = wrappedRequest,
                 RequestAborted = cancellationToken,
-            }; 
+            };
+
+            return context;
         }
     }
 }

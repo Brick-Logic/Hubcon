@@ -14,11 +14,11 @@ namespace Hubcon.Analyzers.SourceGenerators.Extensions
         {
             var type = typeof(T);
 
-            // 1. Intento directo (rápido)
+            // 1. Intento directo
             var symbol = compilation.GetTypeByMetadataName(type.FullName);
             if (symbol != null) return symbol;
 
-            // 2. Intento exhaustivo en referencias (lento pero seguro)
+            // 2. Intento exhaustivo en referencias
             foreach (var reference in compilation.References)
             {
                 var assemblySymbol = compilation.GetAssemblyOrModuleSymbol(reference) as IAssemblySymbol;

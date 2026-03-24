@@ -50,6 +50,7 @@ namespace Hubcon.Server.Core.Security
             }
 
             context.User = principal;
+            context.HttpContext!.User = principal;
 
             await next();
         }

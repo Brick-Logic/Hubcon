@@ -8,7 +8,7 @@ public sealed class MinimalSuppressor : DiagnosticSuppressor
     private static readonly SuppressionDescriptor SuppressDescriptor =
             new SuppressionDescriptor(
                 id: "SUP8974",
-                suppressedDiagnosticId: "CS8974", // warning que queremos suprimir
+                suppressedDiagnosticId: "CS8974",
                 justification: "Using 'Expression<Func<T, object>>' in Configure method from IOperationSelector<T> is an intended behaviour."
             );
 
@@ -28,7 +28,7 @@ namespace Hubcon.Analyzers.DiagnosticSuppressors
         private static readonly SuppressionDescriptor SuppressDescriptor =
             new SuppressionDescriptor(
                 id: "SUP8974",
-                suppressedDiagnosticId: "CS8974", // warning que queremos suprimir
+                suppressedDiagnosticId: "CS8974",
                 justification: "Using 'Expression<Func<T, object>>' in Configure method from IOperationSelector<T> is an intended behaviour."
             );
 

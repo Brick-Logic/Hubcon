@@ -1,6 +1,7 @@
 ﻿using Hubcon.Server.Abstractions.CustomAttributes;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Extensions;
+using Hubcon.Shared.Abstractions.Attributes;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Lazy;
 using Hubcon.Shared.Core.Tools;
@@ -121,7 +122,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                     .ForEach(x => Attributes.Add(x));         
 
                 endpointAttributes = Attributes
-                    .Where(x => x is AuthorizeAttribute || x is AllowAnonymousAttribute)
+                    .Where(x => x is AuthorizeAttribute or AllowAnonymousAttribute or AnonymousAttribute)
                     .ToList();
             }
             else
@@ -134,13 +135,12 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             var classAttributes = controllerType
                 .GetCustomAttributes()
-                .Where(x => x is AuthorizeAttribute || x is AllowAnonymousAttribute)
+                .Where(x => x is AuthorizeAttribute or AllowAnonymousAttribute or AnonymousAttribute)
                 .ToList();
 
             List<AuthorizeAttribute> combinedAuthorize = new List<AuthorizeAttribute>();
 
-            // Si el método tiene AllowAnonymous, ignora todo Authorize
-            if (endpointAttributes.Any(a => a is AllowAnonymousAttribute) || classAttributes.Any(a => a is AllowAnonymousAttribute))
+            if (endpointAttributes.Any(a => a is AllowAnonymousAttribute or AnonymousAttribute) || classAttributes.Any(a => a is AllowAnonymousAttribute or AnonymousAttribute))
             {
                 RequiresAuthorization = false;
             }

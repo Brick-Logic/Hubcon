@@ -41,6 +41,11 @@ namespace Hubcon.Server
         {
         }
 
+        internal void ConfigureServices(Action<IServiceCollection> services)
+        {
+            services.Invoke(Services);
+        }
+
         internal ServerBuilder AddHubconServer(
             WebApplicationBuilder builder,
             params Action<IServiceCollection>?[] additionalServices)
@@ -69,6 +74,7 @@ namespace Hubcon.Server
             ServerOptions.AddTransport<WebSocketTransport>();
 
             Services.AddSingleton<IInternalServerOptions>(ServerOptions);
+            Services.AddScoped<IOperationContext>(x => OperationContextProvider.GetContext() ?? throw new InvalidOperationException("No active operation context. IOperationContext is only available inside the Hubcon pipeline."));
             Services.AddSingleton(OperationRegistry);
             Services.AddSingleton<IPermissionRegistry, PermissionRegistry>();
             Services.AddSingleton<IConnectionSupervisor, ConnectionSupervisor>();
@@ -78,8 +84,6 @@ namespace Hubcon.Server
             Services.AddSingleton<IOperationConfigRegistry, OperationConfigRegistry>();
             Services.AddSingleton<IGlobalRateLimiterManager, GlobalRateLimiterManager>();
             Services.AddScoped<IRequestHandler, RequestHandler>();
-            Services.TryAddSingleton<IMemoryCache, MemoryCache>();
-            Services.TryAddSingleton<IOperationCache, DefaultMemoryCache>();
 
             foreach (var services in additionalServices)
                 services?.Invoke(Services);

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using System.Reflection;
 
@@ -26,6 +27,14 @@ namespace Hubcon.Server.Injection
         public void ConfigureCore(Action<ICoreServerOptions> coreServerOptions)
         {
             HubconServerBuilder.ConfigureCore(coreServerOptions);
+        }
+
+        public void UseCache<T>() where T: class, IOperationCache
+        {
+            HubconServerBuilder.ConfigureServices(services =>
+            {
+                services.TryAddSingleton<IOperationCache, T>();
+            });
         }
 
         public void AddGlobalMiddleware<T>()
