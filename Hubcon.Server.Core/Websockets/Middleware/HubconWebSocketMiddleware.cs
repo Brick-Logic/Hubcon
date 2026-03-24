@@ -823,7 +823,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     }
 
                     _ingestHandlers.TryRemove(ingestInitMessage.Id, out _);
-                    localCts.Cancel();
                     ingestInitMessage.Dispose();
                 }
             }
@@ -931,7 +930,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 finally
                 {
                     tasks.TryRemove(operationCallMessage.Id, out _);
-                    await localCts.CancelAsync();
                     operationCallMessage.Dispose();
                 }
             }
@@ -1061,7 +1059,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 finally
                 {
                     _streams.TryRemove(streamInitMessage.Id, out _);
-                    await localCts.CancelAsync();
 
                     if (webSocket.State == WebSocketState.Open)
                     {
@@ -1130,7 +1127,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 finally
                 {
                     _tasks.TryRemove(tokenUpdateMessage.Id, out _);
-                    await localCts.CancelAsync();
                     tokenUpdateMessage.Dispose();
                 }
             }
