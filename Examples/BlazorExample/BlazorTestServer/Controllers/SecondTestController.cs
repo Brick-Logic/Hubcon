@@ -72,5 +72,10 @@ namespace BlazorTestServer.Controllers
         {
             throw new NotImplementedException();
         }
+
+        public async Task<HubconResponse<bool>> TestHubconResponse()
+        {
+            return true;
+        }
     }
 }
