@@ -1,6 +1,9 @@
 ﻿# Hubcon
 
-A high-performance, zero-alloc RPC framework for .NET where interfaces define contracts, 
+Use C# interfaces as multi-transport API contracts.
+Create an interface, implement on server, use in client.
+
+Hubcon is high-performance, near zero-alloc RPC framework for .NET where interfaces define contracts, 
 combining transport-agnostic architecture, a production-grade middleware pipeline, and developer-first design.
 
 Hubcon enables you, as a developer, to very easily implement strongly-typed and fast communications between clients and
@@ -9,12 +12,12 @@ servers through HTTP and/or Websockets by just injecting your own interfaces any
 ## 🚀 Key Features
 
 - **Contract-Based Architecture**: Share interfaces between client and server - implement on server as Controllers/ContractHandlers, use
-  directly on client
+  directly on client.
 - **Transport Agnostic**: Easy multi-transport support. Integrated HTTP and WebSockets, add your own transport.
-- **Non-Hubcon REST HTTP Support**: Integrate to any REST-compliant API using only interfaces in a Refit-like style.
+- **Non-Hubcon REST HTTP Support**: Integrate to any REST-compliant API using interfaces and attributes.
 - **Bidirectional Data Streaming**: Send multiple data streams to your server on a single
   call, or stream contents from your server by using `IAsyncEnumerable<T>`.
-- **Dependency Injection**: Full DI support for contracts on both client and server
+- **Dependency Injection**: Full DI support for contracts on both client and server.
 - **Custom Middlewares**: Lightweight custom ASP.NET-like middlewares with an extended operation context featuring all the pre-processed data about your operation, with full DI support.
 - **Plug & Play**: Minimalistic configuration setup, extensive customization options.
 - **High Performance**: Optimized for high throughput, high concurrency stability and low latency.
@@ -23,224 +26,223 @@ servers through HTTP and/or Websockets by just injecting your own interfaces any
   cancellation tokens.
 - **Memory Optimized**: Made to sustain a very high throughput with minimal memory footprint. Leak-free, minimal alloc
   architecture, confirmed by over 5 billion requests tests.
-- **OpenAPI Compatible**: Compatibility with OpenAPI through Minimal API.
+- **OpenAPI**: Compatibility with OpenAPI.
 - **Working examples**: This project includes a classic Client + Server example used as test-bench and benchmark, a
   BlazorWasm + Server example and a triple microservice loop example.
 
-## Features implementation state
-
-✅ Complete – Implemented and functional.
-
-⚠️ In progress – Currently being developed or partially functional.
-
-🟡 Planned – Designed, pending implementation.
-
-🔜 Coming – Planned for the next version.
-
-### 🌐 HTTP – Features
-
-| Feature                                          | Description                                                                         | Status     |
-|--------------------------------------------------|-------------------------------------------------------------------------------------|------------|
-| Invoke (Round Trip)                              | RPC call with return value. Handles response coordination and exception propagation | ✅ Complete |
-| Invoke with multiple parameters                  | Supports serializable parameters + optional CancellationToken                       | ✅ Complete |
-| TaskCompletionSource coordination                | Auto-cleanup when Task is cancelled                                                 | ✅ Complete |
-| Remote exception propagation                     | Server exceptions are thrown as `HubconRemoteException` on client                   | ✅ Complete |
-| Stress test (round-trip up to 66k RPS, 1 client) | Stable under high concurrency                                                       | ✅ Complete |
-| Fire and Forget (FaF)                            | One-way call with no response or wait                                               | ✅ Complete |
-| Exception handling in FaF                        | Exceptions on server do not propagate to client                                     | ✅ Complete |
-| Throttling support                               | Rate limiting to prevent overload                                                   | ✅ Complete |
-| Cancellation on disconnect                       | FaF auto-cancels if connection or context is terminated                             | ✅ Complete |
-| Upload and download support                      | Stream class support for uploads and downloads through RPC methods                  | 🔜 Coming  |
-
-### 📡 WebSocket – Features~~~~
-
-| Feature                         | Description                                                 | Status     |
-|---------------------------------|-------------------------------------------------------------|------------|
-| Stream (Server → Client)        | Stream data from server via `IAsyncEnumerable<T>`           | ✅ Complete |
-| Disconnection cancels stream    | Auto-cancel stream when connection is closed                | ✅ Complete |
-| Idle timeout                    | Cleanup triggered on inactivity (no pull)                   | ✅ Complete |
-| Ingest (Client → Server)        | Push data from client via `IAsyncEnumerable<T>`             | ✅ Complete |
-| Heartbeat timeout               | Detects silent/lost connections automatically               | ✅ Complete |
-| Error propagation in ingest     | Exceptions during ingest are sent to client                 | ✅ Complete |
-| Subscriptions (server → client) | Push-based updates (observer style)                         | ✅ Complete |
-| Bounded channel for subs        | Prevents memory pressure under high load                    | ✅ Complete |
-| Manual unsubscription           | Client can unsubscribe explicitly via `ISubscription<T>`    | ✅ Complete |
-| Cleanup on disconnect           | All server-side handlers cleaned automatically              | ✅ Complete |
-| Server-only cancellation token  | Server operations receive `HubconContext.CancellationToken` | ✅ Complete |
-
-### 🧩 Shared – Cross Transport Features
-
-| Feature                               | Description                                                                            | Status     |
-|---------------------------------------|----------------------------------------------------------------------------------------|------------|
-| Source Generator (SG)                 | Auto-generates strongly-typed client proxies based on interfaces                       | ✅ Complete |
-| Ignores external CancellationToken    | Prevents serialization of external `CancellationToken` in contract methods             | ✅ Complete |
-| Unified cancellation behavior         | Unified cancellation handling across all operations (stream, ingest, invoke, etc.)     | ✅ Complete |
-| WebSocket auto-reconnect (optional)   | Optional automatic reconnection when WebSocket connection drops                        | ✅ Complete |
-| Configurable ping/pong                | Ping/pong heartbeat configurable on client and server                                  | ✅ Complete |
-| Precise throttling mechanism          | New internal throttling system with per-operation granularity                          | ✅ Complete |
-| Throttling configuration              | Throttling limits configurable globally, per contract, or per method                   | ✅ Complete |
-| Optional certificate support          | Supports client/server TLS certificates for HTTP and WebSocket                         | ✅ Complete |
-| Dependency injection for RemoteModule | `RemoteServerModule` supports transient registration for injected logic/configurations | ✅ Complete |
-| Configuration via DI                  | Global, per-contract, per-handler, or per-method configuration                         | ✅ Complete |
-| ASP.NET & custom middlewares          | Fully integrates with existing ASP.NET pipeline                                        | ✅ Complete |
-| Analyzers                             | Detects sync methods, invalid return types, or bad patterns                            | ✅ Complete |
-| Observability                         | Supports logging via `ILogger<T>`; extensible to tracing/metrics (e.g., OpenTelemetry) | ✅ Partial  |
-| Semantic Versioning                   | Uses beta versions (`1.0.0-betaX`) with clear release goals                            | ✅ Partial  |
-| RC1 milestone                         | First stable RC will include improved cancellation and token coordination              | ✅ Complete |
-| Operation multiplexing                | All operations internally routed using `operationId` to enable full concurrency        | ✅ Complete |
-| MCP Protocol                          | In progress: Protocol to connect AIs, supporting both WebSocket and HTTP transport     | 🔜 Coming  |
-
-## 📦 Installation
-
-```bash
-    On client: dotnet add package Hubcon.Client
-    On server: dotnet add package Hubcon.Server
-    On your shared project: dotnet add package Hubcon.Shared
-```
-
 ## 🏗️ Quick Start
 
-For this, you need 3 projects:
+### Prerequisites
+For this, we need to create 3 projects:
 
-1. A client project that will use the server, a console app is enough.
-2. A server project ASP.NET Core Web API is recommended.
+![projects.jpg](ReadmeImages/projects.jpg)
+
+1. A client project, we are using a console app for this example. Requires .NET 5+.
+2. A server project, we are using ASP.NET Core Web API for this example. Requires .NET 8+.
 3. A shared project to define your contracts.
 
-All projects must target .NET 8.0 or higher.
+We will be using NET 8 as a target in all 3 projects for this example and top-level statements for simplicity.
 
-### 1. 📜 Define Your Contract
+We will explain the important components later.
 
-A contract is simply an interface that inherits from `IControllerContract`.
+### 1. Installation
+Next, we install the unified `Hubcon` nuget package on all projects. It will automatically adapt to the project type.
+
+```
+dotnet add package Hubcon
+```
+Note that ASP.NET Core 8 API uses an older Swashbuckle nuget package version for OpenAPI that conflicts with Hubcon as it uses a newer version. 
+You can remove it safely as it's not needed.
+
+You can also install `Hubcon.Client`, `Hubcon.Server` and `Hubcon.Shared` individually, that's up to you.
+
+### 2. 📜 Define Your Contract
+
+A contract is any C# interface that inherits from `IControllerContract`.
 Put this in your shared project, which will be used by both client and server.
 
 ```csharp
-    public interface IUserContract : IControllerContract
+using Hubcon;
+
+[HttpTransport]
+public interface IUserContract : IControllerContract
+{
+    Task<string> TestHubcon(string message);
+}
+```
+### 3. 💻 Client configuration
+In program.cs:
+```csharp
+using Hubcon;
+using HubconQuickStart.Shared;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+var builder = Host.CreateApplicationBuilder(args);
+
+Console.Title = "HubconQuickStart.Client";
+
+// We add the hubcon client services
+builder.Services.AddHubconClient();
+
+// We register the remote server module
+builder.Services.AddRemoteServerModule<TestRemoteServerModule>();
+
+// We add some testing service
+builder.Services.AddSingleton<MyService>();
+
+var app = builder.Build();
+
+// We simulate a service being used
+var userContract = app.Services.GetRequiredService<MyService>();
+await userContract.DoSomething();
+
+internal class MyService(IUserContract userContract, ILogger<MyService> logger)
+{
+    public async Task DoSomething()
     {
-        Task<string> GetUserNameAsync(int id);
+        logger.LogInformation("Sending message to the server...");
+        var response = await userContract.Execute(contract => contract.TestHubcon("Message from client"));
+        logger.LogInformation($"Received from server: {response.Data}");
+        Console.ReadKey();
     }
-```
+}
 
-### 2. 🌐 Server Project Implementation
-
-#### 🛠️ Implementing a Hubcon Controller
-
-Here you will implement your contract/interface, such as any normal class.
-They behave similarly to ASP.NET Core traditional controllers.
-
-```csharp
-    public class UserController: IUserContract
+internal class TestRemoteServerModule : RemoteServerModule
+{
+    public override void Configure(IServerModuleConfiguration server)
     {
-        public async Task<string> GetUserNameAsync(int id)
-        {
-            await Task.Delay(100); // Simulate some work
-            Console.WriteLine($"User {id} requested.");
-            return "HubconUser";
-        }
+        server.WithBaseUrl("localhost:5000");
+        server.UseInsecureConnection(); // For testing purposes only
+
+        server.Implements<IUserContract>();
     }
+}
 ```
 
-`Task` or `Task<T>` usage is strongly recommended.
-
-#### 🛠️ Program.cs
-
-Before '`var app = builder.Build();`'
-
+### 4. 🌐 Server configuration
+In program.cs:
 ```csharp
-    builder.AddHubconServer();
-    builder.ConfigureHubconServer(serverOptions =>
+using Hubcon;
+using HubconQuickStart.Shared;
+
+var builder = WebApplication.CreateBuilder(args);
+
+Console.Title = "HubconQuickStart.Server";
+
+// We add the hubcon server services
+builder.AddHubconServer(x =>
+{
+    x.AutoRegisterControllers();
+});
+
+var app = builder.Build();
+
+// Maps hubcon operations to HTTP
+app.UseHubconHttpEndpoints();
+
+await app.RunAsync("http://localhost:5000");
+
+internal class UserController(ILogger<UserController> logger) : IUserContract
+{
+    public async Task<string> TestHubcon(string message)
     {
-        serverOptions.AddController<UserController>();
-    });
-```
-
-After '`builder.Build();`'
-
-```csharp
-
-    // Maps all hubcon controllers to HTTP endpoints.
-    app.UseHubconHttpEndpoints();
-    
-    // This enables the hubcon websocket features. Not needed for this example, but also works.
-    // app.UseHubconWebsocketEndpoints();
-
-```
-
-These options can be used in any order and are fully independent.
-
-### 3. 💻 Client Implementation
-
-#### 🛠️ Creating a RemoteServerModule
-
-The `RemoteServerModule` class is used to describe a remote server, and it's used to implement
-one or more contracts automatically based on the provided settings.
-
-```csharp
-    internal class MyUserServerModule : RemoteServerModule
-    {
-        public override void Configure(IServerModuleConfiguration server)
-        {
-            // Base url. Do not specify the protocol.
-            server.WithBaseUrl("localhost:5000");
-
-            // Specify the contracts that this server implements. They will share the same configuration and websocket connection.
-            server.Implements<IUserContract>();
-            //server.Implements<IAnotherContract>();
-            //server.Implements<IAnotherAnotherContract>();
-
-            // Switch to insecure connection for testing.
-            server.UseInsecureConnection();
-        }
+        Console.Clear();
+        logger.LogInformation($"Received message from client: {message}");
+        logger.LogInformation($"Sending a response to the client.");
+        return "Server response";
     }
+}
 ```
 
-Note: The `Implements<T>` method will automatically generate a client proxy for the specified contract and proceed to
-register it in the DI container.
-All contracts will point to the same server. If you need different servers, you can create multiple `RemoteServerModule`
-classes.
+### 5. Running the projects
 
-The only limitation is that you **cannot use the same contract on multiple `RemoteServerModules`**. If you do, hubcon
-will not allow it.
+When running both projects together, both consoles should print:
+![running.jpg](ReadmeImages/running.jpg)
 
-### 🛠️ Register your RemoteServerModule
+Congratulations! You called a Hubcon endpoint from a client, using your own interface.
 
-On your client-side `program.cs`...
+#### ⚡ Some notes
+When calling a method, it's optional but **recommended** to use the `Execute` method for contracts, as it returns a `HubconResponse<T>`.
+In addition, you can also return `HubconResponse<T>` in your endpoint to customize the response and 
+it will automatically be mapped.
 
 ```csharp
-    // We create an application builder (or a service collection)
-    var builder = WebApplication.CreateBuilder();
-    
-    // Add the hubcon client services to the DI container (IServiceCollection)
-    builder.Services.AddHubconClient();
-    
-    // Add your remote server module/modules
-    builder.Services.AddRemoteServerModule<MyUserServerModule>();
-
-    // Build the app and create an scope
-    var app = builder.Build();
-    var scope = app.Services.CreateScope();
-
-    // Now you can inject your contract directly.
-    var client = scope.ServiceProvider.GetRequiredService<IUserContract>();
-
-    // Use the contract as if it were a local service. Hubcon will do its magic.
-    var result = await client.GetUserNameAsync(1);
-
-    // Prints your result
-    Console.WriteLine($"User: {result}"); // Should print "User: HubconUser"
-    Console.ReadKey();
+var response = await userContract.Execute(contract => contract.TestHubcon("Message from client"));
 ```
 
-Congratulations! You made hubcon your first client-server call with hubcon.
-Take in count that Hubcon is specifically designed to work with a DI container.
+![response.jpg](ReadmeImages/response.jpg)
 
-Hubcon provides a lot of features and configurations that will be explained in the next sections.
+The `Execute` method also **catches exceptions** and maps it to the hubcon response.
+
+## 🛠️ Important basic configuration points
+Here we will cover the basic configuration points that hubcon exposes in order to work properly for production.
+
+### ⚡ The contract
+Hubcon uses C# interfaces as contracts, which means that ANY client that has the contract can directly use ANY server implementing it. 
+Hubcon utilizes it as a single source of truth at both sides.
+
+Inherit from the `IControllerContract` interface to make a contract.
+
+### ⚙️ The remote server module
+```csharp
+internal class TestRemoteServerModule : RemoteServerModule
+{
+    public override void Configure(IServerModuleConfiguration server)
+    {
+        server.WithBaseUrl("localhost:5000");
+        server.UseInsecureConnection(); // For testing purposes only
+
+        server.Implements<IUserContract>();
+    }
+}
+```
+
+The `RemoteServerModule` is a configuration class that represents a single (remote) server that allows the hubcon client to `Implement` a contract.
+A `RemoteServerModule` can implement multiple interfaces, and they will all share the same configurations and transports. 
+It also allows to configure `rate limits` (yes, client-side rate limits), request `interceptors`, request `hooks`,  setup `static headers` and `header providers` and even 
+access the `HttpClient` and `WebSocketClientOptions` if you need.
+
+For auth flows, the abstract class `BaseAuthenticationManager` should be implemented and registered in the `RemoteServerModule` class.
+
+Note that a contract can only be implemented by one `RemoteServerModule`.
+
+### Hubcon Controllers/ContractHandlers
+
+```csharp
+internal class UserController : IUserContract
+{
+    public async Task<string> TestHubcon(string text)
+    {
+        Console.WriteLine($"Received message from client: {text}");
+        Console.WriteLine($"Sending a response to the client.");
+        return "Server response";
+    }
+}
+```
+Hubcon Controllers are similar to ASP.NET's traditional controllers in usage, combined with a lightweight pipeline.
+The used contract methods in the client will call the corresponding endpoint in the server, through the hubcon middleware pipeline, 
+applying rate limits, auth, telemetry, along with your custom middlewares.
+
+Both Controllers and Contracts allow the following attributes:
+- `[Authorize]`
+- `[Anonymous]`
+- `[RateLimit(...)]`
+- `[UseApiKey]`
+- `[UseJwt]`
+- `[HttpTransport]`
+- `[WebSocketTransport]`
+- `[UseMiddleware<TMiddleware>]`
+- OpenAPI configuration attributes
+
+All these attributes can also be used at the endpoint level which have a higher priority, with the exception of `[Authorize]` and `[UseMiddleware<TMiddleware>]` which are accumulative.
 
 ## ⚙️ Supported Operations
 
 ### ⚡ Round-trip Operations (Invoke)
 
 Round-trip operations are the most common way to call methods on the server and get a response back.
-Works with both HTTP and WebSocket transports (HTTP by default).
 
 ```csharp
     public class UserController: IUserContract
@@ -254,78 +256,9 @@ Works with both HTTP and WebSocket transports (HTTP by default).
     }
 ```
 
-The client can inject and use the contract anywhere directly to consume the method:
-
-```csharp
-    // Inject the client
-    var client = scope.ServiceProvider.GetRequiredService<IUserContract>();
-
-    // Call the method
-    var userName = await client.GetUserNameAsync(1);
-
-    Console.WriteLine(userName); // Prints "HubconUser"
-```
-
-This is just an example of manual injection. You can use constructor injection freely.
-
-### 🔧 Configuration
-
-You can use the `[WebsocketInvokeSettings]` attribute to configure the RPC invocation behavior. Must
-be applied to the websocket method.
-
-- `rateTokensPerPeriod` → Tokens generated per period (invoke rate).
-- `rateTokenLimit` → Max tokens accumulated (allows bursts).
-- `queueLimit` → Max number of requests waiting in the queue.
-- `queueProcessingOrder` → Queue order (OldestFirst | NewestFirst).
-- `millisecondsToReplenish` → Token refill period duration (default: 1000 ms).
-
-Note that the settings will not work for HTTP invocations, but their behaviour is affected
-directly by the ASP.NET Core pipeline and the Hubcon Pipeline.
-
-For http, use the `[UseHttpRateLimiter("name")]` attribute after configuring:
-
-```csharp
-builder.ConfigureHubconServer(serverOptions =>
-{
-    serverOptions.AddHttpRateLimiter(options =>
-    {
-        options.AddPolicy("contract", httpContext =>
-        {
-            return RateLimitPartition.GetFixedWindowLimiter(
-                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                factory: x => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = 5,
-                    Window = TimeSpan.FromSeconds(1),
-                    AutoReplenishment = true,
-                    QueueLimit = 20,
-                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst
-                });
-        });
-
-        options.AddPolicy("endpoint", httpContext =>
-        {
-            return RateLimitPartition.GetFixedWindowLimiter(
-                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                factory: x => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = 5,
-                    Window = TimeSpan.FromSeconds(1),
-                    AutoReplenishment = true,
-                    QueueLimit = 20,
-                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst
-                });
-        });
-    });
-
-    serverOptions.AutoRegisterControllers();
-});
-```
-
 ### ⚡ No Return Operations (Call)
 
 Call operations are one-way calls that do not expect a response from the server.
-Works with both HTTP and WebSocket transports (HTTP by default).
 
 ```csharp
 public interface IUserContract : IControllerContract
@@ -335,117 +268,14 @@ public interface IUserContract : IControllerContract
 }
 ```
 
-```csharp
-public class UserController: IUserContract
-{
-    public async Task<string> GetUserNameAsync(int id)
-    {
-        await Task.Delay(100); // Simulate some work
-        Console.WriteLine($"User {id} requested.");
-        return "HubconUser";
-    }
-}
-```
-
-The client can inject and use the contract anywhere directly to consume the method:
-
-```csharp
-// Inject the client
-var client = scope.ServiceProvider.GetRequiredService<IUserContract>();
-
-// Call the method. HTTP will wait for the response by design, WebSocket will not.
-await client.SendMessage("My message");
-```
-
-### 🔧 Configuration
-
-You can use the `[WebsocketCallSettings]` attribute to configure the RPC call behavior. Must
-be applied to the websocket method.
-
-- `rateTokensPerPeriod` → Tokens generated per period (RPC rate).
-- `rateTokenLimit` → Max tokens accumulated (allows bursts).
-- `queueLimit` → Max number of requests waiting in the queue.
-- `queueProcessingOrder` → Queue order (OldestFirst | NewestFirst).
-- `millisecondsToReplenish` → Token refill period duration (default: 1000 ms).
-
-### ⚡ Subscriptions
-
-Subscriptions allow the server to push updates to the client in real-time.
-You can use the `ISubscription<T>` interface to define a subscription property in your contract.
-Subscriptions only work over WebSockets.
-
-```csharp
-public interface IUserContract : IControllerContract
-{
-    public ISubscription<int?>? OnUserCreated { get; }
-}
-```
-
-To use, just implement the contract and call the Emit() method from the server-side controller:
-
-```csharp
-public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserContract
-{
-    public ISubscription<int?>? OnUserCreated { get; }
-
-    // Example method that 'creates' a user and emits an event.
-    public Task CreateUser(CancellationToken cancellationToken)
-    {
-        // Send an event if the client is subscribed (subcribed = not null)
-        OnUserCreated?.Emit(1);
-
-        return Task.CompletedTask;
-    }
-}
-```
-
-Hubcon will detect the presence of the `ISubscription<T>` property and will proceed to implement it automatically.
-
-On the client side, you can subscribe to the event like this:
-
-```csharp
-// We create a handler
-var handler = async (int x) => Console.WriteLine(x);
-
-// We register the handler for the stream (can be multiple)
-client.OnUserCreated!.AddHandler(handler);
-
-// Then we subscribe
-await client.OnUserCreated!.Subscribe();
-
-// Additionaly, you can unsubscribe from the stream
-await client.OnUserCreated!.Unsubscribe();
-
-// And/or remove the handler
-client.OnUserCreated!.RemoveHandler(handler);
-```
-
-Note that users must manually subscribe to start receiving events. If the client isn't subscribed, the
-`ISubscription<T>` property will be `null`.
-If for some reason the connection is lost, the client will automatically re-subscribe when the connection is restored,
-as long
-as the client still chooses to be subscribed. Take in count that re-subscription is based on request resend.
-
-### 🔧 Configuration
-
-You can use the `[SubscriptionSettings]` attribute to configure the subscription behavior. Must
-be applied to the websocket property.
-
-- `rateTokensPerPeriod` → Tokens generated per period (subscription rate).
-- `rateTokenLimit` → Max tokens accumulated (allows bursts).
-- `queueLimit` → Max number of requests waiting in the queue.
-- `queueProcessingOrder` → Queue order (OldestFirst | NewestFirst).
-- `channelCapacity` → Capacity of the internal channel for buffering messages.
-- `channelFullMode` → Behavior when the channel is full (Wait | DropOldest | DropNewest | etc.).
-- `millisecondsToReplenish` → Token refill period duration (default: 1000 ms).
-
 ### ⚡ Streaming methods
 
 Streaming methods allow the server to push a continuous stream of data to the client.
-They only work over WebSockets.
-The only requirement is that the method must return an `IAsyncEnumerable<T>`. Hubcon will do the rest.
+They are supported over HTTP using SSE protocol and WebSockets.
 
-#### Usage
+The only requirement is that the method must return an `IAsyncEnumerable<T>`. 
+
+After that, hubcon will do the rest.
 
 ```csharp
 public interface IUserContract : IControllerContract
@@ -467,12 +297,7 @@ public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserCon
 }
 ```
 
-Because servers are too powerful compared to clients, they can be rate limited to allow slow event sending, or unlocked
-for maximum speed using the `[StreamingSettings]` attribute, acting as a parameterized subscription, or a high-speed
-stream for arbitrary data.
-
-Streaming methods work similarly to subscriptions, but they can receive parameters and be consumed as an async
-enumerable.
+Because servers are too powerful compared to clients, they can be rate limited using the `[RateLimit]` attribute. The framework will do the rest.
 
 The client can use `await foreach` to consume the stream:
 
@@ -484,24 +309,13 @@ await foreach (var message in messages)
 }
 ```
 
-Note that if the client disconnects, the server will automatically cancel the stream.
-Streaming methods are not automatically re-subscribed on reconnection.
-The usage of `CancellationToken` for resource cleaning is strongly recommended in this case.
-
-### 🔧 Configuration
-
-You can use the `[StreamingSettings]` attribute to configure the streaming behavior. Must
-be applied to the controller method.
-
-- `rateTokensPerPeriod` → Tokens generated per period (send rate).
-- `rateTokenLimit` → Max tokens accumulated (allows bursts).
-- `queueProcessingOrder` → Queue order (OldestFirst | NewestFirst).
-- `millisecondsToReplenish` → Token refill period duration (default: 1000 ms).
+Note that if the client disconnects, both the client and the server will automatically cancel the stream.
+Streaming methods are not automatically restored on reconnection and will finish gracefully when the server endpoint finishes.
 
 ### ⚡ Ingest Methods
 
 Ingest methods allow the client to send one or more streams of data to the server.
-Just ask for an `IAsyncEnumerable<T>` in your contract, and Hubcon will handle the rest.
+Just add an `IAsyncEnumerable<T>` parameter to your endpoint and Hubcon will handle the rest.
 
 Ingest methods can be used to send large amounts of data to the server, such as logs, telemetry, or any other data that
 needs to be processed in real-time.
@@ -517,155 +331,80 @@ public interface IUserContract : IControllerContract
 }
 ```
 
-```csharp
-    public class UserContractHandler(ILogger<UserContractHandler> logger) : IUserContract
-    {
-        public async Task IngestMessages(IAsyncEnumerable<string> source, CancellationToken cancellationToken)
-        {
-            Stopwatch? swReq;
-
-            await foreach (var item in source.WithCancellation(cancellationToken))
-            {
-                swReq = Stopwatch.StartNew();
-
-                try
-                {
-                    Interlocked.Increment(ref finishedRequestsCount);
-                }
-                finally
-                {
-                    swReq.Stop();
-                    latencies.Add(swReq.Elapsed.TotalMilliseconds);
-                }
-            }
-
-            logger.LogInformation("Ingest finished");
-        }
-    }
-```
-
-On the client side, you can use it like this:
-
-```csharp
-// We create a source of messages
-static async IAsyncEnumerable<string> GetMessages(int count)
-{
-    for (int i = 0; i < count; i++)
-    {
-        yield return "SomeMessage";
-        await Task.Delay(100);
-    }
-}
-
-// We call the ingest method
-await client.IngestMessages(GetMessages(1000));
-```
-
-From this point, hubcon will start consuming and sending the messages to the server.
-The server will receive and process them as they arrive, allowing for real-time data ingestion.
-
-The client-side cancellation token is optional, but recommended for cancelling unlimited ingest operations.
-
 Some notes:
-Ingest methods can be throttled to prevent overload, and they support cancellation tokens for resource cleaning.
+Ingest methods can be rate limited to prevent overload, and they support cancellation tokens for resource cleaning.
 
-Ingest methods are not automatically re-subscribed on reconnection, and they will be cancelled if the connection is lost.
+Ingest methods are not automatically re-subscribed on reconnection, and they will be cancelled and cleaned from the server if the connection is lost.
 In that case, ingest must be restarted from the client.
 
-Clients can also throttle themselves to adjust to the server's rate to prevent flooding, which is important
+- Important: Clients can also rate limit themselves to sync with the server's rate to prevent flooding, which is important
 as the anti-flooding and anti-abuse measures are very aggressive by design on a per-client basis.
 
 This will be discussed in the later sections.
 
-### 🔧 Configuration
+## 📡 Supported transport layers
 
-You can use the `[IngestSettings]` attribute to configure the ingest behavior. Must
-be applied to the controller method.
+### Default HTTP
+The default HTTP transport implementation assumes every request as POST by default, unless you use the `[HttpGet]` 
+attribute in your interface method. This attribute will register your endpoint as GET if it passes standard checks.
 
-- `rateTokensPerPeriod` → Tokens generated per period (ingest rate).
-- `rateTokenLimit` → Max tokens accumulated (allows bursts).
-- `sharedRateLimiter` → Whether to share the rate limiter across methods.
-- `queueProcessingOrder` → Queue order (OldestFirst | NewestFirst).
-- `channelCapacity` → Capacity of the internal channel for buffering messages.
-- `channelFullMode` → Behavior when the channel is full (Wait | DropOldest | DropNewest | etc.).
-- `millisecondsToReplenish` → Token refill period duration (default: 1000 ms).
+
+
+
+
+
+
+
+
+
+
 
 ## 🔐 Authentication and Authorization
 
 ### ⚙️ Authentication manager
 
-The `AuthenticationManager` allows Hubcon to inject an authorization token on HTTP requests and
+The `BaseAuthenticationManager` tells Hubcon how it should handle the authentication, injecting an authorization token on HTTP requests and
 to authenticate the initial websocket connection.
 
+This is an example AuthenticationManager, which makes use of an IAuthenticationContract, showing it can inject and use other contracts or services through dependency injection.
+
 ```csharp
-    public class AuthenticationManager(ISomeAuthContract someAuthContract) : BaseAuthenticationManager
+public class MyAuthenticationManager(IMyAuthenticationContract authenticationContract, ILogger<MyAuthenticationManager> logger) : BaseAuthenticationManager
+{
+    protected async override Task<IAuthResult> AuthenticateAsync(string username, string password)
     {
-        public override string? TokenType { get; protected set; } = "";
-        public override string? AccessToken { get; protected set; } = "";
-        public override string? RefreshToken { get; protected set; } = "";
-        public override DateTime? AccessTokenExpiresAt { get; protected set; } = DateTime.UtcNow.AddYears(1);
-
-        protected async override Task<IAuthResult> AuthenticateAsync(string username, string password)
-        {
-            var token = await someAuthContract.LoginAsync(username, password);
-
-            TokenType = "Bearer";
-            AccessToken = token;
-            RefreshToken = "";
-            AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
-
-            return AuthResult.Success(token, "", 100000);
-        }
-
-        protected override Task ClearSessionAsync()
-        {
-            TokenType = "";
-            AccessToken = "";
-            RefreshToken = "";
-            AccessTokenExpiresAt = null;
-
-            return Task.CompletedTask;
-        }
-
-        protected async override Task<PersistedSession?> LoadPersistedSessionAsync()
-        {
-            var token = await someAuthContract.LoginAsync("aaa", "bbb");
-
-            TokenType = "Bearer";
-            AccessToken = token;
-            RefreshToken = "";
-            AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
-
-
-            return new PersistedSession()
-            {
-                AccessToken = token,
-                RefreshToken = ""
-            };
-        }
-
-        protected async override Task<IAuthResult> RefreshSessionAsync(string refreshToken)
-        {
-            var token = await someAuthContract.LoginAsync(Username, Password);
-
-            TokenType = "Bearer";
-            AccessToken = token;
-            RefreshToken = "";
-            AccessTokenExpiresAt = DateTime.UtcNow.AddYears(1);
-
-            return AuthResult.Success(token, "", 100000);
-        }
-
-        protected async override Task SaveSessionAsync()
-        {
-       
-        }
+        // An implementation example
+        logger.LogInformation("Trying to log in...");
+        var loginResponse = await authenticationContract.LoginAsync(username, password);
+        return AuthResult.Success(loginResponse.AccessToken!, loginResponse.TokenType, loginResponse.RefreshToken, loginResponse.ExpirationTime);
     }
-```
 
-All methods and subscriptions (including ISubscription<T> properties) allow the usage of the
-`[Authorize]` attribute, including its variants, and the `[AllowAnonymous]` attribute.
-`ISubscription<T>` can also use the `[Broadcast]` attribute to allow the subscription to be broadcasted to all clients.
+    protected override Task<IAuthResult> AuthenticateWithTokenAsync(string token, string type)
+    {
+        // Your implementation
+    }
+
+    protected override async Task ClearSessionAsync()
+    {
+        // Your implementation
+    }
+
+    protected async override Task<PersistedSession?> LoadPersistedSessionAsync()
+    {
+        // Your implementation
+    }
+
+    protected async override Task<IAuthResult> RefreshSessionAsync(string refreshToken)
+    {
+        // Your refresh implementation
+    }
+
+    protected async override Task SaveSessionAsync(PersistedSession session)
+    {
+        // Your implementation
+    }
+}
+```
 
 Note that 1 authentication manager can be used by multiple contracts, each of them will have **their own instance**, or you can create one per `RemoteServerModule`, as you please.
 
@@ -746,20 +485,21 @@ public class UserController(ILogger<UserController> logger) : IUserContract
         return Task.FromResult(Random.Shared.Next(-10, 50));
     }
 }
-
 ```
 
 NOTE: There's a hard middleware order by type, which goes like this:
 
-- ExceptionMiddleware (one local, one global)
-- LoggingMiddlewares (multiple)
-- AuthenticationMiddlewares (multiple)
-- PreRequestMiddlewares (multiple)
-- PreRequestMiddlewares(multiple)
-- AuthorizationMiddlewares (multiple)
+- IExceptionMiddleware (one local, one global)
+- ITelemetryMiddleware (multiple)
+- ILoggingMiddleware (multiple)
+- IAuthenticationMiddleware (multiple)
+- IPreRequestMiddleware (multiple)
+- IAuthorizationMiddleware (multiple)
 - GlobalRoutingMiddleware (internal middleware, cannot be changed)
-- PostRequestMiddlewares (multiple)
-- ResponseMiddlewares (multiple)
+- IPostRequestMiddleware (multiple)
+- IResponseMiddleware (multiple)
+
+You can use the corresponding interfaces when implementing your middlewares and they will be assigned to the corresponding positions.
 
 This option:
 
@@ -1100,7 +840,7 @@ you can do it using this variable.
 ### ⚙️ Hashed operation names on requests
 
 Hubcon uses the contract name and the operation name to route the requests. Because the operation names can be
-very long strings, i added hashed operation names to reduce the payload size, without compromising the routing aspect.
+very long strings, it uses hashed operation names to reduce the payload size, without compromising the routing aspect.
 
 If, for some reason, you need to see the full operation name, you can use the `HUBCON_OPNAME_DEBUG_ENABLED` environment variable.
 
@@ -1256,7 +996,7 @@ Note that both are accumulative.
 
 - **HTTP**: RESTful endpoints with **JSON serialization** with `partial OpenAPI compatibility`
 - **WebSocket**: Real-time bidirectional communication using a lightweight messaging protocol.
-- **MCP Planned**: A communication protocol that allows AI models and agents to interact with the server.
+- **Non-Hubcon RESTful HTTP**: Hubcon clients can use a special standard REST transport to integrate to external servers.
 
 ### 📜 Contract System
 
