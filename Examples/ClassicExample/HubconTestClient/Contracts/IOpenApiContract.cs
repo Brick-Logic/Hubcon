@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 namespace HubconTestClient.Contracts
 {
     [Header("Authorization")]
+    [NonHubconHttpTransport]
     public interface IOpenAIContract : IControllerContract
     {
         [HttpPost("/v1/responses")]

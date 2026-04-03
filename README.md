@@ -245,15 +245,15 @@ All these attributes can also be used at the endpoint level which have a higher 
 Round-trip operations are the most common way to call methods on the server and get a response back.
 
 ```csharp
-    public class UserController: IUserContract
+public class UserController: IUserContract
+{
+    public async Task<string> GetUserNameAsync(int id)
     {
-        public async Task<string> GetUserNameAsync(int id)
-        {
-            await Task.Delay(100); // Simulate some work
-            Console.WriteLine($"User {id} requested.");
-            return "HubconUser";
-        }
+        await Task.Delay(100); // Simulate some work
+        Console.WriteLine($"User {id} requested.");
+        return "HubconUser";
     }
+}
 ```
 
 ### ⚡ No Return Operations (Call)
@@ -342,29 +342,332 @@ as the anti-flooding and anti-abuse measures are very aggressive by design on a 
 
 This will be discussed in the later sections.
 
-## 📡 Supported transport layers
+## ⚙️Key Configuration Attributes
+Hubcon allows using attributes to easily configure client/server interaction.
 
-### Default HTTP
-The default HTTP transport implementation assumes every request as POST by default, unless you use the `[HttpGet]` 
-attribute in your interface method. This attribute will register your endpoint as GET if it passes standard checks.
+### 🛠️ Transport Attributes
+Transport attributes tell the server which transports an endpoint should be exposed to. If there's one, it will only use one. 
+If there are multiple, it will be exposed in multiple transport layers.
+
+Recommended to be used in interfaces at the contract or method level as it allows the client to adapt automatically.
+
+### 🛠️ `[HttpTransport]`
+Tells Hubcon that a contract or endpoint needs to be exposed as an HTTP endpoint (including OpenAPI).
+
+```csharp
+[HttpTransport] // All methods will use HTTP and clients will also adapt.
+public interface IMyContract : IControllerContract
+{
+    public Task MyMethod();
+}
+```
+
+or 
+
+```csharp
+public interface IMyContract : IControllerContract
+{
+    [HttpTransport] // Only this method will be exposed as an HTTP endpoint. Overrides contract's transports.
+    public Task MyMethod();
+}
+```
+
+### 🛠️ `[WebSocketTransport]`
+Tells Hubcon to use the framework's WebSocket implementation. Note that WebSockets **require authorization by default**.
+
+```csharp
+  [WebSocketTransport] // All methods will use HTTP and clients will also adapt.
+  public interface IMyContract : IControllerContract
+  {
+    public Task MyWebSocketMethod();
+    
+    [HttpTransport] // This overrides WebSocketTransport. More specific attributes have more priority.
+    public Task MyHttpMethod();
+  }
+```
+
+### 🛠️ `[NonHubconHttpTransport]`
+This is a special transport layer specially made to make a contract capable of 
+standard RESTful/external/non-hubcon integrations, and enables some additional configuration attributes to achieve this.
+
+To make it simple, this is an OpenAI integration example to their responses API:
+
+```csharp
+[NonHubconHttpTransport]
+[Header("Authorization")]
+public interface IOpenAIContract : IControllerContract
+{
+    [HttpPost("/v1/responses")] 
+    public Task<OpenAIResponse> CreateModelResponse([AsBody] CreateResponseCommand command);
+    
+    [HttpGet("/v1/responses/{id}")]
+    public Task<OpenAIResponse> GetModelResponse(string id);
+    
+    [HttpGet("/v1/responses/{id}/input_items")]
+    public Task<OpenAIList<OpenAIMessage>> GetModelResponseInputs(string id);
+    
+    [HttpDelete("/v1/responses/{id}")]
+    public Task<OpenAIResponse> DeleteModelResponse(string id);
+    
+    [HttpPost("/v1/responses")]
+    [ParseSseMessage("data:")]
+    [ParseSseMessage("event:", "event")]
+    [ParseEndSseMessage("[DONE]")]
+    public IAsyncEnumerable<OpenAIStreamEvent> GetResponseStream([AsBody] OpenAIStreamRequest request);
+}
+```
+
+then, we implement it in a RemoteServerModule:
+
+```csharp
+public sealed class OpenAIServerModule : RemoteServerModule
+{
+    private readonly IConfigurationRoot config;
+
+    public OpenAIServerModule(IConfigurationRoot config)
+    {
+        this.config = config;
+    }
+
+    public override void Configure(IServerModuleConfiguration server)
+    {
+        server.WithBaseUrl("https://api.openai.com/");
+        
+        server.AddHeaderProvider("Authorization", x => "Bearer " + config["OpenAI:ApiKey"]);
+
+        server.Implements<IOpenAIContract>();
+    }
+}
+...
+// In program.cs
+
+builder.Services.AddHubconClient()
+                .AddRemoteServerModule(() => new OpenAIServerModule(config));
+```
+
+Now you can simply call any of the methods, and the underlying implementation will create a standard RESTful request 
+for this external/non-hubcon server. A more complete example is provided in the Classic example in this
+repository, including classes used.
+
+### 🛠️ Supported HTTP Verb Attributes
+
+Non-Hubcon transport allows the following HTTP verbs:
+- `[HttpGet]`
+- `[HttpPost]`
+- `[HttpPut]`
+- `[HttpDelete]`
+- `[HttpPatch]`
+- `[HttpHead]`
+- `[HttpOptions]`
+
+### 🛠️ Path parameter attribute
+The framework supports path parameters directly mapped from parameters.
+
+```csharp
+public interface IOpenAIContract : IControllerContract
+{
+    [HttpGet("/v1/responses/{id}")] // Maps from 'id' parameter
+    public Task<OpenAIResponse> GetModelResponse(string id);
+}
+```
+### 🛠️ Body parameter attribute
+
+You can modify the request with the `[AsBody]` attribute in parameters. Only allows one complex parameter for the 
+whole body.
+
+```csharp
+public interface IOpenAIContract : IControllerContract
+{
+    [HttpPost("/v1/responses")] 
+    public Task<OpenAIResponse> CreateModelResponse([AsBody] CreateResponseCommand command);
+}
+```
+
+### 🛠️ Query parameter attribute
+
+You can deconstruct a complex type into query parameters using `[AsQuery]`
+
+```csharp
+public interface IOpenAIContract : IControllerContract
+{
+    [HttpPost("/v1/responses")] 
+    public Task<OpenAIResponse> CreateModelResponse([AsQuery] ExampleCreateResponseCommand command);
+}
+```
+
+### 🛠️ Static and dynamic header attribute
+
+Hubcon offers two ways to include headers to a request: Static headers, and header providers with DI support.
+This also works for `[HttpTransport]` and `[WebSocketTransport]`.
+```csharp
+[Header("Origin", "my.origin.com")] // Static key-value header
+[Header("Authorization")] // Hubcon will use the header provider corresponding to this key,    
+                          // registered in the RemoteServerModule that implements this Contract.
+public interface IOpenAIContract : IControllerContract {}
+```
+
+### 🛠️ SSE Streaming attributes
+
+This transport also allows adapting to Server-Sent Events (SSE) and filtering 
+only the messages you want by returning `IAsyncEnumerable<T>` and using some special attributes. 
+
+```csharp
+public interface IOpenAIContract : IControllerContract
+{
+    [HttpPost("/v1/responses")]
+    // Tells hubcon to parse SSE messages starting with "data:"
+    // Maps to the OpenAIStreamEvent object as a whole
+    [ParseSseMessage("data:")]
+    // Tells hubcon to parse SSE messages starting with "event:", and maps 
+    // them to the "event" property only (case insensitive)
+    [ParseSseMessage("event:", "event")]
+    // Tells hubcon that if a [DONE] message is received, the stream should be considered as gracefully finished.
+    [ParseEndSseMessage("[DONE]")]
+    public IAsyncEnumerable<OpenAIStreamEvent> GetResponseStream([AsBody] OpenAIStreamRequest request);
+}
+```
+### 🛠️`[RateLimit]`
+This is a special attribute containing multiple configurations to rate limit endpoints, streams and ingest methods.
+It will apply rate limits by IP using an internal memory cache with a 15 minute window, keeping the server clean and secure.
+
+When using it in the contract/your interface, the client will also rate limit itself, syncing limits with the server.
+Both client and server use bucket rate limiters by default.
+
+You can apply them manually per-contract or per-endpoint, and use global and per-operation-type limiters both in the server
+configuration and the RemoteServerModule in client.
+
+The framework also allows to manually register rate limiting to the HTTP transport, which use ASP.NET's limiters.
+
+### 🛠️ Enum Handling Attributes
+
+To finish, we will talk about the Enums support. Enums are known to be tricky when parsing/mapping them from external 
+sources, making them difficult to work with and tend to break integrations pretty easily.
+
+Because of this, Hubcon handles them carefully using defaults and fallbacks when parsing them. 
+This is an example usage for OpenAI events:
+
+```csharp
+public enum OpenAIEventType
+{
+    [JsonPropertyName("response.created")] ResponseCreated,
+    [JsonPropertyName("response.in_progress")] ResponseInProgress,
+    [JsonPropertyName("response.output_item.added")] OutputItemAdded,
+    [JsonPropertyName("response.content_part.added")] ContentPartAdded,
+    [JsonPropertyName("response.output_text.delta")] OutputTextDelta,
+    [JsonPropertyName("response.output_text.done")] OutputTextDone,
+    [JsonPropertyName("response.content_part.done")] ContentPartDone,
+    [JsonPropertyName("response.output_item.done")] OutputItemDone,
+    [JsonPropertyName("response.completed")] ResponseCompleted,
+    [JsonDefault] Unknown
+}
+```
+
+As you can see, these event types are being mapped from an event key provided by OpenAI's documentation to a typed enum.
+If something fails, 'Unknown' value is used instead. Hubcon will automatically search for `ParseError`, `Unknown` 
+and `Undefined` values as fallback values, so there's no need to mark them with `[JsonDefault]`, but this attribute lets you
+define a custom fallback, which will be prioritized.
+
+To finish, enum handling also supports numeric values. Use `[JsonSerializeAsNumberAttribute]` to automatically assume
+a number will be received and should be mapped from.
 
 
 
+### 🛠️ Authorization Attributes
 
+### `[Anonymous]`
+Overrides any authorize attribute in its scope. Tells the client to not authorize requests marked 
+with it, and the server to not check for authorization. Use in contracts and its methods. Can be used in controllers, but it's not recommended.
 
+```csharp
+[Anonymous] // Makes all methods anonymous
+public interface IMyContract : IControllerContract
+{
+    public Task MyMethod();
+}
+```
+or
+```csharp
+public interface IMyContract : IControllerContract
+{
+    [Anonymous] // Makes only this method anonymous
+    public Task MyMethod();
+}
+```
 
+### `[Authorize]`
+Tells the framework that a contract or endpoint/method requires authorization. Supports ASP.NET's 
+roles and policies. This attribute is accumulative if there are multiple (contracts + methods). **Use in controllers to keep them private**.
 
+```csharp
+// An example interface
+public interface IMyExampleContract : IControllerContract
+{
+    public Task MyAuthorizedMethod();
+    
+    [Anonymous]
+    public Task MyAnonymousMethod();
+}
 
+// An example controller
+[Authorize(roles:"user")] // Assume all methods require authorization with user role, except those marked as Anonymous
+public sealed class MyExampleController : IMyExampleContract
+{
+    [Authorize(roles:"marketing")] // Requires user + marketing roles.
+    public Task MyAuthorizedMethod()
+    {
+    }
+    
+    // This method is anonymous, overriden by the contract's attribute.
+    public Task MyAnonymousMethod()
+    {
+    }
+}
+```
 
+### `[UseJwt]`
+Tells hubcon to use the framework's JWT authentication handler implementation in a 
+controller when checking authorization. This will check if the authorization header contains a bearer token, and 
+proceed to validate it.
+```csharp
+ // An example controller with JWT
+[UseJwt]
+[Authorize(roles:"user")]
+public sealed class MyExampleController : IMyExampleContract
+{
+    [Authorize(roles:"marketing")]
+    public Task MyAuthorizedMethod()
+    {
+    }
+}
+```
 
+### `[UseApiKey]`
+Tells hubcon to use the framework's API Key authentication handler implementation in a 
+controller when checking authorization. This will check if the provided API Key is present in the X-API-KEY header. 
+Use for development only.
+```csharp
+ // An example controller
+[UseApiKey("MyKey")] 
+[Authorize(roles:"user")]
+public sealed class MyExampleController : IMyExampleContract
+{
+    [Authorize(roles:"marketing")]
+    public Task MyAuthorizedMethod()
+    {
+    }
+}
+```
 
+Note that you can use both `[UseJwt]` and `[UseApiKey]` attributes at the same time. Hubcon will consider both as 
+separate "gates" to access the endpoint. At least one of them must provide a valid ClaimsPrincipal object to enter the endpoint.
 
 ## 🔐 Authentication and Authorization
 
-### ⚙️ Authentication manager
+### ⚙️ BaseAuthenticationManager
 
 The `BaseAuthenticationManager` tells Hubcon how it should handle the authentication, injecting an authorization token on HTTP requests and
-to authenticate the initial websocket connection.
+to authenticate the initial websocket connection. Note that it will automatically fill the Authorization header with the authorization 
+information you provide, unless an `[Anonymous]` attribute is present in the contract.
 
 This is an example AuthenticationManager, which makes use of an IAuthenticationContract, showing it can inject and use other contracts or services through dependency injection.
 
@@ -415,7 +718,7 @@ Note that 1 authentication manager can be used by multiple contracts, each of th
 Hubcon has its own execution pipeline with custom middlewares, which come AFTER the ASP.NET's pipeline.
 You can add global middlewares, per-controller middlewares and per-endpoint middlewares.
 
-Lets define some basic middleware:
+Let's define some basic middleware:
 
 ```csharp
     public class LocalLoggingMiddleware(ILogger<LocalLoggingMiddleware> logger) : ILoggingMiddleware
@@ -455,7 +758,7 @@ Then we register their usage:
 
 ```csharp
 // On server-side program.cs...
-builder.ConfigureHubconServer(serverOptions =>
+builder.AddHubconServer(serverOptions =>
 {
     // This will execute for ALL controllers.
     serverOptions.AddGlobalMiddleware<GlobalLoggingMiddleware>();
@@ -476,10 +779,10 @@ builder.ConfigureHubconServer(serverOptions =>
 Or you can declare them directly on the controller:
 
 ```csharp
-[UseMiddleware(typeof(GlobalLoggingMiddleware))]
+[UseMiddleware<GlobalLoggingMiddleware>] // Generic attribute
 public class UserController(ILogger<UserController> logger) : IUserContract
 {
-    [UseMiddleware(typeof(LocalLoggingMiddleware))]
+    [UseMiddleware(typeof(LocalLoggingMiddleware))] // Typeof attribute, if you need
     public Task<int> GetTemperatureFromServer(CancellationToken cancellationToken)
     {
         return Task.FromResult(Random.Shared.Next(-10, 50));
@@ -526,7 +829,7 @@ All of this will make up for better code quality and predictability.
 Hubcon allows extensive configuration options to change the framework behavior.
 
 ```csharp
-    builder.ConfigureHubconServer(serverOptions =>
+    builder.AddHubconServer(serverOptions =>
     {
         // 1️⃣ Register global middlewares
         serverOptions.AddGlobalMiddleware<ExceptionHandlingMiddleware>();
@@ -714,18 +1017,13 @@ per-operation basis.
             .SetWebsocketPingInterval(TimeSpan.FromSeconds(5))
             .RequirePongResponse(true)
             .EnableWebsocketAutoReconnect(true)
-
-            // Message processor scaling (1 default, 2 recommended for high traffic)
-            .ScaleMessageProcessors(2) 
-
-            // Auto-reconnect for streams/subscriptions/ingest
-            .ResubscribeOnReconnect()
+            
+            // Re-initiate streamings on reconnect instead of failing
             .ResubcribeStreamingOnReconnect()
 
             // Rate limits (applied per-client)
             .GlobalLimit(500)                          // Global limit per second
             .LimitIngest(200)                           // Messages sent to server
-            .LimitSubscription(300)                     // Client subscriptions
             .LimitStreaming(100)                        // Data streaming
             .LimitWebsocketRoundTrip(150)              // WS request-response
             .LimitWebsocketFireAndForget(200)          // WS fire-and-forget
@@ -768,7 +1066,6 @@ per-operation basis.
 | `WebsocketRoundTripMethodRateLimiter` | 50         | 50              | 1 s                 | 1          | WS request-response |
 | `WebsocketFireAndForgetMethodLimiter` | 100        | 100             | 1 s                 | 1          | WS fire-and-forget  |
 | `WebsocketIngestRateLimiter`          | 200        | 200             | 1 s                 | 1          | WS ingest messages  |
-| `WebsocketSubscriptionRateLimiter`    | 20         | 20              | 2 s                 | 1          | WS subscriptions    |
 | `WebsocketStreamingRateLimiter`       | 100        | 100             | 1 s                 | 1          | WS streaming        |
 
 ### Other Defaults
@@ -778,7 +1075,6 @@ per-operation basis.
 | `MaxWebSocketMessageSize`        | 64 KB   |
 | `MaxHttpMessageSize`             | 128 KB  |
 | `WebSocketIngestIsAllowed`       | true    |
-| `WebSocketSubscriptionIsAllowed` | true    |
 | `WebSocketStreamIsAllowed`       | true    |
 | `WebSocketMethodsIsAllowed`      | true    |
 | `WebsocketRequiresPing`          | true    |
@@ -852,11 +1148,10 @@ This shows the full operation name in the request for you to see, including the 
 
 ### 🔁 WebSocket Reconnection Behaviour
 
-The hubcon websocket client allows automatic reconnection without breaking existing subscriptions on the client.
-They will just wait for the websocket to reconnect and keep receiving messages.
+The hubcon websocket client allows automatic reconnection without breaking existing streams on the client.
+They will just wait for the websocket to reconnect and keep receiving messages if configured in `RemoteServerModule`.
 
-This includes property subscriptions and streams (they will resend the request to reestablish them), but will not recover
-Ingest Methods.
+This includes streams (they will resend the request to reestablish them), but will not recover Ingest Methods.
 
 Note that Hubcon's focus is to always keep the client connected. If auto reconnection is disabled, the client will still
 try to reconnect when a method that requires websockets is used.
@@ -871,37 +1166,42 @@ All operations will always wait for the connection to be established before doin
 Hubcon is designed for high-performance scenarios:
 
 - HTTP round-trip: Up to ~85k RPS.
-- HTTP one-way call: Up to ~90k RPS.
-- Websocket Round-Trip: Up to ~93k RPS.
-- Websocket One-Way Call: Up to ~170k RPS.
-- Websocket Ingest: ~170k event/s.
-- Event Streaming and Subscriptions: Up to ~450k events/s per receiver on client (scalable through
-  `RemoteServerModule`).
+- HTTP one-way call: Up to ~120k RPS.
+- Websocket Round-Trip: Up to ~100k RPS.
+- Websocket One-Way Call: Up to ~150k RPS.
+- Websocket Ingest: Up to ~130k event/s.
+- Event Streaming: The theoretical limit is up to around 1.5 million events per second (not optimized for broadcast).
 
 Some notes:
 
-- Tested on a Ryzen 5 5600X CPU.
-- Single-threaded client (max 10% CPU).
+- Tested on a Ryzen 5 5600X CPU, shared between client and server.
+- Single-threaded client (max 10% CPU, core 0).
 - 12 threads assigned to server.
-- 256 concurrent requests (TPL library) is the sweet spot. Keeps working even with 65k parallelism level at the cost of
+- 256 concurrent requests (TPL library) is the sweet spot in the client. Keeps stable even at 65k parallelism level at the cost of
   latency over websockets.
-- HTTP consumes around 50% of the CPU, while WebSockets consume around 33% of the CPU under invoke load.
-- Observed stable ~35mb of RAM in all cases under load testing, both on client and server.
-- Hubcon Authentication Middleware has around ~7% performance cost for all tested RPS values.
-  The tests include hooks, remote cancellation coordination, validation hooks, and all features
-  configured in the `ClassicExample` project.
+- HTTP consumes around 50% of the CPU in round-trip tests, while WebSockets consume around 23% of the CPU under round-trip.
+- Observed stable ~30mb of RAM in all cases under load testing, both on client and server.
+
+The tests included the following active middlewares in the following order:
+- WebSocket middleware (includes rate limiters)
+- A global exception middleware
+- Telemetry middleware (to accurately read speeds)
+- Concurrency limiter middleware 
+- Authorization middleware (JWT) with 1 role, evaluated on each request using ASP.NET's IAuthorizationService.
+- Routing middleware with data annotation checks before endpoint execution. 
+
+The tests include hooks, remote cancellation coordination, cancellation token propagation, 
+validation hooks, and all features configured in the `ClassicExample` project.
 
 Another test was conducted regarding max websocket clients. I managed to connect up to 40k clients (1.7-2.1gb of RAM
 usage).
 Due to socket assignment limitations on Windows, I'm unable to test more client counts for now, but it should theoretically
-support up to 270k concurrent websocket clients at 1 RPS. Around 230k clients at 1 RPS would be a safe bet on this processor or similar. In the
-future, I will be making a testing environment for this using Linux.
+support up to 300k concurrent and isolated websocket clients at 1 RPS. Around 230k clients at 1 RPS would be a safe bet on this processor or similar. 
 
-This is for a single instance.
+In the future, I will be making a better testing environment for this.
 
 Note that `the underlying transport format is JSON`. This is **not ideal** for binary data as the payload is 33% bigger
-by design,
-but it is more than enough for most use cases. Binary transport is planned for the future.
+by design, but it is more than enough for most use cases. **Binary transport support is planned for a future version**.
 
 Allocations are kept to a minimum, with most operations being zero-allocation, and the rest being very low allocation.
 They will be further optimized to reduce GC pressure and improve performance.
@@ -911,31 +1211,29 @@ They will be further optimized to reduce GC pressure and improve performance.
 Hubcon is designed with self-preservation in mind, meaning that it will not allow itself to be overloaded or
 abused by websocket clients.
 
-How does Hubcon protect itself? In websockets, there's a single message processor per client connection. If a client
-tries
-to flood the server with messages, the reader will get stuck by one of the rate limiters, causing the client a natural
-backpressure due to TCP.
+How does Hubcon protect itself? In a websocket connection, the server creates a single message processor per 
+client connection. If a client tries to flood the server with messages, the reader will get stuck by one 
+of the rate limiters, causing the client a natural backpressure due to TCP.
 
-If the server only allows 20 messages per second and the client sends 40, the reader will get stuck waiting for tokens
-to be available, therefore
-not reading any messages in the process, including ping messages, reaching a timeout.
+If the server only allows 20 messages per second and the client sends 40, the reader will get stuck waiting 
+for tokens to be available, therefore not reading any messages in the process, including ping messages, 
+reaching a timeout.
 
-Also, if there's too many messages in the TCP buffer, the OS will apply backpressure to the client, causing it to slow
-down.
+Also, if there's too many messages in the TCP buffer, the OS will apply backpressure to the client, 
+causing it to slow down.
 
 If the messages keep accumulating, the server will eventually disconnect the client due to timeout or TCP pressure.
 
-However, if the client is well-behaved and respects the rate limits, everything will work as expected.
-That's why clients also have rate limiters, to ensure this.
+However, if the client is well-behaved and respects the rate limits (for example, using `[RateLimit]` attribute in 
+the contract), everything will work as expected. That's why clients also have rate limiters, to ensure this.
 
-This applies, as said, to websockets only. Http has its own rate limiting mechanism using the
-`[UseHttpRatelimiter("name")]` attribute on
-controllers and individual endpoints. To configure the rate limiters, you can use the AddRateLimiter method from
-ASP.NET, but it's recommended to add the rate limiters through the hubcon settings 
-for better compatibility (it's the same configuration):
+This architecture applies, as said, to websockets only. HTTP also makes use of `[RateLimit]` attribute, and it has 
+its own rate limiting mechanism using the `[UseHttpRatelimiter("name")]` attribute on controllers and 
+individual endpoints. To configure HTTP specific rate limiters, you can use the AddRateLimiter method from ASP.NET, 
+but it's recommended to add the rate limiters through the hubcon settings for better compatibility:
 
 ```csharp
-builder.ConfigureHubconServer(serverOptions =>
+builder.AddHubconServer(serverOptions =>
 {
     serverOptions.AddHttpRateLimiter(options =>
     {
@@ -990,12 +1288,12 @@ public class UserController: IUserContract
 
 Note that both are accumulative.
 
-## ⚙️ Architecture
+## ⚙️ Architecture Summary
 
 ### 📡 Transport Layer
 
 - **HTTP**: RESTful endpoints with **JSON serialization** with `partial OpenAPI compatibility`
-- **WebSocket**: Real-time bidirectional communication using a lightweight messaging protocol.
+- **WebSocket**: Real-time bidirectional communication using a lightweight, low-CPU messaging protocol.
 - **Non-Hubcon RESTful HTTP**: Hubcon clients can use a special standard REST transport to integrate to external servers.
 
 ### 📜 Contract System
@@ -1003,6 +1301,10 @@ Note that both are accumulative.
 - **Source Generation**: Automatic minimal proxy generation at compile-time
 - **Type Safety**: Full compile-time validation, any incompatible type **will not be tolerated**
 - **Dependency Injection**: Seamless DI container integration. Use your services as you always do.
+
+### Native AOT support for clients
+Hubcon clients support native AOT compilation without any additional configurations.
+Everything that's used in a contract is automatically preserved by the framework, allowing painless AOT support.
 
 ## 🤝 Integration
 
@@ -1014,14 +1316,10 @@ Hubcon integrates seamlessly with the ASP.NET Core pipeline:
 - Supports authentication and authorization
 - Integrates with logging and metrics through middlewares.
 
-### 💉 Dependency Injection
+## 📝 Framework requirements
 
-Just inject the contract you need, and hubcon will do the rest.
-
-## 📝 Requirements
-
-- **.NET 8.0** or higher (client and shared project)
-- **ASP.NET Core 8.0** or higher (server project)
+- **.NET 5.0** or higher for clients and shared projects
+- **.NET 8.0** or higher for servers
 
 ## 🏆 Why Hubcon?
 
@@ -1077,13 +1375,12 @@ Why? Because I hate manual integrations, nothing less, nothing more.
 
 ## 📈 Project status
 
-This project in a release candidate state, and it will soon be used in real cross-platform projects to show its
-capabilities.
+This project is in a release candidate state, and it will soon be used in production to show its capabilities.
 
 ## 📄 License
 
 This project is licensed, for now, under a Personal Use License - see the [LICENSE](LICENSE) file for details.
-This will change in the future when the first stable version is out.
+This will soon change when the first stable version is out.
 
 ## 🤝 Contributing
 
@@ -1092,3 +1389,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📞 Support
 
 For questions and support, please open an issue on GitHub.
+
+## Contact
+
+For direct contact, you can email me at **brick.logic.contact@gmail.com**.
