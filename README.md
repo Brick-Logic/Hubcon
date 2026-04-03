@@ -815,14 +815,199 @@ Will set global middlewares as priority in their own group.
 Using that option, the global AuthorizationMiddleware will have priority over the local one, but will
 still respect the type order.
 
+## 🔐 Easy Custom Auth Handlers
+Hubcon allows you to implement your own authentication handlers by implementing two classes.
+
+First, we define an auth handler that implements the IAuthHandler interface.
+
+```csharp
+public sealed class MyCustomAuthHandler : IAuthHandler
+{
+    public async ValueTask<ClaimsPrincipal?> AuthenticateAsync(IOperationContext context, IUseAuthAttribute originAttribute)
+    {
+        // Create and return a valid ClaimsPrincipal object. Return null if failed.
+        // Includes full dependency injection support
+    }
+}
+```
+
+Then we define our marking attribute:
+
+```csharp
+public sealed class UseMyCustomAuthAttribute : UseAuthAttribute<MyCustomAuthHandler>
+{
+}
+```
+In your desired controller or endpoint, just mark it with your new attribute.
+```csharp
+[UseMyCustomAuthAttribute]
+public sealed class MyExampleController : IMyExampleContract
+{
+}
+```
+
+And that's it, the framework will see it and call it when requested. Keep in mind you can customize the attribute 
+to receive more information in its constructor, and it will be injected in the `IUseAuthAttribute originAttribute` 
+parameter in your new auth handler.
+
+## 🔌 Custom transport layers
+Hubcon allows adding a custom transport layer for the client and the server.
+The transport layer works similarly to the auth handlers in architecture, but its implementation complexity is higher.
+
+### 💻 Client-side transport layer
+
+First, we create an `attribute`:
+```csharp
+public sealed class MyCustomTransport : HubconTransportAttribute
+{
+    public override string TransportKey => "MyCustomTransportName"; // Used internally, can be anything.
+}
+```
+
+Then, we implement our `TransportClient`
+
+```csharp
+public sealed class MyCustomTransportClient : TransportClient<MyCustomTransport>
+{
+    public override ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
+    
+    public override ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
+    
+    public override ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
+    
+    public override ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
+    
+    protected override void Build(TransportContext context)
+    {
+        throw new NotImplementedException();
+    }
+}
+```
+
+And here comes the complex part. 
+You need to manually implement how this client will interact with a server (be it hubcon or not) and what operation
+metadata it uses from the IClientOperationContext, which contains all the needed data and configurations gathered
+by the framework.
+
+Maybe you are wondering why most of these methods do not return a value. Because the pipeline needs to adapt the response, the
+framework needs to process the response through the context. It includes methods to get and set the response, call hooks and interceptors, and
+trigger rate limiters, along with all the metadata you could wish about the `Operation`.
+
+This gives you all the tools you need to implement your own transport logic. As long as it transports data, it can be
+used by Hubcon.
+
+Note that client transport layers are created `once` per `RemoteServerModule`, acting as a singleton in the module's 
+execution context for all registered interfaces. You can still use scoped services using the framework-provided scoped service provider in the context along with
+the corresponding authentication manager and its exposed events.
+
+You can also implement the `IRealTimeTransport` interface in your transport client, giving access to the 
+contract-level extension methods to manipulate the real-time transport state.
+
+```csharp
+public interface IRealTimeTransport
+{
+    public Task<HubconResponse> Connect(string? url = null);
+    public Task<HubconResponse> Reconnect(string url);
+    public Task<HubconResponse> Disconnect();
+    public Task<HubconResponse<bool>> IsConnected();
+}
+```
+
+This is optional, but it's a part of the feature.
+
+### ☁️ Server-side transport layer
+The server-side transport layers are less structured due to their changing nature.
+
+```csharp
+// Program.cs post-build or an extension method
+
+// We get the operation registry service, where hubcon stores the preliminar endpoint metadata.
+var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
+
+// We call the MapTransport method which includes all operations marked with the [MyCustomTransport] attribute.
+operationRegistry.MapTransport<MyCustomTransport>(app, (operations, app) =>
+{
+    // We iterate the operations dictionary and map the endpoints to our transport layer
+    // Could be a custom HTTP layer, gRPC, some weird custom protocol, doesn't matter.
+    foreach (var operation in operations)
+    {
+        MapMyEndpoint(operation.Value);
+    }
+});
+return app;
+```
+
+The map transport configuration lambda provides a metadata object that I named as `OperationBlueprint`s.
+`OperationBlueprint`s contain all the pre-processed metadata needed to work with an endpoint.
+
+To call the Hubcon pipeline in your transport layer, use the static `DefaultEntrypoint` class and call the desired 
+operation like this example:
+```csharp
+
+// We get the names and values from some request
+var dict = context.Request.Query
+    .Cast<KeyValuePair<string, StringValues>>()
+    .ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString());
+
+// We create an operation request
+var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
+
+// We get a HubconTransportAttribute instance from the framework that matches your transport layer
+var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
+
+// Apply rate limiters provided by the framework
+var rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
+
+// Use a key of your preference for the rate limiters
+var remoteAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_invoke, transport, operationRequest))
+{
+    return HubconResponse.TooManyRequests();
+}
+
+// Then call the pipeline.
+var pipelineResponse = await DefaultEntrypoint.HandleMethodWithResult(
+    operationRequest,
+    transport,
+    services,
+    null,
+    cancellationToken);
+
+// Do something with the pipeline response
+```
+
+For responses, you can use generic response from `HubconResponse` class methods, like `HubconResponse.TooManyRequests()`.
+This allows the hubcon client to understand all your responses properly.
+
+If your transport layer requires manual serialization and deserialization, the framework provides the `IDynamicConverter`
+service, which allows the client to dynamically serialize/deserialize almost any non-boxing type with AOT support, therefore,
+no reflection. It also provides security to enum handling, avoiding exceptions using fallbacks. It also ignores null properties and
+provides a wide range of methods more than enough to implement your custom transport layer.
+
+For server-level metadata, you can use the `IInternalServerOptions` service to get the framework's configurations.
+
+This is a kind of complex feature, but this is how you can extend Hubcon with your own transport layers.
+
 ### 🔍 Code analyzers
 
-Hubcon provides a set of analyzers that aim to warn about potential problems, specially in the contract design phase.
+Hubcon provides a set of analyzers that aim to warn about some potential problems in the contract design phase.
 For example, if you don't return `Task` or `Task<T>` on your endpoints, hubcon will warn you of the potential problems. 
-If you return `ValueTask` or `ValueTask<T>`, the compiler will throw an error. If an `ISubscription<T>` property is not nullable, 
-hubcon will also warn you.
+If you return `ValueTask` or `ValueTask<T>`, the compiler will throw an error.
 
-All of this will make up for better code quality and predictability.
+All of this will make up for better code quality and predictability, and will include more in the future.
 
 ### ⚙️ Server Settings
 
