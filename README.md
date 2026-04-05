@@ -99,17 +99,20 @@ var app = builder.Build();
 var myService = app.Services.GetRequiredService<MyService>();
 await myService.DoSomething();
 
+// An example service injecting both the contract and a logger through dependency injection
 internal class MyService(IUserContract userContract, ILogger<MyService> logger)
 {
     public async Task DoSomething()
     {
         logger.LogInformation("Sending message to the server...");
+        // Use the contract through the Execute() method
         var response = await userContract.Execute(contract => contract.TestHubcon("Message from client"));
         logger.LogInformation($"Received from server: {response.Data}");
         Console.ReadKey();
     }
 }
 
+// Hubcon's configuration class. Represents a server. Multiple modules can be defined.
 internal class TestRemoteServerModule : RemoteServerModule
 {
     public override void Configure(IServerModuleConfiguration server)
@@ -117,7 +120,15 @@ internal class TestRemoteServerModule : RemoteServerModule
         server.WithBaseUrl("localhost:5000");
         server.UseInsecureConnection(); // For testing purposes only
 
+        // The module implements a contract.
+        // A contract can only be implemented by one module.
         server.Implements<IUserContract>();
+
+        // Modules can implement any contract counts.
+        // server.Implements<IAuthContract>();
+        // server.Implements<IProductsContract>();
+        // server.Implements<ICategoriesContract>();
+        // ...
     }
 }
 ```
@@ -145,6 +156,7 @@ app.UseHubconHttpEndpoints();
 
 await app.RunAsync("http://localhost:5000");
 
+// An example controller for your contract
 internal class UserController(ILogger<UserController> logger) : IUserContract
 {
     public async Task<string> TestHubcon(string message)
