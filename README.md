@@ -31,6 +31,7 @@ servers through HTTP and/or Websockets by just injecting your own interfaces any
   BlazorWasm + Server example and a triple microservice loop example.
 
 ## 🏗️ Quick Start
+This quick start is designed to take around 3 minutes to setup.
 
 ### Prerequisites
 For this, we need to create 3 projects:
@@ -95,8 +96,8 @@ builder.Services.AddSingleton<MyService>();
 var app = builder.Build();
 
 // We simulate a service being used
-var userContract = app.Services.GetRequiredService<MyService>();
-await userContract.DoSomething();
+var myService = app.Services.GetRequiredService<MyService>();
+await myService.DoSomething();
 
 internal class MyService(IUserContract userContract, ILogger<MyService> logger)
 {
@@ -163,10 +164,19 @@ When running both projects together, both consoles should print:
 
 Congratulations! You called a Hubcon endpoint from a client, using your own interface.
 
+### ❓ What's happening under the hood?
+This framework does not use magic or complex rules to work as most frameworks tend to do. 
+Instead, it takes advantage of determinism. It takes your interface, generates all the needed static metadata at startup 
+and that's used through the pipeline in both client and server.
+
+A long as both use the same contract, both will know how to talk to each other, allowing you to use APIs fast 
+by just sharing the contract and the remote server configuration. One client configuration, use in all your projects.
+
+No more manual and repetitive integrations.
+
 #### ⚡ Some notes
 When calling a method, it's optional but **recommended** to use the `Execute` method for contracts, as it returns a `HubconResponse<T>`.
-In addition, you can also return `HubconResponse<T>` in your endpoint to customize the response and 
-it will automatically be mapped.
+In addition, you can also return `HubconResponse<T>` in your endpoint to customize the response, and it will automatically be mapped.
 
 ```csharp
 var response = await userContract.Execute(contract => contract.TestHubcon("Message from client"));
@@ -183,7 +193,7 @@ Here we will cover the basic configuration points that hubcon exposes in order t
 Hubcon uses C# interfaces as contracts, which means that ANY client that has the contract can directly use ANY server implementing it. 
 Hubcon utilizes it as a single source of truth at both sides.
 
-Inherit from the `IControllerContract` interface to make a contract.
+Inherit from the `IControllerContract` interface to automatically turn it into a contract.
 
 ### ⚙️ The remote server module
 ```csharp
@@ -901,9 +911,10 @@ You need to manually implement how this client will interact with a server (be i
 metadata it uses from the IClientOperationContext, which contains all the needed data and configurations gathered
 by the framework.
 
-Maybe you are wondering why most of these methods do not return a value. Because the pipeline needs to adapt the response, the
-framework needs to process the response through the context. It includes methods to get and set the response, call hooks and interceptors, and
-trigger rate limiters, along with all the metadata you could wish about the `Operation`.
+You may have noticed that most of these methods do not return a value. The pipeline needs to adapt the response, therefore the
+framework needs to process the response through the context with certain logic. The context includes methods to get and set 
+the response, call hooks and interceptors, and trigger rate limiters, along with all the metadata you need 
+about the `Operation`.
 
 This gives you all the tools you need to implement your own transport logic. As long as it transports data, it can be
 used by Hubcon.
@@ -925,7 +936,7 @@ public interface IRealTimeTransport
 }
 ```
 
-This is optional, but it's a part of the feature.
+This is optional, but allows controlling the transport layer directly through the contract's extensions.
 
 ### ☁️ Server-side transport layer
 The server-side transport layers are less structured due to their changing nature.
@@ -940,7 +951,7 @@ var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
 operationRegistry.MapTransport<MyCustomTransport>(app, (operations, app) =>
 {
     // We iterate the operations dictionary and map the endpoints to our transport layer
-    // Could be a custom HTTP layer, gRPC, some weird custom protocol, doesn't matter.
+    // Could be a custom HTTP layer, gRPC, your own custom protocol, anything.
     foreach (var operation in operations)
     {
         MapMyEndpoint(operation.Value);
