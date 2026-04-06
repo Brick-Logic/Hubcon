@@ -101,10 +101,10 @@ namespace Hubcon
         public Task<HubconResponse> Disconnect();
 
         /// <summary>
-        /// Asynchronously checks whether the transport is currently connected to the server.
+        /// Checks whether the transport is currently connected to the server.
         /// </summary>
-        /// <returns>A <see cref="Task{TResult}"/> containing a <see cref="HubconResponse{T}"/> with the connection status.</returns>
-        public Task<HubconResponse<bool>> IsConnected();
+        /// <returns>A <see cref="bool"/> indicating the connection status.</returns>
+        public bool IsConnected();
     }
 
     /// <summary>

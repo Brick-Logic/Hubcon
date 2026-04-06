@@ -23,7 +23,7 @@ namespace Hubcon
         /// <returns>A <see cref="HubconResponse"/> indicating success or failure of the connection attempt.</returns>
         public static async Task<HubconResponse> Connect<T>(this IControllerContract contract, string? url = null) where T : HubconTransportAttribute
         {
-            if (contract is IContractDataAccessor accessor && accessor.GetTransportClient<T>() is IRealTimeTransport client)
+            if (contract is IContractDataAccessor accessor && accessor.GetTransportClient<T>() is not null and IRealTimeTransport client)
                 return await client.Connect(url);
 
             return HubconResponse.Fail("Specified transport is not being used by this contract or is not a real-time transport.");
@@ -34,7 +34,7 @@ namespace Hubcon
         /// </summary>
         public static async Task<HubconResponse> Reconnect<T>(this IControllerContract contract, string url) where T : HubconTransportAttribute
         {
-            if (contract is IContractDataAccessor accessor && accessor.GetTransportClient<T>() is IRealTimeTransport client)
+            if (contract is IContractDataAccessor accessor && accessor.GetTransportClient<T>() is not null and IRealTimeTransport client)
                 return await client.Reconnect(url);
 
             return HubconResponse.Fail("Specified transport is not being used by this contract or is not a real-time transport.");
@@ -45,7 +45,7 @@ namespace Hubcon
         /// </summary>
         public static async Task<HubconResponse> Disconnect<T>(this IControllerContract contract) where T : HubconTransportAttribute
         {
-            if (contract is IContractDataAccessor accessor && accessor.GetTransportClient<T>() is IRealTimeTransport client)
+            if (contract is IContractDataAccessor accessor && accessor.GetTransportClient<T>() is not null and IRealTimeTransport client)
                 return await client.Disconnect();
 
             return HubconResponse.Fail("Specified transport is not being used by this contract or is not a real-time transport.");
@@ -54,10 +54,10 @@ namespace Hubcon
         /// <summary>
         /// Checks the current connection status of the specified real-time transport.
         /// </summary>
-        public static async Task<HubconResponse<bool>> IsConnected<T>(this IControllerContract contract) where T : HubconTransportAttribute
+        public static HubconResponse<bool> IsConnected<T>(this IControllerContract contract) where T : HubconTransportAttribute
         {
-            if (contract is IContractDataAccessor accessor && accessor.GetTransportClient<T>() is IRealTimeTransport client)
-                return await client.IsConnected();
+            if (contract is IContractDataAccessor accessor && accessor.GetTransportClient<T>() is not null and IRealTimeTransport client)
+                return client.IsConnected();
 
             return HubconResponse.Fail<bool>("Specified transport is not being used by this contract or is not a real-time transport.");
         }

@@ -143,12 +143,6 @@ namespace Hubcon.Client.Core.Transports
         }
 
         /// <inheritdoc/>
-        public async Task<HubconResponse<bool>> IsConnected()
-        {
-            if (_client.IsConnected)
-                return HubconResponse.OkT(true);
-            else
-                return HubconResponse.OkT(false);
-        }
+        public bool IsConnected() => _client.IsConnected;     
     }
 }

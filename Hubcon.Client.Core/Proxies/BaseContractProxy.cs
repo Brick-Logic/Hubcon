@@ -28,9 +28,9 @@ namespace Hubcon.Client.Core.Proxies
 {
     public interface IContractDataAccessor
     {
-        IAuthenticationManager AuthenticationManager { get; }
+        IAuthenticationManager? AuthenticationManager { get; }
 
-        ITransportClient GetTransportClient<T>() where T : HubconTransportAttribute;
+        ITransportClient? GetTransportClient<T>() where T : HubconTransportAttribute;
     }
 
     public abstract class BaseContractProxy : BaseClientProxyMarker, IContractDataAccessor
@@ -87,12 +87,6 @@ namespace Hubcon.Client.Core.Proxies
                 IClientOperationContext context = new ClientOperationContext(method, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType, transports);
                 tempOperations.Add(signature, context);
             }
-
-            //foreach (var prop in _contractType.GetProperties().Where(x => x.PropertyType.IsGenericType && x.PropertyType.GetGenericTypeDefinition() == typeof(ISubscription<>)))
-            //{
-            //    IClientOperationContext context = new ClientOperationContext(prop, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType, transports);
-            //    tempOperations.Add(prop.Name, context);
-            //}
 
             _transports = transports;
             _operations = tempOperations.ToImmutableDictionary();
@@ -319,7 +313,7 @@ namespace Hubcon.Client.Core.Proxies
             await context.CallHooksAndInterceptors(HookType.OnUnsubscribed, cancellationToken);
         }
 
-        public ITransportClient GetTransportClient<T>() where T : HubconTransportAttribute
+        public ITransportClient? GetTransportClient<T>() where T : HubconTransportAttribute
         {
             if(_transports.TryGetValue(typeof(T), out var value))
             {
@@ -327,7 +321,7 @@ namespace Hubcon.Client.Core.Proxies
             }
             else
             {
-                return default!;
+                return null;
             }
         }
 
