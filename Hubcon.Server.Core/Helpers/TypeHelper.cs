@@ -108,7 +108,7 @@ namespace Hubcon.Server.Core.Helpers
 
             if (exampleValue != null)
             {
-                // Opción 1: DefaultValue attribute (más compatible)
+                // Opción 1: DefaultValue attribute
                 var defaultValueAttr = new CustomAttributeBuilder(
                     typeof(DefaultValueAttribute).GetConstructor(new[] { typeof(object) })!,
                     new[] { exampleValue }
@@ -122,15 +122,6 @@ namespace Hubcon.Server.Core.Helpers
                     new[] { description }
                 );
                 propertyBuilder.SetCustomAttribute(descriptionAttr);
-
-                // Opción 3: Si tienes Swashbuckle, puedes usar SwaggerSchema
-                // var swaggerAttr = new CustomAttributeBuilder(
-                //     typeof(SwaggerSchemaAttribute).GetConstructor(Type.EmptyTypes)!,
-                //     new object[0],
-                //     new[] { typeof(SwaggerSchemaAttribute).GetProperty("Example")! },
-                //     new[] { exampleValue }
-                // );
-                // propertyBuilder.SetCustomAttribute(swaggerAttr);
             }
         }
 

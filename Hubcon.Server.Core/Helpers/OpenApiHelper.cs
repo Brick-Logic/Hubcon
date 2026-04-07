@@ -492,7 +492,7 @@ namespace Hubcon.Server.Core.Helpers
                                 Type = MapToOpenApiType(param.ParameterType),
                                 Format = MapToOpenApiFormat(param.ParameterType),
                             },
-                            Example = new Microsoft.OpenApi.Any.OpenApiString($"Ejemplo_{param.Name}")
+                            Example = new Microsoft.OpenApi.Any.OpenApiString($"Example_{param.Name}")
                         });
                     }
                     else
@@ -511,7 +511,7 @@ namespace Hubcon.Server.Core.Helpers
                                         Type = MapToOpenApiType(prop.PropertyType),
                                         Format = MapToOpenApiFormat(prop.PropertyType),
                                     },
-                                    Example = new Microsoft.OpenApi.Any.OpenApiString($"Ejemplo_{prop.Name}")
+                                    Example = new Microsoft.OpenApi.Any.OpenApiString($"Example_{prop.Name}")
                                 });
                             }
                         }

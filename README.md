@@ -47,13 +47,13 @@ We will be using NET 8 as a target in all 3 projects for this example and top-le
 We will explain the important components later.
 
 ### 1. Installation
-Next, we install the unified `Hubcon` nuget package on all projects. It will automatically adapt to the project type.
+Next, we install the `Hubcon` nuget package on all projects.
 
 ```
-dotnet add package Hubcon
+dotnet add package Hubcon --version 2.0.0-rc1
 ```
-Note that ASP.NET Core 8 API uses an older Swashbuckle nuget package version for OpenAPI that conflicts with Hubcon as it uses a newer version. 
-You can remove it safely as it's not needed.
+
+Or use the Nuget package manager with the "Include prerelease" option enabled. 
 
 You can also install `Hubcon.Client`, `Hubcon.Server` and `Hubcon.Shared` individually, that's up to you.
 
@@ -143,6 +143,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 Console.Title = "HubconQuickStart.Server";
 
+builder.Services.AddSwaggerGen();
+
 // We add the hubcon server services
 builder.AddHubconServer(x =>
 {
@@ -151,12 +153,14 @@ builder.AddHubconServer(x =>
 
 var app = builder.Build();
 
-// Maps hubcon operations to HTTP
+app.UseSwagger();
+app.UseSwaggerUI();
+
+// Maps hubcon operations to HTTP and OpenAPI
 app.UseHubconHttpEndpoints();
 
 await app.RunAsync("http://localhost:5000");
 
-// An example controller for your contract
 internal class UserController(ILogger<UserController> logger) : IUserContract
 {
     public async Task<string> TestHubcon(string message)
@@ -175,6 +179,8 @@ When running both projects together, both consoles should print:
 ![running.jpg](ReadmeImages/running.jpg)
 
 Congratulations! You called a Hubcon endpoint from a client, using your own interface.
+
+You can also access http://localhost:5000/swagger to check the mapped method and any methods you add.
 
 ### ❓ What's happening under the hood?
 This framework does not use magic or complex rules to work as most frameworks tend to do. 

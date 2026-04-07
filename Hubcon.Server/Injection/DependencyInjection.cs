@@ -26,7 +26,7 @@ namespace Hubcon
             if (schema.Type == "string")
             {
                 schema.Nullable = false;
-                schema.Example = new OpenApiString("ejemplo");
+                schema.Example = new OpenApiString("string");
             }          
 
             if (schema.Properties != null)
