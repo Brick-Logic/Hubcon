@@ -182,6 +182,8 @@ Congratulations! You called a Hubcon endpoint from a client, using your own inte
 
 You can also access http://localhost:5000/swagger to check the mapped method and any methods you add.
 
+The Quick Start solution is available in the Examples folder for you to use.
+
 ### ❓ What's happening under the hood?
 This framework does not use magic or complex rules to work as most frameworks tend to do. 
 Instead, it takes advantage of determinism. It takes your interface, generates all the needed static metadata at startup 

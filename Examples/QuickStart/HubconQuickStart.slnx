@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="HubconQuickStart.Client/HubconQuickStart.Client.csproj" />
+  <Project Path="HubconQuickStart.Server/HubconQuickStart.Server.csproj" Id="a7aa952a-ba55-4ed3-af6d-1dcb51bc908d" />
+  <Project Path="HubconQuickStart.Shared/HubconQuickStart.Shared.csproj" Id="b7f6d57f-c8f2-4dcf-8d74-48d4a3b3347e" />
+</Solution>
