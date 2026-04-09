@@ -255,7 +255,6 @@ namespace HubconTest.ContractHandlers
             logger.LogInformation("Ingest terminado exitosamente");
         }
 
-        [Authorize(Roles = "Manager")]
         public async Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
         {
             var response = HubconResponse.OkT(input);

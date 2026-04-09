@@ -107,12 +107,9 @@ namespace HubconTest
                 serverOptions.ConfigureCore(config =>
                 {
                     config
-                        .SetGlobalRateLimiter(5)
                         .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
-                        .SetMaxConcurrentOperations(5000000)
-                        .AllowRemoteTokenCancellation()
-                        .EnableWebsocketsLogging()
-                        .EnableRequestDetailedErrors();
+                        .DisableAllRateLimiters()
+                        .AllowRemoteTokenCancellation();
                 });
 
                 serverOptions.AutoRegisterControllers();
@@ -128,9 +125,6 @@ namespace HubconTest
                 app.MapScalarApiReference();
             }
 
-            app.UseAuthentication(); // debe ir antes de UseAuthorization
-            app.UseAuthorization();
-
             app.UseHubconHttpEndpoints();
             app.UseHubconWebsocketEndpoints();
 
@@ -144,8 +138,6 @@ namespace HubconTest
                 Console.Title = $" RPS: {rps.RequestsPerSecond.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | Total requests: {TotalRequests.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | CPU: {telemetry.CurrentCPU} | Threads: {telemetry.CurrentThreads} | WS clients: {telemetry.CurrentWebSocketClients} | WS req/s: {rps.WebSocketsRequestsPerSecond} | HTTP req/s: {rps.HttpRequestsPerSecond}";
                 Interlocked.Add(ref TotalRequests, rps.RequestsPerSecond);
             };
-
-
 
             app.Run();
         }

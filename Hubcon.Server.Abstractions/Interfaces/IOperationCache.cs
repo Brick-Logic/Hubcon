@@ -30,8 +30,9 @@ namespace Hubcon
         /// <param name="key">The unique identifier for the cached item.</param>
         /// <param name="value">The instance to store in the cache.</param>
         /// <param name="postEvictionCallback">An optional action to execute after the item is removed from the cache.</param>
+        /// <param name="expirationMinutes">Minutes before the entry is deleted.</param>
         /// <returns>The instance that was just cached.</returns>
-        T Set<T>(object key, T value, Action? postEvictionCallback = null) where T : class;
+        T Set<T>(object key, T value, Action? postEvictionCallback = null, int expirationMinutes = 15) where T : class;
 
         /// <summary>
         /// Explicitly removes the value associated with the specified key from the cache.
@@ -46,7 +47,8 @@ namespace Hubcon
         /// <param name="key">The unique identifier for the cached item.</param>
         /// <param name="factory">A function that generates the value if it is not present in the cache.</param>
         /// <param name="postEvictionCallback">An optional action to execute after the item is removed from the cache.</param>
+        /// <param name="expirationMinutes">Minutes before the entry is deleted.</param>
         /// <returns>The existing or newly created value.</returns>
-        T? GetOrCreate<T>(object key, Func<T?> factory, Action? postEvictionCallback = null) where T : class;
+        T? GetOrCreate<T>(object key, Func<T?> factory, Action? postEvictionCallback = null, int expirationMinutes = 15) where T : class;
     }
 }

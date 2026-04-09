@@ -13,18 +13,22 @@ namespace Hubcon
     /// <summary>
     /// Hubcon's JWT token authentication handler.
     /// </summary>
-    public class JwtAuthHandler : IAuthHandler
+    public class JwtAuthHandler(IOperationCache operationCache) : IAuthHandler
     {
         ///<inheritdoc/>
         public async ValueTask<ClaimsPrincipal?> AuthenticateAsync(IOperationContext context, IUseAuthAttribute originAttribute)
         {
-            var token = JwtHelper.ExtractTokenFromHeader(context.HttpContext);
+            var token = JwtHelper.ExtractTokenFromHeader(context.HttpContext!.Request.Headers.Authorization.ToString());
+
+            if (operationCache.TryGetValue(token!, out ClaimsPrincipal? cachedUser) && cachedUser != null)
+            {
+                return cachedUser;
+            }
+
             var tokenValidationParameters = context.RequestServices.GetRequiredService<IInternalServerOptions>().TokenValidationParameters;
+            var user = JwtHelper.ValidateJwtToken(token!, tokenValidationParameters!, out _);
 
-            if (tokenValidationParameters == null) 
-                throw new ArgumentException("Hubcon's built-in JWT authentication handler needs a registered TokenValidationParameter object to work properly. Please, use WebApplicationBuilder.AddHuconServer(serverOptions => serverOptions.UseTokenValidationParameters(tokenValidationParameters)) in your program.cs to configure it.");
-
-            var user = JwtHelper.ValidateJwtToken(token!, tokenValidationParameters, out _);
+            operationCache.Set(token!, user!, expirationMinutes:5);
             return user;
         }
     }

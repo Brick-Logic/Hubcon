@@ -38,7 +38,7 @@ internal class Program
         long coreMask = 0;
 
         int minCore = 0;
-        int? maxCore = 11;
+        int? maxCore = 0;
 
         int cores = maxCore ?? Environment.ProcessorCount - 1;
 
@@ -149,7 +149,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 48
+            MaxDegreeOfParallelism = 256
         };
 
         int rps = 9999999;

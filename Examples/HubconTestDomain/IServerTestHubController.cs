@@ -27,8 +27,6 @@ namespace HubconTestDomain
     {
         Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken = default);
 
-        [WebSocketTransport]
-        [RateLimit(9999999)]
         Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default);
 
         Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default);
