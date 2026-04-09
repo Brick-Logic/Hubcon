@@ -59,12 +59,12 @@ namespace Hubcon.Server.Injection
 
         public void AddAuthentication()
         {
-            HubconServerBuilder.AddGlobalMiddleware<InternalAuthorizationMiddleware>((services, middleware) => services.AddSingleton(middleware));
+            HubconServerBuilder.AddGlobalMiddleware<InternalAuthorizationMiddleware>((services, middleware) => services.TryAddSingleton(middleware));
         }
 
         public void AddTelemetry()
         {
-            HubconServerBuilder.AddGlobalMiddleware<InternalTelemetryMiddleware>((x, y) => x.AddSingleton(y));
+            HubconServerBuilder.AddGlobalMiddleware<InternalTelemetryMiddleware>((x, y) => x.TryAddSingleton(y));
         }
 
         public void AutoRegisterControllers()
@@ -118,6 +118,11 @@ namespace Hubcon.Server.Injection
         public void UseTokenValidationParameters(TokenValidationParameters tokenValidationParameters)
         {
             HubconServerBuilder.AddTokenValidationParameters(tokenValidationParameters);
+        }
+
+        public void AddConcurrencyLimiter()
+        {
+            HubconServerBuilder.AddGlobalMiddleware<InternalConcurrencyCheckMiddleware>((services, type) => services.TryAddSingleton(type));
         }
     }
 }

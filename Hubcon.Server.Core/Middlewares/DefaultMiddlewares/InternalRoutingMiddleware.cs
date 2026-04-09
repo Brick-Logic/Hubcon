@@ -20,7 +20,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
         IDynamicConverter dynamicConverter) : IInternalRoutingMiddleware
     {
         /// <inheritdoc/>
-        public async Task Execute(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, PipelineDelegate next)
+        public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
             var dict = context.Request.Arguments.ToDictionary();
 
@@ -79,20 +79,15 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 return;
             }
 
+            object? result = context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper, context.RequestAborted);
 
-            object? result = null;
-
-            try
+            if (result is Task task && task.IsFaulted)
             {
-                result = context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper, context.RequestAborted);
-            }
-            catch (Exception ex)
-            {
-                context.Exception = ex;
-            }
+                context.Exception = task.Exception.InnerException;
+                return;
+            }            
 
-            var response = await resultHandler.Invoke(result);
-            context.Response = (response as IHubconResponse)!;
+            context.Response = await context.ResultHandler.Invoke(result);
             await next();
         }
     }

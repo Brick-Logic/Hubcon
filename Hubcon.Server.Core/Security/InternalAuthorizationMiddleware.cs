@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 #pragma warning disable CS1591
@@ -13,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Server.Core.Security
 {
-    public class InternalAuthorizationMiddleware(IAuthorizationService authService) : IAuthenticationMiddleware
+    public class InternalAuthorizationMiddleware(IAuthorizationService authService, IOperationCache operationCache) : IAuthenticationMiddleware
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
@@ -25,15 +26,7 @@ namespace Hubcon.Server.Core.Security
 
             var policy = context.Blueprint.SecurityPolicy;
 
-            ClaimsPrincipal? principal = null;
-
-            foreach (var attribute in policy.Handlers)
-            {
-                var handlerInstance = (context.RequestServices.GetRequiredService(attribute.HandlerType) as IAuthHandler)!;
-                principal = await handlerInstance.AuthenticateAsync(context, attribute);
-
-                if (principal != null) break;
-            }
+            ClaimsPrincipal? principal = await policy.Execute(context, context.RequestServices);
 
             if (principal == null)
             {
@@ -41,7 +34,7 @@ namespace Hubcon.Server.Core.Security
                 return;
             }
 
-            var isAuthorized = principal.IsInRole("AuthOverride") || await CheckPermissionsAsync(principal, policy);
+            var isAuthorized = await CheckPermissionsAsync(principal, policy);
 
             if (!isAuthorized)
             {
@@ -50,15 +43,28 @@ namespace Hubcon.Server.Core.Security
             }
 
             context.User = principal;
-            context.HttpContext!.User = principal;
-
             await next();
         }
 
-        private async Task<bool> CheckPermissionsAsync(ClaimsPrincipal user, CompiledSecurityPolicy policy)
+        private async ValueTask<bool> CheckPermissionsAsync(ClaimsPrincipal user, CompiledSecurityPolicy policy)
         {
+            if ((operationCache.TryGetValue(user, out bool isAuthorized) && isAuthorized) || user.IsInRole("AuthOverride"))
+                return true;
+
             // Validación de Roles (Fast Path)
-            if (policy.Roles.Length > 0 && !policy.Roles.Any(user.IsInRole)) return false;
+            if (policy.Roles.Length > 0)
+            {
+                bool hasRole = false;
+                for (int i = 0; i < policy.Roles.Length; i++)
+                {
+                    if (user.IsInRole(policy.Roles[i]))
+                    {
+                        hasRole = true;
+                        break;
+                    }
+                }
+                if (!hasRole) return false;
+            }
 
             // Validación de Policies (Usa IAuthorizationService)
             foreach (var policyName in policy.Policies)

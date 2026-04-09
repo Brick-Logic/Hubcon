@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Hubcon.Server.Abstractions.Delegates;
+using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
 namespace Hubcon
@@ -44,5 +45,8 @@ namespace Hubcon
 
         /// <summary>Indicates if this context is originated from a transport layer. If this property is True, the context will only be partially initialized.</summary>
         bool IsTransportCalled { get; }
+
+        /// <summary>Handles the pipeline result according to the expected output.</summary>
+        ResultHandlerDelegate ResultHandler { get; }
     }
 }

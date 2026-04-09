@@ -96,19 +96,19 @@ namespace HubconTest
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
             };
 
-            builder.Services.AddOpenApi();
-
             builder.AddHubconServer(serverOptions =>
             {
                 serverOptions.AddAuthentication();
                 serverOptions.AddTelemetry();
+                //serverOptions.AddConcurrencyLimiter();
                 serverOptions.UseTokenValidationParameters(tokenValidationParameters);
 
                 serverOptions.ConfigureCore(config =>
                 {
                     config
+                        //.SetMaxConcurrentOperations(999999)
+                        //.SetGlobalRateLimiter(999999)
                         .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
-                        .DisableAllRateLimiters()
                         .AllowRemoteTokenCancellation();
                 });
 

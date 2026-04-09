@@ -1,5 +1,7 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Abstractions.Models;
+using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
@@ -32,7 +34,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         private List<Type> PostRequestMiddlewares { get; } = new();
         private List<Type> ResponseMiddlewares { get; } = new();
 
-        private List<Type> BuiltMiddlewares { get; } = new();
+        private Type[] BuiltMiddlewares { get; set; } = [];
 
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
@@ -89,14 +91,14 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             GlobalMiddlewaresFirst = value ?? true;
         }
 
-        private List<Type> GetMiddlewares()
+        private Type[] GetMiddlewares()
         {
-            if (BuiltMiddlewares.Count > 0)
+            if (BuiltMiddlewares.Length > 0)
                 return BuiltMiddlewares;
 
             semaphore.Wait();
 
-            if (BuiltMiddlewares.Count > 0)
+            if (BuiltMiddlewares.Length > 0)
                 return BuiltMiddlewares;
 
             var middlewares = new List<Type>();
@@ -167,59 +169,53 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             var result = middlewares.Where(x => x != null);
 
-            if (result.Any() && BuiltMiddlewares.Count == 0)
-                BuiltMiddlewares.AddRange(result.ToHashSet().Reverse());
+            if (result.Any() && BuiltMiddlewares.Length == 0)
+                BuiltMiddlewares = result.ToHashSet().ToArray();
 
             semaphore.Release();
 
             return BuiltMiddlewares;
         }
 
-        public IPipelineExecutor Build(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, IServiceProvider serviceProvider)
+        public IPipelineExecutor Build(IOperationRequest request, IOperationContext context, IServiceProvider serviceProvider)
         {
-
             var middlewares = GetMiddlewares();
 
-            PipelineDelegate currentDelegate = () => { return Task.FromResult(context); };
+            //PipelineDelegate current = () => Task.CompletedTask;
 
-            foreach (Type middlewareType in middlewares)
+            //foreach (var type in middlewares)
+            //{
+            //    var next = current;
+            //    var middleware = (IExecutableMiddleware)serviceProvider.GetRequiredService(type);
+            //    current = () => middleware.Execute(request, context, next);
+            //}
+
+            var state = new PipelineState()
             {
-                var next = currentDelegate;
+                Context = context,
+                Middlewares = middlewares,
+                Request = request,
+                ServiceProvider = serviceProvider,
+                Chain = InvokeNext
+            };
 
-                if (middlewareType.IsAssignableTo(typeof(IInternalRoutingMiddleware)))
-                {
-                    currentDelegate = () =>
-                    {
-                        var middleware = (IInternalRoutingMiddleware)serviceProvider.GetRequiredService(middlewareType);
-                        return middleware.Execute(request, context, resultHandler, next);
-                    };
-                }
-                else
-                {
-                    currentDelegate = () =>
-                    {
-                        var middleware = (IExecutableMiddleware)serviceProvider.GetRequiredService(middlewareType);
-                        return middleware.Execute(request, context, next);
-                    };
-                }
-            }
+            return new PipelineExecutor(state);
+        }
 
-            async Task<IOperationContext> executionDelegate()
-            {
-                try
-                {
-                    OperationContextProvider.SetContext(context);
-                    await currentDelegate.Invoke();
-                }
-                finally
-                {
-                    OperationContextProvider.ClearContext();
-                }
+        static Task InvokeNext(PipelineState state)
+        {
+            if (state.Index >= state.Middlewares.Length)
+                return Task.CompletedTask;
 
-                return context;
-            }
+            var type = state.Middlewares[state.Index++];
 
-            return new PipelineExecutor(executionDelegate);
+            var middleware = (IExecutableMiddleware)state.ServiceProvider.GetService(type)!;
+
+            return middleware.Execute(
+                state.Request,
+                state.Context,
+                () => InvokeNext(state)
+            );
         }
     }
 }

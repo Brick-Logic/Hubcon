@@ -1,13 +1,24 @@
 ﻿using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Abstractions.Models;
+using Hubcon;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 {
-    internal class PipelineExecutor(PipelineExecutionDelegate pipelineReference) : IPipelineExecutor
+    internal class PipelineExecutor(PipelineState state) : IPipelineExecutor
     {
-        public Task<IOperationContext> Execute()
+        public async ValueTask<IOperationContext> Execute()
         {
-            return pipelineReference();
+            try
+            {
+                OperationContextProvider.SetContext(state.Context);
+                await state.Chain.Invoke(state);
+                return state.Context;
+            }
+            finally
+            {
+                OperationContextProvider.ClearContext();
+            }
         }
     }
 }

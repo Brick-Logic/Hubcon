@@ -769,7 +769,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         sources.TryAdd(id, observer.GetAsyncEnumerable());
                     }
 
-                    using var scope = context.RequestServices.CreateScope();
+                    using var scope = context.RequestServices.CreateAsyncScope();
 
                     var ingestTask = DefaultEntrypoint.HandleIngest(
                         operationRequest,
@@ -780,7 +780,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         localCts.Token);
 
                     await sender.SendAsync(new IngestInitAckMessage(ingestInitMessage.Id));
-                    await Task.Delay(100);
                     var result = await ingestTask;
 
                     if (sender.State != WebSocketState.Open)
@@ -858,7 +857,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     operationRequest = converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload)!;
 
-                    using var scope = context.RequestServices.CreateScope();
+                    using var scope = context.RequestServices.CreateAsyncScope();
 
                     response = await DefaultEntrypoint.HandleMethodWithResult(
                         operationRequest,
@@ -909,7 +908,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     IOperationRequest operationRequest = converter.DeserializeData<OperationRequest>(operationCallMessage.Payload)!;
 
-                    using var scope = context.RequestServices.CreateScope();
+                    using var scope = context.RequestServices.CreateAsyncScope();
 
                     var response = await DefaultEntrypoint.HandleMethodVoid(
                         operationRequest,
@@ -986,7 +985,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                     operationRequest = converter.DeserializeData<OperationRequest>(streamInitMessage.Payload)!;
 
-                    using var scope = context.RequestServices.CreateScope();
+                    using var scope = context.RequestServices.CreateAsyncScope();
 
                     var streamResult = await DefaultEntrypoint.HandleMethodStream(
                         operationRequest,

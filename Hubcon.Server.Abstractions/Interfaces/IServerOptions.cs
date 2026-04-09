@@ -80,5 +80,10 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// </summary>
         /// <typeparam name="T"></typeparam>
         public void UseCache<T>() where T : class, IOperationCache;
+        
+        /// <summary>
+        /// Add the concurrency limiter middleware to the pipeline
+        /// </summary>
+        public void AddConcurrencyLimiter();
     }
 }

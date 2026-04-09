@@ -53,7 +53,6 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
 
                 var elapsed = (DateTime.UtcNow - _lastHeartbeat).TotalSeconds;
                 if (TimeSpan.FromSeconds(elapsed) > _timeoutSeconds)
-
                 {
                     if (!timeoutExecuted)
                     {

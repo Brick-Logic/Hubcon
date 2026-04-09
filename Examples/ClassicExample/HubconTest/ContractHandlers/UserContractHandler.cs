@@ -31,14 +31,13 @@ namespace HubconTest.ContractHandlers
         public async Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken)
         {
             int i = 0;
-            while (cancellationToken.IsCancellationRequested == false)
+            while (i <= 90)
             {
+                Console.WriteLine("Start");
+
                 await Task.Delay(1000);
 
-                if (i > 90)
-                {
-                    break;
-                }
+                Console.WriteLine("End");
 
                 cancellationToken.ThrowIfCancellationRequested();
 

@@ -27,6 +27,7 @@ namespace HubconTestDomain
     {
         Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken = default);
 
+        [Anonymous]
         Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default);
 
         Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default);

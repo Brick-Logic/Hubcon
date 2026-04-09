@@ -12,6 +12,7 @@ namespace Hubcon
     /// Represents a non-generic response envelope for Hubcon operations.
     /// Provides a set of static factory methods to create standard success and error responses.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public class HubconResponse : HubconResponse<object>, IHubconResponse
     {
         /// <summary>

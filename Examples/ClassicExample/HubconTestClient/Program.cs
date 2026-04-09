@@ -369,14 +369,12 @@ internal class Program
     private static async Task TestRemoteCancellation(IUserContract client, ILogger<IUserContract> logger)
     {
         logger.LogWarning("Probando cancelacion remota...");
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-        bool temp2 = false;
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
 
         var result = await client.Execute(x => x.GetTemperatureFromServerBlocking(cts.Token));
         if (result.Failure)
         {
             logger.LogInformation($"Cancelación remota exitosa. Resultado: {result.Error}");
-            temp2 = true;
         }
         else
         {

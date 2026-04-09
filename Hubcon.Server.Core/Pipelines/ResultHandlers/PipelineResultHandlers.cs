@@ -4,7 +4,7 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
 {
     internal static class PipelineResultHandlers
     {
-        internal static async Task<HubconResponse> ResultHandler(object? result)
+        internal static async ValueTask<HubconResponse> ResultHandler(object? result)
         {
             if (result is null)
             {
@@ -19,7 +19,7 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             }
         }
 
-        internal static async Task<HubconResponse> NoResultHandler(object? result)
+        internal static async ValueTask<HubconResponse> NoResultHandler(object? result)
         {
             if (result is Task task)
                 await task;
@@ -27,7 +27,7 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             return HubconResponse.Ok();
         }
 
-        internal static async Task<HubconResponse> StreamResultHandler(object? result)
+        internal static async ValueTask<HubconResponse> StreamResultHandler(object? result)
         {
             if (result is IAsyncEnumerable<object?> sub)
             {
@@ -39,7 +39,7 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             }
         }
 
-        internal static async Task<HubconResponse> WithResultHandler(object? result)
+        internal static async ValueTask<HubconResponse> WithResultHandler(object? result)
         {
             if (result is Task task)
             {
@@ -59,7 +59,7 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             }
         }
 
-        private static async Task<object?> GetTaskResultAsync(Task taskObject)
+        private static async ValueTask<object?> GetTaskResultAsync(Task taskObject)
         {
             await taskObject;
 

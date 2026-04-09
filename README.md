@@ -3,7 +3,7 @@
 Use C# interfaces as multi-transport API contracts.
 Create an interface, implement on server, use in client.
 
-Hubcon is high-performance, near zero-alloc RPC framework for .NET where interfaces define contracts, 
+Hubcon is a high-performance, near zero-alloc RPC framework for .NET where interfaces define contracts, 
 combining transport-agnostic architecture, a production-grade middleware pipeline, and developer-first design.
 
 Hubcon enables you, as a developer, to very easily implement strongly-typed and fast communications between clients and

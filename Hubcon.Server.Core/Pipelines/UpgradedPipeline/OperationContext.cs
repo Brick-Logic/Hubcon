@@ -1,4 +1,5 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
+﻿using Hubcon.Server.Abstractions.Delegates;
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using Microsoft.AspNetCore.Http;
@@ -20,5 +21,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public ClaimsPrincipal? User { get; set; }
         public IHubconResponse Response { get; set; } = default!;
         public bool IsTransportCalled { get; internal set; }
+        public ResultHandlerDelegate ResultHandler { get; internal set; }
     }
 }

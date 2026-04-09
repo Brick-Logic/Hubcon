@@ -70,19 +70,9 @@ namespace Hubcon
 
     /// <summary>
     /// Defines a specialized middleware responsible for internal routing logic. 
-    /// Unlike standard executable middleware, it includes a result handler for final request resolution.
     /// </summary>
-    public interface IInternalRoutingMiddleware : IMiddleware
+    public interface IInternalRoutingMiddleware : IExecutableMiddleware
     {
-        /// <summary>
-        /// Executes the routing logic to determine the appropriate destination for the request.
-        /// </summary>
-        /// <param name="request">The incoming <see cref="IOperationRequest"/>.</param>
-        /// <param name="context">The execution <see cref="IOperationContext"/>.</param>
-        /// <param name="resultHandler">The <see cref="ResultHandlerDelegate"/> responsible for processing the operation result.</param>
-        /// <param name="next">The delegate representing the next middleware in the pipeline.</param>
-        /// <returns>A <see cref="Task"/> that represents the asynchronous execution.</returns>
-        public Task Execute(IOperationRequest request, IOperationContext context, ResultHandlerDelegate resultHandler, PipelineDelegate next);
     }
 
     /// <summary>

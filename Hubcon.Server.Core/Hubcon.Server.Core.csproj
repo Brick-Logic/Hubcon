@@ -30,6 +30,15 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Injectors\**" />
+	  <Compile Remove="Subscriptions\**" />
+	  <EmbeddedResource Remove="Injectors\**" />
+	  <EmbeddedResource Remove="Subscriptions\**" />
+	  <None Remove="Injectors\**" />
+	  <None Remove="Subscriptions\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="[8.0.25, 10.0.0)" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="[6.6.2, 10.0.0)" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="[8.0.0, 11.0.0)" />
@@ -48,10 +57,6 @@
 		<PackageReference Include="Hubcon.Server.Abstractions" Version="2.0.0-rc1" />
 		<PackageReference Include="Hubcon.Shared.Core" Version="2.0.0-rc1" />
 		<PackageReference Include="Hubcon.Shared" Version="2.0.0-rc1" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Injectors\" />
-	  <Folder Include="Subscriptions\" />
 	</ItemGroup>
 
 </Project>
