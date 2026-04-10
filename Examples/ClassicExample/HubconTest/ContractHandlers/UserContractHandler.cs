@@ -28,7 +28,7 @@ namespace HubconTest.ContractHandlers
             return Task.FromResult(Random.Shared.Next(-10, 50));
         }
 
-        public async Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken)
+        public async Task<HubconResponse<bool>> GetTemperatureFromServerCancelable(CancellationToken cancellationToken)
         {
             int i = 0;
             while (i <= 90)
@@ -39,7 +39,8 @@ namespace HubconTest.ContractHandlers
 
                 Console.WriteLine("End");
 
-                cancellationToken.ThrowIfCancellationRequested();
+                if (cancellationToken.IsCancellationRequested)
+                    return new OperationCanceledException();
 
                 i++;
             }

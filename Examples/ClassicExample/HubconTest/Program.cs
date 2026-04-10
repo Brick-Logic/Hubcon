@@ -72,6 +72,8 @@ namespace HubconTest
             {
                 options.Limits.MaxConcurrentConnections = null;
                 options.Limits.MaxConcurrentUpgradedConnections = null;
+                options.Limits.MaxRequestLineSize = 1024;
+                options.Limits.MinRequestBodyDataRate = null; // Evita desconexiones por lentitud en tests
             });
 
             builder.Services.AddCors(options =>

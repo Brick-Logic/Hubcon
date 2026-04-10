@@ -48,7 +48,10 @@ namespace Hubcon.Server.Core.Security
 
         private async ValueTask<bool> CheckPermissionsAsync(ClaimsPrincipal user, CompiledSecurityPolicy policy)
         {
-            if ((operationCache.TryGetValue(user, out bool isAuthorized) && isAuthorized) || user.IsInRole("AuthOverride"))
+            if ((operationCache.TryGetValue(user, out bool isAuthorized) && isAuthorized))
+                return true;
+
+            if (user.IsInRole("AuthOverride"))
                 return true;
 
             // Validación de Roles (Fast Path)
@@ -63,16 +66,25 @@ namespace Hubcon.Server.Core.Security
                         break;
                     }
                 }
-                if (!hasRole) return false;
+                if (!hasRole)
+                {
+                    operationCache.Set(user, false, expirationMinutes: 5);
+                    return false;
+                }
             }
 
             // Validación de Policies (Usa IAuthorizationService)
             foreach (var policyName in policy.Policies)
             {
                 var result = await authService.AuthorizeAsync(user, policyName);
-                if (!result.Succeeded) return false;
+                if (!result.Succeeded)
+                {
+                    operationCache.Set(user, false, expirationMinutes: 5);
+                    return false;
+                }
             }
 
+            operationCache.Set(user, true, expirationMinutes: 5);
             return true;
         }
 

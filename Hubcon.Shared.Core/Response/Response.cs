@@ -90,6 +90,18 @@ namespace Hubcon
         /// <summary>Creates a typed internal error response.</summary>
         public static HubconResponse<T> InternalError<T>(Exception exception = null!, string error = "Internal server error", object originalData = null!)
             => new HubconResponse<T>(false, true, null!, error, 500, default!, originalData, exception);
+
+        /// <summary>
+        /// Implicitly converts an exception into an error response contained in <see cref="HubconResponse"/>.
+        /// </summary>
+        /// <param name="value">The data to wrap.</param>
+        public static implicit operator HubconResponse(Exception value)
+        {
+            if (value is OperationCanceledException)
+                return HubconResponse.Cancelled(null!, value.Message);
+            else
+                return HubconResponse.InternalError(value);
+        }
     }
 
     /// <summary>
@@ -179,6 +191,18 @@ namespace Hubcon
         public static implicit operator HubconResponse<T>(T value)
         {
             return HubconResponse.OkT(value);
+        }
+
+        /// <summary>
+        /// Implicitly converts an exception into an error response contained in <see cref="HubconResponse{T}"/>.
+        /// </summary>
+        /// <param name="value">The data to wrap.</param>
+        public static implicit operator HubconResponse<T>(Exception value)
+        {
+            if(value is OperationCanceledException)
+                return HubconResponse.Cancelled<T>(null!, value.Message);
+            else
+                return HubconResponse.InternalError<T>(value);
         }
 
         /// <summary>

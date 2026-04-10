@@ -423,18 +423,18 @@ namespace Hubcon.Shared.Core.Serialization
         /// </summary>
         /// <param name="options"></param>
         public static void SetupJsonSerializerOption(JsonSerializerOptions? options) 
-        { 
-            if(_options == null)
+        {
+            if (_options == null)
             {
                 _options = options;
                 _options!.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 _options!.WriteIndented = false;
-                _options!.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault; // Maneja nulos
+                _options!.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
                 _options!.MaxDepth = 64;
                 _options!.PropertyNameCaseInsensitive = true;
                 _options!.Converters.Add(new JsonStringEnumConverter<MessageType>(JsonNamingPolicy.CamelCase));
 
-                if(SystemTypesContext.Default.Options.TypeInfoResolver != null)
+                if (SystemTypesContext.Default.Options.TypeInfoResolver != null)
                     _options.TypeInfoResolverChain.Add(SystemTypesContext.Default.Options.TypeInfoResolver);
 
                 if (JsonSerializerOptions.Default.TypeInfoResolver != null)
@@ -443,7 +443,6 @@ namespace Hubcon.Shared.Core.Serialization
                 foreach (var converter in JsonSerializerOptions.Default.Converters)
                     _options!.Converters.Add(converter);
             }
-
         }
     }
 }

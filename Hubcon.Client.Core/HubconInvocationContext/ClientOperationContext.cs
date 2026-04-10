@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,17 +25,13 @@ namespace Hubcon.Client.Core.HubconInvocationContext
     /// Represents the comprehensive execution context for a client-side operation within the Hubcon framework.
     /// Acts as a central repository for metadata, configuration, and state required to execute an RPC or streaming call.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public sealed class ClientOperationContext : IClientOperationContext
     {
         /// <summary>
-        /// Gets a value indicating whether the method signature has been hashed for transport.
+        /// Gets the transport client responsible for sending the request (e.g., WebSocket or HTTP).
         /// </summary>
-        public bool SignatureIsHashed { get; }
-
-        /// <summary>
-        /// Gets the <see cref="MemberInfo"/> representing the method or property being invoked on the contract.
-        /// </summary>
-        public MemberInfo Member { get; }
+        public ITransportClient Transport { get; }
 
         /// <summary>
         /// Gets the global configuration options for the Hubcon client.
@@ -52,14 +49,24 @@ namespace Hubcon.Client.Core.HubconInvocationContext
         public IOperationOptions OperationOptions { get; }
 
         /// <summary>
-        /// Gets the <see cref="Type"/> of the contract interface.
+        /// Gets the <see cref="MemberInfo"/> representing the method or property being invoked on the contract.
         /// </summary>
-        public Type ContractType { get; }
+        public MemberInfo Member { get; }
 
         /// <summary>
         /// Gets the unique string signature of the method being called.
         /// </summary>
         public string MethodSignature { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the method signature has been hashed for transport.
+        /// </summary>
+        public bool SignatureIsHashed { get; }
+
+        /// <summary>
+        /// Gets the <see cref="Type"/> of the contract interface.
+        /// </summary>
+        public Type ContractType { get; }
 
         /// <summary>
         /// Gets the final <see cref="Uri"/> used for the request.
@@ -72,9 +79,19 @@ namespace Hubcon.Client.Core.HubconInvocationContext
         public Func<IAuthenticationManager>? AuthenticationManagerFactory { get; }
 
         /// <summary>
-        /// Gets the transport client responsible for sending the request (e.g., WebSocket or HTTP).
+        /// Gets a dictionary of dynamic header providers that resolve values using the service provider.
         /// </summary>
-        public ITransportClient Transport { get; }
+        public IReadOnlyDictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; }
+
+        /// <summary>
+        /// Gets a dictionary of static HTTP headers to be included in the request.
+        /// </summary>
+        public IReadOnlyDictionary<string, string> StaticHeaders { get; }
+
+        /// <summary>
+        /// Gets a set of headers requested specifically for this operation.
+        /// </summary>
+        public HashSet<string> RequestedHeaders { get; }
 
         /// <summary>
         /// Gets a value indicating whether the operation supports remote cancellation via token.
@@ -157,21 +174,6 @@ namespace Hubcon.Client.Core.HubconInvocationContext
         public bool ExpectsHubconResponse { get; }
 
         /// <summary>
-        /// Gets a dictionary of dynamic header providers that resolve values using the service provider.
-        /// </summary>
-        public IReadOnlyDictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; }
-
-        /// <summary>
-        /// Gets a dictionary of static HTTP headers to be included in the request.
-        /// </summary>
-        public IReadOnlyDictionary<string, string> StaticHeaders { get; }
-
-        /// <summary>
-        /// Gets a set of headers requested specifically for this operation.
-        /// </summary>
-        public HashSet<string> RequestedHeaders { get; }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ClientOperationContext"/> class.
         /// </summary>
         /// <param name="member">The <see cref="MemberInfo"/> of the contract member.</param>
@@ -243,18 +245,6 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                     && method.ReturnType.GenericTypeArguments[0].IsGenericType
                     && method.ReturnType.GenericTypeArguments[0].GetGenericTypeDefinition() == typeof(HubconResponse<>);
             }
-            //else if (member is PropertyInfo propertyInfo)
-            //{
-            //    SignatureIsHashed = false;
-            //    MethodSignature = propertyInfo.Name;
-            //    Member = propertyInfo;
-            //    OperationOptions = contractOptions.GetOperationOptions(MethodSignature, member);
-            //    var httpMethod = TryFindHttpMethod(Member);
-            //    HttpMethodAttribute = httpMethod;
-
-            //    HttpGetAttribute? verb = Member.GetCustomAttribute<HttpGetAttribute>();
-            //    HttpMethodDefined = HttpMethodAttribute != null ? HttpMethodAttribute.HttpMethod : HttpMethod.Get;
-            //}
             else
             {
                 throw new NotSupportedException();

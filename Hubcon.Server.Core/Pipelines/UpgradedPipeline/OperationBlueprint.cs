@@ -9,16 +9,25 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 {
+    [StructLayout(LayoutKind.Sequential)]
     internal sealed class OperationBlueprint : IOperationBlueprint
     {
+        public IPipelineBuilder PipelineBuilder { get; }
+        public Type? CallWrapperType { get; }
+        public ObjectFactory ControllerFactory { get; }
+        public CompiledSecurityPolicy SecurityPolicy { get; }
+        public Func<object?, object, CancellationToken, object?>? InvokeDelegate { get; }
+        public Action<IDictionary<string, object>, object, CancellationToken>? WrapperMapper { get; }
         public string OperationName { get; }
-        public OperationKind Kind { get; }
-
         public string ContractName { get; }
         public string SimpleContractName { get; }
+
+        public OperationKind Kind { get; }
+
         public Type ContractType { get; }
 
         public string ControllerName { get; }
@@ -38,18 +47,12 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public IList<Attribute> Attributes { get; }
         public ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         public ConcurrentDictionary<Type, Attribute> TransportAttributes { get; }
-        public IPipelineBuilder PipelineBuilder { get; }
 
         public string? HttpRoute { get; }
         public string? HttpEndpointGroupName { get; }
-
-        public Type? CallWrapperType { get; }
-        public Action<IDictionary<string, object>, object, CancellationToken>? WrapperMapper { get; }
         public HttpMethod? HttpVerb { get; }
-        public ObjectFactory ControllerFactory { get; }
+
         public bool ReturnsHubconResponse { get; }
-        public CompiledSecurityPolicy SecurityPolicy { get; }
-        public Func<object?, object, CancellationToken, object?>? InvokeDelegate { get; }
 
         public OperationBlueprint(
             string operationName,

@@ -6,6 +6,7 @@ using Hubcon.Shared.Core.Context;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,6 +15,7 @@ namespace Hubcon
     /// <summary>
     /// Internal hubcon context.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public static class HubconContext
     {
         private static readonly AsyncLocal<CallContext> _current = new();
@@ -33,6 +35,7 @@ namespace Hubcon
     /// <summary>
     /// The context of the current interceptor.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public static class InterceptorContext
     {
         private static readonly AsyncLocal<InterceptorManager> _current = new();
@@ -52,6 +55,7 @@ namespace Hubcon
     /// <summary>
     /// Wrapped call context.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public static class WrappedContext
     {
         private static readonly AsyncLocal<WrappedEnvelope> _current = new();
@@ -92,6 +96,7 @@ namespace Hubcon.Shared.Core.Context
     /// <summary>
     /// The wrapped envelope class.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public sealed class WrappedEnvelope
     {
         /// <summary>
@@ -171,6 +176,7 @@ namespace Hubcon.Shared.Core.Context
     /// Manages the execution of interceptors and hooks during the lifecycle of a client-side operation.
     /// Coordinates between global client options, contract-specific settings, and individual operation configurations.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public sealed class InterceptorManager : IInterceptorManager
     {
         /// <summary>
@@ -298,6 +304,7 @@ namespace Hubcon.Shared.Core.Context
     /// Represents the execution context for a single client-side call or invocation.
     /// Stores state, request data, and results for the duration of the call lifecycle.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public sealed class CallContext : IInvocationContext
     {
         /// <summary>

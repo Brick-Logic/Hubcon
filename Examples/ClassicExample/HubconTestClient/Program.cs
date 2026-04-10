@@ -149,7 +149,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 256
+            MaxDegreeOfParallelism = 128
         };
 
         int rps = 9999999;
@@ -371,7 +371,7 @@ internal class Program
         logger.LogWarning("Probando cancelacion remota...");
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
 
-        var result = await client.Execute(x => x.GetTemperatureFromServerBlocking(cts.Token));
+        var result = await client.Execute(x => x.GetTemperatureFromServerCancelable(cts.Token));
         if (result.Failure)
         {
             logger.LogInformation($"Cancelación remota exitosa. Resultado: {result.Error}");

@@ -13,7 +13,7 @@ namespace Hubcon.Server.Core.Cache
     {
         public bool TryGetValue<T>(object key, out T? value) => cache.TryGetValue(key, out value);
 
-        public T Set<T>(object key, T value, Action? postEvictionCallback = null, int expirationMinutes = 15) where T : class
+        public T Set<T>(object key, T value, Action? postEvictionCallback = null, int expirationMinutes = 15)
         {
             return cache.Set(key, value, new MemoryCacheEntryOptions()
                 .SetSlidingExpiration(TimeSpan.FromMinutes(expirationMinutes))
@@ -26,7 +26,7 @@ namespace Hubcon.Server.Core.Cache
 
         public void Remove(object key) => cache.Remove(key);
 
-        public T? GetOrCreate<T>(object key, Func<T?> factory, Action? postEvictionCallback = null, int expirationMinutes = 15) where T : class
+        public T? GetOrCreate<T>(object key, Func<T?> factory, Action? postEvictionCallback = null, int expirationMinutes = 15)
         {
             return cache.GetOrCreate(key, entry =>
             {

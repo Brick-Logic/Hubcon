@@ -30,7 +30,7 @@ namespace HubconTestDomain
         [Anonymous]
         Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default);
 
-        Task<bool> GetTemperatureFromServerBlocking(CancellationToken cancellationToken = default);
+        Task<HubconResponse<bool>> GetTemperatureFromServerCancelable(CancellationToken cancellationToken);
 
         [ParseSseMessage("data: ")]
         [ParseSseMessage("event: ")]
