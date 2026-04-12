@@ -13,12 +13,12 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Connection
         {
             
         }
-        public ConnectionInitMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public ConnectionInitMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null) : base(buffer, id, connectionId, type)
         {
         }
 
         [JsonConstructor]
-        public ConnectionInitMessage(Guid id, string? error = null) : base(MessageType.connection_init, id, error)
+        public ConnectionInitMessage(Guid id, string? error = null) : base(MessageType.connection_init, id, null!, error)
         {
         }
     }

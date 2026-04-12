@@ -48,7 +48,7 @@ namespace HubconTest.ContractHandlers
             return true;
         }
 
-        [RateLimit(1)]
+        [RateLimit(5)]
         public async IAsyncEnumerable<string> GetMessages(int count)
         {
             for (int i = 0; i < count; i++)

@@ -13,12 +13,12 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
         {
             
         }
-        public IngestInitAckMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public IngestInitAckMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null) : base(buffer, id, connectionId, type)
         {
         }
 
         [JsonConstructor]
-        public IngestInitAckMessage(Guid id, string? error = null) : base(MessageType.ingest_init_ack, id, error)
+        public IngestInitAckMessage(Guid id, string connectionId, string? error = null) : base(MessageType.ingest_init_ack, id, connectionId, error)
         {
         }
     }

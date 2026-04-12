@@ -14,12 +14,12 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ping
             
         }
 
-        public PingMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public PingMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null) : base(buffer, id, connectionId, type)
         {
         }
 
         [JsonConstructor]
-        public PingMessage(Guid id, string? error = null) : base(MessageType.ping, id, error)
+        public PingMessage(Guid id, string connectionId, string? error = null) : base(MessageType.ping, id, connectionId, error)
         {
         }
     }

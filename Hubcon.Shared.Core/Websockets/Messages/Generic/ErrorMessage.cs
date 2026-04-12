@@ -12,12 +12,12 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
         {
             
         }
-        public ErrorMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public ErrorMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null) : base(buffer, id, connectionId, type)
         {
         }
 
         [JsonConstructor]
-        public ErrorMessage(Guid id, string error) : base(MessageType.error, id, error)
+        public ErrorMessage(Guid id, string connectionId, string error) : base(MessageType.error, id, connectionId, error)
         {
         }
     }

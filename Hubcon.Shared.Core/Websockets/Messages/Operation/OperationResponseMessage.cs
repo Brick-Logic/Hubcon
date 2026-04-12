@@ -15,12 +15,12 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Operation
         {
         }
 
-        public OperationResponseMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public OperationResponseMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null) : base(buffer, id, connectionId, type)
         {
         }
 
         [JsonConstructor]
-        public OperationResponseMessage(Guid id, JsonElement result, string? error = null) : base(MessageType.operation_response, id, error)
+        public OperationResponseMessage(Guid id, string connectionId, JsonElement result, string? error = null) : base(MessageType.operation_response, id, connectionId, error)
         {
             _result = result;
         }

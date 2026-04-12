@@ -16,12 +16,12 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Token
             
         }
 
-        public TokenUpdateMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public TokenUpdateMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null) : base(buffer, id, connectionId, type)
         {
         }
 
         [JsonConstructor]
-        public TokenUpdateMessage(Guid id, string token, string? error = null) : base(MessageType.token_update, id, error)
+        public TokenUpdateMessage(Guid id, string connectionId, string token, string? error = null) : base(MessageType.token_update, id, connectionId, error)
         {
             _token = token;
         }

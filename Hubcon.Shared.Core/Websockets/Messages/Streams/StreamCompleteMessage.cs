@@ -14,12 +14,12 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Streams
             
         }
 
-        public StreamCompleteMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public StreamCompleteMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null) : base(buffer, id, connectionId, type)
         {
         }
 
         [JsonConstructor]
-        public StreamCompleteMessage(Guid id, string? error = null) : base(MessageType.stream_complete, id, error)
+        public StreamCompleteMessage(Guid id, string connectionId, string? error = null) : base(MessageType.stream_complete, id, connectionId, error)
         {
         }
     }

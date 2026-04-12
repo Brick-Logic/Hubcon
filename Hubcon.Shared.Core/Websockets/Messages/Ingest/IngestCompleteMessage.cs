@@ -16,12 +16,12 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Ingest
             
         }
 
-        public IngestCompleteMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public IngestCompleteMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null) : base(buffer, id, connectionId, type)
         {
         }
 
         [JsonConstructor]
-        public IngestCompleteMessage(Guid id, Guid[] streamIds, string? error = null) : base(MessageType.ingest_complete, id, error)
+        public IngestCompleteMessage(Guid id, string connectionId, Guid[] streamIds, string? error = null) : base(MessageType.ingest_complete, id, connectionId, error)
         {
             _streamIds = streamIds;
         }

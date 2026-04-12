@@ -13,12 +13,12 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Cancellation
         {
         }
 
-        public CancelMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public CancelMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null) : base(buffer, id, connectionId, type)
         {
         }
 
         [JsonConstructor]
-        public CancelMessage(Guid id, string? error = null) : base(MessageType.cancel, id, error)
+        public CancelMessage(Guid id, string connectionId, string? error = null) : base(MessageType.cancel, id, connectionId, error)
         {
         }
     }

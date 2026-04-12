@@ -16,12 +16,12 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Streams
         {
             
         }
-        public StreamInitMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public StreamInitMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null) : base(buffer, id, connectionId, type)
         {
         }
 
         [JsonConstructor]
-        public StreamInitMessage(Guid id, JsonElement payload, string? error = null) : base(MessageType.stream_init, id, error)
+        public StreamInitMessage(Guid id, string connectionId, JsonElement payload, string? error = null) : base(MessageType.stream_init, id, connectionId, error)
         {
             _payload = payload;
         }

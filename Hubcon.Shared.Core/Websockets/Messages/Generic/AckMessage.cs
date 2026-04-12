@@ -13,12 +13,12 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             
         }
 
-        public AckMessage(TrimmedMemoryOwner buffer, Guid? id = null, MessageType? type = null) : base(buffer, id, type)
+        public AckMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null) : base(buffer, id, connectionId, type)
         {
         }
 
         [JsonConstructor]
-        public AckMessage(Guid id, string? error = null) : base(MessageType.ack, id, error)
+        public AckMessage(Guid id, string connectionId, string? error = null) : base(MessageType.ack, id, connectionId, error)
         {
         }
     }
