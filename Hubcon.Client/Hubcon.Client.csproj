@@ -16,7 +16,7 @@
 		<PackageId>Hubcon.Client</PackageId>
 		<Authors>Brick-Logic</Authors>
 		<Company>Brick-Logic</Company>
-		<Description>A .NET client for consuming remote Hubcon.Server based APIs via RPC-like strongly-typed C# contracts, through HTTP and WebSockets.</Description>
+		<Description>Hubcon's .NET client for consuming remote Hubcon.Server based and standard REST based APIs via C# interfaces, with multi-transport support.</Description>
 		<PackageTags>http;websockets;rpc</PackageTags>
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
