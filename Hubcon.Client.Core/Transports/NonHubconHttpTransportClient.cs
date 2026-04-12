@@ -145,9 +145,9 @@ namespace Hubcon.Client.Core.Transports
         }
 
         /// <inheritdoc/>
-        public override ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            await context.SetResponse(HubconResponse.InternalError(new NotSupportedException(), "Non-Hubcon HTTP transport does not support ingest methods."));
         }
 
         /// <inheritdoc/>
