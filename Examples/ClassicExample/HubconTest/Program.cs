@@ -26,7 +26,7 @@ namespace HubconTest
             }
 
             process.ProcessorAffinity = (IntPtr)coreMask;
-            process.PriorityClass = ProcessPriorityClass.RealTime;
+            // process.PriorityClass = ProcessPriorityClass.RealTime;
 
             //worker = new System.Timers.Timer();
             //worker.Interval = 1000;
@@ -117,6 +117,8 @@ namespace HubconTest
                 serverOptions.AutoRegisterControllers();
             });
 
+            builder.Services.AddOpenApi();
+            
             var app = builder.Build();
 
             app.UseCors();
@@ -137,8 +139,10 @@ namespace HubconTest
             var telemetry = app.Services.GetRequiredService<ITelemetryService>();
             telemetry.OnRequestsPerSecondUpdated += (telemetry, rps) =>
             {
-                Console.Title = $" RPS: {rps.RequestsPerSecond.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | Total requests: {TotalRequests.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | CPU: {telemetry.CurrentCPU} | Threads: {telemetry.CurrentThreads} | WS clients: {telemetry.CurrentWebSocketClients} | WS req/s: {rps.WebSocketsRequestsPerSecond} | HTTP req/s: {rps.HttpRequestsPerSecond}";
+                var title = $" RPS: {rps.RequestsPerSecond.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | Total requests: {TotalRequests.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | CPU: {telemetry.CurrentCPU} | Threads: {telemetry.CurrentThreads} | WS clients: {telemetry.CurrentWebSocketClients} | WS req/s: {rps.WebSocketsRequestsPerSecond} | HTTP req/s: {rps.HttpRequestsPerSecond}";
+                Console.Title = title;
                 Interlocked.Add(ref TotalRequests, rps.RequestsPerSecond);
+                logger.LogInformation(title);
             };
 
             app.Run();

@@ -48,7 +48,7 @@ internal class Program
         }
 
         process.ProcessorAffinity = (IntPtr)coreMask;
-        process.PriorityClass = ProcessPriorityClass.RealTime;
+        // process.PriorityClass = ProcessPriorityClass.RealTime;
 
         var builder = WebApplication.CreateSlimBuilder();
 

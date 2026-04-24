@@ -14,6 +14,11 @@ namespace BlazorTestServer.Controllers
             throw new NotImplementedException();
         }
 
+        public Task<HubconResponse<bool>> GetTemperatureFromServerCancelable(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
         public async IAsyncEnumerable<string> GetMessages(int count)
         {
             for (int i = 0; i < count; i++)
