@@ -1,11 +1,11 @@
 ﻿# Hubcon
 
-Use C# interfaces as multi-transport API contracts. Create an interface, implement on the server, use it on the client. Done.
+Use C# interfaces as multi-transport API contracts. _Create an interface, implement on the server, use it on the client._
 
 Hubcon is a high-performance, near zero-allocation RPC framework for .NET. It enables developers to implement strongly-typed, fast communications via HTTP, WebSockets or **Custom Transports** by simply sharing interfaces.
 ## 🚀 Key Features
 - **Contract-Based**: Share interfaces between client and server as the single source of truth.
-- **Transport Agnostic**: Native support for HTTP and WebSockets, plus standard REST integration.
+- **Transport Agnostic**: Native support for HTTP and WebSockets, compatible with standard REST integrations and OpenAPI.
 - **High Performance:** Optimized for high throughput and low latency.
 - **Memory Optimized**: Zero-allocation hot paths and minimal memory footprint.
 - **Native AOT**: Full support for ahead-of-time compilation for cloud-native apps.
@@ -28,7 +28,7 @@ Hubcon is a high-performance, near zero-allocation RPC framework for .NET. It en
 - *Number of tasks that share the same Hubcon client.
 - Client used a single physical core and a single WebSocket connection for this test.
 
-For a far more detailed explanation about the tests like memory consumption, CPU usages, middlewares used, garbage collector pressure and more, please check the project's Wiki.
+For a far more detailed explanation about the tests like memory consumption, CPU usages, middlewares used, garbage collector pressure and more, please check the [Wiki Benchmarks Page](https://github.com/Brick-Logic/Hubcon/wiki/Benchmarks).
 
 ## 🏗️ Quick Start
 This quick start is designed to take around 3 minutes to setup.
@@ -183,7 +183,7 @@ Congratulations! By running both projects you easily called a Hubcon HTTP endpoi
 The Quick Start solution is available in the `Examples` folder for you to use.
 
 ## 📖 Documentation & Advanced Usage
-The full technical reference is available in our **GitHub Wiki**. Check it out for:
+The full technical reference is available in our [GitHub Wiki](https://github.com/Brick-Logic/Hubcon/wiki). Check it out for:
 
 - **Advanced Configuration**: Setting up RemoteServerModule and BaseAuthenticationManager.
 - **Middleware Pipeline**: How to create custom global or per-endpoint middlewares.
