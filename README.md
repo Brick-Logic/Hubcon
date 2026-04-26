@@ -15,12 +15,12 @@ Hubcon is a high-performance, near zero-allocation RPC framework for .NET. It en
 
 | Operation Type                      | Requests per second |
 |-------------------------------------|---------------------|
-| HTTP round-trip - 48 tasks*         | ~60,000             |
-| HTTP one-way call - 48 tasks*       | ~72,000             |
-| WebSocket Round-Trip - 256 tasks*   | ~85,000             |
-| WebSocket One-Way Call - 256 tasks* | ~110,000            |
-| WebSocket Ingest 256 tasks*         | ~110,000            |
-| WebSocket Event Streaming           | ~600,000            |
+| HTTP round-trip - 48 tasks*         |       ~60,000       |
+| HTTP one-way call - 48 tasks*       |       ~72,000       |
+| WebSocket Round-Trip - 256 tasks*   |       ~85,000       |
+| WebSocket One-Way Call - 256 tasks* |       ~110,000      |
+| WebSocket Ingest 256 tasks*         |       ~110,000      |
+| WebSocket Event Streaming           |       ~600,000      |
 
 ### Some notes:
 - Tests include Jwt Authentication and Authorization, and multiple framework middlewares.
