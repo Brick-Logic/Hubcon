@@ -10,13 +10,18 @@
 		<RootNamespace>$(AssemblyName)</RootNamespace>
 		<PackageId>$(AssemblyName)</PackageId>
 		<IsPackable>true</IsPackable>
+
+		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
+		<SignAssembly>true</SignAssembly>
+		<AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)HubconKey.snk</AssemblyOriginatorKeyFile>
+		<PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
+		
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageOutputPath>../../nupkgs</PackageOutputPath>
 		<Version>2.0.0-rc1</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<Description>Code analyzers for Hubcon.</Description>
-		<PackageTags>analyzer</PackageTags>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
