@@ -13,8 +13,6 @@
 	  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	  <Description>Hubcon's .NET server package to build multi-transport servers, allowing integrations using C# interfaces or OpenAPI clients.</Description>
 	  <RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
-	  <SignAssembly>true</SignAssembly>
-	  <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)HubconKey.snk</AssemblyOriginatorKeyFile>
 	  <PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
 	  <Version>2.0.0-rc1</Version>
 	  <Authors>$(Authors)</Authors>

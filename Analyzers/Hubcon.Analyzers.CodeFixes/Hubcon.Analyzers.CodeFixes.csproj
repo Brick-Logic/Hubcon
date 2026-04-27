@@ -18,8 +18,6 @@
 		<Description>Code fixer analyzers for Hubcon.</Description>
 		
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
-		<SignAssembly>true</SignAssembly>
-		<AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)HubconKey.snk</AssemblyOriginatorKeyFile>
 		<PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
 	</PropertyGroup>
 
