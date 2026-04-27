@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.1</TargetFrameworks>
+		<TargetFramework>netstandard2.1</TargetFramework>
 		<Nullable>enable</Nullable>
 		<LangVersion>9.0</LangVersion>
 
@@ -15,7 +15,9 @@
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<Description>Shared core implementations for Hubcon.</Description>
-		<PackageTags>http;websockets;rpc</PackageTags>
+		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
+		<SignAssembly>true</SignAssembly>
+		<AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)HubconKey.snk</AssemblyOriginatorKeyFile>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
 

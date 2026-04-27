@@ -12,7 +12,9 @@
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Description>Server-side abstractions for Hubcon.</Description>
-		<PackageTags>http;websockets;rpc</PackageTags>
+		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
+		<SignAssembly>true</SignAssembly>
+		<AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)HubconKey.snk</AssemblyOriginatorKeyFile>
 		<Version>2.0.0-rc1</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
