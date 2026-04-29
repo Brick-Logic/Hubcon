@@ -8,7 +8,7 @@ Hubcon is a high-performance, near zero-allocation RPC framework for .NET. It en
 - **Transport Agnostic**: Native support for HTTP and WebSockets, compatible with standard REST integrations and OpenAPI.
 - **High Performance:** Optimized for high throughput and low latency.
 - **Memory Optimized**: Zero-allocation hot paths and minimal memory footprint.
-- **Native AOT**: Full support for ahead-of-time compilation for cloud-native apps.
+- **Native AOT**: Full support for ahead-of-time compilation for Hubcon clients.
 - **Streaming & Ingest**: Built-in support for bidirectional `IAsyncEnumerable<T>` streams.
 
 ## 📊 Performance
