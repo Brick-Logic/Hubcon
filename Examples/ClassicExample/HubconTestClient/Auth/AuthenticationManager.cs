@@ -18,7 +18,7 @@ namespace HubconTestClient.Auth
         {
             var token = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand(username, password, true)));
             var token2 = await secondTestContract.LoginAsync(new LoginCommand(username, password, true));
-            return AuthResult.Success(token.Data!, "Bearer", RefreshToken!, DateTimeOffset.UtcNow.AddMinutes(2).ToUnixTimeSeconds());
+            return AuthResult.Success(token.Data!, "Bearer", RefreshToken!, DateTimeOffset.UtcNow.AddMinutes(10).ToUnixTimeSeconds());
         }
 
         protected override Task<IAuthResult> AuthenticateWithTokenAsync(string token, string type)
@@ -47,7 +47,7 @@ namespace HubconTestClient.Auth
         protected async override Task<IAuthResult> RefreshSessionAsync(string refreshToken)
         {
             var token = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand("refresh", "password", true)));
-            return AuthResult.Success(token!.Data, "Bearer", RefreshToken!, DateTimeOffset.UtcNow.AddMinutes(2).ToUnixTimeSeconds());
+            return AuthResult.Success(token!.Data, "Bearer", RefreshToken!, DateTimeOffset.UtcNow.AddMinutes(10).ToUnixTimeSeconds());
         }
 
         protected async override Task SaveSessionAsync(PersistedSession session)

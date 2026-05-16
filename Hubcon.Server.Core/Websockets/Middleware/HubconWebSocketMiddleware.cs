@@ -196,11 +196,14 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 var lastPingId = Guid.Empty;
 
-                _heartbeatWatcher = new HeartbeatWatcher(timeoutSeconds, () =>
+                if (options.WebsocketRequiresPing)
                 {
-                    webSocket.Abort();
-                    return cts.CancelAsync();
-                });
+                    _heartbeatWatcher = new HeartbeatWatcher(timeoutSeconds, () =>
+                    {
+                        webSocket.Abort();
+                        return cts.CancelAsync();
+                    });
+                }
 
                 _subscriptions = new();
                 _streams = new();
@@ -235,7 +238,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     }
 
                     var message = new BaseMessage(tmo);
-
+                    
                     if (message.Id == Guid.Empty 
                         || message.ConnectionId.Length != 36 
                         || message.ConnectionId[8] != '-' 
@@ -246,15 +249,15 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         webSocket.Abort();
                         return;
                     }
-
+                    
                     if (message.ConnectionId != connectionId)
                         continue;
-
+                    
                     switch (message.Type)
                     {
                         case MessageType.ping:
 
-                            await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ping, message.Id, 0);
+                            await rateLimiterManager.TryAcquireAsync(connectionId + "_ping", MessageType.ping, message.Id, 0);
 
                             if (!options.WebsocketRequiresPing)
                             {
@@ -1166,7 +1169,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return;
                 }
 
-                if (!await rateLimiterManager.TryAcquireAsync(connectionId, MessageType.ping, pingMessage.Id, 1))
+                if (!await rateLimiterManager.TryAcquireAsync(connectionId + "_ping", MessageType.ping, pingMessage.Id, 1))
                 {
                     await HandleError(pingMessage.Id, HubconResponse.TooManyRequests());
                     return;

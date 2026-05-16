@@ -19,6 +19,7 @@ namespace HubconTestClient.Modules
             server.EnableLogging();
             server.DisableAllLimiters();
             server.AllowRemoteCancellation();
+            server.RequirePongResponse(false);
             //server.AddHeaderProvider("key", x => "value");
 
             //server.DisableAllLimiters();

@@ -34,16 +34,11 @@ namespace Hubcon.Shared.Core.Tools
         //    }
         //}
 
-        public static async ValueTask<T?> WaitWithTimeoutAsync<T>(Func<TimeSpan, TimeProvider, CancellationToken, Task<T>> taskFactory, TimeSpan timeout)
+        public static async ValueTask<T?> WaitWithTimeoutAsync<T>(Task<T> task, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            using var cts = new CancellationTokenSource(timeout);
             try
             {
-                return await taskFactory(timeout, TimeProvider.System, cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                return default!;
+                return await task.WaitAsync(timeout, TimeProvider.System, cancellationToken);
             }
             catch (Exception)
             {

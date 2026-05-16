@@ -10,7 +10,7 @@ namespace Hubcon.Shared.Core.Websockets.Heartbeat
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class HeartbeatWatcher : IAsyncDisposable
     {
-        private bool timeoutExecuted = false;
+        private volatile bool timeoutExecuted = false;
         private readonly Func<Task> _onTimeout;
         private readonly TimeSpan _timeoutSeconds;
 

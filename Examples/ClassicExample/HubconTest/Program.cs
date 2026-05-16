@@ -20,7 +20,7 @@ namespace HubconTest
             int? customCores = null;
             int cores = customCores ?? Environment.ProcessorCount - 1;
 
-            for (int i = 0; i <= cores; i++)
+            for (int i = 4; i <= cores; i++)
             {
                 coreMask |= 1L << i;
             }
@@ -72,7 +72,6 @@ namespace HubconTest
             {
                 options.Limits.MaxConcurrentConnections = null;
                 options.Limits.MaxConcurrentUpgradedConnections = null;
-                options.Limits.MaxRequestLineSize = 1024;
                 options.Limits.MinRequestBodyDataRate = null; // Evita desconexiones por lentitud en tests
             });
 
@@ -104,14 +103,16 @@ namespace HubconTest
                 serverOptions.AddTelemetry();
                 //serverOptions.AddConcurrencyLimiter();
                 serverOptions.UseTokenValidationParameters(tokenValidationParameters);
-
+                
                 serverOptions.ConfigureCore(config =>
                 {
-                    config
-                        //.SetMaxConcurrentOperations(999999)
-                        //.SetGlobalRateLimiter(999999)
-                        .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
-                        .AllowRemoteTokenCancellation();
+                        config
+                            //.SetMaxConcurrentOperations(999999)
+                            //.SetGlobalRateLimiter(999999)
+                            .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
+                            .EnableWebsocketsLogging()  
+                            .DisableWebsocketPing()
+                            .AllowRemoteTokenCancellation();
                 });
 
                 serverOptions.AutoRegisterControllers();

@@ -13,10 +13,12 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
+using HubconTestClient;
 
 internal class Program
 {
@@ -29,16 +31,17 @@ internal class Program
 
     static async Task Main()
     {
-        Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "true");
+        Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "false");
 
-        Console.WriteLine($"¿Es Native AOT?: {System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported == false}");
+        Console.WriteLine(
+            $"¿Es Native AOT?: {System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported == false}");
 
         var process = Process.GetCurrentProcess();
 
         long coreMask = 0;
 
         int minCore = 0;
-        int? maxCore = 0;
+        int? maxCore = 3;
 
         int cores = maxCore ?? Environment.ProcessorCount - 1;
 
@@ -58,8 +61,8 @@ internal class Program
             .Build();
 
         builder.Services.AddHubconClient()
-                        .AddRemoteServerModule<TestModule>()
-                        .AddRemoteServerModule(() => new OpenAIServerModule(config));
+            .AddRemoteServerModule<TestModule>()
+            .AddRemoteServerModule(() => new OpenAIServerModule(config));
 
         builder.Logging.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
         builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
@@ -149,7 +152,7 @@ internal class Program
 
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = 256
+            MaxDegreeOfParallelism = 1000
         };
 
         int rps = 9999999;
@@ -240,52 +243,86 @@ internal class Program
         //    }
         //}
 
-        int maxDegreeOfParallelism = options.MaxDegreeOfParallelism;
-        var tasks = new List<Task>();
+        // int maxDegreeOfParallelism = options.MaxDegreeOfParallelism;
+        // var tasks = new List<Task>();
+        //
+        // for (int i = 0; i < maxDegreeOfParallelism; i++)
+        // {
+        //     // Lanzamos cada worker como una Task independiente
+        //     tasks.Add(Task.Run(async () =>
+        //     {
+        //         // Importante: Resolvemos el contrato dentro de la Task si el scope lo permite
+        //         var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+        //         Interlocked.Increment(ref clientCount);
+        //
+        //         while (true)
+        //         {
+        //            await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+        //             // Interlocked.Increment(ref _finishedRequestsCount);
+        //         }
+        //     }, default));
+        // }
+        //
+        // // Esperamos a que todas las tareas terminen (esto ocurrirá cuando se cancele el ct)
+        // await Task.WhenAll(tasks);
+        
+        // 1. Instancia global
+        var stats = new LatencyHistogram();
 
-        for (int i = 0; i < maxDegreeOfParallelism; i++)
-        {
-            // Lanzamos cada worker como una Task independiente
-            tasks.Add(Task.Run(async () =>
+        Console.WriteLine("Warming up clients...");
+        // 2. En el loop del cliente (muestreo de 1 cada 100 para no saturar)
+        var testTasks = Enumerable.Range(0, 2).Select(i => Task.Run(async () => {
+            int counter = 0;
+            await Task.Delay(i * 1000);
+            int testCount = 50000;
+            var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+            await paralellClient.Connect<WebSocketTransport>();
+
+            while (counter <= testCount)
             {
-                TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions()
-                {
-                    QueueLimit = 1,
-                    AutoReplenishment = true,
-                    ReplenishmentPeriod = TimeSpan.FromSeconds(1),
-                    TokenLimit = rps,
-                    TokensPerPeriod = rps,
-                });
+                var response = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+                if(response.Success) counter++;
+            }
+        })).ToArray();
 
-                try
-                {
-                    // Importante: Resolvemos el contrato dentro de la Task si el scope lo permite
-                    var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-                    Interlocked.Increment(ref clientCount);
+        await Task.WhenAll(testTasks);
 
-                    while (true)
-                    {
-                        // El AcquireAsync es vital para no saturar si el Rate Limiter está activo
-                        // await tokenBucketRateLimiter.AcquireAsync(1, ct); 
+        var taskCount = 32;
+        var totalSamples = 16000;
+        bool shouldStart = false;
+        Console.WriteLine("Excuting latency test...");
 
-                        var item = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+        var tasks = Enumerable.Range(0, taskCount).Select(i => Task.Factory.StartNew(async () => {
+            int counter = 0;
+            var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+            
+            await Task.Delay(i * 100);
+            
+            while (Interlocked.Read(ref stats.totalSamples) < totalSamples) 
+            {
+                long start = 0;
+                bool shouldMeasure = (counter++ % 100 == 0);
 
-                        // Interlocked.Increment(ref _finishedRequestsCount);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    // Salida limpia por cancelación
-                }
-                finally
-                {
-                    Interlocked.Decrement(ref clientCount);
-                }
-            }, default));
-        }
+                if (shouldMeasure) start = Stopwatch.GetTimestamp();
 
-        // Esperamos a que todas las tareas terminen (esto ocurrirá cuando se cancele el ct)
+                await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+
+                if (shouldMeasure) stats.Record(start);
+            }
+        }, default, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap()).ToArray();
+
+        Console.WriteLine("Esperando entrada para el test...");
+        Console.ReadKey();
+        shouldStart = true;
         await Task.WhenAll(tasks);
+
+        foreach (var task in tasks)
+        {
+            Console.WriteLine(task.Exception?.ToString());
+        }
+        
+        stats.PrintReport();
+        Console.ReadKey();
     }
 
     private static async Task TestHubconResponse(ISecondTestContract client2, ILogger<IUserContract> logger)
@@ -410,6 +447,7 @@ internal class Program
         }
 
         bool evento2 = false;
+
         async Task handler2(int? input)
         {
             logger.LogInformation($"Evento recibido: {input}");
@@ -418,6 +456,7 @@ internal class Program
         }
 
         bool evento3 = false;
+
         async Task handler3(int? input)
         {
             logger.LogInformation($"Evento recibido: {input}");
@@ -426,6 +465,7 @@ internal class Program
         }
 
         bool evento4 = false;
+
         async Task handler4(int? input)
         {
             logger.LogInformation($"Evento recibido: {input}");
@@ -495,7 +535,8 @@ internal class Program
         if (result.Success)
             logger.LogInformation($"Ingest OK.");
         else
-            throw new Exception($"Ingest FAILED: {result.Message} | Error: {result.Error} | Exception: {result.Exception?.ToString()}");
+            throw new Exception(
+                $"Ingest FAILED: {result.Message} | Error: {result.Error} | Exception: {result.Exception?.ToString()}");
     }
 
     private static async Task TestValidations(IUserContract client, ILogger<IUserContract> logger)
@@ -519,7 +560,8 @@ internal class Program
             throw new Exception($"Error de login: {response.ErrorMessage}");
     }
 
-    static async IAsyncEnumerable<string> GetMessages(int count, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    static async IAsyncEnumerable<string> GetMessages(int count,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         for (int i = 0; i < count; i++)
         {

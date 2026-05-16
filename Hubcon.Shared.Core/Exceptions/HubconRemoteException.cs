@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 #pragma warning disable CS1591
-namespace Hubcon.Client.Core.Exceptions
+namespace Hubcon
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class HubconRemoteException : Exception
