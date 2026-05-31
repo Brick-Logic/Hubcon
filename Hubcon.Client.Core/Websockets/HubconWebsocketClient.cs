@@ -56,15 +56,6 @@ namespace Hubcon.Client.Core.Websockets
         public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; set; }
         public Func<string?>? AuthorizationTokenProvider { get; set; }
 
-        private readonly ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, CancellationTokenRegistration)> _streams
-            = new ConcurrentDictionary<Guid, (BaseObservable, CancellationTokenSource, HeartbeatWatcher, CancellationTokenRegistration)>();
-
-        private readonly ConcurrentDictionary<Guid, (TaskCompletionSource<IngestResultMessage>, CancellationTokenSource, CancellationTokenRegistration)> _ingests
-            = new ConcurrentDictionary<Guid, (TaskCompletionSource<IngestResultMessage>, CancellationTokenSource, CancellationTokenRegistration)>();
-
-        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<BaseMessage>> _requestsCts
-            = new ConcurrentDictionary<Guid, TaskCompletionSource<BaseMessage>>();
-
         private readonly SemaphoreSlim _reconnectLock = new SemaphoreSlim(1, 1);
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
@@ -78,11 +69,6 @@ namespace Hubcon.Client.Core.Websockets
         private bool IsReady = false;
 
         public bool IsConnected => IsReady && _webSocket?.State == WebSocketState.Open;
-
-        private HeartbeatWatcher? _heartbeatWatcher;
-
-        private readonly GenericObservable<PongMessage> _pongStream;
-        private readonly GenericObservable<Exception> _errorStream;
 
         public IObservable<PongMessage> PongStream => _pongStream;
         public IObservable<Exception> ErrorStream => _errorStream;
@@ -98,9 +84,6 @@ namespace Hubcon.Client.Core.Websockets
         private Guid _lastPongId = Guid.Empty;
         private DateTime _lastPongTime = DateTime.UtcNow;
 
-        private readonly Channel<TrimmedMemoryOwner> _messageChannel;
-        private readonly Channel<ByteMessage> _sendChannel;
-
         public HubconWebSocketClient(Uri uri, TransportContext context, ILogger<HubconWebSocketClient>? logger = null)
         {
             this.context = context;
@@ -112,116 +95,16 @@ namespace Hubcon.Client.Core.Websockets
             converter = context.Converter;
             ClientOptions = context.ClientOptions;
             serviceProvider = context.ProxyServiceProvider;
-
-            _messageChannel = Channel.CreateBounded<TrimmedMemoryOwner>(
-                new BoundedChannelOptions(20000 * options.MessageProcessorsCount)
-                {
-                    FullMode = BoundedChannelFullMode.Wait,
-                    SingleWriter = true,
-                    SingleReader = false
-                });
-
-            _sendChannel = Channel.CreateBounded<ByteMessage>(new BoundedChannelOptions(20000)
-            {
-                FullMode = BoundedChannelFullMode.Wait,
-                SingleWriter = false,
-                SingleReader = true
-            });
         }
 
         public async Task<IObservable<T>> Stream<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             await EnsureConnectedAsync();
 
-            using var request = new StreamInitMessage(Guid.NewGuid(), connectionId, converter.SerializeToElement(payload));
-            var tcs = new CancellationTokenSource();
-
-            HeartbeatWatcher hw = null!;
-
-            CancellationTokenRegistration registration = cancellationToken.Register(async () =>
-            {
-                if (remoteCancelEnabled)
-                    await SendMessageAsync(new CancelMessage(request.Id, connectionId));
-
-                tcs.Cancel();
-            });
-
-            hw = new HeartbeatWatcher(TimeSpan.Zero, async () =>
-            {
-                if (_streams.TryRemove(request.Id, out var obs))
-                {
-                    obs.Item1.OnCompleted();
-                    if (!obs.Item2.IsCancellationRequested)
-                    {
-                        obs.Item2.Cancel();
-                        obs.Item2.Dispose();
-                    }
-                    obs.Item4.Dispose();
-                }
-            });
-
-            var observable = new GenericObservable<T>(
-                null!,
-                request.Id,
-                converter.SerializeToElement(request),
-                RequestType.Stream,
-                converter,
-                async () => await hw.DisposeAsync(),
-                options.ReconnectStreams);
-
-            if (!_streams.TryAdd(request.Id, (observable, tcs, hw, registration)))
-                throw new InvalidOperationException($"Ya existe un stream con Id {request.Id}");
-
-            await SendMessageAsync(request);
 
             return observable;
         }
 
-        public async Task<BaseMessage?> SendAndReceive<TRequest>(TRequest message, CancellationToken cancellationToken = default) where TRequest : BaseMessage
-        {
-            try
-            {
-                var responseTcs = new TaskCompletionSource<BaseMessage>();
-
-                if (_requestsCts.TryAdd(message.Id, responseTcs))
-                {
-                    await SendMessageAsync(message, cancellationToken);
-                    return await TimeoutHelper.WaitWithTimeoutAsync(responseTcs.Task, options.WebsocketTimeout, cancellationToken);
-                }
-            }
-            finally
-            {
-                _requestsCts.TryRemove(message.Id, out _);
-            }
-
-            return null;
-        }
-
-        public async Task<BaseMessage?> Receive(Guid id, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                var responseTcs = _requestsCts.GetOrAdd(id, _ => new TaskCompletionSource<BaseMessage>());
-                return await TimeoutHelper.WaitWithTimeoutAsync(responseTcs.Task.WaitAsync, options.WebsocketTimeout);       
-            }
-            finally
-            {
-                _requestsCts.TryRemove(id, out _);
-            }
-        }
-
-        public async Task<BaseMessage?> Receive(Guid id, TimeSpan timeout, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                var responseTcs = _requestsCts.GetOrAdd(id, _ => new TaskCompletionSource<BaseMessage>());
-                return await TimeoutHelper.WaitWithTimeoutAsync(responseTcs.Task.WaitAsync, timeout);
-            }
-            finally
-            {
-                _requestsCts.TryRemove(id, out _);
-            }
-        }
 
         public async Task<T> IngestMultiple<T>(
             IOperationRequest operationRequest,
@@ -232,382 +115,21 @@ namespace Hubcon.Client.Core.Websockets
         {
             await EnsureConnectedAsync();
             
-            using var cts = new CancellationTokenSource();
-            var sourceTasks = new List<Task>();
-            var initAckTcs = new TaskCompletionSource<bool>();
-            var generalTcs = new TaskCompletionSource<IngestResultMessage>();
-            var sources = new ConcurrentDictionary<Guid, IAsyncEnumerable<JsonElement>>();
-            var initialAckId = Guid.NewGuid();
-
-            using var registration = cancellationToken.Register(async () =>
-            {
-                if (remoteCancelEnabled)
-                {
-                    await SendMessageAsync(new CancelMessage(initialAckId, connectionId));
-                    cts.Cancel();
-                    generalTcs.TrySetException(new OperationCanceledException());
-                }
-            });
-
-            _ingests.TryAdd(initialAckId, (generalTcs, cts, registration));
             
-            try
-            {
-                var dict = operationRequest.Arguments.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value);
-                foreach (var kvp in operationRequest.Arguments)
-                {
-                    if (kvp.Value != null && EnumerableTools.IsAsyncEnumerable(kvp.Value))
-                    {
-                        var obj = kvp.Value;
-                        var id = Guid.NewGuid();
-                        dict[kvp.Key] = id;
-                        var stream = EnumerableTools.Wrap(obj, cancellationToken);
-                        sources.TryAdd(id, stream!);
-                    }
-                }
-
-                operationRequest.AssignArguments(dict!);
-
-                RateLimiter? sharedLimiter = null;
-                bool? useShared = null;
-
-                if (operationOptions != null && operationOptions.RateBucketOptions != null)
-                {
-                    if (operationOptions.RateLimiterIsShared)
-                    {
-                        sharedLimiter = new TokenBucketRateLimiter(operationOptions.RateBucketOptions);
-                        useShared = true;
-                    }
-                    else
-                    {
-                        useShared = false;
-                    }
-                }
-
-                foreach (var source in sources)
-                {
-                    var sourceTask = Task.Factory.StartNew(async () =>
-                    {
-                        try
-                        {
-                            var shouldIngest = await initAckTcs.Task;
-
-                            if (!shouldIngest)
-                                return;
-
-                            RateLimiter? limiter = sharedLimiter ?? (useShared == false
-                                ? new TokenBucketRateLimiter(operationOptions!.RateBucketOptions!)
-                                : null);
-
-                            await foreach (var item in source.Value.WithCancellation(cancellationToken))
-                            {
-                                if (generalTcs.Task.IsCompleted || cancellationToken.IsCancellationRequested)
-                                    break;
-
-                                var message = new IngestDataMessage(source.Key, connectionId, item);
-
-                                try
-                                {
-                                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.IngestRateBucket, limiter);
-                                    await SendMessageAsync(message, cancellationToken);
-                                }
-                                catch (Exception ex)
-                                {
-                                    if (LoggingEnabled)
-                                        logger?.LogError(ex, $"Error al enviar dato en ingest stream {source.Key}");
-
-                                    _errorStream.OnNext(ex);
-                                }
-
-                                if (generalTcs.Task.IsCompleted || cancellationToken.IsCancellationRequested)
-                                    break;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            if (LoggingEnabled)
-                                logger?.LogError(ex, $"Error en ingest stream {source.Key}");
-
-                            _errorStream.OnNext(ex);
-                        }
-                    },
-                    cancellationToken,
-                    TaskCreationOptions.LongRunning,
-                    TaskScheduler.Default).Unwrap();
-
-                    sourceTasks.Add(sourceTask);
-                }
-                
-                var ingestRequest = new IngestInitMessage(initialAckId, connectionId, sources.Keys.ToArray(), converter.SerializeToElement(operationRequest), default);
-
-                try
-                {
-                    var ack = await SendAndReceive(ingestRequest, cancellationToken);
-
-                    if (ack?.Error != null)
-                    {
-                        initAckTcs.TrySetResult(false);
-                        return converter.DeserializeData<T>(ack.Error);
-                    }
-
-                    initAckTcs.TrySetResult(true);
-                }
-                catch (Exception ex)
-                {
-                    if (LoggingEnabled)
-                        logger?.LogError(ex, "Error al enviar IngestInitMessage");
-                    
-                    _errorStream.OnNext(ex);
-                }
-                
-                var receiver = Receive(initialAckId, TimeSpan.FromDays(23), cancellationToken);
-
-                try
-                {
-                    var allIngests = Task.WhenAll(sourceTasks);
-                    var whenany = Task.WhenAny(allIngests, receiver);
-                    await whenany;
-                }
-                finally
-                {
-                    registration.Dispose();
-                }
-
-                await SendMessageAsync(new IngestCompleteMessage(initialAckId, connectionId, sources.Keys.ToArray()), cancellationToken);
-
-                using BaseMessage? result = await receiver;
-
-                if (result == null) 
-                    throw new HubconRemoteException("Received an empty response.");
-
-                if (result.Error != null)
-                    return converter.DeserializeData<T>(result.Error);
-
-                var response = converter.DeserializeJsonElement<T>(new IngestResultMessage(result).Data) ?? throw new HubconRemoteException("Received an empty response.");
-
-                return response;
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                if (LoggingEnabled)
-                    logger?.LogError(ex, "Error general en IngestMultiple");
-
-                _errorStream.OnNext(ex);
-
-                if (HubconContext.Current.IsWrapped)
-                    return default!;
-
-                throw new HubconGenericException(ex.Message, ex);
-            }
-            finally
-            {
-                if (IsReady && !cts.IsCancellationRequested)
-                {
-                    var msg = new IngestCompleteMessage(initialAckId, connectionId, sources.Keys.ToArray());
-                    await SendMessageAsync(msg);
-                }
-
-                _ingests.TryRemove(initialAckId, out var removedIngest);
-                removedIngest.Item1?.TrySetCanceled();
-                removedIngest.Item2?.Cancel();
-            }
         }
 
         public async Task SendAsync(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         { 
             await EnsureConnectedAsync();
 
-            var request = new OperationCallMessage(Guid.NewGuid(), connectionId, converter.SerializeToElement(payload));
-
-            using var registration = cancellationToken.Register(async () =>
-            {
-                if (remoteCancelEnabled)
-                    await SendMessageAsync(new CancelMessage(request.Id, connectionId));
-            });
-
-            await SendMessageAsync(request, cancellationToken);
+            
         }
 
         public async Task<T> InvokeAsync<T>(IOperationRequest payload, bool remoteCancelEnabled, bool responseIsWrapped, CancellationToken cancellationToken = default)
         {
             await EnsureConnectedAsync();
 
-            var request = new OperationInvokeMessage(Guid.NewGuid(), connectionId, converter.SerializeToElement(payload));
-
-            try
-            {
-                using var registration = cancellationToken.Register(async () =>
-                {
-                    if (remoteCancelEnabled)
-                        await SendMessageAsync(new CancelMessage(request.Id, connectionId));
-                });
-
-                using var response = await SendAndReceive(request, cancellationToken);
-
-                if (response == null)
-                    throw new HubconGenericException("There was an unknown error or the request timed out.");
-
-                if (response.Error != null)
-                    return converter.DeserializeData<T>(response.Error);
-
-                using var converted = new OperationResponseMessage(response);
-                return converter.DeserializeData<T>(converted.Result);
-            }
-            catch (Exception ex)
-            {
-                if (LoggingEnabled)
-                    logger?.LogError(ex.Message);
-
-                _errorStream.OnNext(ex);
-
-                throw;
-            }
-        }
-
-        private async Task HandleIncomingMessage()
-        {
-            TrimmedMemoryOwner tmo = null!;
-
-            try
-            {
-                while (!_cts.IsCancellationRequested)
-                {
-                    try
-                    {
-                        await EnsureConnectedAsync();
-
-                        tmo = await _messageChannel.Reader.ReadAsync();
-
-                        var message = new BaseMessage(tmo);
-
-                        if (message.ConnectionId != connectionId)
-                            continue;
-
-                        switch (message.Type)
-                        {
-                            case MessageType.pong:
-                                if (!options.WebsocketRequiresPong)
-                                    break;
-
-                                var pongMessage = new PongMessage(message);
-
-                                if (_lastPongId == pongMessage.Id)
-                                {
-                                    _webSocket!.Abort();
-                                    return;
-                                }
-
-                                _lastPongId = pongMessage.Id;
-                                _lastPongTime = DateTime.UtcNow;
-                                _heartbeatWatcher?.NotifyHeartbeat();
-                                _pongStream.OnNext(pongMessage);
-
-                                await context.InterceptorManager.CallInterceptor(InterceptorType.OnPong);
-                                break;
-
-                            case MessageType.error:
-                                if (message?.Id != null && _requestsCts.TryGetValue(message.Id, out var subToError))
-                                {
-                                    subToError.TrySetResult(message);
-                                }
-
-                                break;
-
-                            case MessageType.stream_data:
-                                var streamData = new StreamDataMessage(message);
-                                if (streamData?.Id != null && _streams.TryGetValue(streamData.Id, out var stream))
-                                {
-                                    stream.Item1.OnNextElement(streamData.Data);
-                                    stream.Item3.NotifyHeartbeat();
-                                }
-
-                                break;
-
-                            case MessageType.stream_complete:
-                                var streamComplete = new StreamCompleteMessage(message);
-
-                                if (streamComplete?.Id != null &&
-                                    _streams.TryGetValue(streamComplete.Id, out var streamCompleteInfo))
-                                {
-                                    streamCompleteInfo.Item1.OnCompleted();
-                                }
-
-                                break;
-
-                            case MessageType.ingest_init_ack:
-                                if (_requestsCts.TryGetValue(message.Id, out var ingestInitAckTcs))
-                                {
-                                    ingestInitAckTcs.TrySetResult(message);
-                                }
-
-                                break;
-
-                            case MessageType.ingest_result:
-                                if (_requestsCts.TryGetValue(message.Id, out var ingestResultMessageTcs))
-                                {
-                                    ingestResultMessageTcs.TrySetResult(message);
-                                }
-
-                                break;
-
-                            case MessageType.token_update:
-                                if (_requestsCts.TryGetValue(message.Id, out var tokenUpdateResponseTcs))
-                                {
-                                    tokenUpdateResponseTcs.TrySetResult(message);
-                                }
-
-                                break;
-
-                            case MessageType.ingest_data_ack:
-                                if (_requestsCts.TryGetValue(message.Id, out var ingestDataAckTcs))
-                                {
-                                    ingestDataAckTcs.TrySetResult(message);
-                                }
-
-                                break;
-
-                            case MessageType.operation_response:
-                                if (_requestsCts.TryGetValue(message.Id, out var ormTcs))
-                                {
-                                    ormTcs.TrySetResult(message);
-                                }
-
-                                break;
-
-                            default:
-                                var msg = $"Tipo de mensaje no soportado. Tipo recibido: {message.Type.ToString()}";
-                                _errorStream.OnNext(new HubconGenericException(msg));
-
-                                if (LoggingEnabled)
-                                    logger?.LogError(msg);
-
-                                break;
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        if (LoggingEnabled)
-                            logger?.LogError($"Error en HandleIncomingMessage: {ex.Message}");
-
-                        _errorStream.OnNext(ex);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                if (LoggingEnabled)
-                    logger?.LogError($"Error en HandleIncomingMessage: {ex.Message}");
-
-                _errorStream.OnNext(ex);
-            }
+            
         }
 
         public async ValueTask EnsureConnectedAsync(Uri? newUrl = null)
@@ -822,42 +344,6 @@ namespace Hubcon.Client.Core.Websockets
             }
         }
 
-        private void CancelAll()
-        {
-            _websocketCts?.Cancel();
-            _websocketCts?.Dispose();
-            _websocketCts = null;
-
-            _receiveLoopCts?.Cancel();
-            _receiveLoopCts?.Dispose();
-            _receiveLoopCts = null;
-
-            _sendLoopCts?.Cancel();
-            _sendLoopCts?.Dispose();
-            _sendLoopCts = null;
-        }
-
-        private async ValueTask SendMessageAsync<T>(T message, CancellationToken cancellationToken = default) where T : BaseMessage
-        {
-            var pipe = new Pipe();
-            var writer = new Utf8JsonWriter(pipe.Writer);
-
-            converter.Serialize(writer, message);
-
-            await writer.FlushAsync(cancellationToken);
-            await pipe.Writer.CompleteAsync();
-
-            var result = await pipe.Reader.ReadAsync(cancellationToken);
-            var buffer = result.Buffer;
-
-            byte[] bytes = buffer.ToArray();
-            await pipe.Reader.CompleteAsync();
-
-            await _sendChannel.Writer.WriteAsync(new ByteMessage(bytes, connectionId, cancellationToken), cancellationToken);
-
-            message.Dispose();
-        }
-
         private async void PingMessageLoop(object sender, ElapsedEventArgs e)
         {
             if (!IsReady) return;
@@ -886,141 +372,6 @@ namespace Hubcon.Client.Core.Websockets
 
                 if (LoggingEnabled)
                     logger?.LogError($"Error en PingMessageLoop: {ex.Message}");
-            }
-        }
-
-        int cantidad = 0;
-
-        private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
-        {
-            if (LoggingEnabled)
-            {
-                Interlocked.Increment(ref cantidad);
-                logger?.LogInformation($"ReceiveLoop iniciado. Cantidad: {Volatile.Read(ref cantidad)}");
-            }
-
-            var socket = _webSocket;
-
-            try
-            {
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    try
-                    {
-                        if (socket == null) break;
-
-                        var parts = new List<IMemoryOwner<byte>>();
-                        int totalBytes = 0;
-
-                        ValueWebSocketReceiveResult result;
-
-                        do
-                        {
-                            var part = MemoryPool<byte>.Shared.Rent(4096);
-                            var segment = part.Memory;
-
-                            result = await socket.ReceiveAsync(segment, cancellationToken);
-                            
-                            if (result.MessageType != WebSocketMessageType.Binary)
-                            {
-                                if (result.MessageType == WebSocketMessageType.Close)
-                                {
-                                    if (!CloseSent)
-                                    {
-                                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
-                                        CancelAll();
-                                    }
-
-                                    return;
-                                }
-
-                                continue;
-                            }
-
-                            if (result.Count < segment.Length)
-                                part = new TrimmedMemoryOwner(part, result.Count);
-
-                            totalBytes += result.Count;
-                            parts.Add(part);
-                        } while (!result.EndOfMessage);
-
-                        var finalOwner = MemoryPool<byte>.Shared.Rent(totalBytes);
-                        var finalMemory = finalOwner.Memory.Slice(0, totalBytes);
-                        int offset = 0;
-
-                        foreach (var part in parts)
-                        {
-                            part.Memory.Slice(0).CopyTo(finalMemory.Slice(offset));
-                            offset += part.Memory.Length;
-                            part.Dispose();
-                        }
-
-                        await _messageChannel.Writer.WriteAsync(new TrimmedMemoryOwner(finalOwner, totalBytes),
-                            cancellationToken);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        if (LoggingEnabled)
-                            logger?.LogError("Receive loop: Operation cancelled.");
-                    }
-                    catch (Exception ex)
-                    {
-                        if (LoggingEnabled)
-                            logger?.LogError(ex.ToString());
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception ex)
-            {
-                if (LoggingEnabled)
-                    logger?.LogError("Error en ReceiveLoop: " + ex.Message);
-
-                _errorStream.OnNext(ex);
-            }
-            finally
-            {
-                if (LoggingEnabled)
-                {
-                    logger?.LogInformation($"ReceiveLoop terminado. Cantidad: {Volatile.Read(ref cantidad)}");
-                    Interlocked.Decrement(ref cantidad);
-                }
-            }
-        }
-
-        private async Task SendLoopAsync(ClientWebSocket _webSocket, CancellationToken cancellationToken)
-        {
-            try
-            {
-                while (await _sendChannel.Reader.WaitToReadAsync(cancellationToken))
-                {
-                    try
-                    {
-                        while (_sendChannel.Reader.TryRead(out var buffer))
-                        {
-                            if (_webSocket?.State == WebSocketState.Closed)
-                                return;
-
-                            if (buffer.CancellationToken.IsCancellationRequested || buffer.ConnectionId != connectionId)
-                                continue;
-
-                            var segment = new ArraySegment<byte>(buffer.Bytes);
-                            await _webSocket!.SendAsync(segment, WebSocketMessageType.Binary, true, cancellationToken);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        if (LoggingEnabled)
-                            logger?.LogError($"Error en SendLoopAsync: {ex.Message}");
-
-                        _errorStream.OnNext(ex);
-                    }
-                }
-            }
-            catch
-            {
             }
         }
 

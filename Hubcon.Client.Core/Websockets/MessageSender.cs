@@ -40,15 +40,15 @@ namespace Hubcon.Client.Core.Websockets
         /// <summary>
         /// Default constructor
         /// </summary>
-        /// <param name="connectionId">The current websocket connection id.</param>
-        /// <param name="webSocket">The current websocket client.</param>
+        /// <param name="webSocketClient">The current websocket client.</param>
         /// <param name="context">The context of the transport.</param>
-        public MessageSender(string connectionId, ClientWebSocket webSocket, TransportContext context)
+        /// <param name="connectionId">The current websocket connection id.</param>
+        public MessageSender(IWebSocketClient webSocketClient, TransportContext context, string connectionId)
         {
             _cts = new CancellationTokenSource();
             _logger = context.ProxyServiceProvider.GetService<ILogger<MessageSender>>();
             _context = context;
-            _webSocket = webSocket;
+            _webSocket = webSocketClient.WebSocket;
             _connectionId = connectionId;
 
             _sendLoopDisposed = new TaskCompletionSource<bool>();

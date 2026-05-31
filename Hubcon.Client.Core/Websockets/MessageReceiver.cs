@@ -1,10 +1,3 @@
-using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.Net.WebSockets;
-using System.Threading;
-using System.Threading.Channels;
-using System.Threading.Tasks;
 using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
@@ -12,6 +5,14 @@ using Hubcon.Shared.Core.Websockets.Messages.Generic;
 using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System;
+using System.Buffers;
+using System.Collections.Generic;
+using System.Net.WebSockets;
+using System.Threading;
+using System.Threading.Channels;
+using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Websockets
 {
@@ -36,25 +37,28 @@ namespace Hubcon.Client.Core.Websockets
 
         private readonly Channel<TrimmedMemoryOwner> _receiveChannel;
         private readonly TransportContext _context;
+        private readonly IClientOptions _clientOptions;
         private readonly CancellationTokenSource _cts;
         private readonly ILogger<MessageReceiver>? _logger;
         private readonly Task _receiveTask;
+        
         private readonly MessageRouter _router; 
         
         private ClientWebSocket? _webSocket;
-        
-        
+
+
         /// <summary>
         /// Default constructor
         /// </summary>
-        /// <param name="webSocket">The current websocket client.</param>
+        /// <param name="webSocketClient">The current websocket client.</param>
         /// <param name="context">The context of the transport.</param>
-        public MessageReceiver(ClientWebSocket webSocket, TransportContext context)
+        public MessageReceiver(IWebSocketClient webSocketClient, TransportContext context)
         {
             _cts = new CancellationTokenSource();
             _logger = context.ProxyServiceProvider.GetService<ILogger<MessageReceiver>>();
             _context = context;
-            _webSocket = webSocket;
+            _clientOptions = context.ClientOptions;
+            _webSocket = webSocketClient.WebSocket;
             _startSignal = new TaskCompletionSource<bool>();
 
             _receiveLoopDisposed = new TaskCompletionSource<bool>();
@@ -67,7 +71,7 @@ namespace Hubcon.Client.Core.Websockets
                     SingleReader = true
                 });
 
-            _router = new MessageRouter(_webSocket, _receiveChannel, context);
+            _router = new MessageRouter(webSocketClient, _receiveChannel, context);
 
             _receiveTask = Task.Factory.StartNew(
                 ReceiveLoopAsync,
@@ -79,7 +83,7 @@ namespace Hubcon.Client.Core.Websockets
         /// <summary>
         /// The message router manages operation parsing and coordination.
         /// </summary>
-        public MessageRouter Router => _router;
+        public IMessageRouter Router => _router;
 
         /// <summary>
         /// Starts the reception loop operations.
@@ -88,7 +92,30 @@ namespace Hubcon.Client.Core.Websockets
         {
             _startSignal.TrySetResult(true);
         }
-        
+
+        /// <summary>
+        /// Waits for a message given a specific message id. This overload uses the framework's default timeout for websockets.
+        /// </summary>
+        /// <param name="id">The message ID.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A task that returns a <see cref="BaseMessage"/> object, which contains the server's raw response.</returns>
+        public async Task<BaseMessage?> Receive(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _router.GetResponseAsync(id, _clientOptions.WebsocketTimeout ,cancellationToken);
+        }
+
+        /// <summary>
+        /// Waits for a message given a specific message id. This overload requires a timeout.
+        /// </summary>
+        /// <param name="id">The message ID.</param>
+        /// <param name="timeout">The time to wait for the response.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A task that returns a <see cref="BaseMessage"/> object, which contains the server's raw response.</returns>
+        public async Task<BaseMessage?> Receive(Guid id, TimeSpan timeout, CancellationToken cancellationToken = default)
+        {
+            return await _router.GetResponseAsync(id, timeout, cancellationToken);
+        }
+
         private async Task ReceiveLoopAsync()
         {
             if (!await _startSignal.Task)

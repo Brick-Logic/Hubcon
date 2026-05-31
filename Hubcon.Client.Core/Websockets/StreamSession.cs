@@ -16,8 +16,10 @@ namespace Hubcon.Client.Core.Websockets
     /// <summary>
     /// Represents a stream session and manages all the resources needed.
     /// </summary>
-    public abstract class StreamSession : IDisposable
+    public abstract class StreamSession : IStreamSession, IDisposable
     {
+        public abstract BaseMessage Payload { get; }
+
         /// <summary>
         /// Used to provide the next element to the ongoing stream session.
         /// </summary>
@@ -80,10 +82,12 @@ namespace Hubcon.Client.Core.Websockets
 
 
     /// <inheritdoc cref="StreamSession" />
-    public sealed class StreamSession<T> : StreamSession, IDisposable
+    public sealed class StreamSession<T> : StreamSession, IStreamSession<T>, IDisposable
     {
         private readonly GenericObservable<T> _observable;
         private readonly CancellationTokenSource _cts;
+        private readonly BaseMessage _payload;
+        private readonly Action? _onFinishedCallback;
         private readonly HeartbeatWatcher _heartbeatWatcher;
         private CancellationTokenRegistration? _cancellationTrigger;
 
@@ -92,10 +96,12 @@ namespace Hubcon.Client.Core.Websockets
         /// </summary>
         /// <param name="payload"></param>
         /// <param name="context"></param>
-        public StreamSession(BaseMessage payload, TransportContext context)
+        /// <param name="onFinishedCallback"></param>
+        public StreamSession(BaseMessage payload, TransportContext context, Action? onFinishedCallback = null)
         {
             _cts = new CancellationTokenSource();
-            
+            _payload = payload;
+            _onFinishedCallback = onFinishedCallback;
             _observable = new GenericObservable<T>(
                 null, 
                 payload.Id, 
@@ -115,11 +121,13 @@ namespace Hubcon.Client.Core.Websockets
                 return Task.CompletedTask;
             });
         }
-        
+
+        public override BaseMessage Payload => _payload;
+
         /// <inheritdoc/>
-        public override void Next(JsonElement streamDataData)
+        public override void Next(JsonElement streamData)
         {
-            _observable.OnNextElement(streamDataData);
+            _observable.OnNextElement(streamData);
             _heartbeatWatcher.NotifyHeartbeat();
         }
         
@@ -153,7 +161,8 @@ namespace Hubcon.Client.Core.Websockets
             _ = _heartbeatWatcher.DisposeAsync();
             _cancellationTrigger?.Dispose();
             _cts.Dispose();
-            
+            _payload.Dispose();
+            _onFinishedCallback?.Invoke();
             GC.SuppressFinalize(this);
         }
     }

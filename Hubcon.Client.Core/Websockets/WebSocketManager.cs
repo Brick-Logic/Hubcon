@@ -35,7 +35,7 @@ namespace Hubcon.Client.Core.Websockets
     /// <summary>
     /// Manages 
     /// </summary>
-    public sealed class HubconWebSocket : IWebSocketClient
+    public sealed class HubconWebSocket : IHubconWebSocket
     {
         private volatile bool _disposed = false;
 
@@ -58,6 +58,11 @@ namespace Hubcon.Client.Core.Websockets
         private readonly string connectionId;
         private readonly Uri _uri;
 
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <param name="context"></param>
         public HubconWebSocket(Uri uri, TransportContext context)
         {
             _cts = new CancellationTokenSource();
@@ -73,8 +78,11 @@ namespace Hubcon.Client.Core.Websockets
             _logger = context.ProxyServiceProvider.GetService<ILogger<HubconWebSocket>>();
             connectionId = Guid.NewGuid().ToString();
 
-            _receiver = new MessageReceiver(_webSocket, context);
-            _sender = new MessageSender(connectionId, _webSocket, context);
+            _receiver = new MessageReceiver(this, context);
+            _sender = new MessageSender(this, context, connectionId);
+
+            _pongStream = new GenericObservable<PongMessage>(_converter);
+            _errorStream = new GenericObservable<Exception>(_converter);
         }
 
         /// <summary>
@@ -96,7 +104,7 @@ namespace Hubcon.Client.Core.Websockets
         /// <param name="cancellationToken"></param>
         /// <typeparam name="TRequest"></typeparam>
         /// <returns></returns>
-        public async Task<BaseMessage?> SendAndReceive<TRequest>(TRequest message, CancellationToken cancellationToken = default) where TRequest : BaseMessage
+        public async Task<BaseMessage?> SendAndReceiveAsync<TRequest>(TRequest message, CancellationToken cancellationToken = default) where TRequest : BaseMessage
         {
             Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, "WebSocket is not open.");
 
@@ -111,14 +119,34 @@ namespace Hubcon.Client.Core.Websockets
                 _receiver.Router.EndRequest(message.Id);
             }
         }
-        
-        public async Task<StreamSession<T>> Stream<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
+
+        /// <summary>
+        /// Sends a message excepting a response. 
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="cancellationToken"></param>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <returns></returns>
+        public async Task SendAsync<TRequest>(TRequest message, CancellationToken cancellationToken = default) where TRequest : BaseMessage
+        {
+            Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, "WebSocket is not open.");
+            await _sender.SendMessageAsync(message, cancellationToken);
+        }
+
+        /// <summary>
+        /// Creates and returns an object that handles a streaming session.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="payload"></param>
+        /// <param name="remoteCancelEnabled"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task<IStreamSession<T>> GetStreamSession<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, "WebSocket is not open.");
 
-            using var request = new StreamInitMessage(Guid.NewGuid(), connectionId, _converter.SerializeToElement(payload));
-
-            var streamSession = _receiver.Router.CreateStream<T>(request);
+            var streamSession = _receiver.Router.CreateStream<T>(Guid.NewGuid(), connectionId, payload);
+            var request = streamSession.Payload;
 
             if (remoteCancelEnabled)
             {
@@ -136,198 +164,38 @@ namespace Hubcon.Client.Core.Websockets
 
             return streamSession;
         }
-        
-        public async Task<T> IngestMultiple<T>(
+
+        /// <summary>
+        /// Creates and returns an object that handles an ingest session.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="operationRequest"></param>
+        /// <param name="remoteCancelEnabled"></param>
+        /// <param name="operationOptions"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task<IIngestSession<T>> GetIngestSession<T>(
             IOperationRequest operationRequest,
             bool remoteCancelEnabled,
             IOperationOptions? operationOptions = null,
             CancellationToken cancellationToken = default)
         {
             Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, "WebSocket is not open.");
-            
-            using var cts = new CancellationTokenSource();
-            var sourceTasks = new List<Task>();
-            var initAckTcs = new TaskCompletionSource<bool>();
-            var generalTcs = new TaskCompletionSource<IngestResultMessage>();
-            var sources = new ConcurrentDictionary<Guid, IAsyncEnumerable<JsonElement>>();
-            var initialAckId = Guid.NewGuid();
 
-            using var registration = cancellationToken.Register(async () =>
+            var ingestSession = _receiver.Router.CreateIngest<T>(Guid.NewGuid(), connectionId, operationRequest, operationOptions!);
+
+            if (remoteCancelEnabled)
             {
-                if (remoteCancelEnabled)
+                ingestSession.AddCancellation(async () =>
                 {
-                    await SendMessageAsync(new CancelMessage(initialAckId, connectionId));
-                    cts.Cancel();
-                    generalTcs.TrySetException(new OperationCanceledException());
-                }
-            });
+                    if (remoteCancelEnabled && _webSocket.State == WebSocketState.Open)
+                        await _sender.SendMessageAsync(new CancelMessage(ingestSession.Id, connectionId), cancellationToken);
 
-            _ingests.TryAdd(initialAckId, (generalTcs, cts, registration));
-            
-            try
-            {
-                var dict = operationRequest.Arguments.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value);
-                foreach (var kvp in operationRequest.Arguments)
-                {
-                    if (kvp.Value != null && EnumerableTools.IsAsyncEnumerable(kvp.Value))
-                    {
-                        var obj = kvp.Value;
-                        var id = Guid.NewGuid();
-                        dict[kvp.Key] = id;
-                        var stream = EnumerableTools.Wrap(obj, cancellationToken);
-                        sources.TryAdd(id, stream!);
-                    }
-                }
-
-                operationRequest.AssignArguments(dict!);
-
-                RateLimiter? sharedLimiter = null;
-                bool? useShared = null;
-
-                if (operationOptions != null && operationOptions.RateBucketOptions != null)
-                {
-                    if (operationOptions.RateLimiterIsShared)
-                    {
-                        sharedLimiter = new TokenBucketRateLimiter(operationOptions.RateBucketOptions);
-                        useShared = true;
-                    }
-                    else
-                    {
-                        useShared = false;
-                    }
-                }
-
-                foreach (var source in sources)
-                {
-                    var sourceTask = Task.Factory.StartNew(async () =>
-                    {
-                        try
-                        {
-                            var shouldIngest = await initAckTcs.Task;
-
-                            if (!shouldIngest)
-                                return;
-
-                            RateLimiter? limiter = sharedLimiter ?? (useShared == false
-                                ? new TokenBucketRateLimiter(operationOptions!.RateBucketOptions!)
-                                : null);
-
-                            await foreach (var item in source.Value.WithCancellation(cancellationToken))
-                            {
-                                if (generalTcs.Task.IsCompleted || cancellationToken.IsCancellationRequested)
-                                    break;
-
-                                var message = new IngestDataMessage(source.Key, connectionId, item);
-
-                                try
-                                {
-                                    await RateLimiterHelper.AcquireAsync(clientOptions, clientOptions?.RateBucket, clientOptions?.IngestRateBucket, limiter);
-                                    await SendMessageAsync(message, cancellationToken);
-                                }
-                                catch (Exception ex)
-                                {
-                                    if (LoggingEnabled)
-                                        logger?.LogError(ex, $"Error al enviar dato en ingest stream {source.Key}");
-
-                                    _errorStream.OnNext(ex);
-                                }
-
-                                if (generalTcs.Task.IsCompleted || cancellationToken.IsCancellationRequested)
-                                    break;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            if (LoggingEnabled)
-                                logger?.LogError(ex, $"Error en ingest stream {source.Key}");
-
-                            _errorStream.OnNext(ex);
-                        }
-                    },
-                    cancellationToken,
-                    TaskCreationOptions.LongRunning,
-                    TaskScheduler.Default).Unwrap();
-
-                    sourceTasks.Add(sourceTask);
-                }
-                
-                var ingestRequest = new IngestInitMessage(initialAckId, connectionId, sources.Keys.ToArray(), converter.SerializeToElement(operationRequest), default);
-
-                try
-                {
-                    var ack = await SendAndReceive(ingestRequest, cancellationToken);
-
-                    if (ack?.Error != null)
-                    {
-                        initAckTcs.TrySetResult(false);
-                        return converter.DeserializeData<T>(ack.Error);
-                    }
-
-                    initAckTcs.TrySetResult(true);
-                }
-                catch (Exception ex)
-                {
-                    if (LoggingEnabled)
-                        logger?.LogError(ex, "Error al enviar IngestInitMessage");
-                    
-                    _errorStream.OnNext(ex);
-                }
-                
-                var receiver = Receive(initialAckId, TimeSpan.FromDays(23), cancellationToken);
-
-                try
-                {
-                    var allIngests = Task.WhenAll(sourceTasks);
-                    var whenany = Task.WhenAny(allIngests, receiver);
-                    await whenany;
-                }
-                finally
-                {
-                    registration.Dispose();
-                }
-
-                await SendMessageAsync(new IngestCompleteMessage(initialAckId, connectionId, sources.Keys.ToArray()), cancellationToken);
-
-                using BaseMessage? result = await receiver;
-
-                if (result == null) 
-                    throw new HubconRemoteException("Received an empty response.");
-
-                if (result.Error != null)
-                    return converter.DeserializeData<T>(result.Error);
-
-                var response = converter.DeserializeJsonElement<T>(new IngestResultMessage(result).Data) ?? throw new HubconRemoteException("Received an empty response.");
-
-                return response;
+                    await ingestSession.DisposeAsync();
+                }, cancellationToken);
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                if (LoggingEnabled)
-                    logger?.LogError(ex, "Error general en IngestMultiple");
 
-                _errorStream.OnNext(ex);
-
-                if (HubconContext.Current.IsWrapped)
-                    return default!;
-
-                throw new HubconGenericException(ex.Message, ex);
-            }
-            finally
-            {
-                if (!cts.IsCancellationRequested)
-                {
-                    var msg = new IngestCompleteMessage(initialAckId, connectionId, sources.Keys.ToArray());
-                    await SendMessageAsync(msg);
-                }
-
-                _ingests.TryRemove(initialAckId, out var removedIngest);
-                removedIngest.Item1?.TrySetCanceled();
-                removedIngest.Item2?.Cancel();
-            }
+            return ingestSession;
         }
         
         public Task Connect(CancellationToken cancellationToken = default)

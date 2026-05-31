@@ -45,7 +45,31 @@ namespace Hubcon.Shared.Core.Extensions
                 ThrowGeneric(message);
             }
         }
-        
+
+        /// <summary>
+        /// Throws an <see cref="HubconGenericException"/> if the value is true.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void If(bool value, string message = "Values are not equal.")
+        {
+            if (!EqualityComparer<bool>.Default.Equals(value, true))
+            {
+                ThrowGeneric(message);
+            }
+        }
+
+        /// <summary>
+        /// Throws an <see cref="HubconGenericException"/> if the value is true.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void IfNot(bool value, string message = "Values are not equal.")
+        {
+            if (!EqualityComparer<bool>.Default.Equals(value, false))
+            {
+                ThrowGeneric(message);
+            }
+        }
+
         [DoesNotReturn]
         private static void ThrowGeneric(string message) => throw new HubconGenericException(message);
     }

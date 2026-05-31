@@ -1,7 +1,19 @@
+using Hubcon.Shared.Abstractions.Interfaces;
+using Hubcon.Shared.Core.Websockets.Messages.Generic;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Hubcon.Client.Abstractions.Interfaces
 {
     public interface IMessageRouter
     {
-        
+        void BeginRequest(Guid id);
+        IIngestSession<T> CreateIngest<T>(Guid id, string connectionId, IOperationRequest request, IOperationOptions operationOptions);
+        IStreamSession<T> CreateStream<T>(Guid id, string connectionId, IOperationRequest request);
+        ValueTask DisposeAsync();
+        void EndRequest(Guid id);
+        Task<BaseMessage?> GetResponseAsync(Guid id, TimeSpan timeout, CancellationToken cancellationToken);
+        void Start();
     }
 }
