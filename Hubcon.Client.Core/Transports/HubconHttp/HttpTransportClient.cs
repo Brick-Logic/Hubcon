@@ -12,7 +12,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Hubcon.Client.Core.Transports
+namespace Hubcon.Client.Core.Transports.HubconHttp
 {
     /// <summary>
     /// Hubcon's HTTP transport client.

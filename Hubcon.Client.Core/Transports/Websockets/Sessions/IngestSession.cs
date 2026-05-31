@@ -19,9 +19,9 @@ using System.Threading;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 
-namespace Hubcon.Client.Core.Websockets
+namespace Hubcon.Client.Core.Transports.Websockets.Sessions
 {
-    public abstract class IngestSession : IIngestSession, IAsyncDisposable
+    internal abstract class IngestSession : IIngestSession, IAsyncDisposable
     {
         public abstract Guid Id { get; }
         public abstract ValueTask DisposeAsync();
@@ -32,7 +32,7 @@ namespace Hubcon.Client.Core.Websockets
     /// <summary>
     /// Represents an ingest session and manages all the resources needed.
     /// </summary>
-    public sealed class IngestSession<T> : IngestSession, IIngestSession<T>, IAsyncDisposable
+    internal sealed class IngestSession<T> : IngestSession, IIngestSession<T>, IAsyncDisposable
     {
         private volatile int _started;
         private volatile int _disposed;
@@ -42,7 +42,7 @@ namespace Hubcon.Client.Core.Websockets
         private readonly CancellationTokenSource _cts;
         private readonly IMessageSender _sender;
         private readonly IMessageReceiver _receiver;
-        private readonly IWebSocketClient _webSocketClient;
+        private readonly IHubconWebSocket _webSocketClient;
         private readonly string _connectionId;
         private readonly IOperationRequest _operationRequest;
         private readonly IClientOptions? _clientOptions;
@@ -68,7 +68,7 @@ namespace Hubcon.Client.Core.Websockets
         /// <param name="operationOptions"></param>
         /// <param name="onFinishedCallback"></param>
         public IngestSession(
-            IWebSocketClient webSocketClient,
+            IHubconWebSocket webSocketClient,
             string connectionId,
             TransportContext context,
             IOperationRequest operationRequest,

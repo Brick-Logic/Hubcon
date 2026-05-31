@@ -11,12 +11,12 @@ using Hubcon.Shared.Core.Websockets.Interfaces;
 using Hubcon.Shared.Core.Websockets.Messages.Cancellation;
 using Hubcon.Shared.Core.Websockets.Messages.Generic;
 
-namespace Hubcon.Client.Core.Websockets
+namespace Hubcon.Client.Core.Transports.Websockets.Sessions
 {
     /// <summary>
     /// Represents a stream session and manages all the resources needed.
     /// </summary>
-    public abstract class StreamSession : IStreamSession, IDisposable
+    internal abstract class StreamSession : IStreamSession, IDisposable
     {
         public abstract BaseMessage Payload { get; }
 
@@ -41,48 +41,9 @@ namespace Hubcon.Client.Core.Websockets
         /// <inheritdoc/>
         public abstract void Dispose();
     } 
-    
-    
-    // var tcs = new CancellationTokenSource();
-    //
-    // HeartbeatWatcher hw = null!;
-    //         
-    // var registration = cancellationToken.Register(async () =>
-    // {
-    //     if (remoteCancelEnabled && _webSocket.State == WebSocketState.Open)
-    //         await _sender.SendMessageAsync(new CancelMessage(request.Id, connectionId), cancellationToken);
-    //
-    //     tcs.Cancel();
-    // });
-    //
-    // hw = new HeartbeatWatcher(TimeSpan.Zero, async () =>
-    // {
-    //             
-    //             
-    //     if (_streams.TryRemove(request.Id, out var obs))
-    //     {
-    //         obs.Item1.OnCompleted();
-    //         if (!obs.Item2.IsCancellationRequested)
-    //         {
-    //             obs.Item2.Cancel();
-    //             obs.Item2.Dispose();
-    //         }
-    //         obs.Item4.Dispose();
-    //     }
-    // });
-    //
-    // var observable = new GenericObservable<T>(
-    //     null!,
-    //     request.Id,
-    //     converter.SerializeToElement(request),
-    //     RequestType.Stream,
-    //     converter,
-    //     async () => await hw.DisposeAsync(),
-    //     options.ReconnectStreams);
-
 
     /// <inheritdoc cref="StreamSession" />
-    public sealed class StreamSession<T> : StreamSession, IStreamSession<T>, IDisposable
+    internal sealed class StreamSession<T> : StreamSession, IStreamSession<T>, IDisposable
     {
         private readonly GenericObservable<T> _observable;
         private readonly CancellationTokenSource _cts;

@@ -1,4 +1,4 @@
-﻿using Hubcon.Client.Core.Websockets;
+﻿using Hubcon;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Core.Websockets.Events;
@@ -13,7 +13,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace Hubcon.Client.Core.Transports
+namespace Hubcon.Client.Core.Transports.Websockets
 {
     /// <summary>
     /// Hubcon's websocket transport client implementations.
@@ -56,7 +56,7 @@ namespace Hubcon.Client.Core.Transports
         /// <inheritdoc/>
         public override async ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
-            var response = await _client.IngestMultiple<JsonElement>(request, context.RemoteCancellationIsAllowed, context.ClientOptions, context.OperationOptions, cancellationToken);
+            var response = await _client.IngestMultiple<JsonElement>(request, context.RemoteCancellationIsAllowed, context.OperationOptions, cancellationToken);
             await context.HandleResponse<T>(response);
         }
 

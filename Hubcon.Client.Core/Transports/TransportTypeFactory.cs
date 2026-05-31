@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Hubcon.Client.Core.Transports.HubconHttp;
+using Hubcon.Client.Core.Transports.NonHubconHttp;
+using Hubcon.Client.Core.Transports.Websockets;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 

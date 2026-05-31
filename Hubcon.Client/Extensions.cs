@@ -1,5 +1,4 @@
-﻿using Hubcon.Client.Core.Exceptions;
-using Hubcon.Client.Core.Proxies;
+﻿using Hubcon.Client.Core.Proxies;
 using System;
 using System.Threading.Tasks;
 #pragma warning disable CS1591

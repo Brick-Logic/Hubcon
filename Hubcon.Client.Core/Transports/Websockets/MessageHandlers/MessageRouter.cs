@@ -1,4 +1,5 @@
 using Hubcon.Client.Abstractions.Interfaces;
+using Hubcon.Client.Core.Transports.Websockets.Sessions;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
@@ -21,7 +22,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace Hubcon.Client.Core.Websockets
+namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
 {
     /// <summary>
     /// Reads messages from the provided channel and routes them to the waiting request.
@@ -40,7 +41,7 @@ namespace Hubcon.Client.Core.Websockets
         /// </summary>
         public event EventHandler<PongMessage>? OnPongMessage;
 
-        private readonly IWebSocketClient _webSocketClient;
+        private readonly IHubconWebSocket _webSocketClient;
         private readonly Channel<TrimmedMemoryOwner> _receiveChannel;
         private readonly TaskCompletionSource<bool> _startSignal;
         private readonly TaskCompletionSource<bool> _messageRouterDisposed;
@@ -65,7 +66,7 @@ namespace Hubcon.Client.Core.Websockets
         /// <param name="webSocketClient"></param>
         /// <param name="receiveChannel"></param>
         /// <param name="context"></param>
-        public MessageRouter(IWebSocketClient webSocketClient, Channel<TrimmedMemoryOwner> receiveChannel, TransportContext context)
+        public MessageRouter(IHubconWebSocket webSocketClient, Channel<TrimmedMemoryOwner> receiveChannel, TransportContext context)
         {
             _webSocketClient = webSocketClient;
             _receiveChannel = receiveChannel;

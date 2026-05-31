@@ -14,7 +14,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace Hubcon.Client.Core.Websockets
+namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
 {
     /// <summary>
     /// Manages the messages received through the provided websocket connection.
@@ -52,7 +52,7 @@ namespace Hubcon.Client.Core.Websockets
         /// </summary>
         /// <param name="webSocketClient">The current websocket client.</param>
         /// <param name="context">The context of the transport.</param>
-        public MessageReceiver(IWebSocketClient webSocketClient, TransportContext context)
+        public MessageReceiver(IHubconWebSocket webSocketClient, TransportContext context)
         {
             _cts = new CancellationTokenSource();
             _logger = context.ProxyServiceProvider.GetService<ILogger<MessageReceiver>>();

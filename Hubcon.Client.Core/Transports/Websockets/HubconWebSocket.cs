@@ -13,6 +13,7 @@ using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Abstractions.Models;
 using Hubcon.Client.Core.Extensions;
 using Hubcon.Client.Core.Helpers;
+using Hubcon.Client.Core.Transports.Websockets.MessageHandlers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
@@ -30,12 +31,12 @@ using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Hubcon.Client.Core.Websockets
+namespace Hubcon.Client.Core.Transports.Websockets
 {
     /// <summary>
     /// Manages 
     /// </summary>
-    public sealed class HubconWebSocket : IHubconWebSocket
+    internal sealed class HubconWebSocket : IHubconWebSocket
     {
         private volatile bool _disposed = false;
 
@@ -56,17 +57,14 @@ namespace Hubcon.Client.Core.Websockets
         private readonly MessageSender _sender;
         private readonly MessageReceiver _receiver;
         private readonly string connectionId;
-        private readonly Uri _uri;
 
         /// <summary>
         /// Default constructor.
         /// </summary>
-        /// <param name="uri"></param>
         /// <param name="context"></param>
-        public HubconWebSocket(Uri uri, TransportContext context)
+        public HubconWebSocket(TransportContext context)
         {
             _cts = new CancellationTokenSource();
-            _uri = uri;
             _context = context;
             
             _webSocket = new ClientWebSocket();
@@ -198,9 +196,15 @@ namespace Hubcon.Client.Core.Websockets
             return ingestSession;
         }
         
-        public Task Connect(CancellationToken cancellationToken = default)
+        public async Task ConnectAsync(Uri uri, CancellationToken cancellationToken = default)
         {
-            return _webSocket.ConnectAsync(_uri, cancellationToken);
+            if(_webSocket.State == WebSocketState.Open)
+            {
+                _logger?.LogWarning("WebSocket is already connected.");
+                return;
+            }
+
+            await _webSocket.ConnectAsync(uri, cancellationToken);
         }
         
         public async ValueTask DisposeAsync()

@@ -13,7 +13,7 @@ using Hubcon.Shared.Core.Websockets.Messages.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Hubcon.Client.Core.Websockets
+namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
 {
     /// <summary>
     /// Manages the messages sent through the provided websocket connection.
@@ -43,7 +43,7 @@ namespace Hubcon.Client.Core.Websockets
         /// <param name="webSocketClient">The current websocket client.</param>
         /// <param name="context">The context of the transport.</param>
         /// <param name="connectionId">The current websocket connection id.</param>
-        public MessageSender(IWebSocketClient webSocketClient, TransportContext context, string connectionId)
+        public MessageSender(IHubconWebSocket webSocketClient, TransportContext context, string connectionId)
         {
             _cts = new CancellationTokenSource();
             _logger = context.ProxyServiceProvider.GetService<ILogger<MessageSender>>();

@@ -1,5 +1,4 @@
 ﻿using Hubcon.Client.Abstractions.Interfaces;
-using Hubcon.Client.Core.Exceptions;
 using Hubcon.Client.Core.Helpers;
 using Hubcon.Client.Core.Transports;
 using Hubcon.Shared.Abstractions.Attributes;
@@ -15,7 +14,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
