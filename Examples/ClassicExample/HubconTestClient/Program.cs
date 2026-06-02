@@ -122,7 +122,8 @@ internal class Program
 
         await TestLatency(scope, stats);
 
-        stats.PrintReport();
+        await TestRPS(scope);
+
         Console.ReadKey();
     }
 
@@ -145,7 +146,7 @@ internal class Program
     private static async Task TestLatency(IServiceScope scope, LatencyHistogram stats)
     {
         Task[] tasks;
-        var taskCount = 256;
+        var taskCount = 32;
         var totalSamples = 16000;
         Console.WriteLine("Setting up latency test...");
 
@@ -184,7 +185,26 @@ internal class Program
             Console.WriteLine(task.Exception?.ToString());
         }
 
+        stats.PrintReport();
         timer.Dispose();
+    }
+
+    private static async Task TestRPS(IServiceScope scope)
+    {
+        var taskCount = 256;
+
+        var tasks = Enumerable.Range(0, taskCount).Select(i => Task.Factory.StartNew(async () =>
+        {
+            var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+
+            while (true)
+            {
+                await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+            }
+        }, default, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap()).ToArray();
+
+
+        await Task.WhenAll(tasks);
     }
 
     private static async Task WarmUpClients(IServiceScope scope)
