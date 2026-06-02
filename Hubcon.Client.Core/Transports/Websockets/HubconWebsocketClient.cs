@@ -61,7 +61,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        private bool _disposed = false;
+        private readonly AtomicPass _disposedPass = new();
 
         private bool IsReady = false;
 
@@ -114,7 +114,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
             var message = new OperationInvokeMessage(Guid.NewGuid(), _webSocket!.ConnectionId, converter.SerializeToElement(request));
             var response = await _webSocket!.SendAndReceiveAsync(message, cancellationToken);
 
-            if(response.Type != MessageType.operation_response)
+            if(response?.Type != MessageType.operation_response)
                 throw new InvalidOperationException("Unexpected response type.");
 
             var operationResponse = new OperationResponseMessage(response);
@@ -222,7 +222,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
         public async ValueTask DisposeAsync()
         {
-            if (_disposed) return;
+            if (!_disposedPass.TryAcquirePass()) return;
 
             try
             {
@@ -234,6 +234,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
             finally
             {
                 _webSocket = null;
+                GC.SuppressFinalize(this);
             }
         }
 
