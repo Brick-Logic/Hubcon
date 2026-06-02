@@ -29,8 +29,9 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         private readonly TaskCompletionSource<bool> _sendLoopDisposed;
 
         private readonly Channel<ByteMessage> _sendChannel;
+        private readonly IHubconWebSocket webSocketClient;
         private readonly TransportContext _context;
-        private readonly string _connectionId;
+        private string connectionId => webSocketClient.ConnectionId;
         private readonly CancellationTokenSource _cts;
         private readonly ILogger<MessageSender>? _logger;
         private readonly Task _sendTask;
@@ -42,14 +43,13 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         /// </summary>
         /// <param name="webSocketClient">The current websocket client.</param>
         /// <param name="context">The context of the transport.</param>
-        /// <param name="connectionId">The current websocket connection id.</param>
-        public MessageSender(IHubconWebSocket webSocketClient, TransportContext context, string connectionId)
+        public MessageSender(IHubconWebSocket webSocketClient, TransportContext context)
         {
             _cts = new CancellationTokenSource();
             _logger = context.ProxyServiceProvider.GetService<ILogger<MessageSender>>();
+            this.webSocketClient = webSocketClient;
             _context = context;
             _webSocket = webSocketClient.WebSocket;
-            _connectionId = connectionId;
 
             _sendLoopDisposed = new TaskCompletionSource<bool>();
 
@@ -92,7 +92,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
             var bytes = buffer.ToArray();
             await pipe.Reader.CompleteAsync();
 
-            await _sendChannel.Writer.WriteAsync(new ByteMessage(bytes, _connectionId, cancellationToken), cancellationToken);
+            await _sendChannel.Writer.WriteAsync(new ByteMessage(bytes, connectionId, cancellationToken), cancellationToken);
         }
 
         private async Task SendLoopAsync()
@@ -109,7 +109,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
                         Throw.IfEqual(_disposed, 1, "Send loop: MessageSender has been disposed.");
                         Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, "Send loop: WebSocket is closed.");
 
-                        if (buffer.CancellationToken.IsCancellationRequested || buffer.ConnectionId != _connectionId)
+                        if (buffer.CancellationToken.IsCancellationRequested || buffer.ConnectionId != connectionId)
                             continue;
 
                         var segment = new ArraySegment<byte>(buffer.Bytes);

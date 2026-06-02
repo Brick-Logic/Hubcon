@@ -13,6 +13,7 @@ using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Abstractions.Models;
 using Hubcon.Client.Core.Extensions;
 using Hubcon.Client.Core.Helpers;
+using Hubcon.Client.Core.Transports.Websockets.Managers;
 using Hubcon.Client.Core.Transports.Websockets.MessageHandlers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
@@ -38,7 +39,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
     /// </summary>
     internal sealed class HubconWebSocket : IHubconWebSocket
     {
-        private volatile bool _disposed = false;
+        private readonly AtomicPass _disposedPass = new();
+        private readonly AtomicPass _connectionPass = new();
 
         private readonly CancellationTokenSource _cts;
         
@@ -56,7 +58,9 @@ namespace Hubcon.Client.Core.Transports.Websockets
         private readonly ClientWebSocket _webSocket;
         private readonly MessageSender _sender;
         private readonly MessageReceiver _receiver;
-        private readonly string connectionId;
+        private string connectionId = string.Empty;
+
+        private readonly bool _loggingEnabled;
 
         /// <summary>
         /// Default constructor.
@@ -74,10 +78,11 @@ namespace Hubcon.Client.Core.Transports.Websockets
             _clientOptions = context.ClientOptions;
             _serviceProvider = context.ProxyServiceProvider;
             _logger = context.ProxyServiceProvider.GetService<ILogger<HubconWebSocket>>();
-            connectionId = Guid.NewGuid().ToString();
+
+            _loggingEnabled = _options.LoggingEnabled;
 
             _receiver = new MessageReceiver(this, context);
-            _sender = new MessageSender(this, context, connectionId);
+            _sender = new MessageSender(this, context);
 
             _pongStream = new GenericObservable<PongMessage>(_converter);
             _errorStream = new GenericObservable<Exception>(_converter);
@@ -104,7 +109,10 @@ namespace Hubcon.Client.Core.Transports.Websockets
         /// <returns></returns>
         public async Task<BaseMessage?> SendAndReceiveAsync<TRequest>(TRequest message, CancellationToken cancellationToken = default) where TRequest : BaseMessage
         {
-            Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, "WebSocket is not open.");
+            cancellationToken.ThrowIfCancellationRequested();
+            Throw.If(_disposedPass.WasAcquired, "This object has been disposed.");
+            Throw.IfNot(_connectionPass.WasAcquired, "The connection has not been established.");
+            Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, $"WebSocket is not open. The WebSocket might be in a closed or faulted state and must be disposed. Current state: {_webSocket?.State}");
 
             try
             {
@@ -127,7 +135,11 @@ namespace Hubcon.Client.Core.Transports.Websockets
         /// <returns></returns>
         public async Task SendAsync<TRequest>(TRequest message, CancellationToken cancellationToken = default) where TRequest : BaseMessage
         {
-            Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, "WebSocket is not open.");
+            cancellationToken.ThrowIfCancellationRequested();
+            Throw.If(_disposedPass.WasAcquired, "This object has been disposed.");
+            Throw.IfNot(_connectionPass.WasAcquired, "The connection has not been established.");
+            Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, $"WebSocket is not open. The WebSocket might be in a closed or faulted state and must be disposed. Current state: {_webSocket?.State}");
+
             await _sender.SendMessageAsync(message, cancellationToken);
         }
 
@@ -141,7 +153,10 @@ namespace Hubcon.Client.Core.Transports.Websockets
         /// <returns></returns>
         public async Task<IStreamSession<T>> GetStreamSession<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
-            Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, "WebSocket is not open.");
+            cancellationToken.ThrowIfCancellationRequested();
+            Throw.If(_disposedPass.WasAcquired, "This object has been disposed.");
+            Throw.IfNot(_connectionPass.WasAcquired, "The connection has not been established.");
+            Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, $"WebSocket is not open. The WebSocket might be in a closed or faulted state and must be disposed. Current state: {_webSocket?.State}");
 
             var streamSession = _receiver.Router.CreateStream<T>(Guid.NewGuid(), connectionId, payload);
             var request = streamSession.Payload;
@@ -178,7 +193,10 @@ namespace Hubcon.Client.Core.Transports.Websockets
             IOperationOptions? operationOptions = null,
             CancellationToken cancellationToken = default)
         {
-            Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, "WebSocket is not open.");
+            cancellationToken.ThrowIfCancellationRequested();
+            Throw.If(_disposedPass.WasAcquired, "This object has been disposed.");
+            Throw.IfNot(_connectionPass.WasAcquired, "The connection has not been established.");
+            Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open, $"WebSocket is not open. The WebSocket might be in a closed or faulted state and must be disposed. Current state: {_webSocket?.State}");
 
             var ingestSession = _receiver.Router.CreateIngest<T>(Guid.NewGuid(), connectionId, operationRequest, operationOptions!);
 
@@ -198,21 +216,64 @@ namespace Hubcon.Client.Core.Transports.Websockets
         
         public async Task ConnectAsync(Uri uri, CancellationToken cancellationToken = default)
         {
-            if(_webSocket.State == WebSocketState.Open)
-            {
-                _logger?.LogWarning("WebSocket is already connected.");
-                return;
-            }
+            BaseMessage? connectionResponse = null;
+            ConnectionAckMessage? ackMessage = null;
 
-            await _webSocket.ConnectAsync(uri, cancellationToken);
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Throw.If(_disposedPass.WasAcquired, "This object has been disposed.");
+                Throw.If(_connectionPass.TryAcquirePass(), "The hubcon websocket can only be connected once.");
+
+                if (_loggingEnabled)
+                    _logger?.LogInformation("Trying to connect to the server...");
+
+                await _webSocket.ConnectAsync(uri, cancellationToken);
+
+                if (_loggingEnabled)
+                    _logger?.LogInformation("Connected, attempting handshake...");
+
+                var msgId = Guid.NewGuid();
+                connectionResponse = await SendAndReceiveAsync(new ConnectionInitMessage(msgId));
+
+                Throw.If(connectionResponse == null, "Handshake failed: No response received or the request timed out.");
+                Throw.If(connectionResponse?.Type != MessageType.connection_ack, $"Handshake failed: Expected '{nameof(MessageType.connection_ack)}' but received '{connectionResponse?.Type}'.");
+                Throw.If(connectionResponse?.Id != msgId, $"Handshake failed: Message ID mismatch. Expected '{msgId}' but received '{connectionResponse?.Id}'.");
+
+                ackMessage = new ConnectionAckMessage(connectionResponse!);
+
+                Throw.If(string.IsNullOrWhiteSpace(ackMessage.ConnectionId), "Handshake failed: Invalid connection ID received.");
+                Throw.If(!string.IsNullOrWhiteSpace(ackMessage.Error), $"Handshake returned an error: {ackMessage.Error}");
+
+                connectionId = ackMessage.ConnectionId;
+
+                if (_loggingEnabled)
+                    _logger?.LogInformation("Connection established.");
+
+                await _context.InterceptorManager.CallInterceptor(InterceptorType.OnConnected, _cts.Token);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                connectionResponse?.Dispose();
+                ackMessage?.Dispose();
+            }             
         }
         
         public async ValueTask DisposeAsync()
         {
-            if (_disposed) return;
+            if (!_disposedPass.TryAcquirePass()) return;
 
             await _sender.DisposeAsync();
             await _receiver.DisposeAsync();
+
+            _cts.Dispose();
+            _webSocket.Dispose();
+
+            GC.SuppressFinalize(this);
         }
     }
 }

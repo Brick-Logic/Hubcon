@@ -124,6 +124,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
             _cts.Dispose();
             _payload.Dispose();
             _onFinishedCallback?.Invoke();
+
             GC.SuppressFinalize(this);
         }
     }

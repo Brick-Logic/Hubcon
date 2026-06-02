@@ -2,6 +2,7 @@
 using Hubcon.Client.Abstractions.Models;
 using Hubcon.Client.Core.Extensions;
 using Hubcon.Client.Core.Helpers;
+using Hubcon.Client.Core.Transports.Websockets.Managers;
 using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets;
@@ -66,6 +67,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
         public bool IsConnected => IsReady && _webSocket?.State == WebSocketState.Open;
 
+        private IPingManager? _pingManager;
 
         public HubconWebSocketClient(Uri uri, TransportContext context, ILogger<HubconWebSocketClient>? logger = null)
         {
@@ -103,7 +105,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         { 
             await EnsureConnectedAsync();
             var message = new OperationCallMessage(Guid.NewGuid(), _webSocket!.ConnectionId, converter.SerializeToElement(request));
-            await _webSocket!.SendAsync(message, cancellationToken);
+            await _webSocket!.SendAndReceiveAsync(message, cancellationToken);
         }
 
         public async Task<T> InvokeAsync<T>(IOperationRequest request, bool remoteCancelEnabled, bool responseIsWrapped, CancellationToken cancellationToken = default)
@@ -148,6 +150,9 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
                         if(_webSocket != null)
                         {
+                            _pingManager?.Dispose();
+                            _pingManager = null;
+
                             await _webSocket.DisposeAsync();
                             _webSocket = null;
                         }
@@ -156,9 +161,6 @@ namespace Hubcon.Client.Core.Transports.Websockets
                         _uri = url;
 
                         _webSocket = new HubconWebSocket(context);
-
-                        if (LoggingEnabled)
-                            logger?.LogInformation("Intentando conectar...");
 
                         context.ClientOptions.WebSocketOptions?.Invoke(_webSocket.WebSocket.Options, serviceProvider);
 
@@ -169,41 +171,12 @@ namespace Hubcon.Client.Core.Transports.Websockets
                             uriBuilder.AddQueryParameter("access_token", token);
 
                         await context.InterceptorManager.CallInterceptor(InterceptorType.OnConnecting, _cts.Token);
+
                         await _webSocket.ConnectAsync(uriBuilder.Uri, _cts.Token);
 
-                        if (LoggingEnabled)
-                            logger?.LogInformation("Conectado, intentando handshake...");
+                        _pingManager = new PingManager(_webSocket, context);
+                        _pingManager.Start();
 
-                        var msgId = Guid.NewGuid();
-                        var connectionResponse = await _webSocket.SendAndReceiveAsync(new ConnectionInitMessage(msgId));
-
-                        if (connectionResponse == null || connectionResponse.GetType() != typeof(WebSocketReceiveResult))
-                        {
-                            await _webSocket.DisposeAsync();
-                            _webSocket = null; 
-                            throw new Exception("Handshake failed: No response received.");
-                        }
-
-                        if(connectionResponse.Type != MessageType.connection_ack)
-                        {
-                            await _webSocket.DisposeAsync();
-                            _webSocket = null;
-                            throw new Exception($"Handshake failed: Expected '{nameof(MessageType.connection_ack)}' but received '{connectionResponse.Type}'.");
-                        }                  
-
-                        if (connectionResponse.Id != msgId)
-                        {
-                            await _webSocket.DisposeAsync();
-                            _webSocket = null;
-                            throw new Exception($"Handshake failed: Message ID mismatch. Expected '{msgId}' but received '{connectionResponse.Id}'.");
-                        }
-
-                        var ackMessage = new ConnectionAckMessage(connectionResponse);
-                        
-                        if (LoggingEnabled)
-                            logger?.LogInformation("Connection established.");                  
-
-                        await context.InterceptorManager.CallInterceptor(InterceptorType.OnConnected, _cts.Token);
                         return;
                     }
                     catch (Exception ex)
@@ -218,6 +191,9 @@ namespace Hubcon.Client.Core.Transports.Websockets
                             await _webSocket.DisposeAsync();
                             _webSocket = null;
                         }
+
+                        _pingManager?.Dispose();
+                        _pingManager = null;
 
                         int delay = Math.Min(1 * ++attempt, 30);
 
