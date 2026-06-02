@@ -57,7 +57,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         public override async ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             var response = await _client.IngestMultiple<JsonElement>(request, context.RemoteCancellationIsAllowed, context.OperationOptions, cancellationToken);
-            await context.HandleResponse<T>(response);
+            await context.HandleResponse<T>(response!);
         }
 
         /// <inheritdoc/>

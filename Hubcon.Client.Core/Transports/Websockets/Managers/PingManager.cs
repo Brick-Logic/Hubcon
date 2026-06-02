@@ -62,7 +62,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.Managers
 
                 if (webSocket?.State == WebSocketState.Open)
                 {
-                    await webSocket.SendAsync(new PingMessage(Guid.NewGuid(), webSocket.ConnectionId), _cts.Token);
+                    await webSocket.SendAsync(new PingMessage(Guid.NewGuid(), webSocket.ConnectionId), false, _cts.Token);
 
                     if (loggingEnabled)
                         logger?.LogInformation("Ping sent.");

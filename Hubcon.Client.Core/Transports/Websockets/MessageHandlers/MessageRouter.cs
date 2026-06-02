@@ -35,7 +35,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         /// An event that's raised when the message router enters in an error state.
         /// </summary>
         public event EventHandler<Exception>? OnError;
-        
+
         /// <summary>
         /// An event that's raised when the message router receives a pong message.
         /// </summary>
@@ -48,12 +48,12 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
 
         private readonly ConcurrentDictionary<Guid, TaskCompletionSource<BaseMessage>> _requestsTcs =
             new ConcurrentDictionary<Guid, TaskCompletionSource<BaseMessage>>();
-        
+
         private readonly ConcurrentDictionary<Guid, StreamSession> _streams = new ConcurrentDictionary<Guid, StreamSession>();
         private readonly ConcurrentDictionary<Guid, IngestSession> _ingests = new ConcurrentDictionary<Guid, IngestSession>();
-        
+
         private ClientWebSocket? _webSocket;
-        
+
         private readonly Task _routingTask;
         private readonly CancellationTokenSource _cts;
         private readonly TransportContext _context;
@@ -77,7 +77,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
             _context = context;
             _converter = context.Converter;
             _logger = context.ProxyServiceProvider.GetService<ILogger<MessageRouter>>();
-            
+
             _routingTask = Task.Factory.StartNew(
                 RoutingLoopAsync,
                 _cts.Token,
@@ -90,9 +90,9 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         /// </summary>
         public void Start()
         {
-            _startSignal.TrySetResult(true);   
+            _startSignal.TrySetResult(true);
         }
-        
+
         /// <summary>
         /// Starts a request with the given ID.
         /// </summary>
@@ -109,7 +109,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         {
             _requestsTcs.TryRemove(id, out _);
         }
-        
+
         /// <summary>
         /// Waits for a response from the
         /// </summary>
@@ -119,28 +119,37 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         /// <returns></returns>
         public async Task<BaseMessage?> GetResponseAsync(Guid id, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            if(_requestsTcs.TryGetValue(id, out var value))
+            if (_requestsTcs.TryGetValue(id, out var value))
             {
                 return await TimeoutHelper.WaitWithTimeoutAsync(value.Task, timeout, cancellationToken);
             }
 
             return null;
         }
-        
-        public IStreamSession<T> CreateStream<T>(Guid id, string connectionId, IOperationRequest request)
+
+        public IStreamSession<T> CreateStream<T>(Guid id, string connectionId, IOperationRequest request, Action? onFinishedCallback = null)
         {
             var payload = new StreamInitMessage(id, connectionId, _converter.SerializeToElement(request));
-            return (_streams.GetOrAdd(payload.Id, _ => new StreamSession<T>(payload, _context, () => _streams.TryRemove(payload.Id, out var _))) as StreamSession<T>)!;
+            return (_streams.GetOrAdd(payload.Id, _ => new StreamSession<T>(payload, _context, () =>
+            {
+                _streams.TryRemove(payload.Id, out var _);
+                onFinishedCallback?.Invoke();
+            })) as StreamSession<T>)!;
         }
 
         public IIngestSession<T> CreateIngest<T>(
-            Guid id, 
-            string connectionId, 
-            IOperationRequest request, 
-            IOperationOptions operationOptions)
+            Guid id,
+            string connectionId,
+            IOperationRequest request,
+            IOperationOptions operationOptions,
+            Action? onFinishedCallback = null)
         {
             var payload = new StreamInitMessage(id, connectionId, _converter.SerializeToElement(request));
-            return (_ingests.GetOrAdd(payload.Id, _ => new IngestSession<T>(_webSocketClient, connectionId, _context, request, operationOptions, () => _ingests.TryRemove(payload.Id, out var _))) as IngestSession<T>)!;
+            return (_ingests.GetOrAdd(payload.Id, _ => new IngestSession<T>(_webSocketClient, connectionId, _context, request, operationOptions, () =>
+            {
+                _ingests.TryRemove(payload.Id, out var _);
+                onFinishedCallback?.Invoke();
+            })) as IngestSession<T>)!;
         }
 
         private async Task RoutingLoopAsync()
@@ -150,7 +159,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
                 _messageRouterDisposed.TrySetResult(true);
                 return;
             }
-            
+
             try
             {
                 while (await _receiveChannel.Reader.WaitToReadAsync())
@@ -164,6 +173,12 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
 
                             switch (message.Type)
                             {
+                                case MessageType.connection_ack:
+                                    if (_requestsTcs.TryGetValue(message.Id, out var ackTcs))
+                                    {
+                                        ackTcs.TrySetResult(message);
+                                    }
+                                    break;
                                 case MessageType.pong:
                                     if (!_context.ClientOptions.WebsocketRequiresPong)
                                         break;
@@ -277,11 +292,11 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
             {
                 if (_context.ClientOptions.LoggingEnabled)
                     _logger?.LogError("Message router finished.");
-                
+
                 _messageRouterDisposed.TrySetResult(true);
             }
         }
-        
+
         /// <summary>
         /// Disposes this object and its resources.
         /// </summary>
@@ -303,17 +318,17 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
                 request.Value.TrySetCanceled();
 
             _requestsTcs.Clear();
-            
+
             foreach (var stream in _streams.Values)
                 stream.Dispose();
 
             _streams.Clear();
-            
+
             foreach (var ingest in _ingests.Values)
-                await ingest.DisposeAsync();
+                ingest.Dispose();
 
             _ingests.Clear();
-            
+
             GC.SuppressFinalize(this);
         }
     }

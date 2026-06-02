@@ -52,7 +52,7 @@ namespace Hubcon.Shared.Core.Extensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void If(bool value, string message = "Values are not equal.")
         {
-            if (!EqualityComparer<bool>.Default.Equals(value, true))
+            if (EqualityComparer<bool>.Default.Equals(value, true))
             {
                 ThrowGeneric(message);
             }
@@ -64,7 +64,7 @@ namespace Hubcon.Shared.Core.Extensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void IfNot(bool value, string message = "Values are not equal.")
         {
-            if (!EqualityComparer<bool>.Default.Equals(value, false))
+            if (EqualityComparer<bool>.Default.Equals(value, false))
             {
                 ThrowGeneric(message);
             }

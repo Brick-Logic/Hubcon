@@ -21,18 +21,19 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Client.Core.Transports.Websockets.Sessions
 {
-    internal abstract class IngestSession : IIngestSession, IAsyncDisposable
+    internal abstract class IngestSession : IIngestSession
     {
         public abstract Guid Id { get; }
-        public abstract ValueTask DisposeAsync();
         public abstract void AddCancellation(Action callback, CancellationToken cancellationToken);
+
+        public abstract void Dispose();
         public abstract void TryComplete(IngestResultMessage ingestResultMessage);
     }
 
     /// <summary>
     /// Represents an ingest session and manages all the resources needed.
     /// </summary>
-    internal sealed class IngestSession<T> : IngestSession, IIngestSession<T>, IAsyncDisposable
+    internal sealed class IngestSession<T> : IngestSession, IIngestSession<T>
     {
         private volatile int _started;
         private volatile int _disposed;
@@ -117,6 +118,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
             Throw.If(Interlocked.CompareExchange(ref _started, 1, 0) == 1, "'StartAsync' method from 'IngestSession' class can only be used once.");
 
             using var registration = cancellationToken.Register(onCancelCallback);
+            Task<BaseMessage?>? receiver = null;
 
             try
             {
@@ -205,7 +207,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
 
                 try
                 {
-                    var ack = await _webSocketClient.SendAndReceiveAsync(ingestRequest, cancellationToken);
+                    var ack = await _webSocketClient.SendAndReceiveAsync(ingestRequest, false, cancellationToken);
 
                     if (ack?.Error != null)
                     {
@@ -221,7 +223,8 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
                         _logger?.LogError(ex, "Error al enviar IngestInitMessage");
                 }
 
-                var receiver = _receiver.Router.GetResponseAsync(_initialAckId, TimeSpan.FromDays(23), cancellationToken);
+                _receiver.Router.BeginRequest(_initialAckId);
+                receiver = _receiver.Router.GetResponseAsync(_initialAckId, TimeSpan.FromDays(23), cancellationToken);
 
                 try
                 {
@@ -236,7 +239,9 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
 
                 await _sender.SendMessageAsync(new IngestCompleteMessage(_initialAckId, _connectionId, _sources.Keys.ToArray()), cancellationToken);
 
-                using BaseMessage? result = await receiver ?? throw new HubconRemoteException("Received an empty response.");
+                using BaseMessage? result = await receiver 
+                    ?? await _receiver.Router.GetResponseAsync(_initialAckId, _clientOptions!.WebsocketTimeout, _cts.Token) 
+                    ?? throw new HubconRemoteException("Received an empty response.");
 
                 if (result.Error != null)
                     return _converter.DeserializeData<T>(result.Error);
@@ -268,6 +273,8 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
                 }
 
                 _onFinishedCallback?.Invoke();
+
+                _receiver.Router.EndRequest(_initialAckId);
             }
         }
 
@@ -290,7 +297,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
         }
 
         /// <inheritdoc/>
-        public override async ValueTask DisposeAsync()
+        public override void Dispose()
         {
             if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
             {

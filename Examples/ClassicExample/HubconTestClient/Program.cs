@@ -31,7 +31,7 @@ internal class Program
 
     static async Task Main()
     {
-        Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "false");
+        Environment.SetEnvironmentVariable("HUBCON_CLIENT_CACHE_ENABLED", "true");
 
         Console.WriteLine(
             $"¿Es Native AOT?: {System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported == false}");
@@ -41,7 +41,7 @@ internal class Program
         long coreMask = 0;
 
         int minCore = 0;
-        int? maxCore = 3;
+        int? maxCore = 0;
 
         int cores = maxCore ?? Environment.ProcessorCount - 1;
 
@@ -111,206 +111,24 @@ internal class Program
         await TestSseStreaming(client, logger);
         await Task.Delay(100);
 
-
-        int clientCount = 0;
-        //_sw = Stopwatch.StartNew();
-        //var ts = TimeSpan.FromSeconds(1);
-        //var worker = new System.Timers.Timer();
-        //worker.Interval = 1000;
-        //worker.Elapsed += (sender, eventArgs) =>
-        //{
-        //    var avgRequestsPerSec = _finishedRequestsCount - _lastRequests;
-
-        //    double avgLatency = 0;
-        //    double p50 = 0, p95 = 0, p99 = 0;
-
-        //    var latenciesSnapshot = Latencies.ToArray();
-        //    Latencies.Clear();
-
-        //    if (latenciesSnapshot.Length > 0)
-        //    {
-        //        Array.Sort(latenciesSnapshot);
-        //        avgLatency = latenciesSnapshot.Average();
-
-        //        p50 = Percentile(latenciesSnapshot, 50);
-        //        p95 = Percentile(latenciesSnapshot, 95);
-        //        p99 = Percentile(latenciesSnapshot, 99);
-        //    }
-
-        //    _maxReqs = Math.Max(_maxReqs, avgRequestsPerSec);
-
-        //    logger.LogInformation($" Client count: {clientCount} | Requests: {_finishedRequestsCount} | Avg requests/s: {avgRequestsPerSec} | Max req/s: {_maxReqs} | " +
-        //                          $"p50 latency(ms): {p50:F2} | p95 latency(ms): {p95:F2} | p99 latency(ms): {p99:F2} | Avg latency(ms): {avgLatency:F2}");
-
-        //    var allocated = GC.GetTotalMemory(forceFullCollection: false);
-        //    logger.LogInformation($"Heap Size: {allocated / 1024.0 / 1024.0:N2} MB - Time: {_sw.Elapsed}");
-
-        //    _lastRequests = _finishedRequestsCount;
-        //    _sw.Restart();
-        //};
-        //worker.Start();
-
         var options = new ParallelOptions
         {
             MaxDegreeOfParallelism = 1000
         };
 
-        int rps = 9999999;
+        await WarmUpClients(scope);
 
-        //await Parallel.ForEachAsync(Enumerable.Range(0, int.MaxValue), options, async (i, ct) =>
-        //{
-        //TokenBucketRateLimiter tokenBucketRateLimiter = new TokenBucketRateLimiter(
-        //    {
-        //        QueueLimit = 1,
-        //        AutoReplenishment = true,
-        //        ReplenishmentPeriod = TimeSpan.FromSeconds(1),
-        //        TokenLimit = rps,
-        //        TokensPerPeriod = rps,
-        //    });
-
-        //    try
-        //    {
-        //        var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-        //        Interlocked.Increment(ref clientCount);
-        //        //await foreach(var item in client.GetMessages2())
-        //        while (true)
-        //        {
-        //            // var swReq = Stopwatch.StartNew();
-        //            //await tokenBucketRateLimiter.AcquireAsync();
-        //            //await client.IngestMessages(GetMessages2(), default);
-        //            //var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass(), ct);
-        //            //await paralellClient.Execute(x => x.ShowTextOnServer());
-
-        //            var item = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), ct));
-        //            //Interlocked.Increment(ref _finishedRequestsCount);
-        //        }
-        //    }
-        //    finally
-        //    {
-        //        Interlocked.Decrement(ref clientCount);
-        //    }
-        //});
-
-        //Console.ReadKey();
-
-        //var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-
-        //while (true)
-        //{
-        //    if (paralellClient.TryGetAuthenticationManager(out var authenticationManager))
-        //    {
-        //        logger.LogInformation("Loggeando...");
-        //        var result = await authenticationManager.LoginAsync("usuario", "");
-        //        logger.LogInformation("Login: {IsSuccess}", result.IsSuccess);
-        //        var request = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass()));
-        //        logger.LogInformation("Request: {Data}", request.Data);
-        //        await Task.Delay(1000);
-        //        await authenticationManager.LogoutAsync();
-        //        logger.LogInformation("Logged out.");
-        //    }
-
-        //    await Task.Delay(2000);
-        //}
-
-        //Console.ReadKey();
-
-        //int j = 0;
-        //while (true)
-        //{
-        //    j++;
-        //    // Un pequeño respiro cada N conexiones para no aturdir al SO
-        //    if (j % 1000 == 0) Console.ReadKey();
-
-        //    var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-        //    Interlocked.Increment(ref clientCount);
-
-        //    // var swReq = Stopwatch.StartNew();
-        //    try
-        //    {
-        //        //await client.IngestMessages(GetMessages2(), default);
-        //        var item = await paralellClient.GetTemperatureFromServerWithInput(new TestInputClass());
-        //        Interlocked.Increment(ref _finishedRequestsCount);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Interlocked.Increment(ref _errors);
-        //    }
-        //    finally
-        //    {
-        //        // swReq.Stop();
-        //        // Latencies.Add(swReq.Elapsed.TotalMilliseconds);
-        //        //Interlocked.Decrement(ref clientCount);
-        //    }
-        //}
-
-        // int maxDegreeOfParallelism = options.MaxDegreeOfParallelism;
-        // var tasks = new List<Task>();
-        //
-        // for (int i = 0; i < maxDegreeOfParallelism; i++)
-        // {
-        //     // Lanzamos cada worker como una Task independiente
-        //     tasks.Add(Task.Run(async () =>
-        //     {
-        //         // Importante: Resolvemos el contrato dentro de la Task si el scope lo permite
-        //         var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-        //         Interlocked.Increment(ref clientCount);
-        //
-        //         while (true)
-        //         {
-        //            await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
-        //             // Interlocked.Increment(ref _finishedRequestsCount);
-        //         }
-        //     }, default));
-        // }
-        //
-        // // Esperamos a que todas las tareas terminen (esto ocurrirá cuando se cancele el ct)
-        // await Task.WhenAll(tasks);
-        
-        // 1. Instancia global
         var stats = new LatencyHistogram();
 
-        Console.WriteLine("Warming up clients...");
-        // 2. En el loop del cliente (muestreo de 1 cada 100 para no saturar)
-        var testTasks = Enumerable.Range(0, 2).Select(i => Task.Run(async () => {
-            int counter = 0;
-            await Task.Delay(i * 1000);
-            int testCount = 50000;
-            var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-            await paralellClient.Connect<WebSocketTransport>();
+        await TestLatency(scope, stats);
 
-            while (counter <= testCount)
-            {
-                var response = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
-                if(response.Success) counter++;
-            }
-        })).ToArray();
+        stats.PrintReport();
+        Console.ReadKey();
+    }
 
-        await Task.WhenAll(testTasks);
-
-        var taskCount = 32;
-        var totalSamples = 16000;
-        bool shouldStart = false;
-        Console.WriteLine("Excuting latency test...");
-
-        var tasks = Enumerable.Range(0, taskCount).Select(i => Task.Factory.StartNew(async () => {
-            int counter = 0;
-            var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
-            
-            await Task.Delay(i * 100);
-            
-            while (Interlocked.Read(ref stats.totalSamples) < totalSamples) 
-            {
-                long start = 0;
-                bool shouldMeasure = (counter++ % 100 == 0);
-
-                if (shouldMeasure) start = Stopwatch.GetTimestamp();
-
-                await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
-
-                if (shouldMeasure) stats.Record(start);
-            }
-        }, default, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap()).ToArray();
-
+    private static async Task<bool> Benchmark(Task[] tasks)
+    {
+        bool shouldStart;
         Console.WriteLine("Esperando entrada para el test...");
         Console.ReadKey();
         shouldStart = true;
@@ -320,9 +138,75 @@ internal class Program
         {
             Console.WriteLine(task.Exception?.ToString());
         }
-        
-        stats.PrintReport();
-        Console.ReadKey();
+
+        return shouldStart;
+    }
+
+    private static async Task TestLatency(IServiceScope scope, LatencyHistogram stats)
+    {
+        Task[] tasks;
+        var taskCount = 256;
+        var totalSamples = 16000;
+        Console.WriteLine("Setting up latency test...");
+
+        tasks = Enumerable.Range(0, taskCount).Select(i => Task.Factory.StartNew(async () =>
+        {
+            int counter = 0;
+            var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+
+
+            while (Interlocked.Read(ref stats.totalSamples) < totalSamples)
+            {
+                long start = 0;
+                bool shouldMeasure = (counter++ % 100 == 0);
+
+                if (shouldMeasure)
+                {
+                    start = Stopwatch.GetTimestamp();
+                }
+                await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+
+                if (shouldMeasure) stats.Record(start);
+            }
+        }, default, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap()).ToArray();
+     
+        using System.Timers.Timer timer = new System.Timers.Timer(500);
+        timer.Elapsed += (sender, e) =>
+        {
+            Console.WriteLine($"Target samples: {totalSamples} | Collected samples: {Interlocked.Read(ref stats.totalSamples)}");
+        };
+        timer.Start();
+
+        await Task.WhenAll(tasks);
+
+        foreach (var task in tasks)
+        {
+            Console.WriteLine(task.Exception?.ToString());
+        }
+
+        timer.Dispose();
+    }
+
+    private static async Task WarmUpClients(IServiceScope scope)
+    {
+        Console.WriteLine("Warming up clients...");
+
+        var testTasks = Enumerable.Range(0, 2).Select(i => Task.Run(async () =>
+        {
+            int counter = 0;
+            await Task.Delay(i * 1000);
+            int testCount = 50000;
+            var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
+            await paralellClient.Connect<WebSocketTransport>();
+
+            while (counter <= testCount)
+            {
+                var response = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+                if (response.Success) counter++;
+            }
+        })).ToArray();
+
+        await Task.WhenAll(testTasks);
     }
 
     private static async Task TestHubconResponse(ISecondTestContract client2, ILogger<IUserContract> logger)
@@ -409,6 +293,7 @@ internal class Program
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
 
         var result = await client.Execute(x => x.GetTemperatureFromServerCancelable(cts.Token));
+
         if (result.Failure)
         {
             logger.LogInformation($"Cancelación remota exitosa. Resultado: {result.Error}");

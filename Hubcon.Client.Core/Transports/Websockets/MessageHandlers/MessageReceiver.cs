@@ -91,6 +91,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         public void Start()
         {
             _startSignal.TrySetResult(true);
+            _router.Start();
         }
 
         /// <summary>
@@ -217,6 +218,8 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
             _receiveTask.Dispose();
             
             _webSocket = null;
+
+            await _router.DisposeAsync();
             
             GC.SuppressFinalize(this);
         }

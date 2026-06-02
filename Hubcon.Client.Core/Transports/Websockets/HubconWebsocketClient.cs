@@ -83,44 +83,63 @@ namespace Hubcon.Client.Core.Transports.Websockets
         {
             await EnsureConnectedAsync();
 
-            var streamSession = await _webSocket!.GetStreamSession<T>(request, remoteCancelEnabled, cancellationToken);
+            using var localCts = new CancellationTokenSource();
+            using var registration1 = cancellationToken.Register(() => localCts.Cancel());
+            using var registration2 = _cts.Token.Register(() => localCts.Cancel());
+
+            var streamSession = await _webSocket!.GetStreamSession<T>(request, remoteCancelEnabled, localCts.Token);
+
             return streamSession.GetObservable();
         }
 
 
-        public async Task<T?> IngestMultiple<T>(
+        public async Task<IHubconResponse<T>?> IngestMultiple<T>(
             IOperationRequest operationRequest,
             bool remoteCancelEnabled,
             IOperationOptions? operationOptions = null,
             CancellationToken cancellationToken = default)
         {
             await EnsureConnectedAsync();
-            
-            var ingestSession = await _webSocket!.GetIngestSession<HubconResponse<T>>(operationRequest, remoteCancelEnabled, operationOptions, cancellationToken);
-            var response = await ingestSession.StartAsync(cancellationToken);
-            return response!.Data;
+
+            var localCts = new CancellationTokenSource();
+            var registration1 = cancellationToken.Register(() => localCts.Cancel());
+            var registration2 = _cts.Token.Register(() => localCts.Cancel());
+
+            using var ingestSession = await _webSocket!.GetIngestSession<HubconResponse<T>>(operationRequest, remoteCancelEnabled, operationOptions, cancellationToken);
+            var response = await ingestSession.StartAsync(localCts.Token);
+            return response;
         }
 
         public async Task SendAsync(IOperationRequest request, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
-        { 
+        {
             await EnsureConnectedAsync();
-            var message = new OperationCallMessage(Guid.NewGuid(), _webSocket!.ConnectionId, converter.SerializeToElement(request));
-            await _webSocket!.SendAndReceiveAsync(message, cancellationToken);
+
+            using var localCts = new CancellationTokenSource();
+            using var registration1 = cancellationToken.Register(() => localCts.Cancel());
+            using var registration2 = _cts.Token.Register(() => localCts.Cancel());
+
+            using var message = new OperationCallMessage(Guid.NewGuid(), _webSocket!.ConnectionId, converter.SerializeToElement(request));
+            await _webSocket!.SendAndReceiveAsync(message, remoteCancelEnabled, localCts.Token);
         }
 
         public async Task<T> InvokeAsync<T>(IOperationRequest request, bool remoteCancelEnabled, bool responseIsWrapped, CancellationToken cancellationToken = default)
         {
             await EnsureConnectedAsync();
-            var message = new OperationInvokeMessage(Guid.NewGuid(), _webSocket!.ConnectionId, converter.SerializeToElement(request));
-            var response = await _webSocket!.SendAndReceiveAsync(message, cancellationToken);
 
-            if(response?.Type != MessageType.operation_response)
+            using var localCts = new CancellationTokenSource();
+            using var registration1 = cancellationToken.Register(() => localCts.Cancel());
+            using var registration2 = _cts.Token.Register(() => localCts.Cancel());
+
+            using var message = new OperationInvokeMessage(Guid.NewGuid(), _webSocket!.ConnectionId, converter.SerializeToElement(request));
+            using var response = await _webSocket!.SendAndReceiveAsync(message, remoteCancelEnabled, localCts.Token);
+
+            if (response?.Type != MessageType.operation_response)
                 throw new InvalidOperationException("Unexpected response type.");
 
-            var operationResponse = new OperationResponseMessage(response);
+            using var operationResponse = new OperationResponseMessage(response);
 
-            return operationResponse != null 
-                ? converter.DeserializeJsonElement<T>(operationResponse.Result)! 
+            return operationResponse != null
+                ? converter.DeserializeJsonElement<T>(operationResponse.Result)!
                 : throw new InvalidCastException("Failed to deserialize response.");
         }
 
@@ -148,7 +167,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
                         IsReady = false;
                         CloseSent = false;
 
-                        if(_webSocket != null)
+                        if (_webSocket != null)
                         {
                             _pingManager?.Dispose();
                             _pingManager = null;
@@ -186,7 +205,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
                         if (LoggingEnabled)
                             logger?.LogError(ex.Message);
 
-                        if(_webSocket != null)
+                        if (_webSocket != null)
                         {
                             await _webSocket.DisposeAsync();
                             _webSocket = null;
@@ -213,7 +232,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
         public async ValueTask Disconnect()
         {
-            if(_webSocket != null)
+            if (_webSocket != null)
             {
                 await _webSocket.DisposeAsync();
                 _webSocket = null;
@@ -226,7 +245,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
             try
             {
-                if(_webSocket != null)
+                if (_webSocket != null)
                 {
                     await _webSocket.DisposeAsync();
                 }
@@ -243,8 +262,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
             await EnsureConnectedAsync();
 
             var request = new TokenUpdateMessage(Guid.NewGuid(), _webSocket!.ConnectionId, token);
-            
-            using var response = await _webSocket!.SendAndReceiveAsync(request, CancellationToken.None);
+
+            using var response = await _webSocket!.SendAndReceiveAsync(request, false, CancellationToken.None);
 
             if (response == null)
                 return HubconResponse.Fail<bool>("There was an unknown error or the request timed out.");

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Hubcon.Client.Abstractions.Interfaces
 {
-    public interface IIngestSession : IAsyncDisposable
+    public interface IIngestSession : IDisposable
     {
         Guid Id { get; }
 
