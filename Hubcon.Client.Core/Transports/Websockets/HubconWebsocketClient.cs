@@ -83,10 +83,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
         {
             await EnsureConnectedAsync();
 
-            using var localCts = new CancellationTokenSource();
-            using var registration1 = cancellationToken.Register(() => localCts.Cancel());
-            using var registration2 = _cts.Token.Register(() => localCts.Cancel());
-
+            using var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
+            
             var streamSession = await _webSocket!.GetStreamSession<T>(request, remoteCancelEnabled, localCts.Token);
 
             return streamSession.GetObservable();
@@ -101,9 +99,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         {
             await EnsureConnectedAsync();
 
-            var localCts = new CancellationTokenSource();
-            var registration1 = cancellationToken.Register(() => localCts.Cancel());
-            var registration2 = _cts.Token.Register(() => localCts.Cancel());
+            var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
 
             using var ingestSession = await _webSocket!.GetIngestSession<HubconResponse<T>>(operationRequest, remoteCancelEnabled, operationOptions, cancellationToken);
             var response = await ingestSession.StartAsync(localCts.Token);
@@ -114,10 +110,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
         {
             await EnsureConnectedAsync();
 
-            using var localCts = new CancellationTokenSource();
-            using var registration1 = cancellationToken.Register(() => localCts.Cancel());
-            using var registration2 = _cts.Token.Register(() => localCts.Cancel());
-
+            using var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
+            
             using var message = new OperationCallMessage(Guid.NewGuid(), _webSocket!.ConnectionId, converter.SerializeToElement(request));
             await _webSocket!.SendAndReceiveAsync(message, remoteCancelEnabled, localCts.Token);
         }
@@ -126,9 +120,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         {
             await EnsureConnectedAsync();
 
-            using var localCts = new CancellationTokenSource();
-            using var registration1 = cancellationToken.Register(() => localCts.Cancel());
-            using var registration2 = _cts.Token.Register(() => localCts.Cancel());
+            var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
 
             using var message = new OperationInvokeMessage(Guid.NewGuid(), _webSocket!.ConnectionId, converter.SerializeToElement(request));
             using var response = await _webSocket!.SendAndReceiveAsync(message, remoteCancelEnabled, localCts.Token);
