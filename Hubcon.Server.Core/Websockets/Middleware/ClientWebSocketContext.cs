@@ -145,6 +145,8 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        await _cts.CancelAsync();
+        
         if (Watcher != null)
         {
             try
@@ -241,5 +243,6 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
         }
 
         WebSocket?.Dispose();
+        _cts.Dispose();
     }
 }
