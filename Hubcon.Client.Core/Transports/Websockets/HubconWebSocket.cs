@@ -174,7 +174,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         }
 
         /// <inheritdoc/>
-        public async Task<IIngestSession<T>> GetIngestSession<T>(
+        public IIngestSession<T> GetIngestSession<T>(
             IOperationRequest operationRequest,
             bool remoteCancelEnabled,
             IOperationOptions? operationOptions = null,

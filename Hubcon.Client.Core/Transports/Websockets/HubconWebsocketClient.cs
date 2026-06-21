@@ -34,6 +34,8 @@ using System.Threading.Channels;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 using System.Timers;
+using Hubcon.Shared.Core.Extensions;
+using Timer = System.Timers.Timer;
 
 #pragma warning disable CS1591
 
@@ -43,16 +45,12 @@ namespace Hubcon.Client.Core.Transports.Websockets
     {
         private readonly TransportContext context;
         private readonly IDynamicConverter converter;
-        private readonly IClientOptions options;
         private readonly IServiceProvider serviceProvider;
         private readonly ILogger<HubconWebSocketClient>? logger;
         private IHubconWebSocket? _webSocket;
-
-        public bool CloseSent = false;
-
-        public bool LoggingEnabled { get; set; } = true;
+        
+        private bool LoggingEnabled { get; } = true;
         private Uri _uri;
-        public void SetUri(Uri uri) => _uri = uri;
 
         public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; set; }
         public Func<string?>? AuthorizationTokenProvider { get; set; }
@@ -63,20 +61,44 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
         private readonly AtomicPass _disposedPass = new();
 
-        private bool IsReady = false;
+        private bool isReady;
 
-        public bool IsConnected => IsReady && _webSocket?.State == WebSocketState.Open;
+        public bool IsConnected => isReady && _webSocket?.State == WebSocketState.Open;
 
         private IPingManager? _pingManager;
+
+        private readonly Timer? _reconnectTimer;
+        private readonly SemaphoreSlim _reconnectSemaphore = new SemaphoreSlim(1, 1);
 
         public HubconWebSocketClient(Uri uri, TransportContext context, ILogger<HubconWebSocketClient>? logger = null)
         {
             this.context = context;
             _uri = uri;
             this.logger = logger;
-            options = context.ClientOptions;
             converter = context.Converter;
             serviceProvider = context.ProxyServiceProvider;
+
+            if (context.ClientOptions.AutoReconnect)
+            {
+                _reconnectTimer = new Timer();
+                _reconnectTimer.AutoReset = true;
+                _reconnectTimer.Enabled = true;
+                _reconnectTimer.Interval = 3000;
+                _reconnectTimer.Elapsed += async (_, _) => await ReconnectTimerOnElapsed();
+            }
+        }
+
+        private async Task ReconnectTimerOnElapsed()
+        {
+            if (_webSocket?.State is WebSocketState.Open)
+                return;
+            
+            if (!await _reconnectSemaphore.WaitAsync(0))
+                return;
+            
+            if(LoggingEnabled) logger?.LogInformation("Hubcon WebSocket is disconnected, trying to reconnect...");
+            
+            await EnsureConnectedAsync();
         }
 
         public async Task<IObservable<T>> Stream<T>(IOperationRequest request, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
@@ -101,7 +123,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
             var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
 
-            using var ingestSession = await _webSocket!.GetIngestSession<HubconResponse<T>>(operationRequest, remoteCancelEnabled, operationOptions, cancellationToken);
+            using var ingestSession = _webSocket!.GetIngestSession<HubconResponse<T>>(operationRequest, remoteCancelEnabled, operationOptions, cancellationToken);
             var response = await ingestSession.StartAsync(localCts.Token);
             return response;
         }
@@ -137,27 +159,29 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
         public async ValueTask EnsureConnectedAsync(Uri? newUrl = null)
         {
+            Throw.If(_disposedPass.WasAcquired, static () => new ObjectDisposedException("This object has already been disposed."));
+
             await _reconnectLock.WaitAsync();
 
             try
             {
-                if (_webSocket?.State is WebSocketState.Open || _webSocket?.State is WebSocketState.Connecting)
-                    return;
-
-                if (_webSocket?.State is WebSocketState.Closed
-                    || _webSocket?.State is WebSocketState.CloseReceived
-                    || _webSocket?.State is WebSocketState.CloseSent)
+                switch (_webSocket?.State)
                 {
-                    await context.InterceptorManager.CallInterceptor(InterceptorType.OnReconnect, _cts.Token);
+                    case WebSocketState.Open or WebSocketState.Connecting:
+                        return;
+                    case WebSocketState.Closed or WebSocketState.CloseReceived or WebSocketState.CloseSent:
+                        await context.InterceptorManager.CallInterceptor(InterceptorType.OnReconnect, _cts.Token);
+                        break;
                 }
 
                 int attempt = 0;
                 while (!_cts.IsCancellationRequested)
                 {
+                    Throw.If(_disposedPass.WasAcquired, static () => new ObjectDisposedException("This object has already been disposed."));
+
                     try
                     {
-                        IsReady = false;
-                        CloseSent = false;
+                        isReady = false;
 
                         if (_webSocket != null)
                         {
@@ -215,9 +239,13 @@ namespace Hubcon.Client.Core.Transports.Websockets
                     }
                 }
             }
+            catch (ObjectDisposedException)
+            {
+                throw;
+            }
             finally
             {
-                IsReady = true;
+                isReady = true;
                 _reconnectLock.Release();
             }
         }
@@ -230,25 +258,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
                 _webSocket = null;
             }
         }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (!_disposedPass.TryAcquirePass()) return;
-
-            try
-            {
-                if (_webSocket != null)
-                {
-                    await _webSocket.DisposeAsync();
-                }
-            }
-            finally
-            {
-                _webSocket = null;
-                GC.SuppressFinalize(this);
-            }
-        }
-
+        
         public async Task<HubconResponse<bool>> TryRefreshToken(string token)
         {
             await EnsureConnectedAsync();
@@ -263,6 +273,26 @@ namespace Hubcon.Client.Core.Transports.Websockets
             var converted = new TokenUpdateResponseMessage(response);
             var result = HubconResponse.OkT(converted.Result, converted.Message);
             return result;
+        }
+        
+        public async ValueTask DisposeAsync()
+        {
+            if (!_disposedPass.TryAcquirePass()) return;
+
+            try
+            {
+                if (_webSocket != null)
+                {
+                    _reconnectTimer?.Stop();
+                    _reconnectTimer?.Dispose();
+                    await _webSocket.DisposeAsync();
+                }
+            }
+            finally
+            {
+                _webSocket = null;
+                GC.SuppressFinalize(this);
+            }
         }
     }
 }

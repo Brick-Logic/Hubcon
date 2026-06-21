@@ -56,7 +56,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// <param name="operationOptions">Optional settings for the operation.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation.</param>
         /// <returns>A <see cref="Task{TResult}"/> that resolves to an <see cref="IIngestSession{T}"/>.</returns>
-        Task<IIngestSession<T>> GetIngestSession<T>(IOperationRequest operationRequest, bool useRemoteCancel, IOperationOptions? operationOptions = null, CancellationToken cancellationToken = default);
+        IIngestSession<T> GetIngestSession<T>(IOperationRequest operationRequest, bool useRemoteCancel, IOperationOptions? operationOptions = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Retrieves a streaming session for sending and receiving operational payloads.

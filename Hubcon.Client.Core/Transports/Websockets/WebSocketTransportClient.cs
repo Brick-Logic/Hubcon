@@ -20,7 +20,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
     /// </summary>
     public sealed class WebSocketTransportClient : TransportClient<WebSocketTransport>, IRealTimeTransport
     {
-        HubconWebSocketClient _client = null!;
+        private HubconWebSocketClient _client = null!;
         private readonly ILogger<HubconWebSocketClient> logger;
 
         /// <summary>
@@ -98,6 +98,9 @@ namespace Hubcon.Client.Core.Transports.Websockets
         /// <inheritdoc/>
         public async Task<HubconResponse> Connect(string? url = null)
         {
+            if (IsConnected())
+                return HubconResponse.Ok();
+            
             try
             {
                 if (url == null)
@@ -118,7 +121,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         {
             try
             {
-                await _client.Disconnect();
+                if(IsConnected()) await _client.Disconnect();
                 await _client.EnsureConnectedAsync(new Uri(url));
                 return HubconResponse.Ok();
             }
@@ -133,6 +136,9 @@ namespace Hubcon.Client.Core.Transports.Websockets
         {
             try
             {
+                if(!IsConnected())
+                    return HubconResponse.Ok();
+                
                 await _client.Disconnect();
                 return HubconResponse.Ok();
             }
