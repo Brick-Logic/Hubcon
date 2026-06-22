@@ -90,6 +90,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
         private async Task ReconnectTimerOnElapsed()
         {
+            if (!isReady) return;
+            
             if (_webSocket?.State is WebSocketState.Open)
                 return;
             
@@ -99,15 +101,15 @@ namespace Hubcon.Client.Core.Transports.Websockets
             if(LoggingEnabled) logger?.LogInformation("Hubcon WebSocket is disconnected, trying to reconnect...");
             
             await EnsureConnectedAsync();
+
+            _reconnectSemaphore.Release();
         }
 
         public async Task<IObservable<T>> Stream<T>(IOperationRequest request, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             await EnsureConnectedAsync();
-
-            using var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
             
-            var streamSession = await _webSocket!.GetStreamSession<T>(request, remoteCancelEnabled, localCts.Token);
+            var streamSession = await _webSocket!.GetStreamSession<T>(request, remoteCancelEnabled, cancellationToken);
 
             return streamSession.GetObservable();
         }
@@ -120,32 +122,26 @@ namespace Hubcon.Client.Core.Transports.Websockets
             CancellationToken cancellationToken = default)
         {
             await EnsureConnectedAsync();
-
-            var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
-
+            
             using var ingestSession = _webSocket!.GetIngestSession<HubconResponse<T>>(operationRequest, remoteCancelEnabled, operationOptions, cancellationToken);
-            var response = await ingestSession.StartAsync(localCts.Token);
+            var response = await ingestSession.StartAsync(cancellationToken);
             return response;
         }
 
         public async Task SendAsync(IOperationRequest request, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             await EnsureConnectedAsync();
-
-            using var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
             
             using var message = new OperationCallMessage(Guid.NewGuid(), _webSocket!.ConnectionId, converter.SerializeToElement(request));
-            await _webSocket!.SendAndReceiveAsync(message, remoteCancelEnabled, localCts.Token);
+            await _webSocket!.SendAndReceiveAsync(message, remoteCancelEnabled, cancellationToken);
         }
 
         public async Task<T> InvokeAsync<T>(IOperationRequest request, bool remoteCancelEnabled, bool responseIsWrapped, CancellationToken cancellationToken = default)
         {
             await EnsureConnectedAsync();
-
-            var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
-
+            
             using var message = new OperationInvokeMessage(Guid.NewGuid(), _webSocket!.ConnectionId, converter.SerializeToElement(request));
-            using var response = await _webSocket!.SendAndReceiveAsync(message, remoteCancelEnabled, localCts.Token);
+            using var response = await _webSocket!.SendAndReceiveAsync(message, remoteCancelEnabled, cancellationToken);
 
             if (response?.Type != MessageType.operation_response)
                 throw new InvalidOperationException("Unexpected response type.");
@@ -182,7 +178,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
                     try
                     {
                         isReady = false;
-
+                        
                         if (_webSocket != null)
                         {
                             _pingManager?.Dispose();
@@ -252,6 +248,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
         public async ValueTask Disconnect()
         {
+            isReady = false;
+            
             if (_webSocket != null)
             {
                 await _webSocket.DisposeAsync();

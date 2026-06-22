@@ -26,6 +26,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Channels;
 using Hubcon.Server.Core.WebSockets.Middleware;
+using Microsoft.Extensions.Primitives;
 
 namespace Hubcon.Server.Core.Websockets.Middleware
 {
@@ -92,7 +93,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 corsService.ApplyResult(corsResult, httpContext.Response);
             }
-
+            
             long lastTokenExpirationDate;
             string connectionId = Guid.NewGuid().ToString();
             WebSocket webSocket = null!;
@@ -101,12 +102,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
             if (userData != null)
             {
-                if (userData.Value.AccessToken != null)
-                    httpContext.Request.Headers.Authorization = userData.Value.AccessToken;
-
                 httpContext.User = userData.Value.ClaimsPrincipal;
                 lastTokenExpirationDate = userData.Value.ExpirationTime;
-                connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, webSocket.Abort);
             }
             else
             {
@@ -121,9 +118,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 return;
             }
-
+            
             ClientWebSocketContext context = new ClientWebSocketContext(httpContext);
             context.Initialize(connectionId, webSocket);
+            connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, webSocket.Abort);
 
             Interlocked.Increment(ref clientCount);
 
@@ -151,8 +149,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 {
                     fmCts.Dispose();
                 }
-
-
+                
                 var initMessage = new ConnectionInitMessage(firstMessageJson);
 
                 if (initMessage.Type != MessageType.connection_init)
@@ -281,8 +278,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             break;
 
                         case MessageType.ingest_init:
-                            await context.RateLimiter.TryAcquireAsync(context.ConnectionId, MessageType.ingest_init,
-                                message.Id, 0, context.Token);
+                            await context.RateLimiter.TryAcquireAsync(context.ConnectionId, MessageType.ingest_init, message.Id, 0, context.Token);
 
                             if (!options.WebSocketIngestIsAllowed)
                             {
@@ -393,8 +389,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             if (options.WebsocketRequiresAuthorization)
             {
                 var token = context.Request.Query["access_token"];
-                context.Request.Headers.Authorization = token;
-
+                context.Request.Headers["Authorization"] = token;
+                
                 var authProvider =
                     options.AuthHandlerTypes.TryGetValue(HubconTransportAttribute.GetDefault<WebSocketTransport>(),
                         out var authHandlerType)
@@ -597,7 +593,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 Dictionary<Guid, object> sources = new();
                 watchers = new();
 
-                using var localCts = CancellationTokenSource.CreateLinkedTokenSource(context.Token);
+                using var localCts = new CancellationTokenSource();
+                await using var reg1 = context.Token.Register(CancelCtsDelegate, localCts);
 
                 var operationRequest = context.Converter.DeserializeData<OperationRequest>(ingestInitMessage.Payload);
 
@@ -758,7 +755,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 if (context.ConnectionIsClosed) return;
 
-                using var localCts = CancellationTokenSource.CreateLinkedTokenSource(context.Token);
+                using var localCts = new CancellationTokenSource();
+                await using var reg1 = context.Token.Register(CancelCtsDelegate, localCts);
 
                 if (!context.Tasks.TryAdd(operationInvokeMessage.Id, localCts))
                     return;
@@ -807,7 +805,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 if (context.ConnectionIsClosed) return;
 
-                using var localCts = context.GetLinkedCancellationTokenSource();
+                using var localCts = new CancellationTokenSource();
+                await using var reg1 = context.Token.Register(CancelCtsDelegate, localCts);
 
                 if (!context.Tasks.TryAdd(operationCallMessage.Id, localCts))
                     return;
@@ -878,7 +877,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 if (context.ConnectionIsClosed) return;
 
-                using var localCts = context.GetLinkedCancellationTokenSource();
+                using var localCts = new CancellationTokenSource();
+                await using var reg1 = context.Token.Register(CancelCtsDelegate, localCts);
 
                 if (streamInitMessage.Id == Guid.Empty) return;
 
@@ -992,7 +992,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         {
             if (context.ConnectionIsClosed) return;
 
-            using var localCts = CancellationTokenSource.CreateLinkedTokenSource(context.Token);
+            using var localCts = new CancellationTokenSource();
+            await using var reg1 = context.Token.Register(CancelCtsDelegate, localCts);
 
             if (!await context.RateLimiter.TryAcquireAsync(context.ConnectionId, MessageType.token_update,
                     tokenUpdateMessage.Id, 1, CancellationToken.None))
@@ -1093,5 +1094,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 pingMessage.Dispose();
             }
         }
+        
+        private static readonly Action<object?> CancelCtsDelegate = static state => ((CancellationTokenSource)state!).Cancel();
     }
 }

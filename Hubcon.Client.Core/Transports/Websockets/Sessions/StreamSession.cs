@@ -19,24 +19,18 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
     internal abstract class StreamSession : IStreamSession, IDisposable
     {
         public abstract BaseMessage Payload { get; }
-
-        /// <summary>
-        /// Used to provide the next element to the ongoing stream session.
-        /// </summary>
-        /// <param name="streamDataData"></param>
+        
+        /// <inheritdoc/>
         public abstract void Next(JsonElement streamDataData);
         
-        /// <summary>
-        /// Tries to complete the current stream session.
-        /// </summary>
+        /// <inheritdoc/>
         public abstract void TryComplete();
         
-        /// <summary>
-        /// Allows to configure a callback when the provided cancellation token is canceled.
-        /// </summary>
-        /// <param name="callback"></param>
-        /// <param name="cancellationToken"></param>
+        /// <inheritdoc/>
         public abstract void AddCancellation(Action callback, CancellationToken cancellationToken);
+
+        /// <inheritdoc/>
+        public abstract void AddCancellation(Action<object?> callback, object? state, CancellationToken cancellationToken);
         
         /// <inheritdoc/>
         public abstract void Dispose();
@@ -103,6 +97,12 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
         public override void AddCancellation(Action callback, CancellationToken cancellationToken)
         {
             _cancellationTrigger ??= cancellationToken.Register(callback);
+        }
+        
+        /// <inheritdoc/>
+        public override void AddCancellation(Action<object?> callback, object? state, CancellationToken cancellationToken)
+        {
+            _cancellationTrigger ??= cancellationToken.Register(callback, state);
         }
         
         /// <summary>

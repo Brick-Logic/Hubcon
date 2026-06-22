@@ -107,7 +107,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         /// <param name="id"></param>
         public void EndRequest(Guid id)
         {
-            _requestsTcs.TryRemove(id, out _);
+            _requestsTcs.TryRemove(id, out var tcs);
         }
 
         /// <summary>

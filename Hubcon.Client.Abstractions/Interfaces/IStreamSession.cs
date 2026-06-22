@@ -12,6 +12,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         BaseMessage Payload { get; }
 
         void AddCancellation(Action callback, CancellationToken cancellationToken);
+        void AddCancellation(Action<object?> callback, object? state, CancellationToken cancellationToken);
         void Next(JsonElement streamDataData);
         void TryComplete();
     }

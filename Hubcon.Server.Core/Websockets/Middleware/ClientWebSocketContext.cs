@@ -94,7 +94,8 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
         IngestHandlers = new();
         AckChannels = new();
         Tasks = new();
-        
+
+        WebSocket = webSocket;
         Sender = new WebSocketMessageSender(webSocket, Converter);
         Receiver = new WebSocketMessageReceiver(webSocket, InternalServerOptions);
     }
@@ -121,11 +122,6 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
             static () => new HubconGenericException("This context has already been disposed."));
 
         await WebSocket!.CloseAsync(closeStatus, statusDescription, _cts.Token);
-    }
-
-    public CancellationTokenSource GetLinkedCancellationTokenSource()
-    {
-        return CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
     }
 
     public AsyncServiceScope CreateAsyncScope()

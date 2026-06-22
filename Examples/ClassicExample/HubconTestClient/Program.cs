@@ -147,7 +147,7 @@ internal class Program
     {
         Task[] tasks;
         var taskCount = 32;
-        var totalSamples = 16000;
+        var totalSamples = 2000;
         Console.WriteLine("Setting up latency test...");
 
         tasks = Enumerable.Range(0, taskCount).Select(i => Task.Factory.StartNew(async () =>
@@ -215,7 +215,7 @@ internal class Program
         {
             int counter = 0;
             await Task.Delay(i * 1000);
-            int testCount = 50000;
+            int testCount = 20000;
             var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
             await paralellClient.Connect<WebSocketTransport>();
 
@@ -310,7 +310,7 @@ internal class Program
     private static async Task TestRemoteCancellation(IUserContract client, ILogger<IUserContract> logger)
     {
         logger.LogWarning("Probando cancelacion remota...");
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
 
         var result = await client.Execute(x => x.GetTemperatureFromServerCancelable(cts.Token));
 
