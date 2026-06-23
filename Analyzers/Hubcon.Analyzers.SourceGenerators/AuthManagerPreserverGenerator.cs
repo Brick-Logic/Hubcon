@@ -55,8 +55,7 @@ namespace HubconAnalyzers.SourceGenerators
                     transform: (ctx, _) => (ClassDeclarationSyntax)ctx.Node)
                 .Where(m => m != null);
 
-            var compilationAndClasses = context.CompilationProvider.
-                Combine(classDeclarations.Collect());
+            var compilationAndClasses = context.CompilationProvider.Combine(classDeclarations.Collect());
 
             IncrementalValuesProvider<INamedTypeSymbol> authManagers = compilationAndClasses
                 .SelectMany((pair, _) =>
@@ -79,12 +78,12 @@ namespace HubconAnalyzers.SourceGenerators
                             results.Add(classSymbol);
                         }
                     }
+
                     return results;
                 });
 
 
-            var finalProvider = authManagers.
-                Combine(context.CompilationProvider.Select((c, _) => c.AssemblyName))
+            var finalProvider = authManagers.Combine(context.CompilationProvider.Select((c, _) => c.AssemblyName))
                 .Combine(hasCallToInitializer);
 
             context.RegisterSourceOutput(finalProvider, (spc, data) =>
@@ -110,6 +109,7 @@ namespace HubconAnalyzers.SourceGenerators
                 if (SymbolEqualityComparer.Default.Equals(current, baseType)) return true;
                 current = current.BaseType;
             }
+
             return false;
         }
 
@@ -128,7 +128,8 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("{");
             sb.AppendLine("    internal static class " + className + "AuthPreserver");
             sb.AppendLine("    {");
-            sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
+            sb.AppendLine(
+                "        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("        public static void Init()");
             sb.AppendLine("        {");
             sb.AppendLine("            if (Environment.TickCount < 0)");
@@ -136,27 +137,56 @@ namespace HubconAnalyzers.SourceGenerators
 
             // Preservar constructores
             int i = 0;
-            foreach (var ctor in symbol.InstanceConstructors.Where(c => c.DeclaredAccessibility == Accessibility.Public))
+            foreach (var ctor in
+                     symbol.InstanceConstructors.Where(c => c.DeclaredAccessibility == Accessibility.Public))
             {
                 i++;
-                var paramTypes = ctor.Parameters.Select(p => "(" + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")default");
+                var paramTypes = ctor.Parameters.Select(p =>
+                    "(" + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")default");
                 string paramsList = string.Join(", ", paramTypes);
-                sb.AppendLine($"                var instance{i} = new " + fullTypeName + "(" + paramsList + ");");
+                sb.AppendLine(
+                    $"                var instance{i} = (global::Hubcon.Shared.Abstractions.Interfaces.IBuildableAuthenticationManager)(new " +
+                    fullTypeName + "(" + paramsList + "));");
 
                 // Preservar métodos
-                foreach (var method in symbol.GetMembers().OfType<IMethodSymbol>().Where(m => m.MethodKind == MethodKind.Ordinary && m.DeclaredAccessibility == Accessibility.Public))
+                foreach (var method in symbol.GetMembers().OfType<IMethodSymbol>().Where(m =>
+                             m.MethodKind == MethodKind.Ordinary && m.DeclaredAccessibility == Accessibility.Public))
                 {
-                    var methodParamTypes = method.Parameters.Select(p => "(" + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")default");
+                    var methodParamTypes = method.Parameters.Select(p =>
+                        "(" + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")default");
                     string methodParamsList = string.Join(", ", methodParamTypes);
-                    sb.AppendLine("                instance." + method.Name + "(" + methodParamsList + ");");
+                    sb.AppendLine($"                instance{i}." + method.Name + "(" + methodParamsList + ");");
+                }
+
+                var targetInterface = symbol.AllInterfaces.FirstOrDefault(ts =>
+                    ts.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ==
+                    "global::Hubcon.Shared.Abstractions.Interfaces.IBuildableAuthenticationManager");
+
+                var classMethods = symbol.GetMembers().OfType<IMethodSymbol>();
+
+                var interfaceMethods = targetInterface != null
+                    ? targetInterface.GetMembers().OfType<IMethodSymbol>()
+                    : Enumerable.Empty<IMethodSymbol>();
+
+                var allMethods = classMethods.Concat(interfaceMethods)
+                    .Where(m => m.MethodKind == MethodKind.Ordinary && m.DeclaredAccessibility == Accessibility.Public);
+
+                foreach (var method in allMethods)
+                {
+                    var methodParamTypes = method.Parameters.Select(p =>
+                        "(" + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")default!");
+                    string methodParamsList = string.Join(", ", methodParamTypes);
+                    sb.AppendLine($"                instance{i}." + method.Name + "(" + methodParamsList + ");");
                 }
             }
 
 
             sb.AppendLine("            }");
+            sb.AppendLine("            Preserve();");
             sb.AppendLine("        }");
             sb.AppendLine();
-            sb.AppendLine("        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(" + fullTypeName + "))]");
+            sb.AppendLine("        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(" + fullTypeName +
+                          "))]");
             sb.AppendLine("        public static void Preserve() { }");
             sb.AppendLine("    }");
             sb.AppendLine("}");

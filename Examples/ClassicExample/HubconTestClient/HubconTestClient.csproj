@@ -10,8 +10,7 @@
 		<ServerGarbageCollection>false</ServerGarbageCollection>
 		<UserSecretsId>13f2f7ca-4f92-42d8-84fa-908a9804f866</UserSecretsId>
 
-<!--		<RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
-		<!--<PublishAot>false</PublishAot>
+		<PublishAot>true</PublishAot>
 		<IsAotCompatible>true</IsAotCompatible>
 		<TrimMode>link</TrimMode>
 		<StackTraceSupport>false</StackTraceSupport>
@@ -19,8 +18,12 @@
 		<PublishTrimmed>true</PublishTrimmed>
 		<IsTrimmable>true</IsTrimmable>
 
+		<OptimizationPreference>Speed</OptimizationPreference>
+		<InterproceduralOptimization>true</InterproceduralOptimization>
+		<OptimizationLevel>Experimental</OptimizationLevel>
+
 		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-		<EnableAotAnalyzer>true</EnableAotAnalyzer>-->
+		<EnableAotAnalyzer>true</EnableAotAnalyzer>
 
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 		<MicrosoftExtensionsDependencyInjectionVerifyOpenGenericServiceTrimmability>true</MicrosoftExtensionsDependencyInjectionVerifyOpenGenericServiceTrimmability>
