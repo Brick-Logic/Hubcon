@@ -13,7 +13,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         IStreamSession<T> CreateStream<T>(Guid id, string connectionId, IOperationRequest request, Action? onFinishedCallback = null);
         ValueTask DisposeAsync();
         void EndRequest(Guid id);
-        Task<BaseMessage?> GetResponseAsync(Guid id, TimeSpan timeout, CancellationToken cancellationToken);
+        ValueTask<BaseMessage?> GetResponseAsync(Guid id, TimeSpan timeout, CancellationToken cancellationToken);
         void Start();
     }
 }

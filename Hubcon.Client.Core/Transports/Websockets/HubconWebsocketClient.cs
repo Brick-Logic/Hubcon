@@ -53,7 +53,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         private Uri _uri;
 
         public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; set; }
-        public Func<string?>? AuthorizationTokenProvider { get; set; }
+        public Func<IAuthenticationManager>? AuthenticationManagerProvider { get; set; }
 
         private readonly SemaphoreSlim _reconnectLock = new SemaphoreSlim(1, 1);
 
@@ -91,11 +91,13 @@ namespace Hubcon.Client.Core.Transports.Websockets
         private async Task ReconnectTimerOnElapsed()
         {
             if (!isReady) return;
-            
-            if (_webSocket?.State is WebSocketState.Open)
-                return;
+
+            if (_disposedPass.WasAcquired) return;
             
             if (!await _reconnectSemaphore.WaitAsync(0))
+                return;
+            
+            if (_webSocket?.State is WebSocketState.Open)
                 return;
             
             if(LoggingEnabled) logger?.LogInformation("Hubcon WebSocket is disconnected, trying to reconnect...");
@@ -179,11 +181,11 @@ namespace Hubcon.Client.Core.Transports.Websockets
                     {
                         isReady = false;
                         
+                        _pingManager?.Dispose();
+                        _pingManager = null;
+                        
                         if (_webSocket != null)
                         {
-                            _pingManager?.Dispose();
-                            _pingManager = null;
-
                             await _webSocket.DisposeAsync();
                             _webSocket = null;
                         }
@@ -193,13 +195,27 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
                         _webSocket = new HubconWebSocket(context);
 
+                        _webSocket.Receiver.OnDisconnected += async () =>
+                        {
+                            isReady = false; 
+                            await _webSocket.DisposeAsync();
+                        };
+                        
                         context.ClientOptions.WebSocketOptions?.Invoke(_webSocket.WebSocket.Options, serviceProvider);
 
                         var uriBuilder = new UriBuilder(url);
-                        var token = AuthorizationTokenProvider?.Invoke();
+                        var authManager = AuthenticationManagerProvider?.Invoke();
 
-                        if (!string.IsNullOrEmpty(token))
-                            uriBuilder.AddQueryParameter("access_token", token);
+                        if (authManager is { IsSessionActive: true })
+                        {
+                            var authToken = "";
+                            if (!string.IsNullOrEmpty(authManager.TokenType))
+                                authToken += authManager.TokenType + " ";
+                            if (!string.IsNullOrEmpty(authManager.AccessToken))
+                                authToken += authManager.AccessToken;
+                                
+                            uriBuilder.AddQueryParameter("access_token", authToken);
+                        }
 
                         await context.InterceptorManager.CallInterceptor(InterceptorType.OnConnecting, _cts.Token);
 
@@ -207,6 +223,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
                         _pingManager = new PingManager(_webSocket, context);
                         _pingManager.Start();
+                        
+                        _reconnectTimer?.Start();
 
                         return;
                     }
@@ -279,10 +297,14 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
             try
             {
+                isReady = false;
+                
                 if (_webSocket != null)
                 {
-                    _reconnectTimer?.Stop();
                     _reconnectTimer?.Dispose();
+                    _reconnectSemaphore.Dispose();
+                    _reconnectLock.Dispose();
+                    _pingManager?.Dispose();
                     await _webSocket.DisposeAsync();
                 }
             }

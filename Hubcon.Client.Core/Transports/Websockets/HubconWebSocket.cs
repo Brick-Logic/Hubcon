@@ -41,6 +41,9 @@ namespace Hubcon.Client.Core.Transports.Websockets
     /// </summary>
     internal sealed class HubconWebSocket : IHubconWebSocket
     {
+        public event Action? OnConnected;
+        public event Action? OnDisconnected;
+        
         private readonly AtomicPass _disposedPass = new();
         private readonly AtomicPass _connectionPass = new();
 
@@ -66,7 +69,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
             _context = context;
 
             WebSocket = new ClientWebSocket();
-
+            
             _options = context.ClientOptions;
             _converter = context.Converter;
             _clientOptions = context.ClientOptions;
@@ -97,7 +100,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         public ClientWebSocket WebSocket { get; }
 
         /// <inheritdoc/>
-        public async Task<BaseMessage?> SendAndReceiveAsync<TRequest>(TRequest message, bool useRemoteCancel, CancellationToken cancellationToken = default) where TRequest : BaseMessage
+        public async ValueTask<BaseMessage?> SendAndReceiveAsync<TRequest>(TRequest message, bool useRemoteCancel, CancellationToken cancellationToken = default) where TRequest : BaseMessage
         {
             cancellationToken.ThrowIfCancellationRequested();
             Throw.If(_disposedPass.WasAcquired, "This object has been disposed.");
@@ -129,7 +132,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         }
 
         /// <inheritdoc/>
-        public async Task SendAsync<TRequest>(TRequest message, bool useRemoteCancel, CancellationToken cancellationToken = default) where TRequest : BaseMessage
+        public async ValueTask SendAsync<TRequest>(TRequest message, bool useRemoteCancel, CancellationToken cancellationToken = default) where TRequest : BaseMessage
         {
             cancellationToken.ThrowIfCancellationRequested();
             Throw.If(_disposedPass.WasAcquired, "This object has been disposed.");
@@ -144,7 +147,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         }
 
         /// <inheritdoc/>
-        public async Task<IStreamSession<T>> GetStreamSession<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
+        public async ValueTask<IStreamSession<T>> GetStreamSession<T>(IOperationRequest payload, bool remoteCancelEnabled, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             Throw.If(_disposedPass.WasAcquired, "This object has been disposed.");
@@ -223,7 +226,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         }
 
         /// <inheritdoc/>
-        public async Task ConnectAsync(Uri uri, CancellationToken cancellationToken = default)
+        public async ValueTask ConnectAsync(Uri uri, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             Throw.If(_disposedPass.WasAcquired, "This object has been disposed.");

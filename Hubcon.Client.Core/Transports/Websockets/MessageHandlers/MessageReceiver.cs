@@ -21,17 +21,16 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
     /// </summary>
     public class MessageReceiver : IMessageReceiver, IAsyncDisposable
     {
-        /// <summary>
-        /// An event that's raised when the reception loop produces an error.
-        /// </summary>
+        /// <inheritdoc/>
         public event EventHandler<Exception>? OnError;
         
-        /// <summary>
-        /// An event that's raised when the websocket receives a close message from the server.
-        /// </summary>
-        public event EventHandler? OnCloseReceived;
+        /// <inheritdoc/>
+        public event Action? OnDisconnected;
+        
+        /// <inheritdoc/>
+        public event Action? OnCloseReceived;
 
-        private volatile int _disposed;
+        private readonly AtomicPass _isDisposedPass = new();
         private readonly TaskCompletionSource<bool> _receiveLoopDisposed;
         private readonly TaskCompletionSource<bool> _startSignal;
 
@@ -45,8 +44,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         private readonly MessageRouter _router; 
         
         private ClientWebSocket? _webSocket;
-
-
+        
         /// <summary>
         /// Default constructor
         /// </summary>
@@ -100,9 +98,9 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         /// <param name="id">The message ID.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A task that returns a <see cref="BaseMessage"/> object, which contains the server's raw response.</returns>
-        public async Task<BaseMessage?> Receive(Guid id, CancellationToken cancellationToken = default)
+        public ValueTask<BaseMessage?> Receive(Guid id, CancellationToken cancellationToken = default)
         {
-            return await _router.GetResponseAsync(id, _clientOptions.WebsocketTimeout ,cancellationToken);
+            return _router.GetResponseAsync(id, _clientOptions.WebsocketTimeout ,cancellationToken);
         }
 
         /// <summary>
@@ -112,9 +110,9 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         /// <param name="timeout">The time to wait for the response.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A task that returns a <see cref="BaseMessage"/> object, which contains the server's raw response.</returns>
-        public async Task<BaseMessage?> Receive(Guid id, TimeSpan timeout, CancellationToken cancellationToken = default)
+        public ValueTask<BaseMessage?> Receive(Guid id, TimeSpan timeout, CancellationToken cancellationToken = default)
         {
-            return await _router.GetResponseAsync(id, timeout, cancellationToken);
+            return _router.GetResponseAsync(id, timeout, cancellationToken);
         }
 
         private async Task ReceiveLoopAsync()
@@ -152,7 +150,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
                         {
                             if (result.MessageType == WebSocketMessageType.Close)
                             {
-                                OnCloseReceived?.Invoke(this, null);
+                                OnCloseReceived?.Invoke();
                                 return;
                             }
 
@@ -194,9 +192,10 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
             {
                 if (_context.ClientOptions.LoggingEnabled)
                 {
-                    _logger?.LogInformation("ReceiveLoop finished.");
+                    _logger?.LogInformation("Message receiver loop finished.");
                 }
                 
+                OnDisconnected?.Invoke();
                 _receiveLoopDisposed.TrySetResult(true);
             }
         }
@@ -206,20 +205,25 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         /// </summary>
         public async ValueTask DisposeAsync()
         {
-            if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
-            {
+            if (!_isDisposedPass.TryAcquirePass())
                 return;
-            }
             
             _cts.Cancel();
-            _receiveChannel.Writer.TryComplete();
             _startSignal.TrySetResult(false);
-            await _receiveLoopDisposed.Task;
+            if(await _startSignal.Task) await _receiveLoopDisposed.Task;
+            _receiveChannel.Writer.TryComplete();
             _receiveTask.Dispose();
             
             _webSocket = null;
-
+            OnDisconnected = null;
+            OnError = null;
+            
             await _router.DisposeAsync();
+            
+            if (_context.ClientOptions.LoggingEnabled)
+            {
+                _logger?.LogInformation("Message receiver finalized.");
+            }
             
             GC.SuppressFinalize(this);
         }

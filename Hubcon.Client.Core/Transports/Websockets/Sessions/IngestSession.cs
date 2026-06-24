@@ -224,7 +224,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
                 }
 
                 _receiver.Router.BeginRequest(_initialAckId);
-                receiver = _receiver.Router.GetResponseAsync(_initialAckId, TimeSpan.FromDays(23), cancellationToken);
+                receiver = _receiver.Router.GetResponseAsync(_initialAckId, TimeSpan.FromDays(23), cancellationToken).AsTask();
 
                 try
                 {
@@ -234,7 +234,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
                 }
                 finally
                 {
-                    registration.Dispose();
+                    // Ignored
                 }
 
                 await _sender.SendMessageAsync(new IngestCompleteMessage(_initialAckId, _connectionId, _sources.Keys.ToArray()), cancellationToken);

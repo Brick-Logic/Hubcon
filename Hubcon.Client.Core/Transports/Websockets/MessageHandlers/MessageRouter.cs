@@ -117,7 +117,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         /// <param name="timeout"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task<BaseMessage?> GetResponseAsync(Guid id, TimeSpan timeout, CancellationToken cancellationToken)
+        public async ValueTask<BaseMessage?> GetResponseAsync(Guid id, TimeSpan timeout, CancellationToken cancellationToken)
         {
             if (_requestsTcs.TryGetValue(id, out var value))
             {
@@ -168,7 +168,12 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
                     {
                         try
                         {
-                            Throw.IfNotEqual(_webSocket?.State, WebSocketState.Open);
+                            if (_webSocket?.State != WebSocketState.Open)
+                            {
+                                _receiveChannel.Writer.TryComplete();
+                                return;
+                            }
+                            
                             var message = new BaseMessage(tmo);
 
                             switch (message.Type)
@@ -328,6 +333,11 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
                 ingest.Dispose();
 
             _ingests.Clear();
+            
+            if (_context.ClientOptions.LoggingEnabled)
+            {
+                _logger?.LogInformation("Message router finalized.");
+            }
 
             GC.SuppressFinalize(this);
         }

@@ -90,7 +90,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
                     };
                     authenticationManager.OnSessionIsActive += async () => await _client.EnsureConnectedAsync();
 
-                    _client.AuthorizationTokenProvider = () => authenticationManager.TokenType + " " + authenticationManager.AccessToken;
+                    _client.AuthenticationManagerProvider = () => authenticationManager;
                 }
             }
         }
