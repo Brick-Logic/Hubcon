@@ -18,6 +18,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
+using Hubcon.Shared.Core.Extensions;
 using HubconTestClient;
 
 internal class Program
@@ -76,7 +77,7 @@ internal class Program
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserContract>>();
         var openAi = scope.ServiceProvider.GetRequiredService<IOpenAIContract>();
 
-        logger.LogInformation("Esperando interacción antes de iniciar las pruebas...");
+        logger.LogInformation("Press any key to start the tests...");
         Console.ReadKey();
 
         //await TestOpenAiIntegration(logger, openAi);
@@ -84,18 +85,9 @@ internal class Program
 
         await TestLogin(authManager, logger);
         await Task.Delay(100);
-
-        //var responseTemp = await client.Execute(x => x.GetTemperatureFromServer("test"));
-
-        //if (!responseTemp.Success || responseTemp.StatusCode != 200)
-        //{
-        //    // Hacer algo
-        //}
-        //else
-        //{
-        //    var data = responseTemp.Data;
-        //    // Hago algo con data
-        //}
+        
+        await TestWebSocketConnectionFeatures(logger, client);
+        await Task.Delay(100);
         await TestHubconResponse(client2, logger);
         await Task.Delay(100);
         await TestValidations(client, logger);
@@ -125,6 +117,35 @@ internal class Program
         await TestRPS(scope);
 
         Console.ReadKey();
+    }
+
+    private static async Task TestWebSocketConnectionFeatures(ILogger<IUserContract> logger, IUserContract client)
+    {
+        logger.LogInformation($"Testing connection...");
+        
+        logger.LogInformation($"Is connected result: {client.IsConnected<WebSocketTransport>().Data}");
+        await Task.Delay(500);
+
+        logger.LogInformation($"Testing if connection is open...");
+        logger.LogInformation($"Is connected result: {client.IsConnected<WebSocketTransport>().Data}");
+        await Task.Delay(500);
+
+        logger.LogInformation($"Testing WebSocket graceful disconnection...");
+        await client.Disconnect<WebSocketTransport>();
+        logger.LogInformation($"Disconnected result: {client.IsConnected<WebSocketTransport>().Data}");
+        await Task.Delay(500);
+        
+        logger.LogInformation($"Testing WebSocket graceful reconnection...");
+        await client.Reconnect<WebSocketTransport>();
+        logger.LogInformation($"Reconnection result: {client.IsConnected<WebSocketTransport>().Data}");
+        await Task.Delay(500);
+        
+        logger.LogInformation($"Testing if connection is open after tests...");
+        var connectionResult = client.IsConnected<WebSocketTransport>().Data;
+        logger.LogInformation($"Is connected result: {connectionResult}");
+
+        if (!connectionResult)
+            throw new Exception("A problem has been detected, the connection is not open.");
     }
 
     private static async Task<bool> Benchmark(Task[] tasks)

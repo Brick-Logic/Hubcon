@@ -48,6 +48,12 @@ namespace Hubcon.Client.Abstractions.Interfaces
         ValueTask ConnectAsync(Uri uri, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Closes the current connection, if the connection is established.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        public Task DisconnectAsync();
+        
+        /// <summary>
         /// Retrieves an ingest session for streaming operational requests of a specific type.
         /// </summary>
         /// <typeparam name="T">The type of the operation request payload.</typeparam>

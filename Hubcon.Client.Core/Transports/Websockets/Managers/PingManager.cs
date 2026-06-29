@@ -44,34 +44,27 @@ namespace Hubcon.Client.Core.Transports.Websockets.Managers
                 return;
 
             _pingTimer ??= new System.Timers.Timer();
-            _pingTimer.Elapsed += PingMessageLoop;
+            _pingTimer.Elapsed += async (_, _) => await PingMessageLoop();
             _pingTimer.Interval = context.ClientOptions.WebsocketPingInterval.TotalMilliseconds;
             _pingTimer.Enabled = true;
             _pingTimer.AutoReset = true;
             _pingTimer.Start();
         }
 
-        private async void PingMessageLoop(object sender, ElapsedEventArgs e)
+        private async Task PingMessageLoop()
         {
             if (!_pingStartedPass.WasAcquired || _disposedPass.WasAcquired) return;
 
             try
             {
+                if (webSocket?.State != WebSocketState.Open) return;
+                
+                await webSocket.SendAsync(new PingMessage(Guid.NewGuid(), webSocket.ConnectionId), false, _cts.Token);
+
                 if (loggingEnabled)
-                    logger?.LogInformation("Ping invoked, sending...");
-
-                if (webSocket?.State == WebSocketState.Open)
-                {
-                    await webSocket.SendAsync(new PingMessage(Guid.NewGuid(), webSocket.ConnectionId), false, _cts.Token);
-
-                    if (loggingEnabled)
-                        logger?.LogInformation("Ping sent.");
-                }
-
-                if (webSocket != null)
-                {
-                    await context.InterceptorManager.CallInterceptor(InterceptorType.OnPing, _cts.Token);
-                }
+                    logger?.LogInformation("Ping sent.");
+                    
+                await context.InterceptorManager.CallInterceptor(InterceptorType.OnPing, _cts.Token);
             }
             catch (Exception ex)
             {

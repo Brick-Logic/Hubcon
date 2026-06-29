@@ -201,6 +201,19 @@ namespace Hubcon.Shared.Core.Extensions
                 ThrowFromFactory(exceptionFactory);
             }
         }
+        
+        /// <summary>
+        /// Throws an <see cref="HubconGenericException"/> if the value is true.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void If<TException, TMessageValue>(bool value, TMessageValue? messageValue, Func<TMessageValue?, TException> exceptionFactory)
+            where TException : Exception
+        {
+            if (EqualityComparer<bool>.Default.Equals(value, true))
+            {
+                ThrowFromFactory(messageValue, exceptionFactory);
+            }
+        }
 
         /// <summary>
         /// Throws an <see cref="HubconGenericException"/> if the value is true.

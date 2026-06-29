@@ -32,7 +32,7 @@ namespace Hubcon
         /// <summary>
         /// Attempts to reconnect an existing real-time transport to a specific URL.
         /// </summary>
-        public static async Task<HubconResponse> Reconnect<T>(this IControllerContract contract, string url) where T : HubconTransportAttribute
+        public static async Task<HubconResponse> Reconnect<T>(this IControllerContract contract, string? url = null) where T : HubconTransportAttribute
         {
             if (contract is IContractDataAccessor accessor && accessor.GetTransportClient<T>() is not null and IRealTimeTransport client)
                 return await client.Reconnect(url);

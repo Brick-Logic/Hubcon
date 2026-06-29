@@ -92,7 +92,7 @@ namespace Hubcon
         /// </summary>
         /// <param name="url">The target URL for the reconnection.</param>
         /// <returns>A <see cref="Task{TResult}"/> containing the <see cref="HubconResponse"/> of the reconnection attempt.</returns>
-        public Task<HubconResponse> Reconnect(string url);
+        public Task<HubconResponse> Reconnect(string? url = null);
 
         /// <summary>
         /// Asynchronously terminates the current connection.

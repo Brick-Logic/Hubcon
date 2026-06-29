@@ -117,12 +117,20 @@ namespace Hubcon.Client.Core.Transports.Websockets
         }
 
         /// <inheritdoc/>
-        public async Task<HubconResponse> Reconnect(string url)
+        public async Task<HubconResponse> Reconnect(string? url = null)
         {
             try
             {
                 if(IsConnected()) await _client.Disconnect();
-                await _client.EnsureConnectedAsync(new Uri(url));
+                
+                if (string.IsNullOrEmpty(url))
+                {
+                    await _client.EnsureConnectedAsync();
+                }
+                else
+                {
+                    await _client.EnsureConnectedAsync(new Uri(url));
+                }
                 return HubconResponse.Ok();
             }
             catch (Exception ex)

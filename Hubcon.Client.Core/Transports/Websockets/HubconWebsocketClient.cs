@@ -157,6 +157,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
         public async ValueTask EnsureConnectedAsync(Uri? newUrl = null)
         {
+            if (_webSocket?.State is WebSocketState.Open) return;
+            
             Throw.If(_disposedPass.WasAcquired, static () => new ObjectDisposedException("This object has already been disposed."));
 
             await _reconnectLock.WaitAsync();
@@ -165,7 +167,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
             {
                 switch (_webSocket?.State)
                 {
-                    case WebSocketState.Open or WebSocketState.Connecting:
+                    case WebSocketState.Open:
                         return;
                     case WebSocketState.Closed or WebSocketState.CloseReceived or WebSocketState.CloseSent:
                         await context.InterceptorManager.CallInterceptor(InterceptorType.OnReconnect, _cts.Token);
@@ -270,6 +272,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
             
             if (_webSocket != null)
             {
+                await _webSocket.DisconnectAsync();
                 await _webSocket.DisposeAsync();
                 _webSocket = null;
             }
