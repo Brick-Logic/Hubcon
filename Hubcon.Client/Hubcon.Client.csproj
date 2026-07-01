@@ -44,11 +44,18 @@
 		<ProjectReference Include="..\Hubcon.Shared\Hubcon.Shared.csproj" />
 	</ItemGroup>
 
-	<ItemGroup Condition="( '$(SourceGeneratorDevelopment)' != 'true' )">
+	<ItemGroup>
 		<PackageReference Include="Hubcon.Analyzers" Version="$(AnalyzersRange)" />
 		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="$(AnalyzersCodeFixesRange)"/>
 		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="$(AnalyzersDiagnosticSuppressorsRange)" />
+	</ItemGroup>
+
+	<ItemGroup Condition="$(SuppressHubconGenerators) == DEADCODE">
 		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="$(SourceGeneratorsRange)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="build\Hubcon.Client.targets" Pack="true" PackagePath="build\" />
 	</ItemGroup>
 	
 	<ItemGroup>

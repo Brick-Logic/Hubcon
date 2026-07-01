@@ -8,84 +8,50 @@ using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using Hubcon.Analyzers.SourceGenerators;
+using Hubcon.Analyzers.SourceGenerators.Extensions;
 
 namespace HubconAnalyzers.SourceGenerators
 {
     [Generator]
     public class CommunicationProxyGenerator : IIncrementalGenerator
     {
-        private static INamedTypeSymbol hubconResponseBaseSymbol;
+        private static INamedTypeSymbol _hubconResponseBaseSymbol;
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            var hasCallToInitializer = context.SyntaxProvider
-                .CreateSyntaxProvider(
-                    predicate: (node, _) => node is InvocationExpressionSyntax,
-                    transform: (ctx, _) =>
-                    {
-                        var invocation = (InvocationExpressionSyntax)ctx.Node;
-
-                        // 1a. Filtro rápido por nombre
-                        var name = "";
-
-                        if (invocation.Expression is MemberAccessExpressionSyntax m)
-                            name = m.Name.Identifier.Text;
-                        else if (invocation.Expression is IdentifierNameSyntax i)
-                            name = i.Identifier.Text;
-                        else
-                            name = null;
-
-
-                        if (name != "AddHubconClient") return false;
-
-                        // 1b. Validación Semántica
-                        var symbol = ctx.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
-                        if (symbol == null) return false;
-
-                        return symbol.ContainingType?.Name == "DependencyInjection" &&
-                               symbol.ContainingNamespace?.ToDisplayString() == "Hubcon";
-                    })
-                .Where(found => found)
-                .Collect()
-                .Select((calls, _) => calls.Any());
-
-            // Capturamos interfaces del proyecto actual
-            var localInterfaces = context.SyntaxProvider
-                .CreateSyntaxProvider(
-                    predicate: (s, _) => s is InterfaceDeclarationSyntax,
-                    transform: (ctx, _) =>
-                    {
-                        var iface = (InterfaceDeclarationSyntax)ctx.Node;
-                        var symbol = ctx.SemanticModel.GetDeclaredSymbol(iface) as INamedTypeSymbol;
-                        return GetValidContractInterface(symbol);
-                    })
-                .Where(symbol => symbol != null)
-                .Collect();
-
+            var hasCallToInitializer = context.GethubconProvider();
+            var localInterfaces = context.CreateNext((ctx, _) =>
+            {
+                var interfaceDeclarationSyntax = (InterfaceDeclarationSyntax)ctx.Node;
+                var symbol = ctx.SemanticModel.GetDeclaredSymbol(interfaceDeclarationSyntax);
+                return symbol.ImplementsControllerContract() ? symbol : null;
+            })
+            .Where(symbol => symbol != null)
+            .Collect();
+            
             // Capturamos todas las referencias de compilación para buscar interfaces en proyectos referenciados
-            var referencedInterfaces = context.CompilationProvider
-                .Select((compilation, _) =>
+            var referencedInterfaces = context.CompilationProvider.Select((compilation, _) =>
+            {
+                var interfaces = new List<INamedTypeSymbol>();
+                
+                if(_hubconResponseBaseSymbol == null)
+                    _hubconResponseBaseSymbol = SymbolExtensions.GetHubconResponseSymbol(compilation);
+                
+                // Recorremos todos los assemblies referenciados
+                foreach (var reference in compilation.References)
                 {
-                    var interfaces = new List<INamedTypeSymbol>();
-
-                    if (hubconResponseBaseSymbol == null)
-                        hubconResponseBaseSymbol = compilation.GetTypeByMetadataName("Hubcon.HubconResponse`1");
-
-                    // Recorremos todos los assemblies referenciados
-                    foreach (var reference in compilation.References)
+                    if (compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol assembly)
                     {
-                        if (compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol assembly)
-                        {
-                            CollectInterfacesFromAssembly(assembly.GlobalNamespace, interfaces);
-                        }
+                        assembly.CollectInterfacesFromAssemblyTo(interfaces);
                     }
+                }
 
-                    return interfaces.ToArray();
-                });
+                return interfaces.ToArray();
+            });
 
             // Combinamos ambos sources
             var allInterfaces = localInterfaces
@@ -107,12 +73,11 @@ namespace HubconAnalyzers.SourceGenerators
                 if (!shouldGenerate) 
                     return;
 
-                if (assemblyName == "Hubcon.Client")
+                if (assemblyName == "Hubcon" || assemblyName == "Hubcon.Client" || assemblyName == "Hubcon.Server")
                     return;
 
-                // 1. HashSet para evitar procesar la misma interfaz dos veces (evita el error de hintName)
                 var processedFullNames = new HashSet<string>();
-                var generatedResolverClasses = new List<string>(); // Para el Aggregator
+                var generatedResolverClasses = new List<string>();
 
                 // 1. Obtener la compilación (necesaria para buscar símbolos)
                 var firstInterface = interfaceList.OfType<INamedTypeSymbol>().FirstOrDefault();
@@ -138,12 +103,12 @@ namespace HubconAnalyzers.SourceGenerators
                         if (member is IMethodSymbol method && method.MethodKind == MethodKind.Ordinary)
                         {
                             // Extraer de Retorno (desempaqueta Task<T>)
-                            CollectTypesRecursive(method.ReturnType, typesToSerialize);
+                            method.ReturnType.CollectTypesRecursiveTo(typesToSerialize, _hubconResponseBaseSymbol);
 
                             // Extraer de Parámetros
                             foreach (var p in method.Parameters)
                             {
-                                CollectTypesRecursive(p.Type, typesToSerialize);
+                                p.Type.CollectTypesRecursiveTo(typesToSerialize, _hubconResponseBaseSymbol);
                             }
                         }
                     }
@@ -198,9 +163,6 @@ namespace HubconAnalyzers.SourceGenerators
                            !string.IsNullOrWhiteSpace(ns);
                 }).ToList();
 
-                //var subscriptionHandlersCode = GenerateSubscriptionHandlerFactory(interfaces, semiFilteredTypes);
-                //spc.AddSource("ClientSubscriptionFactory.g.cs", subscriptionHandlersCode);
-
                 var filteredTypes = semiFilteredTypes.ToImmutableHashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
 
                 var resolverClassName = $"GlobalMetadataResolver";
@@ -218,39 +180,6 @@ namespace HubconAnalyzers.SourceGenerators
                     spc.AddSource("HubconGlobalSerialization.g.cs", globalCode);
                 }
             });
-        }
-
-        private static INamedTypeSymbol GetValidContractInterface(INamedTypeSymbol symbol)
-        {
-            if (symbol == null)
-                return null;
-
-            // Chequeamos que implemente IControllerContract
-            var implementsContract = symbol.AllInterfaces
-                .Any(i => i.Name == nameof(IControllerContract));
-
-            return implementsContract ? symbol : null;
-        }
-
-        private static void CollectInterfacesFromAssembly(INamespaceSymbol namespaceSymbol, List<INamedTypeSymbol> interfaces)
-        {
-            // Recorremos todos los tipos en el namespace
-            foreach (var member in namespaceSymbol.GetMembers())
-            {
-                if (member is INamedTypeSymbol namedType && namedType.TypeKind == TypeKind.Interface)
-                {
-                    var validInterface = GetValidContractInterface(namedType);
-                    if (validInterface != null)
-                    {
-                        interfaces.Add(validInterface);
-                    }
-                }
-                else if (member is INamespaceSymbol childNamespace)
-                {
-                    // Recursivamente exploramos namespaces anidados
-                    CollectInterfacesFromAssembly(childNamespace, interfaces);
-                }
-            }
         }
 
         private static string GenerateProxyClass(INamedTypeSymbol iface)
@@ -387,15 +316,15 @@ namespace HubconAnalyzers.SourceGenerators
                 else if (returnType.StartsWith("System.Collections.Generic.IAsyncEnumerable<"))
                 {
                     // Streaming
-                    var generic = ExtractGenericArgument(returnType, "System.Collections.Generic.IAsyncEnumerable");
+                    var generic = returnType.GetGenericArgument("System.Collections.Generic.IAsyncEnumerable");
                     callMethod = $"return {nameof(BaseProxy.StreamAsync)}<{generic}>({stringMethodName}{AllParameters}{cancellationTokenName});";
                 }
-                else if (method.Parameters.Any(p => IsIAsyncEnumerable(p.Type)))
+                else if (method.Parameters.Any(p => p.Type.IsIAsyncEnumerable()))
                 {
                     // Si tiene argumento IAsyncEnumerable, usar IngestAsync
                     if (returnType.StartsWith("System.Threading.Tasks.Task<"))
                     {
-                        var generic = ExtractGenericArgument(returnType, "System.Threading.Tasks.Task");
+                        var generic = returnType.GetGenericArgument("System.Threading.Tasks.Task");
                         callMethod = $"return {nameof(BaseProxy.IngestAsync)}<{generic}>({stringMethodName}{AllParameters}{cancellationTokenName});";
                     }
                     else if (returnType == "System.Threading.Tasks.Task")
@@ -411,7 +340,7 @@ namespace HubconAnalyzers.SourceGenerators
                 else if (returnType.StartsWith("System.Threading.Tasks.Task<"))
                 {
                     // InvokeAsync para Task<T>
-                    var generic = ExtractGenericArgument(returnType, "System.Threading.Tasks.Task");
+                    var generic = returnType.GetGenericArgument("System.Threading.Tasks.Task");
                     callMethod = $"return {nameof(BaseProxy.InvokeAsync)}<{generic}>({stringMethodName}{AllParameters}{cancellationTokenName});";
                 }
                 else if (returnType == "System.Threading.Tasks.Task")
@@ -465,42 +394,7 @@ namespace HubconAnalyzers.SourceGenerators
 
             return sb.ToString();
         }
-
-        private static bool IsIAsyncEnumerable(ITypeSymbol type)
-        {
-            return type is INamedTypeSymbol namedType &&
-                   namedType.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.IAsyncEnumerable<T>";
-        }
-
-        private static string ExtractGenericArgument(string fullTypeName, string genericTypeName)
-        {
-            // Ej: fullTypeName = "System.Threading.Tasks.Task<System.Int32>"
-            //     genericTypeName = "System.Threading.Tasks.Task"
-            // Resultado esperado: "System.Int32"
-
-            int start = genericTypeName.Length + 1; // salto el '<'
-            int end = fullTypeName.LastIndexOf('>');
-            if (start >= end || start < 0 || end < 0)
-                return "System.Object"; // fallback seguro
-
-            return fullTypeName.Substring(start, end - start);
-        }
-
-
-        private static string ExtractTaskGenericArgumentRegex(string taskType)
-        {
-            // Patrón que captura todo entre el primer < y el último > balanceado
-            var pattern = @"System\.Threading\.Tasks\.Task<(.+)>$";
-            var match = Regex.Match(taskType, pattern);
-
-            if (match.Success)
-            {
-                return match.Groups[1].Value;
-            }
-
-            return "object";
-        }
-
+        
         private static string GenerateProxyPreserverClass(INamedTypeSymbol iface)
         {
             var sb = new StringBuilder();
@@ -612,7 +506,7 @@ namespace HubconAnalyzers.SourceGenerators
             {
                 // Usamos el formato calificado completo (global::...) para el typeof
                 var fullName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                var safeName = GetSafeName(type);
+                var safeName = type.GetSafeName();
 
                 // C# 8.0/Standard 2.1 syntax: Type t when t == typeof(...)
                 sb.AppendLine($"            Type t when t == typeof({fullName}) => Create_{safeName}(options),");
@@ -630,7 +524,7 @@ namespace HubconAnalyzers.SourceGenerators
             // Generar los métodos Create_{SafeName}
             foreach (var type in typesToSerialize)
             {
-                var name = GetSafeName(type);
+                var name = type.GetSafeName();
 
                 if (methodNames.Any(x => x.ToLower() == name.ToLower()))
                     continue;
@@ -654,7 +548,7 @@ namespace HubconAnalyzers.SourceGenerators
         private static void GenerateTypeMetadataMethod(StringBuilder sb, ITypeSymbol type, string optionsName)
         {
             var fullName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            var safeName = GetSafeName(type);
+            var safeName = type.GetSafeName();
 
             sb.AppendLine($"    private JsonTypeInfo Create_{safeName}(JsonSerializerOptions {optionsName}) {{");
 
@@ -678,7 +572,7 @@ namespace HubconAnalyzers.SourceGenerators
         var enumConverter = global::Hubcon.HubconEnumConverter<{fullName}>.Current;
         return JsonMetadataServices.CreateValueInfo<{fullName}>({optionsName}, enumConverter);");
                 }
-                else if (IsDictionary(type, out var keyType, out var valueType))
+                else if (type.IsDictionary(out var keyType, out var valueType))
                 {
                     var keyFullName = keyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                     var valueFullName = valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
@@ -698,7 +592,7 @@ namespace HubconAnalyzers.SourceGenerators
         return info;");
                 }
                 // 3. CASO COLECCIONES (List<T>, T[], etc.)
-                else if (IsCollection(type, out var elementType))
+                else if (type.IsCollection(out var elementType))
                 {
                     var elementFullName = elementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
@@ -731,7 +625,6 @@ namespace HubconAnalyzers.SourceGenerators
                 {
                     sb.AppendLine($"        var info = JsonMetadataServices.CreateObjectInfo<{fullName}>({optionsName}, new JsonObjectInfoValues<{fullName}> {{");
 
-                    // --- LÓGICA DE CONSTRUCTOR PROTEGIDA ---
                     var namedType = type as INamedTypeSymbol;
 
                     var constructor = namedType?.Constructors
@@ -813,145 +706,7 @@ namespace HubconAnalyzers.SourceGenerators
             }
             sb.AppendLine("    }");
         }
-
-        private static bool IsDictionary(ITypeSymbol type, out ITypeSymbol keyType, out ITypeSymbol valueType)
-        {
-            keyType = null;
-            valueType = null;
-
-            if (type is INamedTypeSymbol namedType)
-            {
-                // Buscamos en el tipo mismo y en todas sus interfaces
-                var interfaceType = namedType.AllInterfaces
-                    .Concat(new[] { namedType })
-                    .FirstOrDefault(i => i.IsGenericType &&
-                        (i.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_ICollection_T || // Caso base
-                         i.OriginalDefinition.ToDisplayString().StartsWith("System.Collections.Generic.IDictionary<") ||
-                         i.OriginalDefinition.ToDisplayString().StartsWith("System.Collections.Generic.IReadOnlyDictionary<") ||
-                         i.OriginalDefinition.ToDisplayString().StartsWith("System.Collections.Generic.Dictionary<")));
-
-                if (interfaceType != null && interfaceType.TypeArguments.Length == 2)
-                {
-                    keyType = interfaceType.TypeArguments[0];
-                    valueType = interfaceType.TypeArguments[1];
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private static bool IsCollection(ITypeSymbol type, out ITypeSymbol elementType)
-        {
-            elementType = null;
-
-            // Caso Array T[]
-            if (type is IArrayTypeSymbol arrayType)
-            {
-                elementType = arrayType.ElementType;
-                return true;
-            }
-
-            // Caso IEnumerable<T> o derivados (List<T>, etc.)
-            if (type is INamedTypeSymbol namedType)
-            {
-                if (namedType.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T ||
-                    namedType.AllInterfaces.Any(i => i.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T))
-                {
-                    elementType = namedType.TypeArguments.FirstOrDefault();
-                    return elementType != null;
-                }
-            }
-
-            return false;
-        }
-
-        private static string GetSafeName(ITypeSymbol type)
-        {
-            return type.ToDisplayString()
-                .Replace("global::", "")
-                .Replace(".", "_")
-                .Replace("<", "_")
-                .Replace(">", "_")
-                .Replace("[", "Array")
-                .Replace("]", "")
-                .Replace(",", "_")
-                .Replace("?", "Nullable") // Manejo de T?
-                .Replace(" ", "");
-        }
-
-        private static void CollectTypesRecursive(ITypeSymbol type, HashSet<ITypeSymbol> typesToSerialize)
-        {
-            if (type == null || type.TypeKind == TypeKind.Error) return;
-
-            // 1. Filtros de namespaces (Reflection, etc.)
-            var ns = type.ContainingNamespace?.ToDisplayString();
-            if (ns != null && (ns.StartsWith("System.Reflection") || ns.StartsWith("Microsoft.CodeAnalysis"))) return;
-
-            // 2. Manejo de Arrays
-            if (type is IArrayTypeSymbol arrayType)
-            {
-                if (typesToSerialize.Add(type))
-                {
-                    CollectTypesRecursive(arrayType.ElementType, typesToSerialize);
-                }
-                return;
-            }
-
-            if (type is INamedTypeSymbol named)
-            {
-                // 3. Caso especial Task<T>: Desempaquetar y salir (No queremos Task en el JSON)
-                if (named.IsGenericType && named.Name == "Task" && ns == "System.Threading.Tasks")
-                {
-                    foreach (var arg in named.TypeArguments) CollectTypesRecursive(arg, typesToSerialize);
-                    return;
-                }
-
-                // 4. Agregar el tipo actual (sea List<User>, User, o int?)
-                // Si ya estaba, cortamos para evitar bucles infinitos
-                if (!typesToSerialize.Add(type)) return;
-
-                // --- Generar HubconResponse<T> ---
-                // Solo si el tipo actual NO es ya un HubconResponse y no es un tipo primitivo de sistema basura
-                if (type.SpecialType != SpecialType.System_Void
-                    && type.SpecialType != SpecialType.System_Object
-                    && hubconResponseBaseSymbol != null
-                    && !SymbolEqualityComparer.Default.Equals(named.OriginalDefinition, hubconResponseBaseSymbol))
-                {
-                    // Fabricamos HubconResponse<TipoActual>
-                    var wrappedType = hubconResponseBaseSymbol.Construct(type);
-                    typesToSerialize.Add(wrappedType);
-                }
-
-                // 5. Si es genérico (List<T>, Nullable<T>, Dictionary<K,V>)
-                if (named.IsGenericType)
-                {
-                    // Entramos recursivamente en los tipos de adentro
-                    foreach (var arg in named.TypeArguments)
-                    {
-                        CollectTypesRecursive(arg, typesToSerialize);
-                    }
-
-                    // Si es una colección de System, no queremos analizar sus propiedades (paso 6)
-                    // porque STJ ya sabe cómo tratar una List.
-                    if (ns != null && ns.StartsWith("System.Collections")) return;
-                }
-
-                // 6. Si es un modelo propio (Clase/Struct que no es de sistema)
-                // Analizamos sus propiedades para seguir la cadena
-                if ((type.TypeKind == TypeKind.Class || type.TypeKind == TypeKind.Struct) &&
-                    type.SpecialType == SpecialType.None)
-                {
-                    foreach (var prop in type.GetMembers().OfType<IPropertySymbol>())
-                    {
-                        if (prop.DeclaredAccessibility == Accessibility.Public && !prop.IsStatic)
-                        {
-                            CollectTypesRecursive(prop.Type, typesToSerialize);
-                        }
-                    }
-                }
-            }
-        }
-
+        
         private static string GenerateGlobalResolver(List<string> allResolverNames, string namespaceName)
         {
             var sb = new StringBuilder();
@@ -995,79 +750,7 @@ namespace HubconAnalyzers.SourceGenerators
             return sb.ToString();
         }
 
-        private static string GenerateSubscriptionHandlerFactory(IEnumerable<INamedTypeSymbol> interfaces, IList<ITypeSymbol> typesToSerialize)
-        {
-            // 1. Buscamos las interfaces que implementan IControllerContract
-            var controllerContracts = interfaces.Where(i =>
-                i.TypeKind == TypeKind.Interface &&
-                (i.ToDisplayString() == "Hubcon.IControllerContract" ||
-                 i.AllInterfaces.Any(ai => ai.ToDisplayString() == "Hubcon.IControllerContract")));
-
-            // 2. Extraemos los argumentos genéricos T de las propiedades ISubscription<T>
-            var genericTypes = controllerContracts
-                .SelectMany(contract => contract.GetMembers().OfType<IPropertySymbol>())
-                .Select(prop => prop.Type as INamedTypeSymbol)
-                .Where(type => type != null && type.IsGenericType)
-                .Where(type => type.OriginalDefinition.ToDisplayString() == "Hubcon.ISubscription<T>")
-                .Select(type => type.TypeArguments.First());
-
-            var sb = new StringBuilder();
-            sb.AppendLine("// <auto-generated />");
-            sb.AppendLine("using System;");
-            sb.AppendLine("using System.Runtime.CompilerServices;");
-            sb.AppendLine("using System.Diagnostics.CodeAnalysis;");
-            sb.AppendLine();
-            sb.AppendLine("namespace Hubcon.Generated");
-            sb.AppendLine("{");
-            sb.AppendLine("public static class ClientSubscriptionFactory");
-            sb.AppendLine("{");
-
-            // Module Initializer para registro automático
-            sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
-            sb.AppendLine("    public static void Initialize()");
-            sb.AppendLine("    {");
-            sb.AppendLine("        Hubcon.Client.Builder.SubscriptionFactory.SetupSubscriptionFactory(Create);");
-            sb.AppendLine();
-            sb.AppendLine("        // Preservación para AOT");
-            sb.AppendLine("        if (Guid.NewGuid().ToString() == \"preserver\")");
-            sb.AppendLine("        {");
-            sb.AppendLine("             _ = Create(default!, default!);");
-            sb.AppendLine("        }");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-
-            sb.AppendLine("    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ClientSubscriptionFactory))]");
-            sb.AppendLine("    public static object Create(global::System.Type type, object config)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        return type switch");
-            sb.AppendLine("        {");
-
-            // 3. Deduplicación y Generación de Ramas
-            var uniqueTypes = genericTypes
-                .Where(t => t != null)
-                .GroupBy(t => t.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
-                .Select(g => g.First())
-                .ToList();
-
-            foreach (var type in uniqueTypes)
-            {
-                typesToSerialize.Add(type);
-                string fullName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-
-                // Branch del switch
-                sb.AppendLine($"            global::System.Type t when t == typeof({fullName}) => new Hubcon.Client.Core.Subscriptions.ClientSubscriptionHandler<{fullName}>(config as Hubcon.Client.Core.Subscriptions.ClientSubscriptionConfig<object>),");
-            }
-
-            sb.AppendLine("            _ => null");
-            sb.AppendLine("        };");
-            sb.AppendLine("    }");
-            sb.AppendLine("}");
-            sb.AppendLine("}");
-
-            return sb.ToString();
-        }
-
-        public string GenerateProxyRegistry(IEnumerable<INamedTypeSymbol> interfaces)
+        private static string GenerateProxyRegistry(IEnumerable<INamedTypeSymbol> interfaces)
         {
             var sb = new StringBuilder();
 
@@ -1116,7 +799,7 @@ namespace HubconAnalyzers.SourceGenerators
             return sb.ToString();
         }
 
-        private string GenerateEnumerableWrapper(IEnumerable<INamedTypeSymbol> interfaces)
+        private static string GenerateEnumerableWrapper(IEnumerable<INamedTypeSymbol> interfaces)
         {
             var asyncTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
 
@@ -1125,14 +808,13 @@ namespace HubconAnalyzers.SourceGenerators
                 foreach (var method in interfaceSymbol.GetMembers().OfType<IMethodSymbol>())
                 {
                     foreach (var param in method.Parameters)
-                        CheckAndAddAsyncType(param.Type, asyncTypes);
+                        param.Type.CollectAsyncTypesTo(asyncTypes);
 
-                    CheckAndAddAsyncType(method.ReturnType, asyncTypes);
+                    method.ReturnType.CollectAsyncTypesTo(asyncTypes);
                 }
             }
 
             var sb = new StringBuilder();
-            sb.AppendLine("// <auto-generated />");
             sb.AppendLine("using System;");
             sb.AppendLine("using System.Collections.Generic;");
             sb.AppendLine("using System.Text.Json;");
@@ -1172,26 +854,6 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("}");
 
             return sb.ToString();
-        }
-
-        private void CheckAndAddAsyncType(ITypeSymbol type, HashSet<ITypeSymbol> set)
-        {
-            if (type is INamedTypeSymbol named)
-            {
-                // Caso IAsyncEnumerable<T>
-                if (named.Name == "IAsyncEnumerable" && named.IsGenericType)
-                {
-                    set.Add(named.TypeArguments[0]);
-                }
-                // Caso Task<IAsyncEnumerable<T>>
-                else if (named.Name == "Task" && named.IsGenericType && named.TypeArguments[0] is INamedTypeSymbol inner)
-                {
-                    if (inner.Name == "IAsyncEnumerable" && inner.IsGenericType)
-                    {
-                        set.Add(inner.TypeArguments[0]);
-                    }
-                }
-            }
         }
     }
 }

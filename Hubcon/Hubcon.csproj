@@ -13,7 +13,7 @@
 	  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	  <Description>Create a C# interface, implement on server, use in client.</Description>
 	  <PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
-	  <Version>2.0.0-rc12</Version>
+	  <Version>2.0.0-rc13</Version>
 	  <Authors>$(Authors)</Authors>
 	  <Company>$(Company)</Company>
 	  <RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
@@ -42,6 +42,9 @@
 		<PackageReference Include="Hubcon.Analyzers" Version="$(AnalyzersRange)" />
 		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="$(AnalyzersCodeFixesRange)"/>
 		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="$(AnalyzersDiagnosticSuppressorsRange)" />
+	</ItemGroup>
+	
+	<ItemGroup Condition="$(SuppressHubconGenerators) == DEADCODE">
 		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="$(SourceGeneratorsRange)" />
 	</ItemGroup>
 	

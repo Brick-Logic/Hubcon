@@ -38,16 +38,23 @@
         <ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj"/>
     </ItemGroup>
 
-    <ItemGroup Condition="( '$(SourceGeneratorDevelopment)' != 'true' )">
+    <ItemGroup>
         <PackageReference Include="Hubcon.Analyzers" Version="$(AnalyzersRange)" />
         <PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="$(AnalyzersCodeFixesRange)"/>
         <PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="$(AnalyzersDiagnosticSuppressorsRange)" />
+    </ItemGroup>
+
+    <ItemGroup Condition="$(SuppressHubconGenerators) == DEADCODE">
         <PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="$(SourceGeneratorsRange)" />
     </ItemGroup>
 
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
         <PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="build\Hubcon.Server.targets" Pack="true" PackagePath="build\" />
     </ItemGroup>
 
     <ItemGroup>

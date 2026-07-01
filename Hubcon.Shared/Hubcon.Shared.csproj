@@ -36,7 +36,7 @@
 		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
 	</ItemGroup>
 
-	<ItemGroup Condition="( '$(SourceGeneratorDevelopment)' != 'true' )">
+	<ItemGroup>
 		<PackageReference Include="Hubcon.Analyzers" Version="$(AnalyzersRange)" />
 		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="$(AnalyzersCodeFixesRange)"/>
 		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="$(AnalyzersDiagnosticSuppressorsRange)" />
@@ -45,7 +45,7 @@
 	<ItemGroup>
 	  <PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
 		<None Update="README.md">
 			<PackagePath>./</PackagePath>
