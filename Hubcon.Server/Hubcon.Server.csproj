@@ -1,72 +1,59 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-	  <TargetFramework>net8.0</TargetFramework>
-	  <ImplicitUsings>enable</ImplicitUsings>
-	  <Nullable>enable</Nullable>
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
 
-	  <AssemblyName>$(AssemblyName)</AssemblyName>
-	  <RootNamespace>$(AssemblyName)</RootNamespace>
-	  <PackageId>$(AssemblyName)</PackageId>
-	  <PackageOutputPath>../nupkgs</PackageOutputPath>
-	  <IsPackable>true</IsPackable>
-	  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-	  <Description>Hubcon's .NET server package to build multi-transport servers, allowing integrations using C# interfaces or OpenAPI clients.</Description>
-	  <RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
-	  <PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
-	  <Version>2.0.0-rc1</Version>
-	  <Authors>$(Authors)</Authors>
-	  <Company>$(Company)</Company>
-	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
+        <AssemblyName>$(AssemblyName)</AssemblyName>
+        <RootNamespace>$(AssemblyName)</RootNamespace>
+        <PackageId>$(AssemblyName)</PackageId>
+        <PackageOutputPath>../nupkgs</PackageOutputPath>
+        <IsPackable>true</IsPackable>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Description>Hubcon's .NET server package to build multi-transport servers, allowing integrations using C# interfaces or OpenAPI clients.</Description>
+        <RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
+        <PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
+        <Version>$(HubconServerVersion)</Version>
+        <Authors>$(Authors)</Authors>
+        <Company>$(Company)</Company>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<DebugType>embedded</DebugType>
-		<Deterministic>True</Deterministic>
-	</PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+        <DebugType>embedded</DebugType>
+        <Deterministic>True</Deterministic>
+    </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<DebugType>embedded</DebugType>
-		<Deterministic>True</Deterministic>
-	</PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <DebugType>embedded</DebugType>
+        <Deterministic>True</Deterministic>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\Hubcon.Server.Core\Hubcon.Server.Core.csproj"/>
+        <ProjectReference Include="..\Hubcon.Server.Abstractions\Hubcon.Server.Abstractions.csproj"/>
+        <ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj"/>
+        <ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj"/>
+        <ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj"/>
+    </ItemGroup>
 
-	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-	</ItemGroup>
+    <ItemGroup Condition="( '$(SourceGeneratorDevelopment)' != 'true' )">
+        <PackageReference Include="Hubcon.Analyzers" Version="$(AnalyzersRange)" />
+        <PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="$(AnalyzersCodeFixesRange)"/>
+        <PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="$(AnalyzersDiagnosticSuppressorsRange)" />
+        <PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="$(SourceGeneratorsRange)" />
+    </ItemGroup>
 
-	<!-- Desarrollo local: ProjectReference -->
-	<ItemGroup Condition="'$(UsePackages)' != 'true'">
-		<PackageReference Include="Hubcon.Analyzers" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="2.0.0-rc1" />
-		
-		<ProjectReference Include="..\Hubcon.Server.Core\Hubcon.Server.Core.csproj" />
-		<ProjectReference Include="..\Hubcon.Server.Abstractions\Hubcon.Server.Abstractions.csproj" />
-		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
-		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
-		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
-	</ItemGroup>
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+        <PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)"/>
+    </ItemGroup>
 
-	<!-- Empaquetado o distribución: PackageReference -->
-	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Analyzers" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="2.0.0-rc1" />
-		
-		<PackageReference Include="Hubcon.Server.Core" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Server.Abstractions" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Shared.Abstractions" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Shared.Core" Version="2.0.0-rc1" />
-	</ItemGroup>
-	<ItemGroup>
-	  <PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Update="README.md">
-			<PackagePath></PackagePath>
-			<Pack>true</Pack>
-		</None>
-	</ItemGroup>
+    <ItemGroup>
+        <None Update="README.md">
+            <PackagePath>./</PackagePath>
+            <Pack>true</Pack>
+        </None>
+    </ItemGroup>
 </Project>

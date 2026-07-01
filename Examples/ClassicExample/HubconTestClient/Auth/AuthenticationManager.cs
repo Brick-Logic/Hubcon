@@ -14,7 +14,7 @@ namespace HubconTestClient.Auth
             this.secondTestContract = secondTestContract;
         }
 
-        protected async override Task<IAuthResult> AuthenticateAsync(string username, string password)
+        protected override async Task<IAuthResult> AuthenticateAsync(string username, string password)
         {
             var token = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand(username, password, true)));
             var token2 = await secondTestContract.LoginAsync(new LoginCommand(username, password, true));
@@ -31,7 +31,7 @@ namespace HubconTestClient.Auth
             return Task.CompletedTask;
         }
 
-        protected async override Task<PersistedSession?> LoadPersistedSessionAsync()
+        protected override async Task<PersistedSession?> LoadPersistedSessionAsync()
         {
             var token = await secondTestContract.LoginAsync(new LoginCommand("username", "password", true));
 
@@ -44,13 +44,13 @@ namespace HubconTestClient.Auth
             };
         }
 
-        protected async override Task<IAuthResult> RefreshSessionAsync(string refreshToken)
+        protected override async Task<IAuthResult> RefreshSessionAsync(string refreshToken)
         {
             var token = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand("refresh", "password", true)));
             return AuthResult.Success(token!.Data, "Bearer", RefreshToken!, DateTimeOffset.UtcNow.AddMinutes(10).ToUnixTimeSeconds());
         }
 
-        protected async override Task SaveSessionAsync(PersistedSession session)
+        protected override async Task SaveSessionAsync(PersistedSession session)
         {
 
         }

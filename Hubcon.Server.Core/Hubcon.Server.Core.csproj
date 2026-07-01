@@ -14,7 +14,7 @@
 		<Description>Core server-side implementations for Hubcon.</Description>
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
-		<Version>2.0.0-rc1</Version>
+		<Version>2.0.0-rc2</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -29,16 +29,7 @@
 		<DebugType>embedded</DebugType>
 		<Deterministic>True</Deterministic>
 	</PropertyGroup>
-
-	<ItemGroup>
-	  <Compile Remove="Injectors\**" />
-	  <Compile Remove="Subscriptions\**" />
-	  <EmbeddedResource Remove="Injectors\**" />
-	  <EmbeddedResource Remove="Subscriptions\**" />
-	  <None Remove="Injectors\**" />
-	  <None Remove="Subscriptions\**" />
-	</ItemGroup>
-
+	
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="[8.0.25, 10.0.0)" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="[6.6.2, 10.0.0)" />
@@ -47,17 +38,8 @@
 		<PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)" />
 	</ItemGroup>
 
-	<!-- Development -->
-	<ItemGroup Condition="'$(UsePackages)' != 'true'">
+	<ItemGroup>
 		<ProjectReference Include="..\Hubcon.Server.Abstractions\Hubcon.Server.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
 	</ItemGroup>
-
-	<!-- Nuget -->
-	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Server.Abstractions" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Shared.Core" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Shared" Version="2.0.0-rc1" />
-	</ItemGroup>
-
 </Project>

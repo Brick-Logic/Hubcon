@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>netstandard2.1</TargetFramework>
+		<TargetFrameworks>net5.0;netstandard2.1</TargetFrameworks>
 		<Nullable>enable</Nullable>
 		<LangVersion>9.0</LangVersion>
 		
@@ -14,7 +14,7 @@
 		<Description>Core client-side implementations for Hubcon.</Description>
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
-		<Version>2.0.0-rc1</Version>
+		<Version>2.0.0-rc2</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -29,11 +29,9 @@
 		<DebugType>embedded</DebugType>
 		<Deterministic>True</Deterministic>
 	</PropertyGroup>
-
-	<ItemGroup>
-	  <Compile Remove="Managers\**" />
-	  <EmbeddedResource Remove="Managers\**" />
-	  <None Remove="Managers\**" />
+	
+	<ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
+		<PackageReference Include="System.IO.Pipelines" Version="[8.0.0, 11.0.0)" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -41,20 +39,11 @@
 	  <PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(UsePackages)' != 'true'">
+	<ItemGroup>
 		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
-		<ProjectReference Include="..\Hubcon.Shared\Hubcon.Shared.csproj" />
-	</ItemGroup>
-
-	<!-- Nuget -->
-	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Client.Abstractions" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Shared.Core" Version="2.0.0-rc1" />
-		<PackageReference Include="Hubcon.Shared" Version="2.0.0-rc1" />
-	</ItemGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
-	  <ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
+		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
+		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj"/>
+		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj"/>
 	</ItemGroup>
 </Project>

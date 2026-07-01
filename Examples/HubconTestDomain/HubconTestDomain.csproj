@@ -1,12 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net5.0</TargetFramework>
 		<LangVersion>9.0</LangVersion>
 		<Nullable>enable</Nullable>
-		<IsHubconServer>false</IsHubconServer>
 	</PropertyGroup>
-
 	<ItemGroup>
-		<PackageReference Include="Hubcon" Version="2.0.0-rc1" />
+		<ProjectReference Include="..\..\Hubcon.Shared\Hubcon.Shared.csproj" />
 	</ItemGroup>
 </Project>

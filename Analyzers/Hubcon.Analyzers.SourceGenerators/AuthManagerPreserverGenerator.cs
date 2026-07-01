@@ -1,14 +1,12 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 
-namespace HubconAnalyzers.SourceGenerators
+namespace Hubcon.Analyzers.SourceGenerators
 {
     [Generator]
     public class AuthManagerPreserverGenerator : IIncrementalGenerator
@@ -17,7 +15,6 @@ namespace HubconAnalyzers.SourceGenerators
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // 1. Buscador del "Trigger" específico
             var hasCallToInitializer = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: (node, _) => node is InvocationExpressionSyntax,
@@ -25,7 +22,7 @@ namespace HubconAnalyzers.SourceGenerators
                     {
                         var invocation = (InvocationExpressionSyntax)ctx.Node;
 
-                        // 1a. Filtro rápido por nombre (no gasta CPU)
+                        // Lookup by name
                         var name = "";
 
                         if (invocation.Expression is MemberAccessExpressionSyntax m)
@@ -132,7 +129,7 @@ namespace HubconAnalyzers.SourceGenerators
                 "        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("        public static void Init()");
             sb.AppendLine("        {");
-            sb.AppendLine("            if (Environment.TickCount < 0)");
+            sb.AppendLine($"            {Tools.GetCondition()}");
             sb.AppendLine("            {");
 
             // Preservar constructores

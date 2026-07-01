@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using Hubcon.Analyzers.SourceGenerators;
+using Hubcon.Shared.Abstractions.Standard;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -136,7 +138,6 @@ namespace Hubcon.Generators
             sb.AppendLine("    namespace System.Diagnostics.CodeAnalysis { [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)] internal sealed class DynamicDependencyAttribute : Attribute { public DynamicDependencyAttribute(DynamicallyAccessedMemberTypes memberTypes, Type type) { } } }");
             sb.AppendLine("    #endif");
             sb.AppendLine();
-
             sb.AppendLine("    internal static class TransportClientPreserver");
             sb.AppendLine("    {");
 
@@ -150,7 +151,7 @@ namespace Hubcon.Generators
             sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("        public static void Init()");
             sb.AppendLine("        {");
-            sb.AppendLine("            if (Environment.TickCount < 0)");
+            sb.AppendLine($"            {Tools.GetCondition()}");
             sb.AppendLine("            {");
 
             foreach (INamedTypeSymbol type in combined)

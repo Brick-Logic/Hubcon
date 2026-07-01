@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.1</TargetFrameworks>
+		<TargetFrameworks>net5.0;netstandard2.1</TargetFrameworks>
 		<Nullable>enable</Nullable>
 		<LangVersion>9.0</LangVersion>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
@@ -11,8 +11,6 @@
 		<PackageOutputPath>../nupkgs</PackageOutputPath>
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<!-- Desactivar generación automática de nuspec -->
-		<GenerateNuspecDependsOn></GenerateNuspecDependsOn>
 		<PackageId>Hubcon.Client</PackageId>
 		<Authors>Brick-Logic</Authors>
 		<Company>Brick-Logic</Company>
@@ -21,7 +19,7 @@
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryBranch>main</RepositoryBranch>
-		<Version>2.0.0-rc1</Version>
+		<Version>2.0.0-rc2</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -37,27 +35,25 @@
 		<Deterministic>True</Deterministic>
 	</PropertyGroup>
 
-	<!-- Development -->
-	<ItemGroup Condition="'$(UsePackages)' != 'true'">
+	<ItemGroup>
 		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Client.Core\Hubcon.Client.Core.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
+		<ProjectReference Include="..\Hubcon.Shared\Hubcon.Shared.csproj" />
 	</ItemGroup>
 
-	<!-- Nuget -->
-	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Client" Version="2.0.0-rc1" />
+	<ItemGroup Condition="( '$(SourceGeneratorDevelopment)' != 'true' )">
+		<PackageReference Include="Hubcon.Analyzers" Version="$(AnalyzersRange)" />
+		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="$(AnalyzersCodeFixesRange)"/>
+		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="$(AnalyzersDiagnosticSuppressorsRange)" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="$(SourceGeneratorsRange)" />
 	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="2.0.0-rc1" />					  
-	</ItemGroup>
-
+	
 	<ItemGroup>
 		<None Update="README.md">
-			<PackagePath></PackagePath>
+			<PackagePath>./</PackagePath>
 			<Pack>true</Pack>
 		</None>
 	</ItemGroup>

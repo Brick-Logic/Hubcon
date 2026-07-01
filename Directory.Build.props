@@ -1,22 +1,38 @@
 <Project>
-  <PropertyGroup>
-    <!-- Propiedades comunes para todos los proyectos -->
-    <Authors>Brick-Logic</Authors>
-    <Company>Brick-Logic</Company>
-    <Copyright>Copyright © $(Company) $([System.DateTime]::Now.Year)</Copyright>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-	<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
-	<RepositoryType>git</RepositoryType>
-	<RepositoryBranch>main</RepositoryBranch> 
-	<PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
-	<Stage>rc</Stage>
-	<UsePackages>false</UsePackages>
-  </PropertyGroup>
+    <PropertyGroup>
+        <!-- Propiedades comunes para todos los proyectos -->
+        <Authors>Brick-Logic</Authors>
+        <Company>Brick-Logic</Company>
+        <Copyright>Copyright © $(Company) $([System.DateTime]::Now.Year)</Copyright>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <RepositoryBranch>main</RepositoryBranch>
+        <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+        <Stage>rc</Stage>
+        <UsePackages>false</UsePackages>
+      
+        
+        <!-- Hubcon.Server version -->
+        <HubconServerVersion>2.0.0-rc2</HubconServerVersion>
+        <HubconServerRange>[$(HubconServerVersion), 3.0.0)</HubconServerRange>
+        
+        <!-- Analyzer versions -->
+        <AnalyzersVersion>2.0.0-rc2</AnalyzersVersion>
+        <AnalyzersCodeFixesVersion>2.0.0-rc2</AnalyzersCodeFixesVersion>
+        <AnalyzersDiagnosticSuppressorsVersion>2.0.0-rc2</AnalyzersDiagnosticSuppressorsVersion>
+        <SourceGeneratorsVersion>2.0.0-rc2</SourceGeneratorsVersion>
 
-  <ItemGroup>
-    <!-- Incluir archivos comunes en todos los paquetes -->
-    <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" Condition="Exists('$(MSBuildThisFileDirectory)LICENSE')" />
-    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Condition="Exists('$(MSBuildThisFileDirectory)README.md')" />
-  </ItemGroup>
+        <!-- Analyzer ranges for consuming packages -->
+        <AnalyzersRange>[$(AnalyzersVersion), 3.0.0)</AnalyzersRange>
+        <AnalyzersCodeFixesRange>[$(AnalyzersCodeFixesVersion), 3.0.0)</AnalyzersCodeFixesRange>
+        <AnalyzersDiagnosticSuppressorsRange>[$(AnalyzersDiagnosticSuppressorsVersion), 3.0.0)</AnalyzersDiagnosticSuppressorsRange>
+        <SourceGeneratorsRange>[$(SourceGeneratorsVersion), 3.0.0)</SourceGeneratorsRange>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" Condition="Exists('$(MSBuildThisFileDirectory)LICENSE')"/>
+        <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Condition="Exists('$(MSBuildThisFileDirectory)README.md')"/>
+    </ItemGroup>
 </Project>

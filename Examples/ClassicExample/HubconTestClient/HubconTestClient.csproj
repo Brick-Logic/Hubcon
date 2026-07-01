@@ -24,16 +24,26 @@
 
 		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
 		<EnableAotAnalyzer>true</EnableAotAnalyzer>
-
+		
+		<SourceGeneratorDevelopment>true</SourceGeneratorDevelopment>
+		
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 		<MicrosoftExtensionsDependencyInjectionVerifyOpenGenericServiceTrimmability>true</MicrosoftExtensionsDependencyInjectionVerifyOpenGenericServiceTrimmability>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="2.0.0-rc*" />
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="2.0.0-rc*" />
 		<ProjectReference Include="..\..\..\Hubcon.Client\Hubcon.Client.csproj" />
 		<ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\Analyzers\Hubcon.Analyzers.SourceGenerators\Hubcon.Analyzers.SourceGenerators.csproj"
+		                  OutputItemType="Analyzer"
+		                  ReferenceOutputAssembly="false" />
+
+		<ProjectReference Include="..\..\..\Analyzers\Hubcon.Analyzers.DiagnosticSuppressors\Hubcon.Analyzers.DiagnosticSuppressors.csproj"
+		                  OutputItemType="Analyzer"
+		                  ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<ItemGroup>

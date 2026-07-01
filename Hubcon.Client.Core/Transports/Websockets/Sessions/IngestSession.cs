@@ -6,7 +6,6 @@ using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets.Messages.Cancellation;
 using Hubcon.Shared.Core.Websockets.Messages.Generic;
 using Hubcon.Shared.Core.Websockets.Messages.Ingest;
-using Microsoft.CodeAnalysis.Operations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;

@@ -23,16 +23,29 @@
 		<PackageReference Include="Microsoft.ServiceFabric" Version="10.1.2493" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
 		<PackageReference Include="Scalar.AspNetCore" Version="2.0.34" />
-
-		<PackageReference Include="Hubcon.Analyzers" Version="2.0.0-rc*" />
-		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="2.0.0-rc*" />
-		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="2.0.0-rc*" />
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="2.0.0-rc*" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\Hubcon.Server\Hubcon.Server.csproj" />
 		<ProjectReference Include="..\..\HubconTestDomain\HubconTestDomain.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\Analyzers\Hubcon.Analyzers.SourceGenerators\Hubcon.Analyzers.SourceGenerators.csproj"
+		                  OutputItemType="Analyzer"
+		                  ReferenceOutputAssembly="false" />
+
+		<ProjectReference Include="..\..\..\Analyzers\Hubcon.Analyzers.DiagnosticSuppressors\Hubcon.Analyzers.DiagnosticSuppressors.csproj"
+		                  OutputItemType="Analyzer"
+		                  ReferenceOutputAssembly="false" />
+
+		<ProjectReference Include="..\..\..\Analyzers\Hubcon.Analyzers.CodeFixes\Hubcon.Analyzers.CodeFixes.csproj"
+		                  OutputItemType="Analyzer"
+		                  ReferenceOutputAssembly="false" />
+
+		<ProjectReference Include="..\..\..\Analyzers\Hubcon.Analyzers\Hubcon.Analyzers.csproj"
+		                  OutputItemType="Analyzer"
+		                  ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<ItemGroup>

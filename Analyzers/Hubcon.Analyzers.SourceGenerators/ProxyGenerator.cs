@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Hubcon.Analyzers.SourceGenerators;
 
 namespace HubconAnalyzers.SourceGenerators
 {
@@ -529,7 +530,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine($"{baseIndent}    {{");
             sb.AppendLine($"{baseIndent}        {proxyName}Preserver();");
 
-            sb.AppendLine($"{baseIndent}        if (System.Guid.NewGuid().ToString() == \"preserver\")");
+            sb.AppendLine($"{baseIndent}        {Tools.GetCondition()}");
             sb.AppendLine($"{baseIndent}        {{");
 
             // Constructor vacío

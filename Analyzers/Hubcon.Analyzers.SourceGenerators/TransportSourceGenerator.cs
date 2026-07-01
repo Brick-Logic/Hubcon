@@ -23,7 +23,7 @@ namespace Hubcon.Analyzers.SourceGenerators
                     {
                         var invocation = (InvocationExpressionSyntax)ctx.Node;
 
-                        // 1a. Filtro rápido por nombre (No gasta CPU)
+                        // 1. Filtro por nombre
                         var name = "";
 
                         if (invocation.Expression is MemberAccessExpressionSyntax m)
@@ -36,11 +36,9 @@ namespace Hubcon.Analyzers.SourceGenerators
 
                         if (name != "AddHubconClient") return false;
 
-                        // 1b. Validación Semántica (La verdad absoluta)
                         var symbol = ctx.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
                         if (symbol == null) return false;
 
-                        // Verificamos: Namespace == "Hubcon" && Clase == "DependencyInjection"
                         return symbol.ContainingType?.Name == "DependencyInjection" &&
                                symbol.ContainingNamespace?.ToDisplayString() == "Hubcon";
                     })

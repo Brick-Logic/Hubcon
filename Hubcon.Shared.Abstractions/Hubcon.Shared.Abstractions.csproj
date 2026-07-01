@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>netstandard2.1</TargetFramework>
+		<TargetFrameworks>net5.0;netstandard2.1</TargetFrameworks>
 		<Nullable>enable</Nullable>
 		<LangVersion>9.0</LangVersion>
 
@@ -14,7 +14,7 @@
 		<Description>Shared abstractions for Hubcon.</Description>
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
-		<Version>2.0.0-rc1</Version>
+		<Version>2.0.0-rc2</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -37,13 +37,7 @@
 	  <PackageReference Include="System.Threading.RateLimiting" Version="[9.0.0, 11.0.0)" />
 	</ItemGroup>
 
-	<!-- Development -->
-	<ItemGroup Condition="'$(UsePackages)' != 'true'">
+	<ItemGroup>
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
-	</ItemGroup>
-
-	<!-- Nuget -->
-	<ItemGroup Condition="'$(UsePackages)' == 'true'">
-		<PackageReference Include="Hubcon.Shared.Abstractions.Standard" Version="2.0.0-rc1" />
 	</ItemGroup>
 </Project>

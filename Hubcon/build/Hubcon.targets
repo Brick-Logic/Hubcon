@@ -1,5 +1,5 @@
 <Project>
 	<ItemGroup Condition="( '$(UsingMicrosoftNETSdkWeb)' == 'true'  and '$(IsHubconServer)' != 'false' ) or ( '$(UsingMicrosoftNETSdkWeb)' != 'true' and '$(IsHubconServer)' == 'true' )">
-		<PackageReference Include="Hubcon.Server" VersionOverride="2.0.0-rc1" />
+		<PackageReference Include="Hubcon.Server" Version="[2.0.0-rc1, 3.0.0)" />
 	</ItemGroup>
 </Project>
