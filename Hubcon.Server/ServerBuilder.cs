@@ -23,7 +23,9 @@ namespace Hubcon.Server
 {
     public class ServerBuilder
     {
-        private IOperationRegistry OperationRegistry { get; } = new OperationRegistry();
+        private static readonly AtomicPass _serverIsBuilt = new();
+        private static readonly IEndpointManager _endpointManager = new EndpointManager();
+        private static readonly IOperationRegistry _operationRegistry = new OperationRegistry(_endpointManager);
         private CoreServerOptions ServerOptions { get; } = new();
         private IServiceCollection Services;
 
@@ -50,6 +52,8 @@ namespace Hubcon.Server
             WebApplicationBuilder builder,
             params Action<IServiceCollection>?[] additionalServices)
         {
+            if (!_serverIsBuilt.TryAcquirePass()) throw new HubconGenericException("The hubcon server cannot be built two times.");
+            
             Services = builder.Services;
 
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
@@ -75,11 +79,12 @@ namespace Hubcon.Server
 
             Services.AddSingleton<IInternalServerOptions>(ServerOptions);
             Services.AddScoped<IOperationContext>(x => OperationContextProvider.GetContext() ?? throw new InvalidOperationException("No active operation context. IOperationContext is only available inside the Hubcon pipeline."));
-            Services.AddSingleton(OperationRegistry);
+            Services.AddSingleton(_endpointManager);
+            Services.AddSingleton(_operationRegistry);
             Services.AddSingleton<IPermissionRegistry, PermissionRegistry>();
             Services.AddSingleton<IConnectionSupervisor, ConnectionSupervisor>();
             Services.AddSingleton<IDynamicConverter, DynamicConverter>();
-            Services.AddSingleton(OperationRegistry);
+            Services.AddSingleton(_operationRegistry);
             Services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
             Services.AddSingleton<IOperationConfigRegistry, OperationConfigRegistry>();
             Services.AddSingleton<IGlobalRateLimiterManager, GlobalRateLimiterManager>();
@@ -125,7 +130,7 @@ namespace Hubcon.Server
             if (implementationTypes.Count == 0)
                 throw new InvalidOperationException($"Class {controllerType.Name} does not implement interface {nameof(IControllerContract)}.");
 
-            if (OperationRegistry.ControllerExists(controllerType))
+            if (_operationRegistry.ControllerExists(controllerType))
                 return builder;
 
             //foreach (var type in implementationTypes)
@@ -138,7 +143,7 @@ namespace Hubcon.Server
             //    }
             //}
 
-            OperationRegistry.RegisterOperations(controllerType, options, ServerOptions, out var services);
+            _operationRegistry.RegisterOperations(controllerType, options, ServerOptions, out var services);
 
             foreach (var service in services)
                 service.Invoke(Services);

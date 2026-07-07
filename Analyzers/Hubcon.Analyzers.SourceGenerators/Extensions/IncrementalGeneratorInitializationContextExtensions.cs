@@ -8,7 +8,7 @@ namespace Hubcon.Analyzers.SourceGenerators.Extensions
 {
     public static class IncrementalGeneratorInitializationContextExtensions
     {
-        public static IncrementalValueProvider<bool> GethubconProvider(this IncrementalGeneratorInitializationContext context)
+        public static IncrementalValueProvider<bool> GetHubconClientProvider(this IncrementalGeneratorInitializationContext context)
         {
             return context.SyntaxProvider
                 .CreateSyntaxProvider(
@@ -38,6 +38,37 @@ namespace Hubcon.Analyzers.SourceGenerators.Extensions
                 .Select((calls, _) => calls.Any());
         }
 
+        public static IncrementalValueProvider<bool> GetHubconServerProvider(this IncrementalGeneratorInitializationContext context)
+        {
+            return context.SyntaxProvider
+                .CreateSyntaxProvider(
+                    predicate: (node, _) => node is InvocationExpressionSyntax,
+                    transform: (ctx, _) =>
+                    {
+                        var invocation = (InvocationExpressionSyntax)ctx.Node;
+                        var name = "";
+
+                        if (invocation.Expression is MemberAccessExpressionSyntax m)
+                            name = m.Name.Identifier.Text;
+                        else if (invocation.Expression is IdentifierNameSyntax i)
+                            name = i.Identifier.Text;
+                        else
+                            name = null;
+                        
+                        if (name != "AddHubconServer") return false;
+
+                        var symbol = ctx.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
+                        if (symbol == null) return false;
+
+                        return symbol.ContainingType?.Name == "DependencyInjection" &&
+                               symbol.ContainingNamespace?.ToDisplayString() == "Hubcon";
+                    })
+                .Where(found => found)
+                .Collect()
+                .Select((calls, _) => calls.Any());
+        }
+
+        
         public static IncrementalValuesProvider<T> CreateNext<T>(
             this IncrementalGeneratorInitializationContext context, 
             Func<GeneratorSyntaxContext, CancellationToken, T> transformFunction)

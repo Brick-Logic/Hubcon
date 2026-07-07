@@ -85,7 +85,12 @@ namespace Hubcon
         /// <summary>
         /// Gets the delegate used to invoke the operation.
         /// </summary>
-        Func<object?, object, CancellationToken, object?>? InvokeDelegate { get; }
+        IEndpointInvoker Invoker{ get; }
+        
+        /// <summary>
+        /// The wrapper factory for endpoint invocations.
+        /// </summary>
+        IParameterWrapper? ParameterWrapper { get; }
 
         /// <summary>
         /// Gets the pipeline builder used for the operation.
@@ -131,11 +136,6 @@ namespace Hubcon
         /// Gets the simplified name of the contract.
         /// </summary>
         string SimpleContractName { get; }
-        
-        /// <summary>
-        /// Gets the delegate responsible for mapping wrappers.
-        /// </summary>
-        Action<IDictionary<string, object>, object, CancellationToken>? WrapperMapper { get; }
 
         /// <summary>
         /// Gets the HTTP method used for the operation, if any.

@@ -16,6 +16,9 @@ using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.Json;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+
 #pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.Routing
@@ -84,45 +87,25 @@ namespace Hubcon.Server.Core.Routing
 
             HttpMethod verbResult = blueprint.HttpVerb!;
             var wrapperType = blueprint.CallWrapperType!;
-            var wrapperProps = wrapperType.GetProperties();
+            var wrapperProps = wrapperType?.GetProperties();
 
 
             if(blueprint.Kind == OperationKind.Stream)
             {
                 if (verbResult == HttpMethod.Get)
                 {
-                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, true);
-                    builder = endpointGroup.MapGet(route, endpointDelegate);
-
                     SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
-
-                    builder.AddEndpointFilter(async (invocationContext, next) =>
+                    
+                    async ValueTask<object> GetDelegate(HttpContext context)
                     {
-                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
 
-                        var wrapper = Activator.CreateInstance(wrapperType);
-
-                        foreach (var prop in wrapperType.GetProperties())
-                        {
-                            var value = context.Request.Query[prop.Name];
-                            if (value.Count > 0)
-                            {
-                                var converted = Convert.ChangeType(value.ToString(), prop.PropertyType);
-                                prop.SetValue(wrapper, converted);
-                            }
-                        }
-
-                        var ctProp = wrapperType.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(CancellationToken));
-                        ctProp?.SetValue(wrapper, context.RequestAborted);
-
                         var dict = context.Request.Query
-                            .Cast<KeyValuePair<string, StringValues>>()
-                            .ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString());
+                            .ToDictionary(static kvp => kvp.Key, static object (kvp) => kvp.Value.ToString());
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
                         var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
@@ -139,7 +122,7 @@ namespace Hubcon.Server.Core.Routing
                             operationRequest,
                             transport, 
                             services, 
-                            wrapper, 
+                            null, 
                             cancellationToken);
 
 
@@ -149,23 +132,20 @@ namespace Hubcon.Server.Core.Routing
                         }
 
                         return new SseResult((res.Data as IAsyncEnumerable<object?>)!, operationRequest);
-                    })
+                    }
+                    
+                    builder = endpointGroup.MapGet(route, GetDelegate)
                     .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
                     .AllowAnonymous()
                     .WithRequestTimeout(options.HttpTimeout);
                 }
                 else
                 {
-                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, false);
-                    builder = endpointGroup.MapPost(route, endpointDelegate);
-
                     SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
 
-                    builder.AddEndpointFilter(async (invocationContext, next) =>
+                    async ValueTask<object> PostDelegate(JsonElement request, HttpContext context)
                     {
-                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
-                        var converter = services.GetRequiredService<IDynamicConverter>();
                         var cancellationToken = context.RequestAborted;
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
@@ -174,22 +154,8 @@ namespace Hubcon.Server.Core.Routing
                             return ProcessResponse(response, context);
                         }
 
-                        var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType);
-
-                        if (wrapper == null)
-                        {
-                            var response = HubconResponse.BadRequest();
-                            return ProcessResponse(response, context);
-                        }
-
                         var args = new Dictionary<string, object>();
-
-                        foreach (var prop in wrapperProps)
-                        {
-                            var value = prop.GetValue(wrapper);
-                            args[prop.Name!] = value!;
-                        }
-
+                        
                         var operationRequest = new OperationRequest(
                             operationName,
                             simpleContractName,
@@ -210,7 +176,7 @@ namespace Hubcon.Server.Core.Routing
                             operationRequest,
                             transport,
                             services,
-                            wrapper,
+                            null,
                             cancellationToken);
 
                         if (res.Failure)
@@ -219,7 +185,10 @@ namespace Hubcon.Server.Core.Routing
                         }
 
                         return new SseResult((res.Data! as IAsyncEnumerable<object?>)!, operationRequest);
-                    }).ApplyOpenApiFromMethod(controllerMethod!, verbResult)
+                    }
+                    
+                    builder = endpointGroup.MapPost(route, PostDelegate)
+                    .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
                     .AllowAnonymous()
                     .WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);
@@ -229,35 +198,17 @@ namespace Hubcon.Server.Core.Routing
             {
                 if (verbResult == HttpMethod.Get)
                 {
-                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, true);
-                    builder = endpointGroup.MapGet(route, endpointDelegate);
 
                     SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
-
-                    builder.AddEndpointFilter(async (invocationContext, next) =>
+                    
+                    async ValueTask<object> GetDelegate(HttpContext context)
                     {
-                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
-
-                        var wrapper = Activator.CreateInstance(wrapperType);
-
-                        foreach (var prop in wrapperType.GetProperties())
-                        {
-                            var value = context.Request.Query[prop.Name];
-                            if (value.Count > 0)
-                            {
-                                var converted = Convert.ChangeType(value.ToString(), prop.PropertyType);
-                                prop.SetValue(wrapper, converted);
-                            }
-                        }
-
-                        var ctProp = wrapperType.GetProperties().FirstOrDefault(p => p.PropertyType == typeof(CancellationToken));
-                        ctProp?.SetValue(wrapper, context.RequestAborted);
-
+                        
                         var dict = context.Request.Query
                             .Cast<KeyValuePair<string, StringValues>>()
                             .ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString());
@@ -278,25 +229,23 @@ namespace Hubcon.Server.Core.Routing
                             operationRequest,
                             transport,
                             services,
-                            wrapper,
+                            null,
                             cancellationToken);
 
                         return res;
-                    })
+                    }
+                    
+                    builder = endpointGroup.MapGet(route, GetDelegate)
                     .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
                     .AllowAnonymous()
                     .WithRequestTimeout(options.HttpTimeout);
                 }
                 else
                 {
-                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, false);
-                    builder = endpointGroup.MapPost(route, endpointDelegate);
-
                     SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
 
-                    builder.AddEndpointFilter(async (invocationContext, next) =>
+                    async ValueTask<object> PostDelegate(JsonElement request, HttpContext context)
                     {
-                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var converter = services.GetRequiredService<IDynamicConverter>();
                         var cancellationToken = context.RequestAborted;
@@ -307,21 +256,7 @@ namespace Hubcon.Server.Core.Routing
                             return ProcessResponse(response, context);
                         }
 
-                        var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType);
-
-                        if (wrapper == null)
-                        {
-                            var response = HubconResponse.BadRequest();
-                            return ProcessResponse(response, context);
-                        }
-
                         var args = new Dictionary<string, object>();
-
-                        foreach (var prop in wrapperProps)
-                        {
-                            var value = prop.GetValue(wrapper);
-                            args[prop.Name!] = value!;
-                        }
 
                         var operationRequest = new OperationRequest(
                             operationName,
@@ -343,11 +278,14 @@ namespace Hubcon.Server.Core.Routing
                             operationRequest,
                             transport,
                             services,
-                            wrapper,
+                            null,
                             cancellationToken);
 
                         return res;
-                    }).ApplyOpenApiFromMethod(controllerMethod!, verbResult)
+                    }
+                    
+                    builder = endpointGroup.MapPost(route, PostDelegate)
+                    .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
                     .AllowAnonymous()
                     .WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);
@@ -357,14 +295,10 @@ namespace Hubcon.Server.Core.Routing
             {
                 if (verbResult == HttpMethod.Get)
                 {
-                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, true);
-                    builder = endpointGroup.MapGet(route, endpointDelegate);
-
                     SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
 
-                    builder.AddEndpointFilter(async (invocationContext, next) =>
+                    async ValueTask<object> GetDelegate(HttpContext context)
                     {
-                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
 
@@ -395,22 +329,21 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res;
-                    }).ApplyOpenApiFromMethod(controllerMethod!, verbResult)
-                    .WithMetadata(new AsParametersAttribute())
-                    .AllowAnonymous()
-                    .WithRequestTimeout(options.HttpTimeout);
+                    }
+                    
+                    builder = endpointGroup.MapGet(route, GetDelegate)
+                        .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
+                        .WithMetadata(new AsParametersAttribute())
+                        .AllowAnonymous()
+                        .WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);
                 }
                 else
                 {
-                    var endpointDelegate = CreateDelegate(controllerMethod!, wrapperType, false);
-                    builder = endpointGroup.MapPost(route, endpointDelegate);
-
                     SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
 
-                    builder.AddEndpointFilter(async (invocationContext, next) =>
+                    async ValueTask<object> PostDelegate(JsonElement request, HttpContext context)
                     {
-                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var converter = services.GetRequiredService<IDynamicConverter>();
                         var cancellationToken = context.RequestAborted;
@@ -423,23 +356,9 @@ namespace Hubcon.Server.Core.Routing
                             var response = HubconResponse.RequestTooLarge();
                             return ProcessResponse(response, context);
                         }
-
-                        var wrapper = invocationContext.Arguments.FirstOrDefault(a => a?.GetType() == wrapperType);
-
-                        if (wrapper == null)
-                        {
-                            var response = HubconResponse.BadRequest();
-                            return ProcessResponse(response, context);
-                        }
-
+                        
                         var args = new Dictionary<string, object>();
-
-                        foreach (var prop in wrapperProps)
-                        {
-                            var value = prop.GetValue(wrapper);
-                            args[prop.Name!] = value!;
-                        }
-
+                        
                         var operationRequest = new OperationRequest(
                             operationName,
                             simpleContractName,
@@ -464,10 +383,12 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res;
-                    })
-                    .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
-                    .AllowAnonymous()
-                    .WithRequestTimeout(options.HttpTimeout);
+                    }
+
+                    builder = endpointGroup.MapPost(route, PostDelegate)
+                        .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
+                        .AllowAnonymous()
+                        .WithRequestTimeout(options.HttpTimeout);
                     options.EndpointConventions?.Invoke(builder);
                 }
             }

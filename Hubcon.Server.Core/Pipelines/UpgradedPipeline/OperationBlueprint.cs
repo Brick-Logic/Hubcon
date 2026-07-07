@@ -9,7 +9,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
+using Hubcon.Server.Core.EndpointManagement;
+using Hubcon.Shared.Abstractions.Standard.Extensions;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 {
@@ -20,8 +23,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public Type? CallWrapperType { get; }
         public ObjectFactory ControllerFactory { get; }
         public CompiledSecurityPolicy SecurityPolicy { get; }
-        public Func<object?, object, CancellationToken, object?>? InvokeDelegate { get; }
-        public Action<IDictionary<string, object>, object, CancellationToken>? WrapperMapper { get; }
+        public IEndpointInvoker Invoker { get; }
+        public IParameterWrapper? ParameterWrapper { get; }
         public string OperationName { get; }
         public string ContractName { get; }
         public string SimpleContractName { get; }
@@ -58,20 +61,18 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             string operationName,
             Type contractType,
             Type controllerType,
-            MemberInfo intefaceMemberInfo,
+            MemberInfo interfaceMemberInfo,
             MemberInfo controllerMemberInfo,
             OperationKind kind,
             IPipelineBuilder pipelineBuilder,
             IInternalServerOptions options,
-            HttpMethod? httpMethod = null,
-            Type? callWrapperType = null,
-            Action<IDictionary<string, object>, object, CancellationToken>? wrapperMapper = null,
-            Func<object?, object, CancellationToken, object?>? invokeDelegate = null)
+            IEndpointManager endpointManager,
+            HttpMethod? httpMethod = null)
         {
             ArgumentException.ThrowIfNullOrEmpty(operationName);
             ArgumentNullException.ThrowIfNull(contractType);
             ArgumentNullException.ThrowIfNull(controllerType);
-            ArgumentNullException.ThrowIfNull(intefaceMemberInfo);
+            ArgumentNullException.ThrowIfNull(interfaceMemberInfo);
 
             OperationName = operationName;
             ContractType = contractType;
@@ -79,16 +80,14 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             SimpleContractName = NamingHelper.GetCleanName(contractType.Name);
             ControllerType = controllerType;
             ControllerName = controllerType.Name;
-            MemberInfo = intefaceMemberInfo;
+            MemberInfo = interfaceMemberInfo;
             ParameterTypes = [];
             Kind = kind;
-            CallWrapperType = callWrapperType;
-            WrapperMapper = wrapperMapper;
             List<Attribute> endpointAttributes = [];
             HttpVerb = httpMethod;
             ControllerFactory = ActivatorUtilities.CreateFactory(controllerType, Type.EmptyTypes);
 
-            if (intefaceMemberInfo is MethodInfo methodInfo)
+            if (interfaceMemberInfo is MethodInfo methodInfo)
             {
                 foreach (var parameter in methodInfo.GetParameters())
                 {
@@ -112,13 +111,13 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
 
                 Attributes = ControllerType.GetMethod(
-                    intefaceMemberInfo.Name,
+                    interfaceMemberInfo.Name,
                     methodInfo.GetParameters().Select(x => x.ParameterType).ToArray())!
                     .GetCustomAttributes()
                     .ToList();
 
                ContractType.GetMethod(
-                    intefaceMemberInfo.Name,
+                    interfaceMemberInfo.Name,
                     methodInfo.GetParameters().Select(x => x.ParameterType).ToArray())!
                     .GetCustomAttributes()
                     .ToList()
@@ -130,7 +129,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             }
             else
             {
-                throw new NotSupportedException($"The type {intefaceMemberInfo.GetType()} is not supported as an operation type. Use PropertyInfo o MethodInfo instead.");
+                throw new NotSupportedException($"The type {interfaceMemberInfo.GetType()} is not supported as an operation type. Use MethodInfo instead.");
             }
 
             ReturnsHubconResponse = ReturnType.IsGenericType
@@ -214,8 +213,14 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             }
 
             PipelineBuilder = pipelineBuilder;
-            InvokeDelegate = invokeDelegate;
+            Invoker = endpointManager.GetInvoker(ContractName, methodInfo.GetMethodSignature()) 
+                      ?? throw new HubconGenericException($"Could not find an invoker for the '{methodInfo.Name}' endpoint in '{methodInfo.DeclaringType}' controller. This error could be caused by an error while executing the source generators.");
 
+            
+            ParameterWrapper = ParameterTypes.IsEmpty ? null : new ParameterWrapper(ContractName, methodInfo, endpointManager);
+
+            CallWrapperType = endpointManager.GetWrapperType(ContractName, methodInfo.GetMethodSignature());
+            
             var handlerTypes = controllerType.GetCustomAttributes()
                 .Concat(controllerMemberInfo!.GetCustomAttributes())
                 .OfType<IUseAuthAttribute>();

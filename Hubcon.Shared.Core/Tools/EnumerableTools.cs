@@ -51,22 +51,6 @@ namespace Hubcon.Shared.Core.Tools
                       ?.GetGenericArguments()[0];
         }
 
-        //public static IAsyncEnumerable<JsonElement>? WrapEnumeratorAsJsonElementEnumerable(object enumeratorObj, CancellationToken ct)
-        //{
-        //    if (enumeratorObj is null) return null;
-
-        //    var t = GetAsyncEnumeratorType(enumeratorObj);
-        //    if (t == null) return null;
-
-        //    // Obtenemos el método genérico que hará el cast y aplicará el token
-        //    var method = typeof(EnumerableTools)
-        //        .GetMethod(nameof(WrapToJsonElementWithCancellation), BindingFlags.Static | BindingFlags.Public)!
-        //        .MakeGenericMethod(t);
-
-        //    // Invocamos pasando el objeto fuente Y el token
-        //    return (IAsyncEnumerable<JsonElement>)method.Invoke(null, new[] { enumeratorObj, ct })!;
-        //}
-
         private static Func<object, Type, JsonTypeInfo, CancellationToken, IAsyncEnumerable<JsonElement>>? AsyncEnumerableWrapper;
         public static void SetupEnumerableWrapper(Func<object, Type, JsonTypeInfo, CancellationToken, IAsyncEnumerable<JsonElement>> wrapper) 
             => AsyncEnumerableWrapper ??= wrapper;
@@ -78,6 +62,7 @@ namespace Hubcon.Shared.Core.Tools
 
             return AsyncEnumerableWrapper!.Invoke(source, i, info, ct);
         }
+        
         public static async IAsyncEnumerable<JsonElement> GenericYieldWrapper<T>(IAsyncEnumerable<T> source, JsonTypeInfo typeInfo, [EnumeratorCancellation] CancellationToken ct)
         {
             // Casting seguro del JsonTypeInfo para evitar reflexión en el Serialize

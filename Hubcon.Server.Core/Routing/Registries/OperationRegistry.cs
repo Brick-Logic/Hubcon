@@ -23,6 +23,8 @@ namespace Hubcon.Server.Core.Routing.Registries
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class OperationRegistry : IOperationRegistry
     {
+        private readonly IEndpointManager _endpointManager;
+
         /// <summary>
         /// An event called when an operation is registered.
         /// </summary>
@@ -43,8 +45,9 @@ namespace Hubcon.Server.Core.Routing.Registries
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public OperationRegistry()
+        public OperationRegistry(IEndpointManager endpointManager)
         {
+            _endpointManager = endpointManager;
             var env = Environment.GetEnvironmentVariable("HUBCON_OPNAME_DEBUG_ENABLED");
             useHashedNames = !bool.TryParse(env, out var parsed) ? true : !parsed;
         }
@@ -132,18 +135,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                     var httpVerb = verb != null
                         ? HttpMethod.Get
                         : (parameters.Length - parameters.Count(x => x.ParameterType == typeof(CancellationToken)) > 0 ? HttpMethod.Post : HttpMethod.Get);
-
-                    var wrapperType = ParameterWrapHelper.CreateWrapperType(controllerMethod, x =>
-                    {
-                        if (httpVerb == HttpMethod.Get)
-                            return !x.ParameterType.IsTypeAllowed();
-                        else
-                            return true;
-                    });
-
-                    var wrapperMapper = BuildMapper(wrapperType);
-                    Func<object?, object, CancellationToken, object?> action = BuildWrapperInvoker(method, wrapperType);
-
+                    
                     var pipelineBuilder = new PipelineBuilder();
                     var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);
 
@@ -185,10 +177,8 @@ namespace Hubcon.Server.Core.Routing.Registries
                         kind,
                         pipelineBuilder,
                         serverOptions,
-                        httpVerb,
-                        wrapperType,
-                        wrapperMapper,
-                        action!
+                        _endpointManager,
+                        httpVerb
                     );
 
                     foreach (var item in descriptor.SecurityPolicy.Handlers)

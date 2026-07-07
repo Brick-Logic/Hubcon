@@ -1,4 +1,6 @@
-﻿using Hubcon;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using Hubcon;
 using System.Threading.Tasks;
 
 namespace HubconTestDomain
@@ -7,10 +9,11 @@ namespace HubconTestDomain
     public interface ISecondTestContract : IControllerContract
     {
         public Task<string> LoginAsync(LoginCommand command);
+        
         public Task TestVoid();
 
         [HttpGet]
-        public Task TestMethod(string message);
+        public Task TestMethod([Required] string message);
 
         public Task<string> TestReturn(string message);
         public Task<string> TestReturn();

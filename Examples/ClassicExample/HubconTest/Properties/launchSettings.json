@@ -11,6 +11,10 @@
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5000"
     },
+    "Generators": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "./HubconTest.csproj"
+    },
     "Container (Dockerfile)": {
       "commandName": "Docker",
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/scalar",

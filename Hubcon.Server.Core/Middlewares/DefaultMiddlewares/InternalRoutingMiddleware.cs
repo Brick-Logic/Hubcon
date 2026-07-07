@@ -32,12 +32,14 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     {
                         continue;
                     }
+
                     if (dict.TryGetValue(kvp.Key, out var item) && item is JsonElement element)
                     {
                         dict[kvp.Key] = dynamicConverter.DeserializeJsonElement(element, type)!;
                     }
                     else if (EnumerableTools.IsAsyncEnumerable(dict[kvp.Key]!)
-                        && EnumerableTools.GetAsyncEnumerableType(dict[kvp.Key]!) == typeof(IAsyncEnumerable<JsonElement>))
+                             && EnumerableTools.GetAsyncEnumerableType(dict[kvp.Key]!) ==
+                             typeof(IAsyncEnumerable<JsonElement>))
                     {
                         dict[kvp.Key] = EnumerableTools.ConvertAsyncEnumerableDynamic(
                             type,
@@ -62,30 +64,35 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             }
 
             var controller = context.Blueprint!.ControllerFactory.Invoke(serviceProvider, null);
-
-            var wrapper = Activator.CreateInstance(context.Blueprint!.CallWrapperType!)!;
-            context.Blueprint!.WrapperMapper!.Invoke(dict, wrapper, default);
-
-            var validationResults = new List<ValidationResult>();
-            var validationContext = new ValidationContext(wrapper);
-            if (!Validator.TryValidateObject(wrapper, validationContext, validationResults, true))
+            object? result;
+            switch (context.Blueprint.ParameterWrapper)
             {
-                var errors = validationResults.ToDictionary(
-                    k => k.MemberNames.FirstOrDefault() ?? "error",
-                    v => new[] { v.ErrorMessage ?? "Invalid value" }
-                );
+                case null:
+                    result = context.Blueprint!.Invoker?.Invoke(controller, null, context.RequestAborted);
+                    break;
+                default:
+                    var wrapper = context.Blueprint.ParameterWrapper.GetWrapped(dict);
+                    var validationResults = new List<ValidationResult>();
+                    var validationContext = new ValidationContext(wrapper);
+                    if (!Validator.TryValidateObject(wrapper, validationContext, validationResults, true))
+                    {
+                        var errors = validationResults.ToDictionary(
+                            static k => k.MemberNames.FirstOrDefault() ?? "error",
+                            static v => new[] { v.ErrorMessage ?? "Invalid value" }
+                        );
 
-                context.Response = HubconResponse.BadRequest(errors, error: "Validation errors detected.");
-                return;
+                        context.Response = HubconResponse.BadRequest(errors, error: "Validation errors detected.");
+                        return;
+                    }
+                    result = context.Blueprint!.Invoker?.Invoke(controller, wrapper, context.RequestAborted);
+                    break;
             }
-
-            object? result = context.Blueprint!.InvokeDelegate?.Invoke(controller, wrapper, context.RequestAborted);
-
+            
             if (result is Task task && task.IsFaulted)
             {
                 context.Exception = task.Exception.InnerException;
                 return;
-            }            
+            }
 
             context.Response = await context.ResultHandler.Invoke(result);
             await next();
