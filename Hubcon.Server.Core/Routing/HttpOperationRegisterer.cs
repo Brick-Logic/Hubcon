@@ -25,25 +25,15 @@ namespace Hubcon.Server.Core.Routing
 {
     public static class HttpOperationRegisterer
     {
-        private readonly static MethodInfo methodInfo =
+        private readonly static MethodInfo methodInfo1 =
             typeof(EndpointFilterExtensions).GetMethod("AddEndpointFilter", [typeof(RouteHandlerBuilder)])!;
 
         private readonly static ConcurrentDictionary<string, RouteGroupBuilder> EndpointGroups = new();
         private readonly static ConcurrentDictionary<RouteGroupBuilder, bool> RateLimiterApplied = new();
 
-        public static void MapTypedEndpoint(
+
+        public static void RegisterEndpoint(
             this WebApplication app,
-            IOperationBlueprint blueprint)
-        {
-            var generic = typeof(HttpOperationRegisterer)
-                .GetMethod(nameof(RegisterEndpoint), BindingFlags.NonPublic | BindingFlags.Static)!
-                .MakeGenericMethod(blueprint.HasReturnType ? blueprint.ReturnType : typeof(IResponse));
-
-            generic.Invoke(null, [app, blueprint]);
-        }
-
-        private static void RegisterEndpoint<TResponse>(
-            WebApplication app,
             IOperationBlueprint blueprint)
         {
             if (!blueprint.SupportsTransport<HttpTransport>())
@@ -131,7 +121,6 @@ namespace Hubcon.Server.Core.Routing
                             services,
                             null,
                             cancellationToken);
-
 
                         if (res.Failure)
                         {
@@ -387,11 +376,6 @@ namespace Hubcon.Server.Core.Routing
             List<UseHttpEndpointFilterAttribute> filters)
         {
             options.EndpointConventions?.Invoke(builder);
-
-            foreach (var filter in filters)
-            {
-                methodInfo.MakeGenericMethod(filter.EndpointFilterType).Invoke(null, [builder]);
-            }
 
             if (!options.ThrottlingIsDisabled)
             {

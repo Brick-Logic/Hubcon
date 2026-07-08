@@ -4,6 +4,10 @@ using Scalar.AspNetCore;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
+using Hubcon.Shared.Core.Serialization;
+using HubconTest.ContractHandlers;
+using HubconTestClient.Models;
+using HubconTestDomain;
 
 namespace HubconTest
 {
@@ -25,7 +29,7 @@ namespace HubconTest
                 coreMask |= 1L << i;
             }
 
-            process.ProcessorAffinity = (IntPtr)coreMask;
+            // process.ProcessorAffinity = (IntPtr)coreMask;
             // process.PriorityClass = ProcessPriorityClass.RealTime;
 
             //worker = new System.Timers.Timer();
@@ -68,11 +72,17 @@ namespace HubconTest
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.WebHost.ConfigureKestrel(options =>
+            // builder.WebHost.ConfigureKestrel(options =>
+            // {
+            //     options.Limits.MaxConcurrentConnections = null;
+            //     options.Limits.MaxConcurrentUpgradedConnections = null;
+            //     options.Limits.MinRequestBodyDataRate = null; // Evita desconexiones por lentitud en tests
+            // });
+            //
+            builder.Services.ConfigureHttpJsonOptions(options =>
             {
-                options.Limits.MaxConcurrentConnections = null;
-                options.Limits.MaxConcurrentUpgradedConnections = null;
-                options.Limits.MinRequestBodyDataRate = null; // Evita desconexiones por lentitud en tests
+                // 1. Esto le avisa a las Minimal APIs tradicionales cómo serializar tus tipos
+                options.SerializerOptions.TypeInfoResolverChain.Add(DynamicConverter.JsonSerializerOptions.TypeInfoResolver);
             });
 
             builder.Services.AddCors(options =>
@@ -97,6 +107,7 @@ namespace HubconTest
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
             };
 
+            builder.Services.AddHubconClient();
             builder.AddHubconServer(serverOptions =>
             {
                 serverOptions.AddAuthentication();
@@ -114,8 +125,14 @@ namespace HubconTest
                             .DisableWebsocketPing()
                             .AllowRemoteTokenCancellation();
                 });
-
-                serverOptions.AutoRegisterControllers();
+                
+                HubconTestContractHandler test = new HubconTestContractHandler();
+                var res = test.TestMethod().Result;
+                Console.WriteLine(res);
+                var method = test.TestMethod;
+                Console.WriteLine(method.Method);
+                
+                serverOptions.AddController<HubconTestContractHandler>();
             });
 
             builder.Services.AddOpenApi();
@@ -124,18 +141,15 @@ namespace HubconTest
 
             app.UseCors();
 
-            if (app.Environment.IsDevelopment())
-            {
-                app.MapOpenApi();
-                app.MapScalarApiReference();
-            }
-
+            app.MapOpenApi();
+            app.MapScalarApiReference();
+            
             app.UseHubconHttpEndpoints();
             app.UseHubconWebsocketEndpoints();
 
             var logger = app.Services.GetService<ILogger<object>>();
 
-            Watcher.Start(logger!);
+            // Watcher.Start(logger!);
 
             var telemetry = app.Services.GetRequiredService<ITelemetryService>();
             telemetry.OnRequestsPerSecondUpdated += (telemetry, rps) =>

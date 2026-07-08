@@ -84,7 +84,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             Kind = kind;
             List<Attribute> endpointAttributes = [];
             HttpVerb = httpMethod;
-            ControllerFactory = ActivatorUtilities.CreateFactory(controllerType, Type.EmptyTypes);
+            // ControllerFactory = ActivatorUtilities.CreateFactory(controllerType, Type.EmptyTypes);
 
             if (interfaceMemberInfo is MethodInfo methodInfo)
             {
@@ -230,6 +230,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 PrecomputedPolicies.ToArray(), 
                 !RequiresAuthorization
             );
+            
+            Console.WriteLine($"Controller {ControllerName} cargado.");
         }
     }
 }

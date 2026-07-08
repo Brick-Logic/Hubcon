@@ -14,12 +14,12 @@ namespace HubconTest.ContractHandlers
     {
         public async Task TestMethod([Required] string message)
         {
-            logger.LogInformation(message);
+            logger?.LogInformation(message);
         }
 
         public async Task<string> TestReturn(string message)
         {
-            logger.LogInformation(message);
+            logger?.LogInformation(message);
             return message;
         }
 

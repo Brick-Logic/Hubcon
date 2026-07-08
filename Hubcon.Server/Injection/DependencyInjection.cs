@@ -111,7 +111,7 @@ namespace Hubcon
 
                     if (operation.Value.MemberInfo is MethodInfo)
                     {
-                        app.MapTypedEndpoint(operation.Value);
+                        app.RegisterEndpoint(operation.Value);
                     }
                 }
             });

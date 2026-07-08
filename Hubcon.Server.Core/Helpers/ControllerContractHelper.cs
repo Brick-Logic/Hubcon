@@ -12,8 +12,10 @@ namespace Hubcon.Server.Core.Helpers
             var baseInterface = typeof(IControllerContract);
 
             // 2. Obtener todos los assemblies (el actual + referenciados)
-            var assemblies = new HashSet<Assembly>();
-            CollectAssemblies(rootAssembly, assemblies);
+            var assemblies = new HashSet<Assembly>()
+            {
+                rootAssembly
+            };
 
             // 3. Buscar todas las clases que implementen una interfaz hija de IControllerContract
             var implementations = assemblies

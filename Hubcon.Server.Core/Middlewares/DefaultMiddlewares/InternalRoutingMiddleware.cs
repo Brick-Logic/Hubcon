@@ -63,7 +63,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 }
             }
 
-            var controller = context.Blueprint!.ControllerFactory.Invoke(serviceProvider, null);
+            var controller = serviceProvider.GetRequiredService(context.Blueprint.ControllerType);
             object? result;
             switch (context.Blueprint.ParameterWrapper)
             {

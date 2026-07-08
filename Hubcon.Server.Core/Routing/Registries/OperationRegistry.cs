@@ -64,7 +64,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             servicesToInject.Add(Injector);
 
             var interfaces = controllerType.GetInterfaces().Where(x => typeof(IControllerContract).IsAssignableFrom(x));
-
+            Console.WriteLine($"Controller: {controllerType.FullName} | Interfaces: {interfaces.Count()}");
             foreach (var interfaceType in interfaces)
             {
                 var methods = interfaceType
@@ -86,6 +86,8 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                 foreach (var method in methods)
                 {
+                    Console.WriteLine($"Metodo {method.Name} del controlador {controllerType} encontrado.");
+                    
                     var returnType = method.ReturnType;
                     var parameters = method.GetParameters();
 
@@ -118,8 +120,11 @@ namespace Hubcon.Server.Core.Routing.Registries
                         continue;
 
                     var parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
-                    var controllerMethod = controllerType.GetMethod(method.Name, parameterTypes)!;
+                    var controllerMethod = controllerType.GetMethod(method.Name, parameterTypes);
 
+                    Throw.If(controllerMethod == null, (controllerType, method), static x 
+                        => new ArgumentNullException($"Could not find method {x.method.Name} in {x.controllerType.Name}."));
+                    
                     var methodSignature = method.GetMethodSignature(useHashedNames);
 
                     var verb = method.GetCustomAttribute<HttpGetAttribute>();

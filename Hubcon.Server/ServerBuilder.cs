@@ -1,4 +1,5 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
+﻿using System.Diagnostics.CodeAnalysis;
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core;
 using Hubcon.Server.Core.Cache;
 using Hubcon.Server.Core.Configuration;
@@ -99,20 +100,43 @@ namespace Hubcon.Server
             return this;
         }
 
-        internal void AddTransport<T>() where T : HubconTransportAttribute, new()
+        internal void AddTransport<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>() where T : HubconTransportAttribute, new()
         {
             ServerOptions.AddTransport<T>();
         }
 
-        internal void AddTransport<T>(T attribute) where T : HubconTransportAttribute
+        internal void AddTransport<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(T attribute) where T : HubconTransportAttribute
         {
             ServerOptions.AddTransport(attribute);
         }
 
-        internal WebApplicationBuilder AddHubconController<T>(WebApplicationBuilder builder, Action<IControllerOptions>? options = null)
-            where T : class, IControllerContract
+        internal WebApplicationBuilder AddHubconController<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicConstructors)] T>(WebApplicationBuilder builder, Action<IControllerOptions>? options = null)
+            where T : class, IControllerContract, new()
         {
-            return AddHubconController(builder, typeof(T), options);
+            var controllerType = typeof(T);
+            
+            List<Type> implementationTypes = controllerType
+                .GetInterfaces()
+                .Where(x => typeof(IControllerContract).IsAssignableFrom(x))
+                .ToList();
+
+            if (implementationTypes.Count == 0)
+                throw new InvalidOperationException($"Class {controllerType.Name} does not implement interface {nameof(IControllerContract)}.");
+
+            if (_operationRegistry.ControllerExists(controllerType))
+                throw new InvalidOperationException($"Controller {controllerType.Name} has already been registered.");
+            
+            Services.TryAddTransient<T>(sp => new T());
+            
+            _operationRegistry.RegisterOperations(controllerType, options, ServerOptions, out var services);
+
+            foreach (var service in services)
+            {
+                service.Invoke(Services);
+                Console.WriteLine(service.ToString());
+            }
+
+            return builder;
         }
 
         internal WebApplicationBuilder AddHubconController(
@@ -129,27 +153,20 @@ namespace Hubcon.Server
                 throw new InvalidOperationException($"Class {controllerType.Name} does not implement interface {nameof(IControllerContract)}.");
 
             if (_operationRegistry.ControllerExists(controllerType))
-                return builder;
-
-            //foreach (var type in implementationTypes)
-            //{
-            //    foreach (var property in type.GetProperties().Where(x => x.PropertyType.IsAssignableTo(typeof(ISubscription))))
-            //    {
-            //        var controllerProp = controllerType.GetProperty(property.Name);
-
-            //        SubscriptionRegistry.RegisterSubscriptionMetadata(NamingHelper.GetCleanName(property.DeclaringType!.Name), property.Name, controllerProp!);
-            //    }
-            //}
+                throw new InvalidOperationException($"Controller {controllerType.Name} has already been registered.");
 
             _operationRegistry.RegisterOperations(controllerType, options, ServerOptions, out var services);
 
             foreach (var service in services)
+            {
                 service.Invoke(Services);
-
+                Console.WriteLine(service.ToString());
+            }
+            
             return builder;
         }
 
-        internal void AddGlobalMiddleware<TMiddleware>(Action<IServiceCollection, Type>? registerer = null)
+        internal void AddGlobalMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TMiddleware>(Action<IServiceCollection, Type>? registerer = null)
         {
             var middlewareType = typeof(TMiddleware);
 

@@ -250,7 +250,7 @@ namespace HubconAnalyzers.SourceGenerators
 
             sb.AppendLine($"{baseIndent}[HubconProxy]");
             sb.AppendLine($"{baseIndent}[EditorBrowsable(EditorBrowsableState.Never)]");
-            sb.AppendLine($"{baseIndent}public class {proxyName} : {"BaseContractProxy"}, {iface.ToDisplayString()}");
+            sb.AppendLine($"{baseIndent}public class {proxyName} : BaseContractProxy, {iface.ToDisplayString()}");
             sb.AppendLine($"{baseIndent}{{");
             sb.AppendLine(
                 $"{baseIndent}    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof({proxyName}))]");

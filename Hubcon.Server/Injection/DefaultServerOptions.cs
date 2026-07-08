@@ -1,4 +1,5 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
+﻿using System.Diagnostics.CodeAnalysis;
+using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Helpers;
 using Hubcon.Server.Core.Middlewares.DefaultMiddlewares;
 using Hubcon.Server.Core.Security;
@@ -29,7 +30,7 @@ namespace Hubcon.Server.Injection
             HubconServerBuilder.ConfigureCore(coreServerOptions);
         }
 
-        public void UseCache<T>() where T: class, IOperationCache
+        public void UseCache<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>() where T: class, IOperationCache
         {
             HubconServerBuilder.ConfigureServices(services =>
             {
@@ -37,7 +38,7 @@ namespace Hubcon.Server.Injection
             });
         }
 
-        public void AddGlobalMiddleware<T>()
+        public void AddGlobalMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>()
         {
             HubconServerBuilder.AddGlobalMiddleware<T>();
         }
@@ -47,7 +48,7 @@ namespace Hubcon.Server.Injection
             HubconServerBuilder.AddGlobalMiddleware(middlewareType);
         }
 
-        public void AddController<T>(Action<IControllerOptions>? options = null) where T : class, IControllerContract
+        public void AddController<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicConstructors)] T>(Action<IControllerOptions>? options = null) where T : class, IControllerContract, new()
         {
             HubconServerBuilder.AddHubconController<T>(Builder, options);
         }
@@ -78,6 +79,17 @@ namespace Hubcon.Server.Injection
             }
         }
 
+        public void RegisterControllersFromAssembly(Assembly assembly)
+        {
+            var foundControllers = ControllerContractHelper.FindImplementations(assembly, [typeof(BaseClientProxyMarker)]).ToList();
+            foreach (var controller in foundControllers)
+            {
+                Console.WriteLine(controller.FullName);
+                HubconServerBuilder.AddHubconController(Builder, controller);
+            }
+        }
+
+
         public void AddHttpRateLimiter(Action<RateLimiterOptions> options)
         {
             var hubconOptions = (RateLimiterOptions rlo) =>
@@ -105,12 +117,12 @@ namespace Hubcon.Server.Injection
         }
         internal readonly List<HubconTransportAttribute> DefaultTransports = new();
 
-        public void AddTransport<T>() where T : HubconTransportAttribute, new()
+        public void AddTransport<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>() where T : HubconTransportAttribute, new()
         {
             HubconServerBuilder.AddTransport<T>();
         }
 
-        public void AddTransport<T>(T attribute) where T : HubconTransportAttribute, new()
+        public void AddTransport<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(T attribute) where T : HubconTransportAttribute, new()
         {
             HubconServerBuilder.AddTransport<T>(attribute);
         }
