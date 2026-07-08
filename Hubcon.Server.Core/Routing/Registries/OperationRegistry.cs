@@ -23,8 +23,6 @@ namespace Hubcon.Server.Core.Routing.Registries
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class OperationRegistry : IOperationRegistry
     {
-        private readonly IEndpointManager _endpointManager;
-
         /// <summary>
         /// An event called when an operation is registered.
         /// </summary>
@@ -45,9 +43,8 @@ namespace Hubcon.Server.Core.Routing.Registries
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public OperationRegistry(IEndpointManager endpointManager)
+        public OperationRegistry()
         {
-            _endpointManager = endpointManager;
             var env = Environment.GetEnvironmentVariable("HUBCON_OPNAME_DEBUG_ENABLED");
             useHashedNames = !bool.TryParse(env, out var parsed) ? true : !parsed;
         }
@@ -177,7 +174,6 @@ namespace Hubcon.Server.Core.Routing.Registries
                         kind,
                         pipelineBuilder,
                         serverOptions,
-                        _endpointManager,
                         httpVerb
                     );
 

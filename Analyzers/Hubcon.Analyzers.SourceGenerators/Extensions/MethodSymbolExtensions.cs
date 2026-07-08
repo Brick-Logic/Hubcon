@@ -2,6 +2,8 @@
 using Microsoft.CodeAnalysis;
 using System.Linq;
 using System.Text;
+using Hubcon.Analyzers.SourceGenerators.Extensions;
+using Hubcon.Shared.Abstractions.Standard.Interceptor;
 
 namespace HubconAnalyzers.SourceGenerators.Extensions
 {
@@ -99,6 +101,56 @@ namespace HubconAnalyzers.SourceGenerators.Extensions
                                .Replace('+', '.');
             }
         }
+
+        public static string GetHubconResponseTypeFromMethod(this IMethodSymbol method)
+        {
+            var returnType = method.ReturnType.ToDisplayString();
+            
+            if (returnType == "void")
+            {
+                return "Hubcon.HubconResponse";
+            } 
+            
+            if (returnType.StartsWith("Hubcon.HubconResponse<"))
+            {
+                // Streaming
+                return returnType;
+            } 
+            
+            if (returnType == "Hubcon.HubconResponse")
+            {
+                return "Hubcon.HubconResponse";
+            } 
+            
+            if (returnType.StartsWith("System.Collections.Generic.IAsyncEnumerable<"))
+            {
+                return returnType;
+            } 
+            
+            if (returnType.StartsWith("System.Threading.Tasks.Task<"))
+            {
+                var generic = returnType.GetGenericArgument("System.Threading.Tasks.Task");
+                
+                if (generic.StartsWith("Hubcon.HubconResponse<"))
+                {
+                    return generic;
+                } 
+            
+                if (returnType == "Hubcon.HubconResponse")
+                {
+                    return "Hubcon.HubconResponse";
+                } 
+                
+                return $"Hubcon.HubconResponse<{generic}>";
+            }
+            
+            if (returnType == "System.Threading.Tasks.Task")
+            {
+                return "Hubcon.HubconResponse";
+            }
+            
+            return $"Hubcon.HubconResponse<{returnType}>";
+        } 
 
         //public static string GetMethodSymbolSignature(this IMethodSymbol method)
         //{

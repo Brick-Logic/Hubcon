@@ -68,6 +68,16 @@ namespace Hubcon
         T DeserializeData<T>(object? data);
 
         /// <summary>
+        /// Deserializes the objects in the provided dictionary. A deserialized dictionary using the parameter types and names.
+        /// Both must match in counts and names to be fully deserialized.
+        /// </summary>
+        /// <param name="dict">A dictionary with the parameters to deserialize.</param>
+        /// <param name="parameterTypes">A dictionary with the expected parameter names and types.</param>
+        /// <returns></returns>
+        public Dictionary<string, object>? DeserializeParameters(IDictionary<string, object> dict,
+            IDictionary<string, Type> parameterTypes);
+
+        /// <summary>
         /// Deserializes a collection of <see cref="JsonElement"/> into a collection of typed objects.
         /// </summary>
         /// <param name="elements">The JSON elements to deserialize.</param>

@@ -6,6 +6,7 @@ using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
 
 namespace HubconTest.ContractHandlers
 {
@@ -47,7 +48,7 @@ namespace HubconTest.ContractHandlers
         //[ProducesResponseType<IOperationResponse<string>>(200)]
         //[Consumes("application/json")]
         [AllowAnonymous]
-        public async Task<string> LoginAsync([Required] LoginCommand command)
+        public async Task<string> LoginAsync([Required][FromBody] LoginCommand command, [FromQuery] string id)
         {
             try
             {

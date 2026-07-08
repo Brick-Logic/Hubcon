@@ -25,7 +25,8 @@ namespace Hubcon.Server.Core.Routing
 {
     public static class HttpOperationRegisterer
     {
-        private readonly static MethodInfo methodInfo = typeof(EndpointFilterExtensions).GetMethod("AddEndpointFilter", [typeof(RouteHandlerBuilder)])!;
+        private readonly static MethodInfo methodInfo =
+            typeof(EndpointFilterExtensions).GetMethod("AddEndpointFilter", [typeof(RouteHandlerBuilder)])!;
 
         private readonly static ConcurrentDictionary<string, RouteGroupBuilder> EndpointGroups = new();
         private readonly static ConcurrentDictionary<RouteGroupBuilder, bool> RateLimiterApplied = new();
@@ -54,6 +55,13 @@ namespace Hubcon.Server.Core.Routing
             var simpleContractName = NamingHelper.GetCleanName(blueprint.ContractName);
             var options = app.Services.GetRequiredService<IInternalServerOptions>();
             var method = (MethodInfo)blueprint.MemberInfo!;
+            
+            var endpointDelegate =
+                EndpointManager.GetDummyEndpointDelegate(blueprint.ContractName, method.GetMethodSignature());
+
+            if (endpointDelegate == null)
+                throw new HubconGenericException(
+                    $"Could not find a suitable delegate for endpoint '{method.Name}', on contract '{blueprint.ContractName}'. This could mean the source generators had an error.");
 
             if (options.MethodOverloadingIsEnabled) route = $"{method.GetMethodSignature()}";
 
@@ -86,18 +94,16 @@ namespace Hubcon.Server.Core.Routing
             });
 
             HttpMethod verbResult = blueprint.HttpVerb!;
-            var wrapperType = blueprint.CallWrapperType!;
-            var wrapperProps = wrapperType?.GetProperties();
+            SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
 
-
-            if(blueprint.Kind == OperationKind.Stream)
+            if (blueprint.Kind == OperationKind.Stream)
             {
                 if (verbResult == HttpMethod.Get)
                 {
-                    SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
-                    
-                    async ValueTask<object> GetDelegate(HttpContext context)
+                    builder = endpointGroup.MapGet(route, endpointDelegate);
+                    builder.AddEndpointFilter(async (invocationContext, next) =>
                     {
+                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
 
@@ -113,16 +119,17 @@ namespace Hubcon.Server.Core.Routing
                         var rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
                         var remoteAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.stream_init, transport, operationRequest))
+                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.stream_init, transport,
+                                operationRequest))
                         {
                             return HubconResponse.TooManyRequests();
                         }
 
                         var res = await DefaultEntrypoint.HandleMethodStream(
                             operationRequest,
-                            transport, 
-                            services, 
-                            null, 
+                            transport,
+                            services,
+                            null,
                             cancellationToken);
 
 
@@ -132,19 +139,14 @@ namespace Hubcon.Server.Core.Routing
                         }
 
                         return new SseResult((res.Data as IAsyncEnumerable<object?>)!, operationRequest);
-                    }
-                    
-                    builder = endpointGroup.MapGet(route, GetDelegate)
-                    .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
-                    .AllowAnonymous()
-                    .WithRequestTimeout(options.HttpTimeout);
+                    });
                 }
                 else
                 {
-                    SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
-
-                    async ValueTask<object> PostDelegate(JsonElement request, HttpContext context)
+                    builder = endpointGroup.MapPost(route, endpointDelegate);
+                    builder.AddEndpointFilter(async (invocationContext, next) =>
                     {
+                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
 
@@ -155,7 +157,7 @@ namespace Hubcon.Server.Core.Routing
                         }
 
                         var args = new Dictionary<string, object>();
-                        
+
                         var operationRequest = new OperationRequest(
                             operationName,
                             simpleContractName,
@@ -167,7 +169,8 @@ namespace Hubcon.Server.Core.Routing
                         var rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
                         var remoteAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.stream_init, transport, operationRequest))
+                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.stream_init, transport,
+                                operationRequest))
                         {
                             return HubconResponse.TooManyRequests();
                         }
@@ -185,30 +188,23 @@ namespace Hubcon.Server.Core.Routing
                         }
 
                         return new SseResult((res.Data! as IAsyncEnumerable<object?>)!, operationRequest);
-                    }
-                    
-                    builder = endpointGroup.MapPost(route, PostDelegate)
-                    .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
-                    .AllowAnonymous()
-                    .WithRequestTimeout(options.HttpTimeout);
-                    options.EndpointConventions?.Invoke(builder);
+                    });
                 }
             }
             else if (blueprint.HasReturnType)
             {
                 if (verbResult == HttpMethod.Get)
                 {
-
-                    SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
-                    
-                    async ValueTask<object> GetDelegate(HttpContext context)
+                    builder = endpointGroup.MapGet(route, endpointDelegate);
+                    builder.AddEndpointFilter(async (invocationContext, next) =>
                     {
+                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
-                        
+
                         var dict = context.Request.Query
                             .Cast<KeyValuePair<string, StringValues>>()
                             .ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString());
@@ -220,7 +216,9 @@ namespace Hubcon.Server.Core.Routing
                         var rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
                         var remoteAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_invoke, transport, operationRequest))
+                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_invoke,
+                                transport,
+                                operationRequest))
                         {
                             return HubconResponse.TooManyRequests();
                         }
@@ -233,19 +231,14 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res;
-                    }
-                    
-                    builder = endpointGroup.MapGet(route, GetDelegate)
-                    .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
-                    .AllowAnonymous()
-                    .WithRequestTimeout(options.HttpTimeout);
+                    });
                 }
                 else
                 {
-                    SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
-
-                    async ValueTask<object> PostDelegate(JsonElement request, HttpContext context)
+                    builder = endpointGroup.MapPost(route, endpointDelegate);
+                    builder.AddEndpointFilter(async (invocationContext, next) =>
                     {
+                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var converter = services.GetRequiredService<IDynamicConverter>();
                         var cancellationToken = context.RequestAborted;
@@ -269,7 +262,8 @@ namespace Hubcon.Server.Core.Routing
                         var rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
                         var remoteAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_invoke, transport, operationRequest))
+                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_invoke, transport,
+                                operationRequest))
                         {
                             return HubconResponse.TooManyRequests();
                         }
@@ -282,23 +276,17 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res;
-                    }
-                    
-                    builder = endpointGroup.MapPost(route, PostDelegate)
-                    .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
-                    .AllowAnonymous()
-                    .WithRequestTimeout(options.HttpTimeout);
-                    options.EndpointConventions?.Invoke(builder);
+                    });
                 }
             }
             else
             {
                 if (verbResult == HttpMethod.Get)
                 {
-                    SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
-
-                    async ValueTask<object> GetDelegate(HttpContext context)
+                    builder = endpointGroup.MapGet(route, endpointDelegate);
+                    builder.AddEndpointFilter(async (invocationContext, next) =>
                     {
+                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
 
@@ -316,7 +304,8 @@ namespace Hubcon.Server.Core.Routing
                         var rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
                         var remoteAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_call, transport, operationRequest))
+                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_call, transport,
+                                operationRequest))
                         {
                             return HubconResponse.TooManyRequests();
                         }
@@ -329,21 +318,14 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res;
-                    }
-                    
-                    builder = endpointGroup.MapGet(route, GetDelegate)
-                        .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
-                        .WithMetadata(new AsParametersAttribute())
-                        .AllowAnonymous()
-                        .WithRequestTimeout(options.HttpTimeout);
-                    options.EndpointConventions?.Invoke(builder);
+                    });
                 }
                 else
                 {
-                    SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
-
-                    async ValueTask<object> PostDelegate(JsonElement request, HttpContext context)
+                    builder = endpointGroup.MapPost(route, endpointDelegate);
+                    builder.AddEndpointFilter(async (invocationContext, next) =>
                     {
+                        var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var converter = services.GetRequiredService<IDynamicConverter>();
                         var cancellationToken = context.RequestAborted;
@@ -356,9 +338,9 @@ namespace Hubcon.Server.Core.Routing
                             var response = HubconResponse.RequestTooLarge();
                             return ProcessResponse(response, context);
                         }
-                        
+
                         var args = new Dictionary<string, object>();
-                        
+
                         var operationRequest = new OperationRequest(
                             operationName,
                             simpleContractName,
@@ -370,7 +352,8 @@ namespace Hubcon.Server.Core.Routing
                         var rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
                         var remoteAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_call, transport, operationRequest))
+                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_call, transport,
+                                operationRequest))
                         {
                             return HubconResponse.TooManyRequests();
                         }
@@ -383,24 +366,25 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res;
-                    }
-
-                    builder = endpointGroup.MapPost(route, PostDelegate)
-                        .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
-                        .AllowAnonymous()
-                        .WithRequestTimeout(options.HttpTimeout);
-                    options.EndpointConventions?.Invoke(builder);
+                    });
                 }
             }
+
+            builder
+                .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
+                .WithRequestTimeout(options.HttpTimeout);
+
+            builder.AllowAnonymous();
+            options.EndpointConventions?.Invoke(builder);
         }
 
         static void SetupEndpointGroup(
-                IInternalServerOptions options,
-                IEndpointConventionBuilder builder,
-                RouteGroupBuilder endpointGroup,
-                IOperationBlueprint blueprint,
-                MethodInfo controllerMethod,
-                List<UseHttpEndpointFilterAttribute> filters)
+            IInternalServerOptions options,
+            IEndpointConventionBuilder builder,
+            RouteGroupBuilder endpointGroup,
+            IOperationBlueprint blueprint,
+            MethodInfo controllerMethod,
+            List<UseHttpEndpointFilterAttribute> filters)
         {
             options.EndpointConventions?.Invoke(builder);
 
@@ -414,7 +398,8 @@ namespace Hubcon.Server.Core.Routing
                 var limiterApplied = RateLimiterApplied.TryGetValue(endpointGroup, out var result);
                 if (!limiterApplied)
                 {
-                    var ContractRateLimiter = blueprint.ControllerType.GetCustomAttributes<UseHttpRateLimiterAttribute>().FirstOrDefault();
+                    var ContractRateLimiter = blueprint.ControllerType
+                        .GetCustomAttributes<UseHttpRateLimiterAttribute>().FirstOrDefault();
                     if (ContractRateLimiter != null)
                     {
                         endpointGroup.RequireRateLimiting(ContractRateLimiter.Policy);
@@ -422,7 +407,8 @@ namespace Hubcon.Server.Core.Routing
                     }
                 }
 
-                var OperationRateLimiter = controllerMethod!.GetCustomAttributes<UseHttpRateLimiterAttribute>().FirstOrDefault();
+                var OperationRateLimiter = controllerMethod!.GetCustomAttributes<UseHttpRateLimiterAttribute>()
+                    .FirstOrDefault();
                 if (OperationRateLimiter != null)
                     builder.RequireRateLimiting(OperationRateLimiter.Policy);
             }

@@ -202,11 +202,13 @@ namespace HubconAnalyzers.SourceGenerators
                 if (generateForServer)
                 {
                     var endpointModelsCode = GenerateEndpointParameterWrappers(interfaces);
-                    spc.AddSource($"EndpointParameterWrappers.g.cs",
-                        SourceText.From(endpointModelsCode, Encoding.UTF8));
+                    spc.AddSource($"EndpointParameterWrappers.g.cs", SourceText.From(endpointModelsCode, Encoding.UTF8));
 
                     var endpointInvokersCode = GenerateDedicatedInvokers(interfaces);
                     spc.AddSource($"EndpointInvokers.g.cs", SourceText.From(endpointInvokersCode, Encoding.UTF8));
+
+                    var endpointDelegates = GenerateHttpDelegates(interfaces);
+                    spc.AddSource($"EndpointDelegates.g.cs", SourceText.From(endpointDelegates, Encoding.UTF8));
                 }
             });
         }
@@ -956,7 +958,8 @@ namespace HubconAnalyzers.SourceGenerators
                 "        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("        public static void Init()");
             sb.AppendLine("        {");
-            sb.AppendLine("             global::Hubcon.EndpointManager.Setup(EndpointInvokerProvider.GetInvoker, ParameterWrapperProvider.GetWrapperType, ParameterWrapperProvider.GetWrapperDelegate);");
+            sb.AppendLine(
+                "             global::Hubcon.EndpointManager.Setup(EndpointDelegateProvider.GetDelegate, EndpointInvokerProvider.GetInvoker, ParameterWrapperProvider.GetWrapperType, ParameterWrapperProvider.GetWrapperDelegate);");
             sb.AppendLine("        }");
             sb.AppendLine();
 
@@ -1101,7 +1104,6 @@ namespace HubconAnalyzers.SourceGenerators
                             }
                         }
 
-                        // Propiedad estándar Auto-implemented (reemplaza tus métodos get_ / set_ en IL)
                         sb.AppendLine(
                             $"        public {typeName}{(isNullable ? "?" : "")} {paramName} {{ get; set; }}");
                         sb.AppendLine();
@@ -1139,11 +1141,10 @@ namespace HubconAnalyzers.SourceGenerators
                         sb.AppendLine("");
                     }
 
-                    // 2. EL PASE VIP: Método BindAsync (reemplaza tu TryParse en IL para .NET 7/8/9+)
-                    // Este método le dice a Minimal API: "No te metas con el Binding, yo me encargo"
                     if (parameters.Length > 0)
                     {
-                        sb.AppendLine($"        public static ValueTask<{wrapperClassName}> BindAsync(HttpContext context, System.Reflection.ParameterInfo parameter)");
+                        sb.AppendLine(
+                            $"        public static ValueTask<{wrapperClassName}> BindAsync(HttpContext context, System.Reflection.ParameterInfo parameter)");
                         sb.AppendLine("        {");
                         sb.AppendLine($"            return ValueTask.FromResult(new {wrapperClassName}());");
                         sb.AppendLine("        }");
@@ -1169,7 +1170,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine();
             sb.AppendLine("namespace Hubcon.Generated");
             sb.AppendLine("{");
-            
+
             sb.AppendLine($"    public static class EndpointInvokerProvider");
             sb.AppendLine("    {");
             sb.AppendLine("        public static IEndpointInvoker GetInvoker(string contractName, string signature)");
@@ -1177,7 +1178,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("            var finalSignature = contractName + \"_\" + signature;");
             sb.AppendLine("            switch(finalSignature)");
             sb.AppendLine("            {");
-            
+
             foreach (var interfaceSymbol in interfaces)
             {
                 var methods = interfaceSymbol.GetMembers()
@@ -1186,8 +1187,10 @@ namespace HubconAnalyzers.SourceGenerators
 
                 foreach (var method in methods)
                 {
-                    var invokerClassName = $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Invoker";
-                    sb.AppendLine($"                 case \"{interfaceSymbol.Name}_{method.GetMethodSymbolSignature()}\": return new {invokerClassName}();");
+                    var invokerClassName =
+                        $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Invoker";
+                    sb.AppendLine(
+                        $"                 case \"{interfaceSymbol.Name}_{method.GetMethodSymbolSignature()}\": return new {invokerClassName}();");
                 }
             }
 
@@ -1196,7 +1199,7 @@ namespace HubconAnalyzers.SourceGenerators
             sb.AppendLine("        }");
             sb.AppendLine("    }");
             sb.AppendLine();
-            
+
 
             foreach (var interfaceSymbol in interfaces)
             {
@@ -1234,7 +1237,8 @@ namespace HubconAnalyzers.SourceGenerators
                     // Solo casteamos el wrapper si realmente se espera que exista un objeto con datos
                     if (hasRealParameters)
                     {
-                        sb.AppendLine($"            var typedWrapper = (global::Hubcon.Generated.{wrapperTypeName})wrapper;");
+                        sb.AppendLine(
+                            $"            var typedWrapper = (global::Hubcon.Generated.{wrapperTypeName})wrapper;");
                     }
 
                     sb.AppendLine();
@@ -1272,6 +1276,74 @@ namespace HubconAnalyzers.SourceGenerators
                 }
             }
 
+            sb.AppendLine("}");
+            return sb.ToString();
+        }
+
+        private static string GenerateHttpDelegates(IEnumerable<INamedTypeSymbol> interfaces)
+        {
+            var sb = new StringBuilder();
+
+            sb.AppendLine("// <auto-generated />");
+            sb.AppendLine("using System;");
+            sb.AppendLine("using Microsoft.AspNetCore.Mvc;");
+            sb.AppendLine("using System.Threading;");
+            sb.AppendLine("using Hubcon;");
+            sb.AppendLine();
+            sb.AppendLine("namespace Hubcon.Generated");
+            sb.AppendLine("{");
+            sb.AppendLine($"    public static class EndpointDelegateProvider");
+            sb.AppendLine("    {");
+            sb.AppendLine("        public static Delegate? GetDelegate(string contractName, string signature)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            var finalSignature = contractName + \"_\" + signature;");
+            sb.AppendLine("            switch(finalSignature)");
+            sb.AppendLine("            {");
+
+            foreach (var interfaceSymbol in interfaces)
+            {
+                var methods = interfaceSymbol.GetMembers()
+                    .OfType<IMethodSymbol>()
+                    .Where(m => m.MethodKind == MethodKind.Ordinary);
+
+                foreach (var method in methods)
+                {
+                    var delegateName = $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Delegate";
+                    sb.AppendLine(
+                        $"                 case \"{interfaceSymbol.Name}_{method.GetMethodSymbolSignature()}\": return EndpointDelegateProvider.{delegateName};");
+                }
+            }
+
+            sb.AppendLine("                 default: return null;");
+            sb.AppendLine("            }");
+            sb.AppendLine("        }");
+
+
+            foreach (var interfaceSymbol in interfaces)
+            {
+                var methods = interfaceSymbol.GetMembers()
+                    .OfType<IMethodSymbol>()
+                    .Where(m => m.MethodKind == MethodKind.Ordinary);
+
+                foreach (var method in methods)
+                {
+                    var delegateName =
+                        $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Delegate";
+                    var wrapperTypeName =
+                        $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Request";
+
+                    if (method.Parameters.Count(x => x.Type.ToDisplayString() != "System.Threading.CancellationToken") == 0)
+                    {
+                        sb.AppendLine($"        public static {method.GetHubconResponseTypeFromMethod()} {delegateName}() => default!;");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"        public static {method.GetHubconResponseTypeFromMethod()} {delegateName}([AsParameters] {wrapperTypeName} request) => default!;");
+                    }
+                }
+            }
+
+            sb.AppendLine("    }");
             sb.AppendLine("}");
             return sb.ToString();
         }

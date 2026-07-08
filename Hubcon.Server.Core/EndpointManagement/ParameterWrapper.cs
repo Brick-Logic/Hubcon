@@ -8,9 +8,9 @@ public sealed class ParameterWrapper : IParameterWrapper
 {
     private readonly Func<IReadOnlyDictionary<string, object>, object?> _wrapperDelegate;
 
-    public ParameterWrapper(string contractName, MethodInfo methodInfo, IEndpointManager endpointManager)
+    public ParameterWrapper(string contractName, MethodInfo methodInfo)
     {
-        _wrapperDelegate = endpointManager.GetWrapperDelegate(contractName, methodInfo.GetMethodSignature()) 
+        _wrapperDelegate = EndpointManager.GetWrapperDelegate(contractName, methodInfo.GetMethodSignature()) 
                               ?? throw new HubconGenericException($"Could not find a parameter wrapper for the '{methodInfo.Name}' endpoint in '{methodInfo.DeclaringType}' controller. This error could be caused by an error while executing the source generators.");
     }
     

@@ -24,8 +24,7 @@ namespace Hubcon.Server
     public class ServerBuilder
     {
         private static readonly AtomicPass _serverIsBuilt = new();
-        private static readonly IEndpointManager _endpointManager = new EndpointManager();
-        private static readonly IOperationRegistry _operationRegistry = new OperationRegistry(_endpointManager);
+        private static readonly IOperationRegistry _operationRegistry = new OperationRegistry();
         private CoreServerOptions ServerOptions { get; } = new();
         private IServiceCollection Services;
 
@@ -79,7 +78,6 @@ namespace Hubcon.Server
 
             Services.AddSingleton<IInternalServerOptions>(ServerOptions);
             Services.AddScoped<IOperationContext>(x => OperationContextProvider.GetContext() ?? throw new InvalidOperationException("No active operation context. IOperationContext is only available inside the Hubcon pipeline."));
-            Services.AddSingleton(_endpointManager);
             Services.AddSingleton(_operationRegistry);
             Services.AddSingleton<IPermissionRegistry, PermissionRegistry>();
             Services.AddSingleton<IConnectionSupervisor, ConnectionSupervisor>();

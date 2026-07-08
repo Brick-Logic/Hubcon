@@ -8,7 +8,7 @@ namespace HubconTestDomain
     [HttpTransport]
     public interface ISecondTestContract : IControllerContract
     {
-        public Task<string> LoginAsync(LoginCommand command);
+        public Task<string> LoginAsync(LoginCommand command, string id);
         
         public Task TestVoid();
 

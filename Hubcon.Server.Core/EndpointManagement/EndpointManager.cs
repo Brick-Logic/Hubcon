@@ -1,11 +1,15 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using Hubcon.Server.Abstractions.Interfaces;
+using Microsoft.AspNetCore.Routing;
 
 namespace Hubcon;
 
-public sealed class EndpointManager : IEndpointManager
+public static class EndpointManager
 {
+    private static Func<string, string, Delegate?>? _dummyDelegateProvider = null;
+    private static readonly ConcurrentDictionary<(string, string, Func<string, string, Delegate?>), Delegate?> _dummyDelegateCache = new();
+    
     private static Func<string, string, IEndpointInvoker>? _invokerProvider = null;
     private static readonly ConcurrentDictionary<(string, string, Func<string, string, IEndpointInvoker>), IEndpointInvoker> _invokerCache = new();
     
@@ -16,23 +20,25 @@ public sealed class EndpointManager : IEndpointManager
     private static readonly ConcurrentDictionary<(string, string, Func<string, string, Type?>), Type?> _parameterWrapperTypeCache = new();
     
     public static void Setup(
+        Func<string, string, Delegate?> httpEndpointMapper,
         Func<string, string, IEndpointInvoker> invokerProvider,
         Func<string, string, Type?> parameterWrapperTypeProvider,
         Func<string, string, Func<IReadOnlyDictionary<string, object>, object>?> parameterWrapperProvider)
     {
+        _dummyDelegateProvider ??= httpEndpointMapper;
         _invokerProvider ??= invokerProvider;
         _parameterWrapperTypeProvider ??= parameterWrapperTypeProvider;
         _parameterWrapperProvider ??= parameterWrapperProvider;
     }
 
-    public IEndpointInvoker? GetInvoker(string contractName, string signature)
+    public static IEndpointInvoker? GetInvoker(string contractName, string signature)
     {
         return _invokerProvider == null
             ? null 
             : _invokerCache.GetOrAdd((contractName, signature, _invokerProvider), x => x.Item3.Invoke(x.Item1, x.Item2));
     }
 
-    public Func<IReadOnlyDictionary<string, object>, object>? GetWrapperDelegate(string contractName, string methodSignature)
+    public static Func<IReadOnlyDictionary<string, object>, object>? GetWrapperDelegate(string contractName, string methodSignature)
     {
         return _parameterWrapperProvider == null
             ? null 
@@ -40,10 +46,17 @@ public sealed class EndpointManager : IEndpointManager
 
     }
     
-    public Type? GetWrapperType(string contractName, string methodSignature)
+    public static Type? GetWrapperType(string contractName, string methodSignature)
     {
         return _parameterWrapperTypeProvider == null
             ? null 
             : _parameterWrapperTypeCache.GetOrAdd((contractName, methodSignature, _parameterWrapperTypeProvider), x => x.Item3.Invoke(x.Item1, x.Item2));
+    }
+    
+    public static Delegate? GetDummyEndpointDelegate(string contractName, string signature)
+    {
+        return _dummyDelegateProvider == null
+            ? null 
+            : _dummyDelegateCache.GetOrAdd((contractName, signature, _dummyDelegateProvider), x => x.Item3.Invoke(x.Item1, x.Item2));
     }
 }

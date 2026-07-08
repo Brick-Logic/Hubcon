@@ -66,7 +66,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             OperationKind kind,
             IPipelineBuilder pipelineBuilder,
             IInternalServerOptions options,
-            IEndpointManager endpointManager,
             HttpMethod? httpMethod = null)
         {
             ArgumentException.ThrowIfNullOrEmpty(operationName);
@@ -213,13 +212,13 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             }
 
             PipelineBuilder = pipelineBuilder;
-            Invoker = endpointManager.GetInvoker(ContractName, methodInfo.GetMethodSignature()) 
+            Invoker = EndpointManager.GetInvoker(ContractName, methodInfo.GetMethodSignature()) 
                       ?? throw new HubconGenericException($"Could not find an invoker for the '{methodInfo.Name}' endpoint in '{methodInfo.DeclaringType}' controller. This error could be caused by an error while executing the source generators.");
 
             
-            ParameterWrapper = ParameterTypes.IsEmpty ? null : new ParameterWrapper(ContractName, methodInfo, endpointManager);
+            ParameterWrapper = ParameterTypes.IsEmpty ? null : new ParameterWrapper(ContractName, methodInfo);
 
-            CallWrapperType = endpointManager.GetWrapperType(ContractName, methodInfo.GetMethodSignature());
+            CallWrapperType = EndpointManager.GetWrapperType(ContractName, methodInfo.GetMethodSignature());
             
             var handlerTypes = controllerType.GetCustomAttributes()
                 .Concat(controllerMemberInfo!.GetCustomAttributes())

@@ -6,7 +6,7 @@ namespace Hubcon.Blazor.Client.Auth
     {
         protected async override Task<IAuthResult> AuthenticateAsync(string username, string password)
         {
-            var token = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand(username, password, true)));
+            var token = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand(username, password, true), ""));
             return AuthResult.Success(token.Data, "Bearer", RefreshToken!, DateTimeOffset.UtcNow.AddMinutes(30).ToUnixTimeSeconds());
         }
 
@@ -24,7 +24,7 @@ namespace Hubcon.Blazor.Client.Auth
 
         protected async override Task<PersistedSession?> LoadPersistedSessionAsync()
         {
-            var token = await secondTestContract.LoginAsync(new LoginCommand("username", "password", true));
+            var token = await secondTestContract.LoginAsync(new LoginCommand("username", "password", true), "");
 
             return new PersistedSession()
             {
@@ -37,7 +37,7 @@ namespace Hubcon.Blazor.Client.Auth
 
         protected async override Task<IAuthResult> RefreshSessionAsync(string refreshToken)
         {
-            var token = await secondTestContract.LoginAsync(new LoginCommand("refresh", "password", true));
+            var token = await secondTestContract.LoginAsync(new LoginCommand("refresh", "password", true), "");
             return AuthResult.Success(token, "Bearer", RefreshToken!, DateTimeOffset.UtcNow.AddMinutes(30).ToUnixTimeSeconds());
         }
 

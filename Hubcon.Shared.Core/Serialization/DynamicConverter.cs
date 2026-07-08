@@ -321,6 +321,22 @@ namespace Hubcon.Shared.Core.Serialization
             }
         }
 
+        public Dictionary<string, object>? DeserializeParameters(IDictionary<string, object> dict, IDictionary<string, Type> parameterTypes)
+        {
+            if (dict.Count != parameterTypes.Count) return null;
+            
+            var resultDict = new Dictionary<string, object>();
+            foreach (var key in parameterTypes.Keys)
+            {
+                if (dict.TryGetValue(key, out var item) && item is JsonElement element)
+                {
+                    resultDict[key] = DeserializeJsonElement(element, parameterTypes[key])!;
+                }
+            }
+
+            return resultDict;
+        }
+
         /// <inheritdoc/>
         public string Serialize<T>(T value)
         {

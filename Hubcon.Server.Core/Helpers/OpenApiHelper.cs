@@ -201,8 +201,7 @@ namespace Hubcon.Server.Core.Helpers
             else if(returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
             {
                 builder
-                    .Produces(200, typeof(List<>).MakeGenericType(returnType.GenericTypeArguments[0]), "text/event-stream")
-                    .WithOpenApi(operation => SetDefaultExample(operation, Defaults.DefaultSuccessStatusCode.ToString(), returnType));
+                    .Produces(200, typeof(List<>).MakeGenericType(returnType.GenericTypeArguments[0]), "text/event-stream");
             }
             else if (returnType == typeof(IResponse) || returnType.IsAssignableTo(typeof(IResponse)))
             {
@@ -212,8 +211,7 @@ namespace Hubcon.Server.Core.Helpers
             {
                 // Tipo específico
                 var responseType = typeof(IHubconResponse<>).MakeGenericType(returnType);
-                builder.Produces(Defaults.DefaultSuccessStatusCode, responseType)
-                       .WithOpenApi(operation => SetDefaultExample(operation, Defaults.DefaultSuccessStatusCode.ToString(), returnType));
+                builder.Produces(Defaults.DefaultSuccessStatusCode, responseType);
             }
         }
 
@@ -356,52 +354,7 @@ namespace Hubcon.Server.Core.Helpers
 
             return returnType;
         }
-
-        private static void ApplyParametersForHttpMethod(
-            RouteHandlerBuilder builder,
-            MethodInfo methodInfo,
-            HttpMethod httpMethod)
-        {
-            var parameters = methodInfo.GetParameters()
-                .Where(x => !Defaults.ExcludedTypes.Any(t => t.IsAssignableFrom(x.ParameterType)))
-                .ToArray();
-
-            if (httpMethod == HttpMethod.Get && parameters.Any())
-            {
-                builder.WithOpenApi(operation =>
-                {
-                    operation.Parameters ??= new List<Microsoft.OpenApi.Models.OpenApiParameter>();
-
-                    foreach (var param in parameters)
-                    {
-                        if (IsSimpleType(param.ParameterType))
-                        {
-                            var schema = new Microsoft.OpenApi.Models.OpenApiSchema
-                            {
-                                Type = MapToOpenApiType(param.ParameterType),
-                                Format = MapToOpenApiFormat(param.ParameterType),
-                                Example = GetDefaultExample(param.ParameterType)
-                            };
-
-                            operation.Parameters.Add(new Microsoft.OpenApi.Models.OpenApiParameter
-                            {
-                                Name = param.Name!,
-                                In = Microsoft.OpenApi.Models.ParameterLocation.Query,
-                                Required = !param.IsOptional && !IsNullable(param.ParameterType),
-                                Schema = schema
-                            });
-                        }
-                    }
-
-                    return operation;
-                });
-            }
-            else
-            {
-                ApplyAcceptsWithDefaults(builder, methodInfo);
-            }
-        }
-
+        
         private static Microsoft.OpenApi.Any.IOpenApiAny GetDefaultExample(Type type)
         {
             return Type.GetTypeCode(type) switch
@@ -463,72 +416,6 @@ namespace Hubcon.Server.Core.Helpers
                    type == typeof(short) || type == typeof(ushort) ||
                    type == typeof(int) || type == typeof(uint) ||
                    type == typeof(long) || type == typeof(ulong);
-        }
-
-        private static void ApplyQueryParametersWithDefaults(RouteHandlerBuilder builder, MethodInfo methodInfo)
-        {
-            var parameters = methodInfo.GetParameters()
-                .Where(x => !Defaults.ExcludedTypes.Any(t => t.IsAssignableFrom(x.ParameterType)))
-                .ToArray();
-
-            if (!parameters.Any())
-                return;
-
-            builder.WithOpenApi(operation =>
-            {
-                operation.Parameters ??= new List<Microsoft.OpenApi.Models.OpenApiParameter>();
-
-                foreach (var param in parameters)
-                {
-                    if (IsSimpleType(param.ParameterType))
-                    {
-                        operation.Parameters.Add(new Microsoft.OpenApi.Models.OpenApiParameter
-                        {
-                            Name = param.Name!,
-                            In = Microsoft.OpenApi.Models.ParameterLocation.Query,
-                            Required = !param.IsOptional && !IsNullable(param.ParameterType),
-                            Schema = new Microsoft.OpenApi.Models.OpenApiSchema
-                            {
-                                Type = MapToOpenApiType(param.ParameterType),
-                                Format = MapToOpenApiFormat(param.ParameterType),
-                            },
-                            Example = new Microsoft.OpenApi.Any.OpenApiString($"Example_{param.Name}")
-                        });
-                    }
-                    else
-                    {
-                        foreach (var prop in param.ParameterType.GetProperties())
-                        {
-                            if (IsSimpleType(prop.PropertyType))
-                            {
-                                operation.Parameters.Add(new Microsoft.OpenApi.Models.OpenApiParameter
-                                {
-                                    Name = prop.Name,
-                                    In = Microsoft.OpenApi.Models.ParameterLocation.Query,
-                                    Required = false,
-                                    Schema = new Microsoft.OpenApi.Models.OpenApiSchema
-                                    {
-                                        Type = MapToOpenApiType(prop.PropertyType),
-                                        Format = MapToOpenApiFormat(prop.PropertyType),
-                                    },
-                                    Example = new Microsoft.OpenApi.Any.OpenApiString($"Example_{prop.Name}")
-                                });
-                            }
-                        }
-                    }
-                }
-
-                return operation;
-            });
-        }
-
-        private static void RemoveQueryParameters(RouteHandlerBuilder builder, MethodInfo methodInfo)
-        {
-            builder.WithOpenApi(operation =>
-            {
-                operation.Parameters?.Clear();
-                return operation;
-            });
         }
 
         private static IOpenApiAny GetExampleForType(Type type)
