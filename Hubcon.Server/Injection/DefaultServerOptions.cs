@@ -48,7 +48,7 @@ namespace Hubcon.Server.Injection
             HubconServerBuilder.AddGlobalMiddleware(middlewareType);
         }
 
-        public void AddController<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicConstructors)] T>(Action<IControllerOptions>? options = null) where T : class, IControllerContract, new()
+        public void AddController<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicConstructors)] T>(Action<IControllerOptions>? options = null) where T : class, IControllerContract
         {
             HubconServerBuilder.AddHubconController<T>(Builder, options);
         }

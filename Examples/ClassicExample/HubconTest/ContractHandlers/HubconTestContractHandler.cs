@@ -1,4 +1,8 @@
+using System.ComponentModel.DataAnnotations;
 using HubconTestClient.Models;
+using HubconTestDomain;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace HubconTest.ContractHandlers;
 

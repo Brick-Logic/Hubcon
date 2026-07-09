@@ -35,11 +35,9 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine($"using System.Runtime.CompilerServices;");
             sb.AppendLine($"");
 
-            // Determinamos el nivel de indentación base
             var hasNamespace = !string.IsNullOrEmpty(namespaceName) && namespaceName != "<global namespace>";
             var baseIndent = hasNamespace ? "    " : "";
 
-            // Solo agregamos el namespace si no es el global
             if (hasNamespace)
             {
                 sb.AppendLine($"namespace {namespaceName}");
@@ -60,27 +58,22 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                 var propertyName = property.Name;
                 var propertyType = property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-                // Generamos un nombre para el backing field (ej: _myProperty)
                 var fieldName = "_" + char.ToLower(propertyName[0]) + propertyName.Substring(1);
 
-                // 1. Escribimos el backing field privado
                 sb.AppendLine($"{baseIndent}    private {propertyType} {fieldName};");
 
-                // 2. Empezamos la propiedad pública
                 sb.AppendLine($"{baseIndent}    public {propertyType} {propertyName}");
                 sb.AppendLine($"{baseIndent}    {{");
 
-                // Get con su backing field
                 sb.AppendLine($"{baseIndent}        get => this.{fieldName};");
 
-                // Set con su backing field (si existe)
                 if (property.SetMethod != null)
                 {
                     sb.AppendLine($"{baseIndent}        set => this.{fieldName} = value;");
                 }
 
                 sb.AppendLine($"{baseIndent}    }}");
-                sb.AppendLine(); // Espacio entre propiedades
+                sb.AppendLine();
             }
 
             foreach (var method in iface
@@ -92,7 +85,6 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                 var methodName = method.Name;
                 var parameters = string.Join(", ",
                     method.Parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"));
-                var paramNames = string.Join(", ", method.Parameters.Select(p => p.Name));
 
                 sb.AppendLine($"{baseIndent}    public {returnType} {methodName}({parameters})");
                 sb.AppendLine($"{baseIndent}    {{");
@@ -142,20 +134,17 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 
                 if (returnType == "void")
                 {
-                    // CallAsync que devuelve Task, bloquea con Wait() para void
                     callMethod =
                         $"{nameof(BaseProxy.CallAsync)}({stringMethodName}{AllParameters}{cancellationTokenName}).Wait();";
                 }
                 else if (returnType.StartsWith("System.Collections.Generic.IAsyncEnumerable<"))
                 {
-                    // Streaming
                     var generic = returnType.GetGenericArgument("System.Collections.Generic.IAsyncEnumerable");
                     callMethod =
                         $"return {nameof(BaseProxy.StreamAsync)}<{generic}>({stringMethodName}{AllParameters}{cancellationTokenName});";
                 }
                 else if (method.Parameters.Any(p => p.Type.IsIAsyncEnumerable()))
                 {
-                    // Si tiene argumento IAsyncEnumerable, usar IngestAsync
                     if (returnType.StartsWith("System.Threading.Tasks.Task<"))
                     {
                         var generic = returnType.GetGenericArgument("System.Threading.Tasks.Task");
@@ -169,27 +158,23 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                     }
                     else
                     {
-                        // En source generator .NET Standard 2.0 no se usa excepción, puede fallar en runtime si llega acá.
                         callMethod =
                             $"return {nameof(BaseProxy.IngestAsync)}<{returnType}>({stringMethodName}{AllParameters}{cancellationTokenName});";
                     }
                 }
                 else if (returnType.StartsWith("System.Threading.Tasks.Task<"))
                 {
-                    // InvokeAsync para Task<T>
                     var generic = returnType.GetGenericArgument("System.Threading.Tasks.Task");
                     callMethod =
                         $"return {nameof(BaseProxy.InvokeAsync)}<{generic}>({stringMethodName}{AllParameters}{cancellationTokenName});";
                 }
                 else if (returnType == "System.Threading.Tasks.Task")
                 {
-                    // CallAsync para Task
                     callMethod =
                         $"return {nameof(BaseProxy.CallAsync)}({stringMethodName}{AllParameters}{cancellationTokenName});";
                 }
                 else
                 {
-                    // InvokeAsync para cualquier otro tipo sincrónico (bloquea con .Result)
                     callMethod =
                         $"return {nameof(BaseProxy.InvokeAsync)}<{returnType}>({stringMethodName}{AllParameters}{cancellationTokenName}).Result;";
                 }
@@ -209,10 +194,8 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                 var propertyName = property.Name;
                 var propertyType = property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-                // Reutilizamos la misma convención de nombre para el backing field
                 var fieldName = "_" + char.ToLower(propertyName[0]) + propertyName.Substring(1);
 
-                // Generamos el case para cada propiedad
                 sb.AppendLine($"{baseIndent}            case \"{propertyName}\":");
                 sb.AppendLine($"{baseIndent}                this.{fieldName} = value as {propertyType};");
                 sb.AppendLine($"{baseIndent}                break;");
@@ -223,10 +206,9 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine($"{baseIndent}}}");
             sb.AppendLine("");
 
-            var preserver = GenerateProxyPreserverClass(iface);
+            var preserver = GeneratePreserverClass.Execute(iface, "Proxy");
             sb.AppendLine(preserver);
 
-            // Cerramos el namespace si lo abrimos
             if (hasNamespace)
             {
                 sb.AppendLine($"}}");
@@ -234,94 +216,6 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 
             var code = sb.ToString();
             spc.AddSource(fileName, SourceText.From(code, Encoding.UTF8));
-        }
-        
-        private static string GenerateProxyPreserverClass(INamedTypeSymbol iface)
-        {
-            var sb = new StringBuilder();
-            var proxyName = iface.Name + "Proxy";
-            var ifaceFullName = iface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            var namespaceName = iface.ContainingNamespace?.ToDisplayString();
-            var hasNamespace = !string.IsNullOrEmpty(namespaceName) && namespaceName != "<global namespace>";
-            var baseIndent = hasNamespace ? "    " : "";
-            var fullProxyName = hasNamespace ? $"{namespaceName}.{proxyName}" : proxyName;
-
-            sb.AppendLine(
-                $"{baseIndent}[System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]");
-            sb.AppendLine($"{baseIndent}public static class {proxyName}PreserverModule");
-            sb.AppendLine($"{baseIndent}{{");
-
-            // --- CAMBIO CLAVE 1: Preservar la interfaz misma ---
-            sb.AppendLine(
-                $"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof({ifaceFullName}))]");
-
-            // --- CAMBIO CLAVE 2: DynamicDependency por cada método para forzar la VTable ---
-            var allMembers = iface.GetMembers().Concat(iface.AllInterfaces.SelectMany(it => it.GetMembers())).ToList();
-            foreach (var member in allMembers)
-            {
-                sb.AppendLine(
-                    $"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(\"{member.Name}\", typeof({fullProxyName}))]");
-            }
-
-            sb.AppendLine(
-                "        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
-            sb.AppendLine($"{baseIndent}    public static void Init()");
-            sb.AppendLine($"{baseIndent}    {{");
-            sb.AppendLine($"{baseIndent}        {proxyName}Preserver();");
-
-            sb.AppendLine($"{baseIndent}        {Tools.GetCondition()}");
-            sb.AppendLine($"{baseIndent}        {{");
-
-            // Constructor vacío
-            sb.AppendLine($"{baseIndent}            var p = new {fullProxyName}();");
-            sb.AppendLine($"{baseIndent}            {ifaceFullName} i = ({ifaceFullName})p;");
-
-            int methodIndex = 0;
-            foreach (var member in allMembers)
-            {
-                if (member is IMethodSymbol method && method.MethodKind == MethodKind.Ordinary)
-                {
-                    methodIndex++;
-                    var paramsList = string.Join(", ", method.Parameters.Select(p =>
-                        $"({p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)})default!"));
-
-                    if (method.ReturnsVoid)
-                    {
-                        sb.AppendLine($"{baseIndent}            p.{method.Name}({paramsList});");
-                        sb.AppendLine($"{baseIndent}            i.{method.Name}({paramsList});");
-                    }
-                    else
-                    {
-                        // Usamos variables únicas r{index}a y r{index}i
-                        sb.AppendLine($"{baseIndent}            var r{methodIndex}a = p.{method.Name}({paramsList});");
-                        sb.AppendLine($"{baseIndent}            var r{methodIndex}i = i.{method.Name}({paramsList});");
-                        sb.AppendLine($"{baseIndent}            _ = r{methodIndex}a?.GetHashCode();");
-                        sb.AppendLine($"{baseIndent}            _ = r{methodIndex}i?.GetHashCode();");
-                    }
-                }
-                else if (member is IPropertySymbol prop)
-                {
-                    sb.AppendLine($"{baseIndent}            _ = p.{prop.Name}?.GetHashCode();");
-                    sb.AppendLine($"{baseIndent}            _ = i.{prop.Name}?.GetHashCode();");
-                    if (!prop.IsReadOnly)
-                    {
-                        sb.AppendLine($"{baseIndent}            p.{prop.Name} = default!;");
-                        sb.AppendLine($"{baseIndent}            i.{prop.Name} = default!;");
-                    }
-                }
-            }
-
-            sb.AppendLine($"{baseIndent}            p.SetPropertyValue(default!, default!);");
-
-            sb.AppendLine($"{baseIndent}        }}");
-            sb.AppendLine($"{baseIndent}    }}");
-            sb.AppendLine($"{baseIndent}");
-            sb.AppendLine(
-                $"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof({fullProxyName}))]");
-            sb.AppendLine($"{baseIndent}    public static void {proxyName}Preserver() {{ }}");
-            sb.AppendLine($"{baseIndent}}}");
-
-            return sb.ToString();
         }
     }
 }

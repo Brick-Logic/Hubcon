@@ -111,7 +111,7 @@ namespace Hubcon.Server
         }
 
         internal WebApplicationBuilder AddHubconController<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicConstructors)] T>(WebApplicationBuilder builder, Action<IControllerOptions>? options = null)
-            where T : class, IControllerContract, new()
+            where T : class, IControllerContract
         {
             var controllerType = typeof(T);
             
@@ -125,8 +125,6 @@ namespace Hubcon.Server
 
             if (_operationRegistry.ControllerExists(controllerType))
                 throw new InvalidOperationException($"Controller {controllerType.Name} has already been registered.");
-            
-            Services.TryAddTransient<T>(sp => new T());
             
             _operationRegistry.RegisterOperations(controllerType, options, ServerOptions, out var services);
 

@@ -28,7 +28,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// </summary>
         /// <typeparam name="T">The type of the controller that implements <see cref="IControllerContract"/>.</typeparam>
         /// <param name="options">A delegate to configure the <see cref="IControllerOptions"/> for the controller.</param>
-        public void AddController<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicMethods)] T>(Action<IControllerOptions>? options = null) where T : class, IControllerContract, new();
+        public void AddController<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicMethods)] T>(Action<IControllerOptions>? options = null) where T : class, IControllerContract;
 
         /// <summary>
         /// Adds and configures a specific controller to the server using its type.

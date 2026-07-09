@@ -30,7 +30,7 @@ namespace HubconAnalyzers.SourceGenerators
             var classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: (node, _) => SymbolTools.IsCandidateClass(node),
-                    transform: (ctx, _) => SymbolTools.GetClassIfImplementsInterface(ctx))
+                    transform: (ctx, _) => SymbolTools.GetClassSymbolIfImplementsInterface(ctx))
                 .Where(c => c != null)
                 .Collect();
             
@@ -143,64 +143,62 @@ namespace HubconAnalyzers.SourceGenerators
                     GenerateProxyRegistry.Execute(spc, interfaces, "ProxyLookup.g.cs");
                     GenerateEnumerableWrapper.Execute(spc, interfaces, "AsyncEnumerableWrapper.g.cs");
                 }
-
-                if (!generateForClient || !generateForServer)
-                {
-                    var semiFilteredTypes = typesToSerialize
-                        .Where(t =>
-                        {
-                            // 1. Ignorar tipos con errores de compilación
-                            if (t.TypeKind == TypeKind.Error) return false;
-
-                            // 2. CASO ESPECIAL: Arrays (int[], string[], etc.)
-                            if (t is IArrayTypeSymbol) return true;
-
-                            // 3. CASO ESPECIAL: Nullable (int?, etc.)
-                            if (t.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T) return true;
-
-                            // 4. Exclusión explícita de JsonElement (se maneja manual)
-                            if (t.ToDisplayString() == "global::System.Text.Json.JsonElement") return false;
-
-                            // 5. Ignorar tipos básicos de sistema (int, string, bool, etc.)
-                            // Pero dejamos pasar si son tipos complejos (SpecialType.None)
-                            if (t.SpecialType != SpecialType.None) return false;
-
-                            // 6. Ignorar punteros (causa del error sbyte*)
-                            if (t.TypeKind == TypeKind.Pointer || t.TypeKind == TypeKind.FunctionPointer) return false;
-
-                            var ns = t.ContainingNamespace?.ToDisplayString() ?? "";
-
-                            // 7. CASO ESPECIAL: Colecciones Genéricas (List<T>, IEnumerable<T>, Dictionary<K,V>)
-                            if (ns.StartsWith("System.Collections.Generic"))
-                            {
-                                // Solo dejamos pasar si el tipo es una instancia genérica cerrada (ej: List<int>)
-                                if (t is INamedTypeSymbol named && named.IsGenericType) return true;
-                            }
-
-                            // 8. Filtro de Namespaces: Solo permitimos tus tipos.
-                            // Bloqueamos System y Microsoft, a menos que hayan pasado por los filtros de arriba.
-                            return !ns.StartsWith("System") &&
-                                   !ns.StartsWith("Microsoft") &&
-                                   !ns.StartsWith("<global namespace>") &&
-                                   !string.IsNullOrWhiteSpace(ns);
-                        }).ToList();
-
-                    var filteredTypes =
-                        semiFilteredTypes.ToImmutableHashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
-
-                    var resolverClassName = $"GlobalMetadataResolver";
-                    generatedResolverClasses.Add($"Hubcon.Generated.{resolverClassName}");
-
-                    // 4. Generar el Resolver de Metadatos (Incluyendo el .Instance y el mapa de tipos)
-                    GenerateMetadataResolver.Execute(spc, resolverClassName, filteredTypes, $"{resolverClassName}.g.cs");
-                    generatedResolverClasses.Add("Hubcon.Shared.Core.Serialization.SystemTypesContext");
-                    
-                    // Al final, generas el archivo global
-                    if (generatedResolverClasses.Any())
+                
+                var semiFilteredTypes = typesToSerialize
+                    .Where(t =>
                     {
-                        GenerateGlobalTypeResolver.Execute(spc, generatedResolverClasses, "HubconGlobalSerialization.g.cs");
-                    }
+                        // 1. Ignorar tipos con errores de compilación
+                        if (t.TypeKind == TypeKind.Error) return false;
+
+                        // 2. CASO ESPECIAL: Arrays (int[], string[], etc.)
+                        if (t is IArrayTypeSymbol) return true;
+
+                        // 3. CASO ESPECIAL: Nullable (int?, etc.)
+                        if (t.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T) return true;
+
+                        // 4. Exclusión explícita de JsonElement (se maneja manual)
+                        if (t.ToDisplayString() == "global::System.Text.Json.JsonElement") return false;
+
+                        // 5. Ignorar tipos básicos de sistema (int, string, bool, etc.)
+                        // Pero dejamos pasar si son tipos complejos (SpecialType.None)
+                        if (t.SpecialType != SpecialType.None) return false;
+
+                        // 6. Ignorar punteros (causa del error sbyte*)
+                        if (t.TypeKind == TypeKind.Pointer || t.TypeKind == TypeKind.FunctionPointer) return false;
+
+                        var ns = t.ContainingNamespace?.ToDisplayString() ?? "";
+
+                        // 7. CASO ESPECIAL: Colecciones Genéricas (List<T>, IEnumerable<T>, Dictionary<K,V>)
+                        if (ns.StartsWith("System.Collections.Generic"))
+                        {
+                            // Solo dejamos pasar si el tipo es una instancia genérica cerrada (ej: List<int>)
+                            if (t is INamedTypeSymbol named && named.IsGenericType) return true;
+                        }
+
+                        // 8. Filtro de Namespaces: Solo permitimos tus tipos.
+                        // Bloqueamos System y Microsoft, a menos que hayan pasado por los filtros de arriba.
+                        return !ns.StartsWith("System") &&
+                               !ns.StartsWith("Microsoft") &&
+                               !ns.StartsWith("<global namespace>") &&
+                               !string.IsNullOrWhiteSpace(ns);
+                    }).ToList();
+
+                var filteredTypes =
+                    semiFilteredTypes.ToImmutableHashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+
+                var resolverClassName = $"GlobalMetadataResolver";
+                generatedResolverClasses.Add($"Hubcon.Generated.{resolverClassName}");
+
+                // 4. Generar el Resolver de Metadatos (Incluyendo el .Instance y el mapa de tipos)
+                GenerateMetadataResolver.Execute(spc, resolverClassName, filteredTypes, $"{resolverClassName}.g.cs");
+                generatedResolverClasses.Add("Hubcon.Shared.Core.Serialization.SystemTypesContext");
+                
+                // Al final, generas el archivo global
+                if (generatedResolverClasses.Any())
+                {
+                    GenerateGlobalTypeResolver.Execute(spc, generatedResolverClasses, "HubconGlobalSerialization.g.cs");
                 }
+                
                 
                 if (generateForServer)
                 {
@@ -208,10 +206,9 @@ namespace HubconAnalyzers.SourceGenerators
                     GenerateDedicatedInvokers.Execute(spc, interfaces, "EndpointInvokers.g.cs");
                     GenerateHttpDelegates.Execute(spc, interfaces, "EndpointDelegates.g.cs");
                     
-                    var controllers = classesList.OfType<INamedTypeSymbol>();
-                    GenerateControllerPreservers.Execute(spc, controllers, "ControllerPreservers.g.cs");
-                    GenerateControllerFactories.Execute(spc, controllers, "ControllerFactories.g.cs");
-                    GenerateControllerTypeProvider.Execute(spc, controllers, "ControllerTypeProvider.g.cs");
+                    GenerateControllerPreservers.Execute(spc, classesList, "ControllerPreservers.g.cs");
+                    GenerateControllerFactories.Execute(spc, classesList, "ControllerFactories.g.cs");
+                    GenerateControllerTypeProvider.Execute(spc, classesList, "ControllerTypeProvider.g.cs");
                 }
             });
         }

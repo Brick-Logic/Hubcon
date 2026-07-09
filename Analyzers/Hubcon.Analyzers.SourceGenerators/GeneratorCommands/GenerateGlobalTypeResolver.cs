@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 
 namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 {
@@ -50,8 +51,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine("}");
 
             var code = sb.ToString();
-            spc.AddSource("HubconGlobalSerialization.g.cs", code);
-
+            spc.AddSource("HubconGlobalSerialization.g.cs", SourceText.From(code, Encoding.UTF8));
         }
     }
 }

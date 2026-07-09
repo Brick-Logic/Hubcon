@@ -46,6 +46,7 @@ namespace Hubcon.Shared.Core.Serialization
     [JsonSerializable(typeof(IHubconResponse<JsonElement>))]
     [JsonSerializable(typeof(IHubconResponse))]
     [JsonSerializable(typeof(IResponse))]
+    [JsonSerializable(typeof(HubconResponse))]
     [JsonSerializable(typeof(HubconResponse<string>))]
     [JsonSerializable(typeof(HubconResponse<bool>))]
     [JsonSerializable(typeof(HubconResponse<int>))]

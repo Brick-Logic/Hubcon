@@ -15,19 +15,21 @@ namespace Hubcon.Analyzers.SourceGenerators
                    && !classSyntax.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.AbstractKeyword);
         }
 
-        // Análisis semántico para validar la herencia indirecta
-        public static ClassDeclarationSyntax GetClassIfImplementsInterface(GeneratorSyntaxContext context)
+        public static INamedTypeSymbol GetClassSymbolIfImplementsInterface(GeneratorSyntaxContext context)
         {
             var classDeclaration = (ClassDeclarationSyntax)context.Node;
+    
             var classSymbol = context.SemanticModel.GetDeclaredSymbol(classDeclaration) as INamedTypeSymbol;
+            
+            if (classSymbol == null)
+            {
+                return null;
+            }
 
-            if (classSymbol == null) return null;
+            var implementsIndirectly = classSymbol.AllInterfaces
+                .Any(namedInterface => namedInterface.ImplementsControllerContract());
 
-            // Buscamos en todas las interfaces que implementa la clase (AllInterfaces busca recursivamente)
-            bool implementsIndirectly = classSymbol.AllInterfaces.Any(namedInterface => 
-                namedInterface.ToDisplayString() == "IControllerContract");
-
-            return implementsIndirectly ? classDeclaration : null;
+            return implementsIndirectly ? classSymbol : null;
         }
         
         public static void CollectInterfacesFromAssemblyTo(this IAssemblySymbol assemblySymbol, List<INamedTypeSymbol> interfaces, INamespaceSymbol nameSpace = null)

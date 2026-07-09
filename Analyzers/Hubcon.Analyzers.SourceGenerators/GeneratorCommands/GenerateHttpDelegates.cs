@@ -59,9 +59,13 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                 {
                     var delegateName =
                         $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Delegate";
+                    
                     var wrapperTypeName =
                         $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Request";
 
+                    sb.AppendLine($"        [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof(Microsoft.Extensions.Primitives.StringValues))]");
+
+                    
                     if (method.Parameters.Count(x => x.Type.ToDisplayString() != "System.Threading.CancellationToken") == 0)
                     {
                         sb.AppendLine($"        public static {method.GetHubconResponseTypeFromMethod()} {delegateName}() => default!;");

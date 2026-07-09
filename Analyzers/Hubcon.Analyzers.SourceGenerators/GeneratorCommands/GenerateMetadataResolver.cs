@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Hubcon.Analyzers.SourceGenerators.Extensions;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 
 namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 {
@@ -76,7 +77,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine("}"); // namespace
 
             var code = sb.ToString();
-            spc.AddSource(fileName, code);
+            spc.AddSource(fileName, SourceText.From(code, Encoding.UTF8));
         }
         
         private static void GenerateTypeMetadataMethod(StringBuilder sb, ITypeSymbol type, string optionsName)

@@ -79,12 +79,7 @@ namespace HubconTest
             //     options.Limits.MinRequestBodyDataRate = null; // Evita desconexiones por lentitud en tests
             // });
             //
-            builder.Services.ConfigureHttpJsonOptions(options =>
-            {
-                // 1. Esto le avisa a las Minimal APIs tradicionales cómo serializar tus tipos
-                options.SerializerOptions.TypeInfoResolverChain.Add(DynamicConverter.JsonSerializerOptions.TypeInfoResolver);
-            });
-
+            
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
@@ -126,13 +121,9 @@ namespace HubconTest
                             .AllowRemoteTokenCancellation();
                 });
                 
-                HubconTestContractHandler test = new HubconTestContractHandler();
-                var res = test.TestMethod().Result;
-                Console.WriteLine(res);
-                var method = test.TestMethod;
-                Console.WriteLine(method.Method);
-                
                 serverOptions.AddController<HubconTestContractHandler>();
+                serverOptions.AddController<SecondTestController>();
+                serverOptions.AddController<UserController>();
             });
 
             builder.Services.AddOpenApi();

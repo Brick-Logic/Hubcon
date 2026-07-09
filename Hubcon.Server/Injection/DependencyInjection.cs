@@ -1,80 +1,56 @@
 ﻿using Hubcon.Server;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Cache;
-using Hubcon.Server.Core.EndpointDocumentation;
 using Hubcon.Server.Core.Routing;
 using Hubcon.Server.Core.Websockets.Middleware;
 using Hubcon.Server.Injection;
-using Hubcon.Shared.Abstractions.Attributes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Hubcon.Shared.Core.Serialization;
+
 #pragma warning disable CS1591
 
 namespace Hubcon
 {
-    internal sealed class RemoveNullableSchemaFilter : ISchemaFilter
-    {
-        public void Apply(OpenApiSchema schema, SchemaFilterContext context)
-        {
-            if (schema.Type == "string")
-            {
-                schema.Nullable = false;
-                schema.Example = new OpenApiString("string");
-            }          
-
-            if (schema.Properties != null)
-            {
-                foreach (var prop in schema.Properties.Values.Where(x => x.Type == "string"))
-                {
-                    prop.Nullable = false;
-                }
-            }
-        }
-    }
+    // internal sealed class RemoveNullableSchemaFilter : ISchemaFilter
+    // {
+    //     public void Apply(OpenApiSchema schema, SchemaFilterContext context)
+    //     {
+    //         if (schema.Type == "string")
+    //         {
+    //             schema.Nullable = false;
+    //             schema.Example = new OpenApiString("string");
+    //         }          
+    //
+    //         if (schema.Properties != null)
+    //         {
+    //             foreach (var prop in schema.Properties.Values.Where(x => x.Type == "string"))
+    //             {
+    //                 prop.Nullable = false;
+    //             }
+    //         }
+    //     }
+    // }
 
     public static class DependencyInjection
     {
         public static WebApplicationBuilder AddHubconServer(this WebApplicationBuilder builder, Action<IServerOptions>? controllerOptions = null)
         {
-            builder.Services.AddControllers();
             builder.Services.ConfigureHttpJsonOptions(options =>
             {
                 options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                options.SerializerOptions.TypeInfoResolver = DynamicConverter.JsonSerializerOptions.TypeInfoResolver!;
             });
-
-            builder.Services.AddSwaggerGen(options =>
-            {
-                options.SupportNonNullableReferenceTypes();
-                options.SchemaGeneratorOptions.SupportNonNullableReferenceTypes = true;
-
-                options.UseAllOfToExtendReferenceSchemas();
-                options.UseOneOfForPolymorphism();
-
-                options.OperationFilter<RemoveNullableTypesOperationFilter>();
-
-                options.SchemaFilter<RemoveNullableSchemaFilter>();
-            });
-
-            builder.Services.ConfigureSwaggerGen(options =>
-            {
-                options.MapType<string>(() => new OpenApiSchema
-                {
-                    Type = "string",
-                    Nullable = false,
-                    Example = new OpenApiString("string")
-                });
-            });
-
+            
+            builder.Services.AddControllers();
+            
             ServerBuilder.Current.AddHubconServer(builder);
 
-            ConfigureHubconServer(builder, controllerOptions);
+            builder.ConfigureHubconServer(controllerOptions);
 
             ServerBuilder.Current.ConfigureServices(services =>
             {

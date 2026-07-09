@@ -195,7 +195,6 @@ namespace Hubcon.Server.Core.Routing
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
 
                         var dict = context.Request.Query
-                            .Cast<KeyValuePair<string, StringValues>>()
                             .ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString());
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
@@ -360,7 +359,6 @@ namespace Hubcon.Server.Core.Routing
             }
 
             builder
-                .ApplyOpenApiFromMethod(controllerMethod!, verbResult)
                 .WithRequestTimeout(options.HttpTimeout);
 
             builder.AllowAnonymous();

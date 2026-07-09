@@ -1,7 +1,6 @@
 ﻿using Hubcon.Server.Abstractions.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.IdentityModel.Tokens;
-using Swashbuckle.AspNetCore.SwaggerGen;
 using System.ComponentModel;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
