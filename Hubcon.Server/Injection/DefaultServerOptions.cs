@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using System.Reflection;
+using Hubcon.Server.Core.EndpointManagement;
 
 namespace Hubcon.Server.Injection
 {
@@ -70,9 +71,7 @@ namespace Hubcon.Server.Injection
 
         public void AutoRegisterControllers()
         {
-            var assembly = Assembly.GetCallingAssembly();
-            var foundControllers = ControllerContractHelper.FindImplementations(assembly, [typeof(BaseClientProxyMarker)]).ToList();
-
+            var foundControllers = ControllerMetadata.GetAvailableControllers();
             foreach (var controller in foundControllers)
             {
                 HubconServerBuilder.AddHubconController(Builder, controller);

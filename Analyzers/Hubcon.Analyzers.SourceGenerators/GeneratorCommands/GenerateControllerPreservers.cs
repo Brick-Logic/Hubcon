@@ -10,7 +10,8 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 {
     public static class GenerateControllerPreservers
     {
-        public static void Execute(SourceProductionContext spc, IEnumerable<INamedTypeSymbol> controllers, string fileName)
+        public static void Execute(SourceProductionContext spc, IEnumerable<INamedTypeSymbol> controllers,
+            string fileName)
         {
             var sb = new StringBuilder();
 
@@ -26,15 +27,170 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                 sb.AppendLine();
                 sb.AppendLine($"namespace {controller.ContainingNamespace}");
                 sb.AppendLine("{");
-                var preserver = GeneratePreserverClass.Execute(controller, "");
+                var preserver = Execute(controller);
                 sb.AppendLine(preserver);
                 sb.AppendLine("}");
             }
-            
+
             sb.AppendLine();
 
             var code = sb.ToString();
             spc.AddSource(fileName, SourceText.From(code, Encoding.UTF8));
+        }
+
+        public static string Execute(INamedTypeSymbol typeSymbol)
+        {
+            var sb = new StringBuilder();
+            var preserverName = typeSymbol.Name;
+            var ifaceFullName = typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var namespaceName = typeSymbol.ContainingNamespace?.ToDisplayString();
+            var hasNamespace = !string.IsNullOrEmpty(namespaceName) && namespaceName != "<global namespace>";
+            var baseIndent = hasNamespace ? "    " : "";
+            var fullProxyName = hasNamespace ? $"{namespaceName}.{preserverName}" : preserverName;
+
+            sb.AppendLine(
+                $"{baseIndent}[System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]");
+            sb.AppendLine($"{baseIndent}public static class {preserverName}PreserverModule");
+            sb.AppendLine($"{baseIndent}{{");
+
+            // Blindajes de metadata tradicionales contra el Trimmer
+            sb.AppendLine(
+                $"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof({ifaceFullName}))]");
+            sb.AppendLine(
+                $"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors, typeof({ifaceFullName}))]");
+            sb.AppendLine(
+                $"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof(Microsoft.Extensions.Primitives.StringValues))]");
+
+            sb.AppendLine(
+                "        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
+            sb.AppendLine($"{baseIndent}    public static void Init()");
+            sb.AppendLine($"{baseIndent}    {{");
+            sb.AppendLine($"{baseIndent}        {preserverName}Preserver();");
+
+            sb.AppendLine($"{baseIndent}        {Tools.GetCondition()}");
+            sb.AppendLine($"{baseIndent}        {{");
+
+            var constructors = typeSymbol.InstanceConstructors
+                .Where(c => c.DeclaredAccessibility == Accessibility.Public ||
+                            c.DeclaredAccessibility == Accessibility.Internal)
+                .ToList();
+
+            var contractInterfaces = typeSymbol.AllInterfaces
+                .Where(it => it.ImplementsControllerContract())
+                .ToList();
+
+            var allMembers = typeSymbol.GetMembers()
+                .Concat(typeSymbol.AllInterfaces.SelectMany(it => it.GetMembers()))
+                .ToList();
+
+            if (constructors.Count == 0)
+            {
+                GeneratePreservationBlock(sb, baseIndent, fullProxyName, allMembers, contractInterfaces, null, 0);
+            }
+            else
+            {
+                for (int cIdx = 0; cIdx < constructors.Count; cIdx++)
+                {
+                    GeneratePreservationBlock(sb, baseIndent, fullProxyName, allMembers, contractInterfaces,
+                        constructors[cIdx], cIdx);
+                }
+            }
+
+            sb.AppendLine($"{baseIndent}        }}");
+            sb.AppendLine($"{baseIndent}    }}");
+            sb.AppendLine($"{baseIndent}");
+            sb.AppendLine(
+                $"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof({fullProxyName}))]");
+            sb.AppendLine($"{baseIndent}    public static void {preserverName}Preserver() {{ }}");
+            sb.AppendLine($"{baseIndent}}}");
+
+            return sb.ToString();
+        }
+
+        private static void GeneratePreservationBlock(
+            StringBuilder sb,
+            string baseIndent,
+            string fullProxyName,
+            List<ISymbol> allMembers,
+            List<INamedTypeSymbol> contractInterfaces,
+            IMethodSymbol constructor,
+            int constructorIndex)
+        {
+            string ctorArgs = "";
+            if (constructor != null)
+            {
+                ctorArgs = string.Join(", ", constructor.Parameters.Select(p =>
+                    $"({p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)})default!"));
+            }
+
+            var pVar = $"p_c{constructorIndex}";
+
+            // Instanciamos el Proxy directamente
+            sb.AppendLine($"{baseIndent}            var {pVar} = new {fullProxyName}({ctorArgs});");
+
+            // --- BLOQUE 1: Miembros Generales del Controller/Proxy ---
+            ProcessMembersPreservation(sb, baseIndent, allMembers, pVar, constructorIndex, "gen");
+
+            // --- BLOQUE 2: Interfaces de Contrato (Cast explícito para asegurar VTables de Interfaz) ---
+            int ifaceIndex = 0;
+            foreach (var contractIface in contractInterfaces)
+            {
+                ifaceIndex++;
+                var ifaceTypeFullName = contractIface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                var contractIVar = $"c_i{constructorIndex}_f{ifaceIndex}";
+
+                sb.AppendLine(
+                    $"{baseIndent}            {ifaceTypeFullName} {contractIVar} = ({ifaceTypeFullName}){pVar};");
+
+                var ifaceMembers = contractIface.GetMembers().ToList();
+                ProcessMembersPreservation(sb, baseIndent, ifaceMembers, contractIVar, constructorIndex,
+                    $"iface{ifaceIndex}");
+            }
+
+            sb.AppendLine();
+        }
+
+        private static void ProcessMembersPreservation(
+            StringBuilder sb,
+            string baseIndent,
+            List<ISymbol> members,
+            string targetVar,
+            int constructorIndex,
+            string suffix)
+        {
+            int methodIndex = 0;
+            foreach (var member in members)
+            {
+                if (member is IMethodSymbol method && method.MethodKind == MethodKind.Ordinary &&
+                    (method.DeclaredAccessibility == Accessibility.Public ||
+                     method.DeclaredAccessibility == Accessibility.Internal))
+                {
+                    methodIndex++;
+                    var paramsList = string.Join(", ", method.Parameters.Select(p =>
+                        $"({p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)})default!"));
+
+                    if (method.ReturnsVoid)
+                    {
+                        sb.AppendLine($"{baseIndent}            {targetVar}.{method.Name}({paramsList});");
+                    }
+                    else
+                    {
+                        var rI = $"r_c{constructorIndex}_m{methodIndex}_{suffix}";
+
+                        sb.AppendLine($"{baseIndent}            var {rI} = {targetVar}.{method.Name}({paramsList});");
+                        sb.AppendLine($"{baseIndent}            _ = {rI}?.GetHashCode();");
+                    }
+                }
+                else if (member is IPropertySymbol prop)
+                {
+                    sb.AppendLine($"{baseIndent}            _ = {targetVar}.{prop.Name}?.GetHashCode();");
+
+                    if (!prop.IsReadOnly)
+                    {
+                        sb.AppendLine($"{baseIndent}            {targetVar}.{prop.Name} = default!;");
+                    }
+                }
+            }
         }
     }
 }

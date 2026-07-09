@@ -102,7 +102,6 @@ namespace HubconTest
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key))
             };
 
-            builder.Services.AddHubconClient();
             builder.AddHubconServer(serverOptions =>
             {
                 serverOptions.AddAuthentication();
@@ -121,9 +120,7 @@ namespace HubconTest
                             .AllowRemoteTokenCancellation();
                 });
                 
-                serverOptions.AddController<HubconTestContractHandler>();
-                serverOptions.AddController<SecondTestController>();
-                serverOptions.AddController<UserController>();
+                serverOptions.AutoRegisterControllers();
             });
 
             builder.Services.AddOpenApi();

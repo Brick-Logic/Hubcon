@@ -2,7 +2,7 @@
 namespace System.Diagnostics.CodeAnalysis
 {
     [AttributeUsage(AttributeTargets.GenericParameter | AttributeTargets.Parameter | AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
-    public sealed class DynamicallyAccessedMembersAttribute : Attribute
+    internal sealed class DynamicallyAccessedMembersAttribute : Attribute
     {
         public DynamicallyAccessedMembersAttribute(DynamicallyAccessedMemberTypes memberTypes)
         {
@@ -13,7 +13,7 @@ namespace System.Diagnostics.CodeAnalysis
     }
 
     [Flags]
-    public enum DynamicallyAccessedMemberTypes
+    internal enum DynamicallyAccessedMemberTypes
     {
         None = 0,
         PublicParameterlessConstructor = 0x0001,
