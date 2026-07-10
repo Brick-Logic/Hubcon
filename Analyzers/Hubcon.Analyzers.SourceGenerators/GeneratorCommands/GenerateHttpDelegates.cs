@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Hubcon.Analyzers.SourceGenerators.Extensions;
+using Hubcon.Analyzers.SourceGenerators.Models;
 using HubconAnalyzers.SourceGenerators.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -10,7 +11,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 {
     public static class GenerateHttpDelegates
     {
-        public static void Execute(SourceProductionContext spc, IEnumerable<INamedTypeSymbol> interfaces, string fileName)
+        public static void Execute(SourceProductionContext spc, IEnumerable<ControllerMetadata> controllers, string fileName)
         {
             var sb = new StringBuilder();
 
@@ -24,23 +25,19 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine("{");
             sb.AppendLine($"    public static class EndpointDelegateProvider");
             sb.AppendLine("    {");
-            sb.AppendLine("        public static Delegate? GetDelegate(string contractName, string signature)");
+            sb.AppendLine("        public static Delegate? GetDelegate(string controller, string contractName, string signature)");
             sb.AppendLine("        {");
-            sb.AppendLine("            var finalSignature = contractName + \"_\" + signature;");
+            sb.AppendLine("            var finalSignature = controller + \"_\" + contractName + \"_\" + signature;");
             sb.AppendLine("            switch(finalSignature)");
             sb.AppendLine("            {");
 
-            foreach (var interfaceSymbol in interfaces)
+            foreach (var controller in controllers)
             {
-                var methods = interfaceSymbol.GetMembers()
-                    .OfType<IMethodSymbol>()
-                    .Where(m => m.MethodKind == MethodKind.Ordinary);
-
-                foreach (var method in methods)
+                foreach (var endpoint in controller.Endpoints)
                 {
-                    var delegateName = $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Delegate";
+                    var delegateName = $"{endpoint.FullName}_Delegate";
                     sb.AppendLine(
-                        $"                 case \"{interfaceSymbol.Name}_{method.GetMethodSymbolSignature()}\": return EndpointDelegateProvider.{delegateName};");
+                        $"                 case \"{endpoint.Identifier}\": return EndpointDelegateProvider.{delegateName};");
                 }
             }
 
@@ -49,30 +46,28 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine("        }");
 
 
-            foreach (var interfaceSymbol in interfaces)
+            foreach (var controller in controllers)
             {
-                var methods = interfaceSymbol.GetMembers()
-                    .OfType<IMethodSymbol>()
-                    .Where(m => m.MethodKind == MethodKind.Ordinary);
-
-                foreach (var method in methods)
+                foreach (var endpoint in controller.Endpoints)
                 {
                     var delegateName =
-                        $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Delegate";
+                        $"{endpoint.FullName}_Delegate";
                     
                     var wrapperTypeName =
-                        $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Request";
+                        $"{endpoint.FullName}_Request";
 
+                    sb.AppendLine();
                     sb.AppendLine($"        [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof(Microsoft.Extensions.Primitives.StringValues))]");
 
+                    SymbolTools.MapMethodAttributes(endpoint, sb);
                     
-                    if (method.Parameters.Count(x => x.Type.ToDisplayString() != "System.Threading.CancellationToken") == 0)
+                    if (endpoint.Parameters.Count(x => x.Type.ToDisplayString() != "System.Threading.CancellationToken") == 0)
                     {
-                        sb.AppendLine($"        public static {method.GetHubconResponseTypeFromMethod()} {delegateName}() => default!;");
+                        sb.AppendLine($"        public static {endpoint.ControllerMethod.GetHubconResponseTypeFromMethod()} {delegateName}() => default!;");
                     }
                     else
                     {
-                        sb.AppendLine($"        public static {method.GetHubconResponseTypeFromMethod()} {delegateName}([AsParameters] {wrapperTypeName} request) => default!;");
+                        sb.AppendLine($"        public static {endpoint.ControllerMethod.GetHubconResponseTypeFromMethod()} {delegateName}([AsParameters] {wrapperTypeName} request) => default!;");
                     }
                 }
             }
@@ -82,6 +77,5 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             var code = sb.ToString();
             spc.AddSource(fileName, SourceText.From(code, Encoding.UTF8));
         }
-        
     }
 }

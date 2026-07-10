@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Hubcon.Analyzers.SourceGenerators.Extensions;
+using Hubcon.Analyzers.SourceGenerators.Models;
 using HubconAnalyzers.SourceGenerators.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -10,7 +11,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 {
     public static class GenerateControllerPreservers
     {
-        public static void Execute(SourceProductionContext spc, IEnumerable<INamedTypeSymbol> controllers,
+        public static void Execute(SourceProductionContext spc, IEnumerable<ControllerMetadata> pairs,
             string fileName)
         {
             var sb = new StringBuilder();
@@ -22,12 +23,12 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine("using Hubcon.Generated;");
             sb.AppendLine("using System.Runtime.CompilerServices;");
 
-            foreach (var controller in controllers)
+            foreach (var pair in pairs)
             {
                 sb.AppendLine();
-                sb.AppendLine($"namespace {controller.ContainingNamespace}");
+                sb.AppendLine($"namespace {pair.Controller.ContainingNamespace}");
                 sb.AppendLine("{");
-                var preserver = Execute(controller);
+                var preserver = Execute(pair.Controller);
                 sb.AppendLine(preserver);
                 sb.AppendLine("}");
             }

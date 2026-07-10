@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Hubcon.Analyzers.SourceGenerators.Extensions;
+using Hubcon.Analyzers.SourceGenerators.Models;
 using HubconAnalyzers.SourceGenerators.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -10,7 +11,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 {
     public static class GenerateDedicatedInvokers
     {
-        public static void Execute(SourceProductionContext spc, IEnumerable<INamedTypeSymbol> interfaces, string fileName)
+        public static void Execute(SourceProductionContext spc, IEnumerable<ControllerMetadata> controllers, string fileName)
         {
             var sb = new StringBuilder();
 
@@ -24,27 +25,22 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 
             sb.AppendLine($"    public static class EndpointInvokerProvider");
             sb.AppendLine("    {");
-            sb.AppendLine("        public static IEndpointInvoker GetInvoker(string contractName, string signature)");
+            sb.AppendLine("        public static IEndpointInvoker GetInvoker(string controller, string contractName, string signature)");
             sb.AppendLine("        {");
-            sb.AppendLine("            var finalSignature = contractName + \"_\" + signature;");
+            sb.AppendLine("            var finalSignature = controller + \"_\" + contractName + \"_\" + signature;");
             sb.AppendLine("            switch(finalSignature)");
             sb.AppendLine("            {");
 
-            foreach (var interfaceSymbol in interfaces)
+            foreach (var controller in controllers)
             {
-                var methods = interfaceSymbol.GetMembers()
-                    .OfType<IMethodSymbol>()
-                    .Where(m => m.MethodKind == MethodKind.Ordinary);
-
-                foreach (var method in methods)
+                foreach (var endpoint in controller.Endpoints)
                 {
-                    var invokerClassName =
-                        $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Invoker";
+                    var invokerClassName = $"{endpoint.FullName}_Invoker";
                     sb.AppendLine(
-                        $"                 case \"{interfaceSymbol.Name}_{method.GetMethodSymbolSignature()}\": return new {invokerClassName}();");
+                        $"                 case \"{endpoint.Identifier}\": return new {invokerClassName}();");
                 }
             }
-
+            
             sb.AppendLine("                 default: return null;");
             sb.AppendLine("            }");
             sb.AppendLine("        }");
@@ -52,19 +48,15 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine();
 
 
-            foreach (var interfaceSymbol in interfaces)
+            foreach (var controller in controllers)
             {
-                var methods = interfaceSymbol.GetMembers()
-                    .OfType<IMethodSymbol>()
-                    .Where(m => m.MethodKind == MethodKind.Ordinary);
-
-                foreach (var method in methods)
+                foreach (var endpoint in controller.Endpoints)
                 {
                     var invokerClassName =
-                        $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Invoker";
+                        $"{endpoint.FullName}_Invoker";
                     var wrapperTypeName =
-                        $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Request";
-                    var controllerTypeName = interfaceSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                        $"{endpoint.FullName}_Request";
+                    var controllerTypeName = controller.Controller.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                     sb.AppendLine($"    public sealed class {invokerClassName} : IEndpointInvoker");
                     sb.AppendLine("    {");
@@ -76,7 +68,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 
                     // Chequeamos si tiene parámetros que requieran usar el wrapper
                     bool hasRealParameters = false;
-                    foreach (var param in method.Parameters)
+                    foreach (var param in endpoint.Parameters)
                     {
                         if (param.Type.ToDisplayString() != "System.Threading.CancellationToken")
                         {
@@ -96,7 +88,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 
                     // Mapeo de parámetros
                     var paramList = new List<string>();
-                    foreach (var param in method.Parameters)
+                    foreach (var param in endpoint.Parameters)
                     {
                         if (param.Type.ToDisplayString() == "System.Threading.CancellationToken")
                         {
@@ -111,14 +103,14 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 
                     string argsStr = string.Join(", ", paramList);
 
-                    if (method.ReturnsVoid)
+                    if (endpoint.ControllerMethod.ReturnsVoid)
                     {
-                        sb.AppendLine($"            typedTarget.{method.Name}({argsStr});");
+                        sb.AppendLine($"            typedTarget.{endpoint.Name}({argsStr});");
                         sb.AppendLine("            return null;");
                     }
                     else
                     {
-                        sb.AppendLine($"            return (object)typedTarget.{method.Name}({argsStr});");
+                        sb.AppendLine($"            return (object)typedTarget.{endpoint.Name}({argsStr});");
                     }
 
                     sb.AppendLine("        }");

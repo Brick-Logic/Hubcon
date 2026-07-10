@@ -15,7 +15,7 @@ namespace HubconTestDomain
         [HttpGet]
         public Task TestMethod([Required] string message);
 
-        public Task<string> TestReturn(string message);
+        public Task<string> TestReturnWithParameter(string message);
         public Task<string> TestReturn();
         Task<HubconResponse<bool>> TestHubconResponse();
     }

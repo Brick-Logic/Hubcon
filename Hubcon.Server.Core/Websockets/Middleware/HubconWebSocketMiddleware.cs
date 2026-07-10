@@ -26,6 +26,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Channels;
 using Hubcon.Server.Core.WebSockets.Middleware;
+using Hubcon.Shared.Core.Tools;
 using Microsoft.Extensions.Primitives;
 
 namespace Hubcon.Server.Core.Websockets.Middleware
@@ -681,7 +682,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 }
 
                 await using var scope = context.CreateAsyncScope();
-
+                
                 var ingestTask = DefaultEntrypoint.HandleIngest(
                     operationRequest,
                     HubconTransportAttribute.GetDefault<WebSocketTransport>(),
@@ -772,7 +773,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     context.Converter.DeserializeData<OperationRequest>(operationInvokeMessage.Payload);
 
                 await using var scope = context.HttpContext.RequestServices.CreateAsyncScope();
-
+                
                 var response = await DefaultEntrypoint.HandleMethodWithResult(
                     operationRequest,
                     HubconTransportAttribute.GetDefault<WebSocketTransport>(),
@@ -1053,15 +1054,15 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             if (context.ConnectionIsClosed)
                 return;
 
-            var localMessage = new ErrorMessage(id, context.ConnectionId, null!);
-
-            localMessage.Error = context.Converter.Serialize(new HubconResponse<string>(
+            var errorResponse = context.Converter.Serialize(new HubconResponse<string>(
                 error.Success,
                 error.Failure,
                 error.Message,
                 error.Error,
                 error.StatusCode,
                 null!));
+            
+            var localMessage = new ErrorMessage(id, context.ConnectionId, errorResponse);
 
             await context.Sender.SendAsync(localMessage);
         }

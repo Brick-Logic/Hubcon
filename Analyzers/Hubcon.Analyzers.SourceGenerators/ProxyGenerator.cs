@@ -14,6 +14,7 @@ using System.Text;
 using Hubcon.Analyzers.SourceGenerators;
 using Hubcon.Analyzers.SourceGenerators.Extensions;
 using Hubcon.Analyzers.SourceGenerators.GeneratorCommands;
+using Hubcon.Analyzers.SourceGenerators.Models;
 
 namespace HubconAnalyzers.SourceGenerators
 {
@@ -199,16 +200,16 @@ namespace HubconAnalyzers.SourceGenerators
                     GenerateGlobalTypeResolver.Execute(spc, generatedResolverClasses, "HubconGlobalSerialization.g.cs");
                 }
                 
-                
                 if (generateForServer)
                 {
-                    GenerateEndpointParameterWrappers.Execute(spc, interfaces, "EndpointParameterWrappers.g.cs");
-                    GenerateDedicatedInvokers.Execute(spc, interfaces, "EndpointInvokers.g.cs");
-                    GenerateHttpDelegates.Execute(spc, interfaces, "EndpointDelegates.g.cs");
+                    var pairs = classesList.Select(x => new ControllerMetadata(x)).ToList();
                     
-                    GenerateControllerPreservers.Execute(spc, classesList, "ControllerPreservers.g.cs");
-                    GenerateControllerFactories.Execute(spc, classesList, "ControllerFactories.g.cs");
-                    GenerateControllerTypeProvider.Execute(spc, classesList, "ControllerTypeProvider.g.cs");
+                    GenerateDedicatedInvokers.Execute(spc, pairs, "EndpointInvokers.g.cs");
+                    GenerateHttpDelegates.Execute(spc, pairs, "EndpointDelegates.g.cs");
+                    GenerateEndpointParameterWrappers.Execute(spc, pairs, "EndpointParameterWrappers.g.cs");
+                    GenerateControllerPreservers.Execute(spc, pairs, "ControllerPreservers.g.cs");
+                    GenerateControllerFactories.Execute(spc, pairs, "ControllerFactories.g.cs");
+                    GenerateControllerTypeProvider.Execute(spc, pairs, "ControllerTypeProvider.g.cs");
                 }
             });
         }

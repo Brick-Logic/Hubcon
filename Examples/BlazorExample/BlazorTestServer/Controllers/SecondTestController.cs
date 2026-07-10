@@ -20,7 +20,7 @@ namespace BlazorTestServer.Controllers
             logger.LogInformation(message);
         }
 
-        public async Task<string> TestReturn(string message)
+        public async Task<string> TestReturnWithParameter(string message)
         {
             logger.LogInformation(message);
             return message;

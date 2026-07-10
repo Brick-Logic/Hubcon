@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Hubcon.Analyzers.SourceGenerators.Extensions;
+using Hubcon.Analyzers.SourceGenerators.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
@@ -9,7 +10,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 {
     public class GenerateControllerTypeProvider
     {
-        public static void Execute(SourceProductionContext spc, IEnumerable<INamedTypeSymbol> controllers, string fileName)
+        public static void Execute(SourceProductionContext spc, IEnumerable<ControllerMetadata> pairs, string fileName)
         {
             var sb = new StringBuilder();
             
@@ -34,13 +35,13 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine("             var controllers = new Dictionary<string, Type>()");
             sb.AppendLine("             {");
 
-            var controllersArray = controllers.ToArray();
+            var controllersArray = pairs.ToArray();
             var count = controllersArray.Length;
             for(var i = 0; i < count; i++)
             {
                 sb.AppendLine(i == count - 1
-                    ? $"                {{\"{controllersArray[i].ToDisplayString()}\", typeof({controllersArray[i].ToDisplayString()})}}"
-                    : $"                {{\"{controllersArray[i].ToDisplayString()}\", typeof({controllersArray[i].ToDisplayString()})}},");
+                    ? $"                {{\"{controllersArray[i].Controller.ToDisplayString()}\", typeof({controllersArray[i].Controller.ToDisplayString()})}}"
+                    : $"                {{\"{controllersArray[i].Controller.ToDisplayString()}\", typeof({controllersArray[i].Controller.ToDisplayString()})}},");
             }
             
             sb.AppendLine("             };");

@@ -19,38 +19,38 @@ namespace Hubcon.Server.Core.Entrypoint
         /// <summary>
         /// Dispatches a standard RPC method call that expects a return value.
         /// </summary>
-        public static ValueTask<IHubconResponse> HandleMethodWithResult(IOperationRequest request, HubconTransportAttribute transport, IServiceProvider serviceProvider, object? wrapper = null, CancellationToken cancellationToken = default)
+        public static ValueTask<IHubconResponse> HandleMethodWithResult(IOperationRequest request, HubconTransportAttribute transport, IServiceProvider serviceProvider, IWrapper? wrappedRequest, CancellationToken cancellationToken = default)
         {
             var requestHandler = serviceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.HandleWithResultAsync(request, transport, wrapper, cancellationToken);
+            return requestHandler.HandleWithResultAsync(request, transport, wrappedRequest, cancellationToken);
         }
 
         /// <summary>
         /// Dispatches an RPC method call that does not return a value (void or Task).
         /// </summary>
-        public static ValueTask<IHubconResponse> HandleMethodVoid(IOperationRequest request, HubconTransportAttribute transport, IServiceProvider serviceProvider, object? wrapper = null, CancellationToken cancellationToken = default)
+        public static ValueTask<IHubconResponse> HandleMethodVoid(IOperationRequest request, HubconTransportAttribute transport, IServiceProvider serviceProvider, IWrapper? wrappedRequest, CancellationToken cancellationToken = default)
         {
             var requestHandler = serviceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.HandleWithoutResultAsync(request, transport, wrapper, cancellationToken);
+            return requestHandler.HandleWithoutResultAsync(request, transport, wrappedRequest, cancellationToken);
         }
 
         /// <summary>
         /// Dispatches a request to open an asynchronous data stream.
         /// </summary>
-        public static ValueTask<IHubconResponse> HandleMethodStream(IOperationRequest request, HubconTransportAttribute transport, IServiceProvider serviceProvider, object? wrapper = null, CancellationToken cancellationToken = default)
+        public static ValueTask<IHubconResponse> HandleMethodStream(IOperationRequest request, HubconTransportAttribute transport, IServiceProvider serviceProvider, IWrapper? wrappedRequest, CancellationToken cancellationToken = default)
         {
             var requestHandler = serviceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.GetStream(request, transport, wrapper, cancellationToken);
+            return requestHandler.GetStream(request, transport, wrappedRequest, cancellationToken);
         }
 
         /// <summary>
         /// Dispatches a high-throughput ingestion request, mapping unique source identifiers 
         /// to their corresponding data objects.
         /// </summary>
-        public static ValueTask<IHubconResponse> HandleIngest(IOperationRequest request, HubconTransportAttribute transport, IServiceProvider serviceProvider, Dictionary<Guid, object> sources, object? wrapper = null, CancellationToken cancellationToken = default)
+        public static ValueTask<IHubconResponse> HandleIngest(IOperationRequest request, HubconTransportAttribute transport, IServiceProvider serviceProvider, Dictionary<Guid, object> sources, IWrapper? wrappedRequest, CancellationToken cancellationToken = default)
         {
             var requestHandler = serviceProvider.GetRequiredService<IRequestHandler>();
-            return requestHandler.HandleIngest(request, transport, sources, wrapper, cancellationToken);
+            return requestHandler.HandleIngest(request, transport, sources, wrappedRequest, cancellationToken);
         }
     }
 }

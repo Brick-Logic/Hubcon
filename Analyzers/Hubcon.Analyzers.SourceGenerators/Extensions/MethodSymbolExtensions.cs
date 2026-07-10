@@ -108,10 +108,16 @@ namespace HubconAnalyzers.SourceGenerators.Extensions
             
             if (returnType == "void")
             {
-                return "Hubcon.HubconResponse";
+                return "Hubcon.IResponse";
             } 
             
             if (returnType.StartsWith("Hubcon.HubconResponse<"))
+            {
+                // Streaming
+                return returnType.Replace("Hubcon.HubconResponse<", "Hubcon.IHubconResponse<");;
+            }
+            
+            if (returnType.StartsWith("Hubcon.IHubconResponse<"))
             {
                 // Streaming
                 return returnType;
@@ -119,7 +125,7 @@ namespace HubconAnalyzers.SourceGenerators.Extensions
             
             if (returnType == "Hubcon.HubconResponse")
             {
-                return "Hubcon.HubconResponse";
+                return "Hubcon.IHubconResponse";
             } 
             
             if (returnType.StartsWith("System.Collections.Generic.IAsyncEnumerable<"))
@@ -133,23 +139,38 @@ namespace HubconAnalyzers.SourceGenerators.Extensions
                 
                 if (generic.StartsWith("Hubcon.HubconResponse<"))
                 {
+                    return generic.Replace("Hubcon.HubconResponse<", "Hubcon.IHubconResponse<");
+                } 
+                
+                if (generic.StartsWith("Hubcon.IHubconResponse<"))
+                {
                     return generic;
                 } 
             
                 if (returnType == "Hubcon.HubconResponse")
                 {
-                    return "Hubcon.HubconResponse";
+                    return "Hubcon.IHubconResponse";
                 } 
                 
-                return $"Hubcon.HubconResponse<{generic}>";
+                if (returnType == "Hubcon.IHubconResponse")
+                {
+                    return "Hubcon.IHubconResponse";
+                } 
+                
+                if (returnType == "Hubcon.IHubconResponse")
+                {
+                    return "Hubcon.IResponse";
+                }
+                
+                return $"Hubcon.IHubconResponse<{generic}>";
             }
             
             if (returnType == "System.Threading.Tasks.Task")
             {
-                return "Hubcon.HubconResponse";
+                return "Hubcon.IResponse";
             }
             
-            return $"Hubcon.HubconResponse<{returnType}>";
+            return $"Hubcon.IHubconResponse<{returnType}>";
         } 
 
         //public static string GetMethodSymbolSignature(this IMethodSymbol method)

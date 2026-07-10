@@ -22,7 +22,8 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
         HttpClient _httpClient = null!;
 
         /// <inheritdoc/>
-        public override async ValueTask CallAsync(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async ValueTask CallAsync(IOperationRequest request, IClientOperationContext context,
+            CancellationToken cancellationToken = default)
         {
             StringContent? content = null;
             HttpRequestMessage? httpRequest = null;
@@ -66,8 +67,10 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
                 if (content != null)
                     httpRequest.Content = content;
 
-                if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
-                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
+                if (context.RequiresAuthentication && authenticationManager != null &&
+                    authenticationManager.IsSessionActive)
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!,
+                        authenticationManager.AccessToken);
 
                 response = await _httpClient.SendAsync(httpRequest, cancellationToken);
 
@@ -85,7 +88,8 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
             }
             catch (Exception ex)
             {
-                await context.SetResponse(HubconResponse.InternalError(ex, originalData: response?.Content?.ToString()!));
+                await context.SetResponse(
+                    HubconResponse.InternalError(ex, originalData: response?.Content?.ToString()!));
             }
             finally
             {
@@ -96,8 +100,9 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
         }
 
         /// <inheritdoc/>
-        public override async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
-        {          
+        public override async ValueTask<IAsyncEnumerable<JsonElement>> GetStream(IOperationRequest request,
+            IClientOperationContext context, CancellationToken cancellationToken = default)
+        {
             StringContent? content = null;
             HttpRequestMessage? httpRequest = null;
             HttpResponseMessage? response = null;
@@ -110,26 +115,13 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
                 var converter = context.Converter;
                 var route = methodInfo.GetRoute(false);
 
-                if (httpMethod is HttpPostAttribute)
+                if (context.HttpMethodDefined == HttpMethod.Post || context.HttpMethodDefined == HttpMethod.Put)
                 {
-                    var arguments = converter.Serialize(request.Arguments);
-                    content = new StringContent(arguments, Encoding.UTF8, "application/json");
-                    url = context.HttpUrl + route.FullRoute;
+                    HandlePost(request, context, out content, context.HttpUrl, out url, methodInfo);
                 }
                 else
                 {
-                    var builder = new UriBuilder(context.HttpUrl);
-
-                    var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
-
-                    foreach (var argument in request.Arguments)
-                    {
-                        query[argument.Key] = argument.Value?.ToString() ?? "";
-                    }
-
-                    builder.Path = route.FullRoute;
-                    builder.Query = query.ToString();
-                    url = builder.ToString();
+                    url = HandleGeneric(request, context, context.HttpUrl, methodInfo);
                 }
 
                 httpRequest = new HttpRequestMessage(httpMethod.HttpMethod, url);
@@ -141,10 +133,13 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
                 if (content != null)
                     httpRequest.Content = content;
 
-                if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
-                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
+                if (context.RequiresAuthentication && authenticationManager != null &&
+                    authenticationManager.IsSessionActive)
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!,
+                        authenticationManager.AccessToken);
 
-                response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
 
                 var enumerable = HttpMessageHelper.ParseSSEStream(response, context, cancellationToken);
 
@@ -163,7 +158,8 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
             }
             catch (Exception ex)
             {
-                await context.SetResponse(HubconResponse.InternalError(ex, originalData: response?.Content?.ToString()!));
+                await context.SetResponse(
+                    HubconResponse.InternalError(ex, originalData: response?.Content?.ToString()!));
                 return default!;
             }
             finally
@@ -174,14 +170,17 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
         }
 
         /// <inheritdoc/>
-        public override async ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
+        public override async ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context,
+            CancellationToken cancellationToken = default)
         {
-            await context.SetResponse(HubconResponse.InternalError(new NotSupportedException(), "Hubcon's HTTP transport does not support ingest methods."));
+            await context.SetResponse(HubconResponse.InternalError(new NotSupportedException(),
+                "Hubcon's HTTP transport does not support ingest methods."));
         }
 
         /// <inheritdoc/>
-        public override async ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context, CancellationToken cancellationToken = default)
-        {         
+        public override async ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context,
+            CancellationToken cancellationToken = default)
+        {
             StringContent? content = null;
             HttpRequestMessage? httpRequest = null;
             HttpResponseMessage? response = null;
@@ -210,8 +209,10 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
                 if (content != null)
                     httpRequest.Content = content;
 
-                if (context.RequiresAuthentication && authenticationManager != null && authenticationManager.IsSessionActive)
-                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!, authenticationManager.AccessToken);
+                if (context.RequiresAuthentication && authenticationManager != null &&
+                    authenticationManager.IsSessionActive)
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue(authenticationManager.TokenType!,
+                        authenticationManager.AccessToken);
 
                 response = await _httpClient.SendAsync(httpRequest, cancellationToken);
 
@@ -222,7 +223,8 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
             }
             catch (Exception ex)
             {
-                await context.SetResponse(HubconResponse.InternalError<T>(ex, originalData: response?.Content?.ToString()!));
+                await context.SetResponse(HubconResponse.InternalError<T>(ex,
+                    originalData: response?.Content?.ToString()!));
             }
             finally
             {
@@ -232,7 +234,8 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
             }
         }
 
-        private static string HandleGeneric(IOperationRequest request, IClientOperationContext context, string currentUrl, MethodInfo methodInfo)
+        private static string HandleGeneric(IOperationRequest request, IClientOperationContext context,
+            string currentUrl, MethodInfo methodInfo)
         {
             var builder = new UriBuilder(currentUrl);
 
@@ -249,18 +252,82 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
             return currentUrl;
         }
 
-        private static void HandlePost(IOperationRequest request, IClientOperationContext context, out StringContent? content, string currentUrl, out string url, MethodInfo methodInfo)
+        private static void HandlePost(IOperationRequest request, IClientOperationContext context,
+            out StringContent? content, string currentUrl, out string url, MethodInfo methodInfo)
         {
-            var arguments = context.Converter.Serialize(request.Arguments);
-            content = new StringContent(arguments, Encoding.UTF8, "application/json");
-            url = currentUrl + methodInfo.GetRoute(context.ClientOptions.UseHttpEndpointOverloading).FullRoute;
+            var parameters = methodInfo.GetParameters();
+            object? bodyArgument = null;
+            var queryParts = new List<string>();
+
+            foreach (var param in parameters)
+            {
+                string paramName = param.Name!;
+
+                // Ignoramos tokens de cancelación en el mapeo de red
+                if (param.ParameterType == typeof(CancellationToken)) continue;
+
+                // Buscamos el argumento por el nombre del parámetro
+                if (!request.Arguments.TryGetValue(paramName, out var argValue) || argValue == null)
+                {
+                    continue;
+                }
+
+                // Determinar si es tipo simple con la física de tu SG
+                bool isSimpleType = param.ParameterType.IsValueType ||
+                                    param.ParameterType == typeof(string) ||
+                                    param.ParameterType == typeof(DateTime) ||
+                                    param.ParameterType == typeof(TimeSpan) ||
+                                    param.ParameterType == typeof(Guid);
+
+                if (isSimpleType)
+                {
+                    // Formateamos de forma invariante para evitar problemas de regionalización (. vs ,)
+                    string valStr = argValue is IFormattable formattable
+                        ? formattable.ToString(null, System.Globalization.CultureInfo.InvariantCulture)
+                        : argValue.ToString() ?? "";
+
+                    queryParts.Add($"{Uri.EscapeDataString(paramName)}={Uri.EscapeDataString(valStr)}");
+                }
+                else
+                {
+                    // El objeto complejo se guarda para el cuerpo
+                    bodyArgument = argValue;
+                }
+            }
+
+            // 1. Resolver el Body JSON
+            if (bodyArgument != null)
+            {
+                var argumentsJson = context.Converter.Serialize(bodyArgument);
+                content = new StringContent(argumentsJson, Encoding.UTF8, "application/json");
+            }
+            else
+            {
+                // Si el POST no requería un objeto complejo, no mandamos un body vacío simulado.
+                // Dejamos content en null para que HttpClient mande un Content-Length: 0 limpio.
+                content = null;
+            }
+
+            // 2. Resolver la URL con los Query Parameters
+            string baseRoute =
+                currentUrl + methodInfo.GetRoute(context.ClientOptions.UseHttpEndpointOverloading).FullRoute;
+
+            if (queryParts.Count > 0)
+            {
+                url = baseRoute + "?" + string.Join("&", queryParts);
+            }
+            else
+            {
+                url = baseRoute;
+            }
         }
 
         /// <inheritdoc/>
         protected override void Build(TransportContext configuration)
         {
             _httpClient = configuration.ClientOptions.HttpClientFactory.Invoke(configuration.ProxyServiceProvider);
-            configuration.ClientOptions.HttpClientOptions?.Invoke(_httpClient, configuration.ProxyServiceProvider);;
+            configuration.ClientOptions.HttpClientOptions?.Invoke(_httpClient, configuration.ProxyServiceProvider);
+            ;
         }
     }
 }

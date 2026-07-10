@@ -3,6 +3,7 @@ using HubconTestDomain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis.Validation;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -17,7 +18,7 @@ namespace HubconTest.ContractHandlers
             logger?.LogInformation(message);
         }
 
-        public async Task<string> TestReturn(string message)
+        public async Task<string> TestReturnWithParameter(string message)
         {
             logger?.LogInformation(message);
             return message;
@@ -48,7 +49,7 @@ namespace HubconTest.ContractHandlers
         //[ProducesResponseType<IOperationResponse<string>>(200)]
         //[Consumes("application/json")]
         [AllowAnonymous]
-        public async Task<string> LoginAsync([Required][FromBody] LoginCommand command, [FromQuery] string id)
+        public async Task<string> LoginAsync([Required][FromBody][ValidateObject] LoginCommand command, [FromQuery] string id)
         {
             try
             {

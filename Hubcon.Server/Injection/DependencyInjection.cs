@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Hubcon.Shared.Core.Serialization;
+using Microsoft.AspNetCore.Http;
 
 #pragma warning disable CS1591
 
@@ -89,6 +90,17 @@ namespace Hubcon
                     {
                         app.RegisterEndpoint(operation.Value);
                     }
+                }
+            });
+            
+            app.UseStatusCodePages(async context =>
+            {
+                if (context.HttpContext.Response.StatusCode == StatusCodes.Status404NotFound)
+                {
+                    context.HttpContext.Response.ContentType = "application/json";
+
+                    IResponse notFoundResponse = HubconResponse.NotFound(null!, "Resource or endpoint not found.", null!);
+                    await context.HttpContext.Response.WriteAsJsonAsync(notFoundResponse);
                 }
             });
 

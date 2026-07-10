@@ -133,10 +133,22 @@ namespace Hubcon.Server.Core.Routing.Registries
                     {
                         throw new InvalidOperationException($"Operation '{method.Name}' cannot be used with GET verb as it contains complex types. Use primitive types or a DTO class with primitive types instead.");
                     }
+                    
+                    if (verb == null)
+                    {
+                        bool hasComplexParameter = parameters.Any(p => 
+                            p.ParameterType != typeof(CancellationToken) &&
+                            !p.ParameterType.IsValueType &&
+                            p.ParameterType != typeof(string) &&
+                            p.ParameterType != typeof(DateTime) &&
+                            p.ParameterType != typeof(TimeSpan) &&
+                            p.ParameterType != typeof(Guid)
+                        );
 
-                    var httpVerb = verb != null
-                        ? HttpMethod.Get
-                        : (parameters.Length - parameters.Count(x => x.ParameterType == typeof(CancellationToken)) > 0 ? HttpMethod.Post : HttpMethod.Get);
+                        verb = hasComplexParameter ? null : new HttpGetAttribute();
+                    }
+
+                    var httpVerb = verb != null ? HttpMethod.Get : HttpMethod.Post;
                     
                     var pipelineBuilder = new PipelineBuilder();
                     var middlewareOptions = new ControllerOptions(pipelineBuilder, servicesToInject);

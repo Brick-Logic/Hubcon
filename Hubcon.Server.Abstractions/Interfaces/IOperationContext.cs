@@ -29,7 +29,7 @@ namespace Hubcon
         IOperationRequest Request { get; init; }
 
         /// <summary>Gets the transport-specific wrapper (e.g., the specific WebSocket connection instance).</summary>
-        object? WrappedRequest { get; init; }
+        IWrapper? WrappedRequest { get; init; }
 
         /// <summary>Gets a cancellation token that triggers when the client disconnects or the request times out.</summary>
         CancellationToken RequestAborted { get; init; }

@@ -217,9 +217,25 @@ namespace Hubcon.Client.Core.HubconInvocationContext
                 OperationOptions = contractOptions.GetOperationOptions(MethodSignature, member);
                 var httpMethod = TryFindHttpMethod(method);
                 var parameters = method.GetParameters();
-                HttpMethodAttribute = httpMethod != null ? httpMethod : ((parameters.Length - parameters.Count(x => x.ParameterType == typeof(CancellationToken)) > 0) ? new HttpPostAttribute() : new HttpGetAttribute());
-                HttpMethodDefined = HttpMethodAttribute.HttpMethod;
+                
+                // 1. Si ya viene un atributo explícito, lo usamos.
+                if (httpMethod == null)
+                {
+                    // 2. Evaluamos si hay algún parámetro que obligue a que sea POST (tipo complejo que no sea CancellationToken)
+                    bool hasComplexParameter = parameters.Any(p => 
+                        p.ParameterType != typeof(CancellationToken) &&
+                        !p.ParameterType.IsValueType &&
+                        p.ParameterType != typeof(string) &&
+                        p.ParameterType != typeof(DateTime) &&
+                        p.ParameterType != typeof(TimeSpan) &&
+                        p.ParameterType != typeof(Guid)
+                    );
 
+                    httpMethod = hasComplexParameter ? new HttpPostAttribute() : new HttpGetAttribute();
+                }
+
+                HttpMethodAttribute = httpMethod;
+                HttpMethodDefined = HttpMethodAttribute.HttpMethod;
 
                 // Http validation
                 var get = method.HasCustomAttribute<HttpGetAttribute>();

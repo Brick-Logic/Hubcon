@@ -112,30 +112,14 @@ namespace Hubcon
     [StructLayout(LayoutKind.Sequential)]
     public class HubconResponse<T> : IHubconResponse<T>
     {
-        /// <summary>Gets or sets the success message.</summary>
-        [JsonPropertyName("message")]
-        public string Message { get; set; }
-
-        /// <summary>Gets or sets the error message, if any.</summary>
-        [JsonPropertyName("error")]
-        public string Error { get; set; }
-
         /// <summary>Gets or sets the payload of the response.</summary>
         [JsonPropertyName("data")]
         public T Data { get; set; }
-
-        /// <summary>Gets the raw, original response object from the transport layer.</summary>
-        [JsonIgnore]
-        public object? OriginalResponse { get; }
-
-        /// <summary>Gets or sets the exception associated with a failure, if applicable.</summary>
-        [JsonIgnore]
-        public Exception? Exception { get; set; }
-
+        
         /// <summary>Gets or sets the protocol-specific status code.</summary>
         [JsonPropertyName("statusCode")]
         public int StatusCode { get; set; }
-
+        
         /// <summary>Gets a value indicating whether the operation was successful.</summary>
         [JsonPropertyName("success")]
         public bool Success { get; set; }
@@ -143,7 +127,23 @@ namespace Hubcon
         /// <summary>Gets a value indicating whether the operation failed.</summary>
         [JsonPropertyName("failure")]
         public bool Failure { get; set; }
+        
+        /// <summary>Gets or sets the error message, if any.</summary>
+        [JsonPropertyName("error")]
+        public string Error { get; set; }
+        
+        /// <summary>Gets or sets the success message.</summary>
+        [JsonPropertyName("message")]
+        public string Message { get; set; }
+        
+        /// <summary>Gets the raw, original response object from the transport layer.</summary>
+        [JsonIgnore]
+        public object? OriginalResponse { get; }
 
+        /// <summary>Gets or sets the exception associated with a failure, if applicable.</summary>
+        [JsonIgnore]
+        public Exception? Exception { get; set; }
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="HubconResponse{T}"/> class for serialization.
         /// </summary>
@@ -200,7 +200,7 @@ namespace Hubcon
         public static implicit operator HubconResponse<T>(Exception value)
         {
             if(value is OperationCanceledException)
-                return HubconResponse.Cancelled<T>(null!, value.Message);
+                return HubconResponse.Cancelled<T>(value, value.Message);
             else
                 return HubconResponse.InternalError<T>(value);
         }
@@ -211,7 +211,7 @@ namespace Hubcon
         /// <returns>An <see cref="IHubconResponse"/> instance.</returns>
         public IHubconResponse GetBoxed()
         {
-            return new HubconResponse(Success, Failure, Message, Error, StatusCode, Data!, Exception!);
+            return new HubconResponse(Success, Failure, Message, Error, StatusCode, Data!, OriginalResponse!, Exception!);
         }
     }
 }

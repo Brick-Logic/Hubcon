@@ -1,4 +1,5 @@
-﻿using Hubcon;
+﻿using System.ComponentModel.DataAnnotations;
+using Hubcon;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HubconTestDomain
@@ -12,8 +13,13 @@ namespace HubconTestDomain
             this.RememberMe = RememberMe;
         }
 
+        [Required]
         public string Username { get; }
+        
+        [Required]
         public string Password { get; }
+        
+        [Required]
         public bool RememberMe { get; }
     }
 }

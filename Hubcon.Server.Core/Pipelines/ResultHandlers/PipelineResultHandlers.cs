@@ -59,21 +59,22 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             }
         }
 
-        private static async ValueTask<object?> GetTaskResultAsync(Task taskObject)
+        private static async ValueTask<object?> GetTaskResultAsync(Task task)
         {
-            await taskObject;
+            await task;
 
-            var taskType = taskObject.GetType();
+            var type = task.GetType();
 
-            if (taskType.IsGenericType)
+            if (!type.IsGenericType) return null;
+            var resultProperty = type.GetProperty("Result");
+            var value = resultProperty?.GetValue(task);
+
+            if (value != null && value.GetType().FullName == "System.Threading.Tasks.VoidTaskResult")
             {
-                var resultProperty = taskType.GetProperty("Result");
-                var result = resultProperty?.GetValue(taskObject);
-
-                return result;
+                return null;
             }
 
-            return null;
+            return value;
         }
     }
 }

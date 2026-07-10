@@ -349,7 +349,7 @@ internal class Program
     {
         logger.LogWarning("Probando invocación con retorno...");
 
-        var response = await client.Execute(x => x.GetTemperatureFromServer(""));
+        var response = await client.Execute(x => x.GetTemperatureFromServer("asas"));
 
         if (response.Success)
             logger.LogInformation($"Invocación OK. Datos recibidos: {response.Data}");
@@ -478,7 +478,7 @@ internal class Program
     private static async Task TestLogin(AuthenticationManager authManager, ILogger<IUserContract> logger)
     {
         logger.LogWarning($"Probando login...");
-        var response = await authManager.LoginAsync("miusuario", "");
+        var response = await authManager.LoginAsync("miusuario", "micontraseña");
 
         if (response.IsSuccess)
             logger.LogInformation($"Login OK. Token: {authManager.TokenType}");

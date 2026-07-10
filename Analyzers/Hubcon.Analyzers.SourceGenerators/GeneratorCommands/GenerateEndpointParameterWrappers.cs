@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Hubcon.Analyzers.SourceGenerators.Extensions;
+using Hubcon.Analyzers.SourceGenerators.Models;
 using HubconAnalyzers.SourceGenerators.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -11,8 +12,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 {
     public static class GenerateEndpointParameterWrappers
     {
-        public static void Execute(SourceProductionContext spc, IEnumerable<INamedTypeSymbol> interfaces,
-            string fileName)
+        public static void Execute(SourceProductionContext spc, IEnumerable<ControllerMetadata> controllers, string fileName)
         {
             var sb = new StringBuilder();
 
@@ -41,28 +41,24 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine("        }");
             sb.AppendLine();
 
-            sb.AppendLine("        public static Type? GetWrapperType(string contractName, string signature)");
+            sb.AppendLine("        public static Type? GetWrapperType(string controller, string contractName, string signature)");
             sb.AppendLine("        {");
-            sb.AppendLine("            var finalSignature = contractName + \"_\" + signature;");
+            sb.AppendLine("            var finalSignature = controller + \"_\" + contractName + \"_\" + signature;");
             sb.AppendLine("            switch(finalSignature)");
             sb.AppendLine("            {");
-            foreach (var interfaceSymbol in interfaces)
+            
+            foreach (var controller in controllers)
             {
-                var methods = interfaceSymbol.GetMembers()
-                    .OfType<IMethodSymbol>()
-                    .Where(m => m.MethodKind == MethodKind.Ordinary);
-
-
-                foreach (var method in methods)
+                foreach (var endpoint in controller.Endpoints)
                 {
-                    if (method.Parameters.Count(x => x.Type.ToDisplayString() != "System.Threading.CancellationToken") == 0)
+                    if (endpoint.Parameters.Count(x => x.Type.ToDisplayString() != "System.Threading.CancellationToken") == 0)
                         continue;
-
+                    
                     var wrapperClassName =
-                        $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Request";
+                        $"{endpoint.FullName}_Request";
 
                     sb.AppendLine(
-                        $"                 case \"{interfaceSymbol.Name}_{method.GetMethodSymbolSignature()}\": return typeof({wrapperClassName});");
+                        $"                 case \"{endpoint.Identifier}\": return typeof({wrapperClassName});");
                 }
             }
 
@@ -73,29 +69,24 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine();
 
             sb.AppendLine(
-                "        public static Func<IReadOnlyDictionary<string, object>, object>? GetWrapperDelegate(string contractName, string signature)");
+                "        public static Func<IReadOnlyDictionary<string, object>, object>? GetWrapperDelegate(string controller, string contractName, string signature)");
             sb.AppendLine("        {");
-            sb.AppendLine("            var finalSignature = contractName + \"_\" + signature;");
+            sb.AppendLine("            var finalSignature = controller + \"_\" + contractName + \"_\" + signature;");
             sb.AppendLine("            switch(finalSignature)");
             sb.AppendLine("            {");
 
-            foreach (var interfaceSymbol in interfaces)
+            foreach (var controller in controllers)
             {
-                var methods = interfaceSymbol.GetMembers()
-                    .OfType<IMethodSymbol>()
-                    .Where(m => m.MethodKind == MethodKind.Ordinary);
-
-
-                foreach (var method in methods)
+                foreach (var endpoint in controller.Endpoints)
                 {
-                    if (method.Parameters.Count(x => x.Type.ToDisplayString() != "System.Threading.CancellationToken") == 0)
+                    if (endpoint.Parameters.Count(x => x.Type.ToDisplayString() != "System.Threading.CancellationToken") == 0)
                         continue;
-
+                    
                     var wrapperClassName =
-                        $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Request";
+                        $"{endpoint.FullName}_Request";
 
                     sb.AppendLine(
-                        $"                 case \"{interfaceSymbol.Name}_{method.GetMethodSymbolSignature()}\":return {wrapperClassName}.GetWrapped;");
+                        $"                 case \"{endpoint.Identifier}\":return {wrapperClassName}.GetWrapped;");
                 }
             }
 
@@ -105,19 +96,15 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine("    }");
             sb.AppendLine();
 
-            foreach (var interfaceSymbol in interfaces)
+            foreach (var controller in controllers)
             {
-                var methods = interfaceSymbol.GetMembers()
-                    .OfType<IMethodSymbol>()
-                    .Where(m => m.MethodKind == MethodKind.Ordinary);
-
-                foreach (var method in methods)
+                foreach (var endpoint in controller.Endpoints)
                 {
-                    if (method.Parameters.Count(x => x.Type.ToDisplayString() != "System.Threading.CancellationToken") == 0)
+                    if (endpoint.Parameters.Count(x => x.Type.ToDisplayString() != "System.Threading.CancellationToken") == 0)
                         continue;
 
                     var wrapperClassName =
-                        $"{interfaceSymbol.GetSafeName()}_{method.GetMethodSymbolSignature()}_Request";
+                        $"{endpoint.FullName}_Request";
 
                     sb.AppendLine($"    public sealed class {wrapperClassName} : global::Hubcon.IWrapper");
                     sb.AppendLine("    {");
@@ -126,117 +113,24 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                     sb.AppendLine(
                         $"        [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors, typeof({wrapperClassName}))]");
                     sb.AppendLine($"        public {wrapperClassName}(){{ }}");
+                    
+                    SymbolTools.MapPropertyAttributes(endpoint, sb, true);
 
-                    var parameters = method.Parameters
-                        .Where(x => x.Type.ToDisplayString() != "System.Threading.CancellationToken")
-                        .ToImmutableArray();
-
-
-                    foreach (var param in parameters)
-                    {
-                        string typeName = param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                        string paramName = param.Name;
-
-                        bool hasExplicitBindingAttribute = false;
-
-                        foreach (var attr in param.GetAttributes())
-                        {
-                            var attrClass = attr.AttributeClass;
-                            if (attrClass == null) continue;
-
-                            var attrNamespace = attrClass.ContainingNamespace?.ToDisplayString();
-
-                            if (attrNamespace == "System.Runtime.CompilerServices")
-                            {
-                                continue;
-                            }
-
-                            string attrFullName = attrClass.ToDisplayString();
-
-                            if (attrFullName.Contains("Microsoft.AspNetCore.Http.Metadata") ||
-                                attrFullName.Contains("Microsoft.AspNetCore.Mvc.From") ||
-                                attrFullName.Contains("AsParametersAttribute"))
-                            {
-                                hasExplicitBindingAttribute = true;
-                            }
-
-                            sb.AppendLine($"        [{attrFullName}]");
-                        }
-
-                        if (!hasExplicitBindingAttribute)
-                        {
-                            bool isSimpleType = param.Type.IsValueType ||
-                                                param.Type.SpecialType == SpecialType.System_String ||
-                                                param.Type.ToDisplayString() == "System.DateTime" ||
-                                                param.Type.ToDisplayString() == "System.TimeSpan" ||
-                                                param.Type.ToDisplayString() == "System.Guid";
-
-                            if (isSimpleType)
-                            {
-                                sb.AppendLine($"        [Microsoft.AspNetCore.Mvc.FromQuery(Name = \"{paramName}\")]");
-                            }
-                            else
-                            {
-                                sb.AppendLine("        [Microsoft.AspNetCore.Mvc.FromBody]");
-                            }
-                        }
-
-                        var isNullable = false;
-
-                        if (param.HasExplicitDefaultValue)
-                        {
-                            object defaultVal = param.ExplicitDefaultValue;
-                            string valStr;
-
-                            if (defaultVal == null)
-                            {
-                                isNullable = true;
-                            }
-                            else
-                            {
-                                switch (defaultVal)
-                                {
-                                    case string s:
-                                        valStr = "\"" + s + "\"";
-                                        break;
-                                    case bool b:
-                                        valStr = b ? "true" : "false";
-                                        break;
-                                    case double d:
-                                        valStr = d.ToString(System.Globalization.CultureInfo.InvariantCulture) + "d";
-                                        break;
-                                    case float f:
-                                        valStr = f.ToString(System.Globalization.CultureInfo.InvariantCulture) + "f";
-                                        break;
-                                    case decimal dec:
-                                        valStr = dec.ToString(System.Globalization.CultureInfo.InvariantCulture) + "m";
-                                        break;
-                                    default:
-                                        valStr = defaultVal.ToString();
-                                        break;
-                                }
-
-                                sb.AppendLine($"        [System.ComponentModel.DefaultValue({valStr})]");
-                            }
-                        }
-
-                        sb.AppendLine(
-                            $"        public {typeName}{(isNullable ? "?" : "")} {paramName} {{ get; set; }}");
-                        sb.AppendLine();
-                    }
-
-                    if (parameters.Length > 0)
+                    if (endpoint.Parameters.Count > 0)
                     {
                         sb.AppendLine(
-                            $"        public static object GetWrapped(IReadOnlyDictionary<string, object> parameters_{method.GetMethodSymbolSignature()})");
+                            $"        public static object GetWrapped(IReadOnlyDictionary<string, object> parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()})");
                         sb.AppendLine("        {");
                         sb.AppendLine($"             var wrapped = new {wrapperClassName}();");
 
-                        foreach (var parameter in parameters)
+                        foreach (var parameter in endpoint.Parameters)
                         {
+                            if (parameter.Type.ToDisplayString() == "System.Threading.CancellationToken")
+                                continue;
+                            
                             string typeName = parameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                             sb.AppendLine(
-                                $"             wrapped.{parameter.Name} = ({typeName})parameters_{method.GetMethodSymbolSignature()}[\"{parameter.Name}\"];");
+                                $"             wrapped.{parameter.Name} = ({typeName})parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()}[\"{parameter.Name}\"];");
                         }
 
                         sb.AppendLine($"             return wrapped;");
@@ -244,20 +138,23 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                         sb.AppendLine("        }");
                         sb.AppendLine("");
                         sb.AppendLine(
-                            $"        public void Populate(IReadOnlyDictionary<string, object> parameters_{method.GetMethodSymbolSignature()})");
+                            $"        public void Populate(IReadOnlyDictionary<string, object> parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()})");
                         sb.AppendLine("        {");
-                        foreach (var parameter in parameters)
+                        foreach (var parameter in endpoint.Parameters)
                         {
+                            if (parameter.Type.ToDisplayString() == "System.Threading.CancellationToken")
+                                continue;
+                            
                             string typeName = parameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                             sb.AppendLine(
-                                $"             {parameter.Name} = ({typeName})parameters_{method.GetMethodSymbolSignature()}[\"{parameter.Name}\"];");
+                                $"             {parameter.Name} = ({typeName})parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()}[\"{parameter.Name}\"];");
                         }
 
                         sb.AppendLine("        }");
                         sb.AppendLine("");
                     }
 
-                    if (parameters.Length > 0)
+                    if (endpoint.Parameters.Count > 0)
                     {
                         sb.AppendLine(
                             $"        public static ValueTask<{wrapperClassName}> BindAsync(HttpContext context, System.Reflection.ParameterInfo parameter)");

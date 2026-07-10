@@ -17,6 +17,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
+using Hubcon.Shared.Core.Websockets;
 
 namespace Hubcon.Client.Core.Transports.Websockets.Sessions
 {
@@ -235,17 +236,31 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
                 {
                     // Ignored
                 }
-
-                await _sender.SendMessageAsync(new IngestCompleteMessage(_initialAckId, _connectionId, _sources.Keys.ToArray()), cancellationToken);
-
+                
+                try
+                {
+                    await _sender.SendMessageAsync(
+                        new IngestCompleteMessage(_initialAckId, _connectionId, _sources.Keys.ToArray()),
+                        cancellationToken);
+                }
+                finally
+                {
+                    // ignored
+                }
+                
                 using BaseMessage? result = await receiver 
                     ?? await _receiver.Router.GetResponseAsync(_initialAckId, _clientOptions!.WebsocketTimeout, _cts.Token) 
                     ?? throw new HubconRemoteException("Received an empty response.");
 
-                if (result.Error != null)
-                    return _converter.DeserializeData<T>(result.Error);
+                if (result.Type == MessageType.error)
+                {
+                    var error = result.Error;
+                    var converted = _converter.DeserializeData<T>(error);
+                    return converted;
+                }
 
-                var response = _converter.DeserializeJsonElement<T>(new IngestResultMessage(result).Data) ?? throw new HubconRemoteException("Received an empty response.");
+                var resultMessage = new IngestResultMessage(result);
+                var response = _converter.DeserializeJsonElement<T>(resultMessage.Data) ?? throw new HubconRemoteException("Received an empty response.");
 
                 return response;
             }

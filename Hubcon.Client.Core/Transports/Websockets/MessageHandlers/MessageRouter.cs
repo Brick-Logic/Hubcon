@@ -46,8 +46,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         private readonly TaskCompletionSource<bool> _startSignal;
         private readonly TaskCompletionSource<bool> _messageRouterDisposed;
 
-        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<BaseMessage>> _requestsTcs =
-            new ConcurrentDictionary<Guid, TaskCompletionSource<BaseMessage>>();
+        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<BaseMessage>> _requestsTcs = new ConcurrentDictionary<Guid, TaskCompletionSource<BaseMessage>>();
 
         private readonly ConcurrentDictionary<Guid, StreamSession> _streams = new ConcurrentDictionary<Guid, StreamSession>();
         private readonly ConcurrentDictionary<Guid, IngestSession> _ingests = new ConcurrentDictionary<Guid, IngestSession>();

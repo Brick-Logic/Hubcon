@@ -25,12 +25,8 @@ namespace Hubcon.Server.Core.Routing
 {
     public static class HttpOperationRegisterer
     {
-        private readonly static MethodInfo methodInfo1 =
-            typeof(EndpointFilterExtensions).GetMethod("AddEndpointFilter", [typeof(RouteHandlerBuilder)])!;
-
         private readonly static ConcurrentDictionary<string, RouteGroupBuilder> EndpointGroups = new();
         private readonly static ConcurrentDictionary<RouteGroupBuilder, bool> RateLimiterApplied = new();
-
 
         public static void RegisterEndpoint(
             this WebApplication app,
@@ -47,7 +43,7 @@ namespace Hubcon.Server.Core.Routing
             var method = (MethodInfo)blueprint.MemberInfo!;
             
             var endpointDelegate =
-                EndpointManager.GetDummyEndpointDelegate(blueprint.ContractName, method.GetMethodSignature());
+                EndpointManager.GetDummyEndpointDelegate(blueprint.ControllerType, blueprint.ContractType, method);
 
             if (endpointDelegate == null)
                 throw new HubconGenericException(
@@ -68,13 +64,7 @@ namespace Hubcon.Server.Core.Routing
                 .Where(x => x is UseHttpEndpointFilterAttribute)
                 .Select(x => (UseHttpEndpointFilterAttribute)x)
                 .ToList();
-
-            var orderedParameterNames = method
-                .GetParameters()
-                .Select(p => p.Name!)
-                .ToArray();
-
-
+            
             filters.AddRange(classFilters);
 
             var endpointGroup = EndpointGroups.GetOrAdd(blueprint.HttpEndpointGroupName!, x =>
@@ -82,6 +72,7 @@ namespace Hubcon.Server.Core.Routing
                 var group = app
                     .MapGroup(x)
                     .WithTags(x);
+                
                 return group;
             });
 
@@ -102,10 +93,7 @@ namespace Hubcon.Server.Core.Routing
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
 
-                        var dict = context.Request.Query
-                            .ToDictionary(static kvp => kvp.Key, static object (kvp) => kvp.Value.ToString());
-
-                        var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
+                        var operationRequest = new OperationRequest(operationName, simpleContractName);
                         var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
 
                         var rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
@@ -117,11 +105,22 @@ namespace Hubcon.Server.Core.Routing
                             return HubconResponse.TooManyRequests();
                         }
 
+                        IWrapper? wrapper = null;
+                        if (blueprint.ParameterWrapper != null)
+                        {
+                            if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper internalWrapper)
+                            {
+                                return HubconResponse.BadRequest();
+                            }
+
+                            wrapper = internalWrapper;
+                        }
+                        
                         var res = await DefaultEntrypoint.HandleMethodStream(
                             operationRequest,
                             transport,
                             services,
-                            null,
+                            wrapper,
                             cancellationToken);
 
                         if (res.Failure)
@@ -146,13 +145,10 @@ namespace Hubcon.Server.Core.Routing
                             var response = HubconResponse.RequestTooLarge();
                             return ProcessResponse(response, context);
                         }
-
-                        var args = new Dictionary<string, object>();
-
+                        
                         var operationRequest = new OperationRequest(
                             operationName,
-                            simpleContractName,
-                            args
+                            simpleContractName
                         );
 
                         var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
@@ -165,12 +161,17 @@ namespace Hubcon.Server.Core.Routing
                         {
                             return HubconResponse.TooManyRequests();
                         }
-
+                        
+                        if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper wrapper)
+                        {
+                            return HubconResponse.BadRequest();
+                        }
+                        
                         var res = await DefaultEntrypoint.HandleMethodStream(
                             operationRequest,
                             transport,
                             services,
-                            null,
+                            wrapper,
                             cancellationToken);
 
                         if (res.Failure)
@@ -195,11 +196,8 @@ namespace Hubcon.Server.Core.Routing
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
-
-                        var dict = context.Request.Query
-                            .ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString());
-
-                        var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
+                        
+                        var operationRequest = new OperationRequest(operationName, simpleContractName);
 
                         var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
 
@@ -213,11 +211,22 @@ namespace Hubcon.Server.Core.Routing
                             return HubconResponse.TooManyRequests();
                         }
 
+                        IWrapper? wrapper = null;
+                        if (blueprint.ParameterWrapper != null)
+                        {
+                            if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper internalWrapper)
+                            {
+                                return HubconResponse.BadRequest();
+                            }
+
+                            wrapper = internalWrapper;
+                        }
+
                         var res = await DefaultEntrypoint.HandleMethodWithResult(
                             operationRequest,
                             transport,
                             services,
-                            null,
+                            wrapper,
                             cancellationToken);
 
                         return res;
@@ -238,13 +247,10 @@ namespace Hubcon.Server.Core.Routing
                             var response = HubconResponse.RequestTooLarge();
                             return ProcessResponse(response, context);
                         }
-
-                        var args = new Dictionary<string, object>();
-
+                        
                         var operationRequest = new OperationRequest(
                             operationName,
-                            simpleContractName,
-                            args
+                            simpleContractName
                         );
 
                         var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
@@ -252,17 +258,21 @@ namespace Hubcon.Server.Core.Routing
                         var rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
                         var remoteAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_invoke, transport,
-                                operationRequest))
+                        if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_invoke, transport, operationRequest))
                         {
                             return HubconResponse.TooManyRequests();
                         }
 
+                        if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper wrapper)
+                        {
+                            return HubconResponse.BadRequest();
+                        }
+                        
                         var res = await DefaultEntrypoint.HandleMethodWithResult(
                             operationRequest,
                             transport,
                             services,
-                            null,
+                            wrapper,
                             cancellationToken);
 
                         return res;
@@ -280,14 +290,7 @@ namespace Hubcon.Server.Core.Routing
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
 
-                        var dict = new Dictionary<string, object>();
-
-                        foreach (var kvp in context.Request.Query)
-                        {
-                            dict[kvp.Key] = kvp.Value.ToString();
-                        }
-
-                        var operationRequest = new OperationRequest(operationName, simpleContractName, dict);
+                        var operationRequest = new OperationRequest(operationName, simpleContractName);
 
                         var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
 
@@ -299,12 +302,23 @@ namespace Hubcon.Server.Core.Routing
                         {
                             return HubconResponse.TooManyRequests();
                         }
+                        
+                        IWrapper? wrapper = null;
+                        if (blueprint.ParameterWrapper != null)
+                        {
+                            if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper internalWrapper)
+                            {
+                                return HubconResponse.BadRequest();
+                            }
+
+                            wrapper = internalWrapper;
+                        }
 
                         var res = await DefaultEntrypoint.HandleMethodVoid(
                             operationRequest,
                             transport,
                             services,
-                            null,
+                            wrapper,
                             cancellationToken);
 
                         return res;
@@ -328,13 +342,10 @@ namespace Hubcon.Server.Core.Routing
                             var response = HubconResponse.RequestTooLarge();
                             return ProcessResponse(response, context);
                         }
-
-                        var args = new Dictionary<string, object>();
-
+                        
                         var operationRequest = new OperationRequest(
                             operationName,
-                            simpleContractName,
-                            args
+                            simpleContractName
                         );
 
                         var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
@@ -347,12 +358,17 @@ namespace Hubcon.Server.Core.Routing
                         {
                             return HubconResponse.TooManyRequests();
                         }
+                        
+                        if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper wrapper)
+                        {
+                            return HubconResponse.BadRequest();
+                        }
 
                         var res = await DefaultEntrypoint.HandleMethodVoid(
                             operationRequest,
                             transport,
                             services,
-                            null,
+                            wrapper,
                             cancellationToken);
 
                         return res;
@@ -363,6 +379,11 @@ namespace Hubcon.Server.Core.Routing
             builder
                 .WithRequestTimeout(options.HttpTimeout);
 
+            builder.WithMetadata(new ProducesResponseTypeMetadata(400, typeof(IHubconResponse<Dictionary<string, string[]>>), ["application/json"]));
+            builder.WithMetadata(new ProducesResponseTypeMetadata(403, typeof(IResponse), ["application/json"]));
+            builder.WithMetadata(new ProducesResponseTypeMetadata(404, typeof(IResponse), ["application/json"]));
+            builder.WithMetadata(new ProducesResponseTypeMetadata(500, typeof(IResponse), ["application/json"]));
+            
             builder.AllowAnonymous();
             options.EndpointConventions?.Invoke(builder);
         }

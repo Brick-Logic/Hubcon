@@ -273,7 +273,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
             Throw.If(string.IsNullOrWhiteSpace(ackMessage.ConnectionId), (ackMessage, connectionResponse), static x 
                 => new HubconRemoteException($"Handshake failed, connection ID mismatch: Expected ID {x.ackMessage.Id} and received ID {x.connectionResponse?.Id} "));
             
-            Throw.If(!string.IsNullOrWhiteSpace(ackMessage.Error), ackMessage, static x 
+            Throw.If(ackMessage.Type == MessageType.error, ackMessage, static x 
                 => new HubconRemoteException($"Handshake returned an error: {x?.Error}"));
 
             connectionId = ackMessage.ConnectionId;

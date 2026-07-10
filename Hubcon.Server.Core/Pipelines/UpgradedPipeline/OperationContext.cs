@@ -22,7 +22,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public HttpContext? HttpContext { get; init; } = default!;
         public Exception? Exception { get; set; } = default!;
         public CancellationToken RequestAborted { get; init; } = default!;
-        public object? WrappedRequest { get; init; } = default!;
+        public IWrapper? WrappedRequest { get; init; } = default!;
         public bool IsTransportCalled { get; internal set; }
     }
 }
