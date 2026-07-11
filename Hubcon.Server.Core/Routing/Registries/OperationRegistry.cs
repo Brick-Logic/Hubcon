@@ -168,18 +168,18 @@ namespace Hubcon.Server.Core.Routing.Registries
                     if (orderToUse is UseOperationMiddlewaresFirst)
                     {
                         foreach (var middleware in methodAttributes)
-                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, middleware.Cycle);
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, (IRegisterer)middleware);
 
                         foreach (var middleware in classFilters)
-                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, middleware.Cycle);
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, (IRegisterer)middleware);
                     }
                     else
                     {
                         foreach (var middleware in classFilters)
-                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, middleware.Cycle);
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, (IRegisterer)middleware);
 
                         foreach (var middleware in methodAttributes)
-                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, middleware.Cycle);
+                            middlewareOptions.AddMiddleware(middleware.MiddlewareType, (IRegisterer)middleware);
                     }
 
                     var descriptor = new OperationBlueprint(
@@ -196,7 +196,7 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                     foreach (var item in descriptor.SecurityPolicy.Handlers)
                     {
-                        servicesToInject.Add(x => x.TryAddSingleton(item.HandlerType));
+                        servicesToInject.Add(x => ((IRegisterer)item).Register(x));
                     }
 
                     _availableOperations.GetOrAdd(GetOperationKey(interfaceType.Name, descriptor.OperationName), descriptor);

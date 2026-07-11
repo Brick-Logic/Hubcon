@@ -7,6 +7,8 @@ using System.Security.Claims;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
+using Hubcon.Server.Abstractions.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hubcon
 {
@@ -43,9 +45,10 @@ namespace Hubcon
                 var handlers = new Dictionary<Type, (IUseAuthAttribute, IAuthHandler)>();
                 for(int i = 0; i < Handlers.Count; i++)
                 {
-                    var handler = Handlers[i];
-                    var newAuthHandler = (IAuthHandler)serviceProvider.GetService(handler.HandlerType)!;
-                    handlers.TryAdd(handler.HandlerType, (handler, newAuthHandler));            
+                    var useHandler = Handlers[i];
+                    var handler = (IRegisterer)Handlers[i];
+                    var newAuthHandler = handler!.Get<IAuthHandler>(serviceProvider);
+                    handlers.TryAdd(useHandler.HandlerType, (useHandler, newAuthHandler));
                 }
 
                 AuthHandlers = handlers.ToFrozenDictionary();

@@ -1,5 +1,7 @@
 ﻿
+using System.Diagnostics.CodeAnalysis;
 using Hubcon;
+using IMiddleware = Microsoft.AspNetCore.Http.IMiddleware;
 
 namespace HubconTest.Middlewares
 {

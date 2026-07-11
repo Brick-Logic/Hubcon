@@ -7,6 +7,7 @@ namespace Hubcon
     /// <summary>
     /// Base marker interface for all middleware components in the Hubcon pipeline.
     /// </summary>
+    [HubconPreserve]
     public interface IMiddleware
     {
     }

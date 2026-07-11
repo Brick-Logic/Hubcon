@@ -18,13 +18,10 @@ namespace Hubcon.Server.Core.Helpers
         public static (object Instance, MethodInfo Method) CreateProxyInstance(MethodInfo originalMethod, Type wrapperType, bool isGet)
         {
             var typeBuilder = _moduleBuilder.DefineType($"Proxy_{Guid.NewGuid():N}", TypeAttributes.Public | TypeAttributes.Class);
+            
+            var hasParameters = originalMethod.GetParameters().Length > 0;
 
-            // Determinamos si el método original tiene parámetros comparando con el Wrapper
-            // (O chequeando si el originalMethod.GetParameters() está vacío)
-            bool hasParameters = originalMethod.GetParameters().Length > 0;
-
-            // Definimos los tipos de los parámetros del método del proxy
-            Type[] proxyParamTypes = hasParameters ? new[] { wrapperType } : Type.EmptyTypes;
+            var proxyParamTypes = hasParameters ? [wrapperType] : Type.EmptyTypes;
 
             var methodBuilder = typeBuilder.DefineMethod("InvokeRpc",
                 MethodAttributes.Public | MethodAttributes.HideBySig,
@@ -33,20 +30,16 @@ namespace Hubcon.Server.Core.Helpers
 
             if (hasParameters)
             {
-                // 1. Definir el parámetro (índice 1 porque el 0 es 'this')
                 var parameterBuilder = methodBuilder.DefineParameter(1, ParameterAttributes.None, "request");
 
-                // 2. Aplicar atributos según el verbo
                 if (isGet)
                 {
-                    // Usamos AsParametersAttribute para que descomponga el objeto en la Query String
                     var asParamsCtor = typeof(Microsoft.AspNetCore.Http.AsParametersAttribute).GetConstructor(Type.EmptyTypes);
                     var attrBuilder = new CustomAttributeBuilder(asParamsCtor!, Array.Empty<object>());
                     parameterBuilder.SetCustomAttribute(attrBuilder);
                 }
                 else
                 {
-                    // Para POST/PUT/etc, usamos FromBody
                     var fromBodyCtor = typeof(Microsoft.AspNetCore.Mvc.FromBodyAttribute).GetConstructor(Type.EmptyTypes);
                     var attrBuilder = new CustomAttributeBuilder(fromBodyCtor!, Array.Empty<object>());
                     parameterBuilder.SetCustomAttribute(attrBuilder);
@@ -55,7 +48,6 @@ namespace Hubcon.Server.Core.Helpers
 
             var il = methodBuilder.GetILGenerator();
 
-            // Lógica de retorno (Default para que compile, luego tú inyectarás la llamada real)
             if (originalMethod.ReturnType != typeof(void))
             {
                 if (originalMethod.ReturnType.IsValueType)
@@ -103,7 +95,6 @@ namespace Hubcon.Server.Core.Helpers
             var fieldBuilder = tb.DefineField("_" + propertyName, propertyType, FieldAttributes.Private);
             var propBuilder = tb.DefineProperty(propertyName, PropertyAttributes.HasDefault, propertyType, null);
 
-            // Getter
             var getMethodBuilder = tb.DefineMethod("get_" + propertyName,
                 MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
                 propertyType, Type.EmptyTypes);
@@ -112,7 +103,6 @@ namespace Hubcon.Server.Core.Helpers
             getIl.Emit(OpCodes.Ldfld, fieldBuilder);
             getIl.Emit(OpCodes.Ret);
 
-            // Setter
             var setMethodBuilder = tb.DefineMethod("set_" + propertyName,
                 MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
                 null, new[] { propertyType });

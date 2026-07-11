@@ -221,5 +221,24 @@ namespace Hubcon.Analyzers.SourceGenerators.Extensions
                 }
             }
         }
+        
+        public static bool ImplementsOrInherits(INamedTypeSymbol typeSymbol, INamedTypeSymbol targetSymbol)
+        {
+            if (targetSymbol.TypeKind == TypeKind.Interface)
+            {
+                return typeSymbol.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, targetSymbol));
+            }
+
+            var current = typeSymbol.BaseType;
+            while (current != null)
+            {
+                if (SymbolEqualityComparer.Default.Equals(current, targetSymbol))
+                    return true;
+            
+                current = current.BaseType;
+            }
+
+            return false;
+        }
     }
 }

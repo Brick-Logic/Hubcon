@@ -8,7 +8,7 @@ namespace Hubcon
     /// Specifies the lifetime of a middleware within the Hubcon framework.
     /// Determines how middleware instances are created and shared across requests.
     /// </summary>
-    public enum MiddlewareLifeCycle
+    public enum LifeCycle
     {
         /// <summary>
         /// A single instance of the middleware is created and shared throughout the entire lifetime of the server.

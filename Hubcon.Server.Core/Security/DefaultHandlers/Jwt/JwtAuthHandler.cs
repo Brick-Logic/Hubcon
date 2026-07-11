@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
@@ -13,13 +14,14 @@ namespace Hubcon
     /// <summary>
     /// Hubcon's JWT token authentication handler.
     /// </summary>
-    public class JwtAuthHandler(IOperationCache operationCache) : IAuthHandler
+    public sealed class JwtAuthHandler : IAuthHandler
     {
         ///<inheritdoc/>
         public async ValueTask<ClaimsPrincipal?> AuthenticateAsync(IOperationContext context, IUseAuthAttribute originAttribute)
         {
             var token = JwtHelper.ExtractTokenFromHeader(context.HttpContext!.Request.Headers.Authorization.ToString());
-
+            var operationCache = context.RequestServices.GetRequiredService<IOperationCache>();
+            
             if (operationCache.TryGetValue(token!, out ClaimsPrincipal? cachedUser) && cachedUser != null)
             {
                 return cachedUser;

@@ -16,10 +16,10 @@ namespace HubconTest.ContractHandlers
     [Authorize(Roles = "Manager")]
     public class UserController(ILogger<UserController> logger) : IUserContract
     {
-        [UseMiddleware(typeof(LocalLoggingMiddleware))]
+        [UseMiddleware<LocalLoggingMiddleware>]
         public async Task CreateUser(CancellationToken cancellationToken)
         {
-
+            logger.LogInformation("CreateUser called.");
         }
 
         //[Authorize(Roles = "Admin")]

@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Diagnostics.CodeAnalysis;
+using Hubcon.Server.Abstractions.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Hubcon
 {
@@ -7,8 +11,15 @@ namespace Hubcon
     /// Can be applied to classes, properties, or methods.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Class)]
-    public sealed class UseMiddlewareAttribute : Attribute
+    public abstract class UseMiddlewareAttribute : Attribute
     {
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        public UseMiddlewareAttribute()
+        {
+        }
+        
         /// <summary>
         /// Constructor with the middleware type.
         /// </summary>
@@ -23,14 +34,14 @@ namespace Hubcon
         /// </summary>
         /// <param name="middlewareType"></param>
         /// <param name="cycle"></param>
-        public UseMiddlewareAttribute(Type middlewareType, MiddlewareLifeCycle cycle)
+        public UseMiddlewareAttribute(Type middlewareType, LifeCycle cycle)
         {
             MiddlewareType = middlewareType;
             Cycle = cycle;
         }
 
         /// <summary>Defines the DI lifecycle of the middleware (Scoped, Singleton, or Transient).</summary>
-        public MiddlewareLifeCycle Cycle { get; } = MiddlewareLifeCycle.Scoped;
+        public LifeCycle Cycle { get; } = LifeCycle.Scoped;
 
         /// <summary>The type of the middleware to instantiate.</summary>
         public Type MiddlewareType { get; }
@@ -41,31 +52,56 @@ namespace Hubcon
     /// Ensures at compile-time that the type implements IMiddleware.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Class)]
-    public sealed class UseMiddlewareAttribute<T> : Attribute where T : class, IMiddleware
+    public sealed class UseMiddlewareAttribute<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>
+        : UseMiddlewareAttribute, IRegisterer<T>
+        where T : class, IMiddleware
     {
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public UseMiddlewareAttribute() { }
+        public UseMiddlewareAttribute() : base(typeof(T))
+        {
+        }
 
         /// <summary>
         /// Constructor with defined lifecycle.
         /// </summary>
         /// <param name="cycle"></param>
-        public UseMiddlewareAttribute(MiddlewareLifeCycle cycle)
+        public UseMiddlewareAttribute(LifeCycle cycle) : base(typeof(T), cycle)
         {
-            Cycle = cycle;
+            
         }
+        
+        IServiceCollection IRegisterer.Register(IServiceCollection serviceCollection)
+        {
+            switch (Cycle)
+            {
+                case LifeCycle.Scoped:
+                    serviceCollection.TryAddScoped<T>();
+                    break;
+                case LifeCycle.Transient:
+                    serviceCollection.TryAddTransient<T>();
+                    break;
+                case LifeCycle.Singleton:
+                    serviceCollection.TryAddSingleton<T>();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(Cycle), Cycle, null);
+            }
 
-        /// <summary>
-        /// The defined lifecycle for the provided middleware.
-        /// </summary>
-        public MiddlewareLifeCycle Cycle { get; } = MiddlewareLifeCycle.Scoped;
-
-        /// <summary>
-        /// The middleware type.
-        /// </summary>
-        public Type MiddlewareType { get; } = typeof(T);
+            return serviceCollection;
+        }
+        
+        T IRegisterer<T>.Get(IServiceProvider services)
+        {
+            return services.GetRequiredService<T>();
+        }
+        
+        TGet IRegisterer.Get<TGet>(IServiceProvider services) where TGet: class
+        {
+            return (services.GetRequiredService<T>() as TGet)!;
+        }
     }
 
     /// <summary>

@@ -13,7 +13,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
-namespace Hubcon.Generators
+namespace Hubcon.Analyzers.SourceGenerators
 {
     [Generator]
     public class TransportClientPreserverGenerator : IIncrementalGenerator

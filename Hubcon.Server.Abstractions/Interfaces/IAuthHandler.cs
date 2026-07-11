@@ -1,6 +1,7 @@
 ﻿using Hubcon.Shared.Abstractions.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
@@ -12,6 +13,8 @@ namespace Hubcon
     /// Defines the contract for a security handler responsible for authenticating requests 
     /// based on transport-specific attributes and the current operation context.
     /// </summary>
+    [HubconPreserve]
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
     public interface IAuthHandler
     {
         /// <summary>
@@ -23,6 +26,7 @@ namespace Hubcon
         /// A <see cref="ValueTask{TResult}"/> containing the <see cref="ClaimsPrincipal"/> if authentication is successful; 
         /// otherwise, <see langword="null"/>.
         /// </returns>
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
         ValueTask<ClaimsPrincipal?> AuthenticateAsync(IOperationContext context, IUseAuthAttribute originAttribute);
     }
 }

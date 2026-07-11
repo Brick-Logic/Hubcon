@@ -16,7 +16,7 @@ using Hubcon.Analyzers.SourceGenerators.Extensions;
 using Hubcon.Analyzers.SourceGenerators.GeneratorCommands;
 using Hubcon.Analyzers.SourceGenerators.Models;
 
-namespace HubconAnalyzers.SourceGenerators
+namespace Hubcon.Analyzers.SourceGenerators
 {
     [Generator]
     public class CommunicationProxyGenerator : IIncrementalGenerator
@@ -90,8 +90,7 @@ namespace HubconAnalyzers.SourceGenerators
                 if (generateForClient == false && generateForServer == false)
                     return;
 
-                if (assemblyName == "Hubcon" || assemblyName == "Hubcon.Client" || assemblyName == "Hubcon.Server" ||
-                    assemblyName.StartsWith("Hubcon."))
+                if (assemblyName == "Hubcon" || assemblyName == "Hubcon.Client" || assemblyName == "Hubcon.Server" || assemblyName.StartsWith("Hubcon."))
                     return;
 
                 var processedFullNames = new HashSet<string>();

@@ -15,23 +15,36 @@ namespace Hubcon.Server.Core.Middlewares
             ServicesToInject = servicesToInject;
         }
 
-        public IControllerOptions AddMiddleware<T>(MiddlewareLifeCycle cycle = MiddlewareLifeCycle.Scoped) where T : class, IMiddleware
+        public IControllerOptions AddMiddleware<T>(LifeCycle cycle = LifeCycle.Scoped) where T : class, IMiddleware
         {
             return AddMiddleware(typeof(T), cycle);
         }
 
-        public IControllerOptions AddMiddleware(Type middlewareType, MiddlewareLifeCycle cycle = MiddlewareLifeCycle.Scoped)
+        public IControllerOptions AddMiddleware(Type middlewareType, LifeCycle cycle = LifeCycle.Scoped)
         {
             _builder.AddMiddleware(middlewareType);
 
             Action<IServiceCollection>? action = cycle switch
             {
-                MiddlewareLifeCycle.Scoped => x => x.AddScoped(middlewareType),
-                MiddlewareLifeCycle.Singleton => x => x.AddSingleton(middlewareType),
-                MiddlewareLifeCycle.Transient => x => x.AddTransient(middlewareType),
+                LifeCycle.Scoped => x => x.AddScoped(middlewareType),
+                LifeCycle.Singleton => x => x.AddSingleton(middlewareType),
+                LifeCycle.Transient => x => x.AddTransient(middlewareType),
                 _ => null
             };
 
+            ServicesToInject.Add(action!);
+            return this;
+        }
+        
+        public IControllerOptions AddMiddleware<T>(IRegisterer registerer) where T : class, IMiddleware
+        {
+            return AddMiddleware(typeof(T), registerer);
+        }
+
+        public IControllerOptions AddMiddleware(Type middlewareType, IRegisterer registerer)
+        {
+            _builder.AddMiddleware(middlewareType);
+            Action<IServiceCollection>? action = x => registerer.Register(x);
             ServicesToInject.Add(action!);
             return this;
         }
