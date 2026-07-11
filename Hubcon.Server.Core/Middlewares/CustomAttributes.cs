@@ -53,14 +53,14 @@ namespace Hubcon
     /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Class)]
     public sealed class UseMiddlewareAttribute<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>
-        : UseMiddlewareAttribute, IRegisterer<T>
-        where T : class, IMiddleware
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>
+        : UseMiddlewareAttribute, IRegisterer<TMiddleware>
+        where TMiddleware : class, IMiddleware
     {
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public UseMiddlewareAttribute() : base(typeof(T))
+        public UseMiddlewareAttribute() : base(typeof(TMiddleware))
         {
         }
 
@@ -68,7 +68,7 @@ namespace Hubcon
         /// Constructor with defined lifecycle.
         /// </summary>
         /// <param name="cycle"></param>
-        public UseMiddlewareAttribute(LifeCycle cycle) : base(typeof(T), cycle)
+        public UseMiddlewareAttribute(LifeCycle cycle) : base(typeof(TMiddleware), cycle)
         {
             
         }
@@ -78,13 +78,13 @@ namespace Hubcon
             switch (Cycle)
             {
                 case LifeCycle.Scoped:
-                    serviceCollection.TryAddScoped<T>();
+                    serviceCollection.RegisterFactoryScoped<TMiddleware>();
                     break;
                 case LifeCycle.Transient:
-                    serviceCollection.TryAddTransient<T>();
+                    serviceCollection.RegisterFactoryTransient<TMiddleware>();
                     break;
                 case LifeCycle.Singleton:
-                    serviceCollection.TryAddSingleton<T>();
+                    serviceCollection.RegisterFactorySingleton<TMiddleware>();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(Cycle), Cycle, null);
@@ -93,14 +93,14 @@ namespace Hubcon
             return serviceCollection;
         }
         
-        T IRegisterer<T>.Get(IServiceProvider services)
+        TMiddleware IRegisterer<TMiddleware>.Get(IServiceProvider services)
         {
-            return services.GetRequiredService<T>();
+            return services.GetRequiredService<TMiddleware>();
         }
         
         TGet IRegisterer.Get<TGet>(IServiceProvider services) where TGet: class
         {
-            return (services.GetRequiredService<T>() as TGet)!;
+            return (services.GetRequiredService<TMiddleware>() as TGet)!;
         }
     }
 

@@ -1,11 +1,11 @@
 ﻿using Hubcon;
-using HubconTest.Middlewares;
 using HubconTestDomain;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using HubconTest.Middlewares;
 
 namespace HubconTest.ContractHandlers
 {

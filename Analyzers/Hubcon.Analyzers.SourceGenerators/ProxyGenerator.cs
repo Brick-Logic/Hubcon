@@ -27,14 +27,65 @@ namespace Hubcon.Analyzers.SourceGenerators
         {
             var shouldExecuteForClient = context.GetHubconClientProvider();
             var shouldExecuteForServer = context.GetHubconServerProvider();
-            
+
             var classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: (node, _) => SymbolTools.IsCandidateClass(node),
                     transform: (ctx, _) => SymbolTools.GetClassSymbolIfImplementsInterface(ctx))
                 .Where(c => c != null)
                 .Collect();
-            
+
+            // Tipos marcados locales (tienen el atributo físicamente en el código)
+            var localMarkedTypes = context.SyntaxProvider
+                .CreateSyntaxProvider(
+                    predicate: (node, token) =>
+                    {
+                        var isClass = node is ClassDeclarationSyntax;
+                        var isInterface = node is InterfaceDeclarationSyntax;
+                        if (isClass || isInterface)
+                        {
+                            var typeDecl = (TypeDeclarationSyntax)node;
+                            return typeDecl.AttributeLists.Count > 0;
+                        }
+
+                        return false;
+                    },
+                    transform: (ctx, token) => SymbolTools.GetSymbolIfHasPreserveAttribute(ctx))
+                .Where(c => c != null)
+                .Collect();
+
+            // Tipos externos/referenciados
+            var referencedMarkedTypes = context.CompilationProvider.Select((compilation, token) =>
+            {
+                var results = new List<INamedTypeSymbol>();
+                foreach (var reference in compilation.References)
+                {
+                    if (compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol assembly)
+                    {
+                        if (assembly.Name == compilation.AssemblyName) continue;
+
+                        if (assembly.Name == "Hubcon" || assembly.Name.StartsWith("Hubcon."))
+                        {
+                            SymbolTools.CollectMarkedTypesInNamespace(assembly.GlobalNamespace, results);
+                        }
+                    }
+                }
+
+                return results.ToImmutableArray();
+            });
+
+            var controllerClasses = context.SyntaxProvider
+                .CreateSyntaxProvider(
+                    predicate: (node, _) => SymbolTools.IsCandidateClass(node),
+                    transform: (ctx, _) => SymbolTools.GetClassSymbolIfImplementsInterface(ctx))
+                .Where(c => c != null)
+                .Collect();
+
+            var allMarkedTypes = localMarkedTypes
+                .Combine(referencedMarkedTypes)
+                .Combine(controllerClasses)
+                .Combine(context.CompilationProvider);
+
             var shouldExecute = shouldExecuteForClient.Combine(shouldExecuteForServer);
 
             var localInterfaces = context.CreateNext((ctx, _) =>
@@ -45,8 +96,8 @@ namespace Hubcon.Analyzers.SourceGenerators
                 })
                 .Where(symbol => symbol != null)
                 .Collect();
-            
-            // Capturamos todas las referencias de compilación para buscar interfaces en proyectos referenciados
+
+// Capturamos todas las referencias de compilación para buscar interfaces en proyectos referenciados
             var referencedInterfaces = context.CompilationProvider.Select((compilation, _) =>
             {
                 var interfaces = new List<INamedTypeSymbol>();
@@ -66,7 +117,7 @@ namespace Hubcon.Analyzers.SourceGenerators
                 return interfaces.ToArray();
             });
 
-            // Combinamos ambos sources
+// Combinamos ambos sources de interfaces
             var allModels = localInterfaces
                 .Combine(referencedInterfaces)
                 .Select((combined, _) =>
@@ -76,13 +127,20 @@ namespace Hubcon.Analyzers.SourceGenerators
                 })
                 .Combine(classDeclarations);
 
-            var finalProvider = allModels
+
+            var allModelsWithMarked = allModels.Combine(allMarkedTypes);
+
+            var finalProvider = allModelsWithMarked
                 .Combine(context.CompilationProvider.Select((c, _) => c.AssemblyName))
                 .Combine(shouldExecute);
 
             context.RegisterSourceOutput(finalProvider, (spc, data) =>
             {
-                var (((interfaceList, classesList), assemblyName), shouldGenerate) = data;
+                var (((interfacesAndClasses, markedTypesTuple), assemblyName), shouldGenerate) = data;
+
+                var (interfaceList, classesList) = interfacesAndClasses;
+
+                var (((localMarked, referencedMarked), controllersArray), compilation) = markedTypesTuple;
 
                 var generateForClient = shouldGenerate.Left;
                 var generateForServer = shouldGenerate.Right;
@@ -90,13 +148,13 @@ namespace Hubcon.Analyzers.SourceGenerators
                 if (generateForClient == false && generateForServer == false)
                     return;
 
-                if (assemblyName == "Hubcon" || assemblyName == "Hubcon.Client" || assemblyName == "Hubcon.Server" || assemblyName.StartsWith("Hubcon."))
+                if (assemblyName == "Hubcon" || assemblyName == "Hubcon.Client" || assemblyName == "Hubcon.Server" ||
+                    assemblyName.StartsWith("Hubcon."))
                     return;
 
                 var processedFullNames = new HashSet<string>();
                 var generatedResolverClasses = new List<string>();
 
-                // 1. Obtener la compilación (necesaria para buscar símbolos)
                 var firstInterface = interfaceList.OfType<INamedTypeSymbol>().FirstOrDefault();
                 if (firstInterface == null) return;
 
@@ -107,23 +165,17 @@ namespace Hubcon.Analyzers.SourceGenerators
                 {
                     var fullName = iface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-                    // Si ya procesamos este nombre completo (de la interfaz), saltamos
                     if (!processedFullNames.Add(fullName)) continue;
 
-                    // 2. Crear un hintName único basado en el nombre completo de la interfaz
                     var safeHintName = fullName.Replace("global::", "").Replace(".", "_").Replace("<", "_")
                         .Replace(">", "_");
-
-                    // 3. Recolección RECURSIVA de tipos (esto es lo que llena el Resolver)
-
+                    
                     foreach (var member in iface.GetMembers())
                     {
                         if (member is IMethodSymbol method && method.MethodKind == MethodKind.Ordinary)
                         {
-                            // Extraer de Retorno (desempaqueta Task<T>)
                             method.ReturnType.CollectTypesRecursiveTo(typesToSerialize, _hubconResponseBaseSymbol);
 
-                            // Extraer de Parámetros
                             foreach (var p in method.Parameters)
                             {
                                 p.Type.CollectTypesRecursiveTo(typesToSerialize, _hubconResponseBaseSymbol);
@@ -131,7 +183,6 @@ namespace Hubcon.Analyzers.SourceGenerators
                         }
                     }
 
-                    // 5. Generar el Proxy Class
                     if (generateForClient)
                     {
                         GenerateProxyClass.Execute(spc, iface, $"{safeHintName}Proxy.g.cs");
@@ -143,7 +194,7 @@ namespace Hubcon.Analyzers.SourceGenerators
                     GenerateProxyRegistry.Execute(spc, interfaces, "ProxyLookup.g.cs");
                     GenerateEnumerableWrapper.Execute(spc, interfaces, "AsyncEnumerableWrapper.g.cs");
                 }
-                
+
                 var semiFilteredTypes = typesToSerialize
                     .Where(t =>
                     {
@@ -192,23 +243,29 @@ namespace Hubcon.Analyzers.SourceGenerators
                 // 4. Generar el Resolver de Metadatos (Incluyendo el .Instance y el mapa de tipos)
                 GenerateMetadataResolver.Execute(spc, resolverClassName, filteredTypes, $"{resolverClassName}.g.cs");
                 generatedResolverClasses.Add("Hubcon.Shared.Core.Serialization.SystemTypesContext");
-                
+
                 // Al final, generas el archivo global
                 if (generatedResolverClasses.Any())
                 {
                     GenerateGlobalTypeResolver.Execute(spc, generatedResolverClasses, "HubconGlobalSerialization.g.cs");
                 }
-                
+
                 if (generateForServer)
                 {
                     var pairs = classesList.Select(x => new ControllerMetadata(x)).ToList();
-                    
+
                     GenerateDedicatedInvokers.Execute(spc, pairs, "EndpointInvokers.g.cs");
                     GenerateHttpDelegates.Execute(spc, pairs, "EndpointDelegates.g.cs");
                     GenerateEndpointParameterWrappers.Execute(spc, pairs, "EndpointParameterWrappers.g.cs");
                     GenerateControllerPreservers.Execute(spc, pairs, "ControllerPreservers.g.cs");
-                    GenerateControllerFactories.Execute(spc, pairs, "ControllerFactories.g.cs");
                     GenerateControllerTypeProvider.Execute(spc, pairs, "ControllerTypeProvider.g.cs");
+                    GenerateServiceFactories.Execute(
+                        localMarked,
+                        referencedMarked,
+                        controllersArray,
+                        compilation,
+                        spc
+                    );
                 }
             });
         }

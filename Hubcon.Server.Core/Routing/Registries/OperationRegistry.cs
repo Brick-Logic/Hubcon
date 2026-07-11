@@ -14,6 +14,7 @@ using System.Collections.Frozen;
 using System.ComponentModel;
 using System.Linq.Expressions;
 using System.Reflection;
+using Hubcon;
 
 namespace Hubcon.Server.Core.Routing.Registries
 {
@@ -60,7 +61,7 @@ namespace Hubcon.Server.Core.Routing.Registries
 
             servicesToInject = new List<Action<IServiceCollection>>();
 
-            void Injector(IServiceCollection x) => x.TryAddScoped(controllerType);
+            void Injector(IServiceCollection x) => x.RegisterFactoryScoped(controllerType);
             servicesToInject.Add(Injector);
 
             var interfaces = controllerType.GetInterfaces().Where(x => typeof(IControllerContract).IsAssignableFrom(x));

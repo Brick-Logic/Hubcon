@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Hubcon;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,13 +51,13 @@ namespace Hubcon.Server.Abstractions.CustomAttributes
             switch (Cycle)
             {
                 case LifeCycle.Scoped:
-                    serviceCollection.TryAddScoped<THandler>();
+                    serviceCollection.RegisterFactoryScoped<THandler>();
                     break;
                 case LifeCycle.Transient:
-                    serviceCollection.TryAddTransient<THandler>();
+                    serviceCollection.RegisterFactoryTransient<THandler>();
                     break;
                 case LifeCycle.Singleton:
-                    serviceCollection.TryAddSingleton<THandler>();
+                    serviceCollection.RegisterFactorySingleton<THandler>();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(Cycle), Cycle, null);

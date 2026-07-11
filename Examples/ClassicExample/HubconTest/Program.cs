@@ -4,10 +4,6 @@ using Scalar.AspNetCore;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-using Hubcon.Shared.Core.Serialization;
-using HubconTest.ContractHandlers;
-using HubconTestClient.Models;
-using HubconTestDomain;
 
 namespace HubconTest
 {
@@ -123,13 +119,13 @@ namespace HubconTest
                 serverOptions.AutoRegisterControllers();
             });
 
-            builder.Services.AddOpenApi();
+            // builder.Services.AddOpenApi();
             
             var app = builder.Build();
 
             app.UseCors();
 
-            app.MapOpenApi();
+            // app.MapOpenApi();
             app.MapScalarApiReference();
             
             app.UseHubconHttpEndpoints();

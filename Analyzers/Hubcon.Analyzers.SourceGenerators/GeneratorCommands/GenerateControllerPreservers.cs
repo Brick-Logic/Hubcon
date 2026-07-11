@@ -67,7 +67,6 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine($"{baseIndent}    public static void Init()");
             sb.AppendLine($"{baseIndent}    {{");
             sb.AppendLine($"{baseIndent}        {preserverName}Preserver();");
-
             sb.AppendLine($"{baseIndent}        {Tools.GetCondition()}");
             sb.AppendLine($"{baseIndent}        {{");
 

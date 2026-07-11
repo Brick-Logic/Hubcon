@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Hubcon.Analyzers.SourceGenerators.Extensions;
@@ -271,6 +273,196 @@ namespace Hubcon.Analyzers.SourceGenerators
             }
 
             return constant.Value.ToString();
+        }
+        
+        public static INamedTypeSymbol GetSymbolIfHasPreserveAttribute(GeneratorSyntaxContext ctx)
+        {
+            var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) as INamedTypeSymbol;
+            if (symbol == null) return null;
+
+            var attributes = symbol.GetAttributes();
+            for (int i = 0; i < attributes.Length; i++)
+            {
+                var attrClass = attributes[i].AttributeClass;
+                if (attrClass != null &&
+                    attrClass.Name == "HubconPreserveAttribute" &&
+                    attrClass.ContainingNamespace?.ToDisplayString() == "Hubcon")
+                {
+                    return symbol;
+                }
+            }
+
+            return null;
+        }
+
+        public static bool HasPreserveAttribute(INamedTypeSymbol symbol)
+        {
+            if (symbol == null) return false;
+
+            var attributes = symbol.GetAttributes();
+            for (int i = 0; i < attributes.Length; i++)
+            {
+                var attrClass = attributes[i].AttributeClass;
+                if (attrClass != null &&
+                    attrClass.Name == "HubconPreserveAttribute" &&
+                    attrClass.ContainingNamespace?.ToDisplayString() == "Hubcon")
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static HashSet<INamedTypeSymbol> ExpandPreservedSymbols(Compilation compilation,
+            System.Collections.Immutable.ImmutableArray<INamedTypeSymbol> markedSymbols)
+        {
+            var result = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+
+            var targetInterfaces = markedSymbols.Where(s => s.TypeKind == TypeKind.Interface)
+                .ToImmutableHashSet(SymbolEqualityComparer.Default);
+            var targetClasses = markedSymbols.Where(s => s.TypeKind == TypeKind.Class)
+                .ToImmutableHashSet(SymbolEqualityComparer.Default);
+
+            foreach (var targetClass in targetClasses)
+            {
+                if (targetClass is INamedTypeSymbol symbol)
+                    result.Add(symbol);
+            }
+
+            // Acción unificada para evaluar si una clase debe ser preservada
+            Action<INamedTypeSymbol> evaluateClass = currentClass =>
+            {
+                if (targetInterfaces.Count > 0)
+                {
+                    var interfaces = currentClass.AllInterfaces;
+                    for (int i = 0; i < interfaces.Length; i++)
+                    {
+                        if (targetInterfaces.Contains(interfaces[i]))
+                        {
+                            result.Add(currentClass);
+                            return;
+                        }
+                    }
+                }
+
+                if (targetClasses.Count > 0)
+                {
+                    var baseType = currentClass.BaseType;
+                    while (baseType != null)
+                    {
+                        if (targetClasses.Contains(baseType))
+                        {
+                            result.Add(currentClass);
+                            return;
+                        }
+
+                        baseType = baseType.BaseType;
+                    }
+                }
+            };
+
+            GetAllAssemblyClasses(compilation.GlobalNamespace, evaluateClass);
+
+            foreach (var reference in compilation.References)
+            {
+                var assemblySymbol = compilation.GetAssemblyOrModuleSymbol(reference) as IAssemblySymbol;
+                if (assemblySymbol != null)
+                {
+                    var name = assemblySymbol.Name;
+                    if (name == "Hubcon" || name.StartsWith("Hubcon."))
+                    {
+                        GetAllAssemblyClasses(assemblySymbol.GlobalNamespace, evaluateClass);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public static void GetAllAssemblyClasses(INamespaceSymbol namespaceSymbol,
+            Action<INamedTypeSymbol> onClassFound)
+        {
+            foreach (var member in namespaceSymbol.GetMembers())
+            {
+                if (member is INamespaceSymbol nestedNamespace)
+                {
+                    GetAllAssemblyClasses(nestedNamespace, onClassFound);
+                }
+                else if (member is INamedTypeSymbol typeSymbol)
+                {
+                    if (typeSymbol.TypeKind == TypeKind.Class)
+                    {
+                        onClassFound(typeSymbol);
+                    }
+
+                    if (typeSymbol.GetTypeMembers().Length > 0)
+                    {
+                        ProcessNestedTypes(typeSymbol, onClassFound);
+                    }
+                }
+            }
+        }
+
+        public static void CollectMarkedTypesInNamespace(INamespaceSymbol ns, List<INamedTypeSymbol> results)
+        {
+            foreach (var member in ns.GetMembers())
+            {
+                if (member is INamespaceSymbol nestedNs)
+                {
+                    CollectMarkedTypesInNamespace(nestedNs, results);
+                }
+                else if (member is INamedTypeSymbol type)
+                {
+                    if (member.ContainingNamespace.Name != "Hubcon")
+                        return;
+
+                    if (HasPreserveAttribute(type))
+                    {
+                        results.Add(type);
+                    }
+
+                    if (type.GetTypeMembers().Length > 0)
+                    {
+                        CollectMarkedTypesInNested(type, results);
+                    }
+                }
+            }
+        }
+
+        public static void CollectMarkedTypesInNested(INamedTypeSymbol type, List<INamedTypeSymbol> results)
+        {
+            var nestedTypes = type.GetTypeMembers();
+            for (int i = 0; i < nestedTypes.Length; i++)
+            {
+                var nestedType = nestedTypes[i];
+
+                if (HasPreserveAttribute(nestedType))
+                {
+                    results.Add(nestedType);
+                }
+
+                if (nestedType.GetTypeMembers().Length > 0)
+                {
+                    CollectMarkedTypesInNested(nestedType, results);
+                }
+            }
+        }
+
+        public static void ProcessNestedTypes(INamedTypeSymbol typeSymbol, Action<INamedTypeSymbol> onClassFound)
+        {
+            foreach (var nestedType in typeSymbol.GetTypeMembers())
+            {
+                if (nestedType.TypeKind == TypeKind.Class)
+                {
+                    onClassFound(nestedType);
+                }
+
+                if (nestedType.GetTypeMembers().Length > 0)
+                {
+                    ProcessNestedTypes(nestedType, onClassFound);
+                }
+            }
         }
     }
 }
