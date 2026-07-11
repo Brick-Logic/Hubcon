@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Hubcon.Analyzers.SourceGenerators.Extensions;
@@ -20,8 +21,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
         {
             // Combinamos ambas listas de símbolos (locales + externos) en un único lote
             var allSeedSymbols = localSymbols.Concat(referencedSymbols).ToImmutableArray();
-            if (allSeedSymbols.Length == 0) return;
-
+            
             var classesToPreserve = SymbolTools.ExpandPreservedSymbols(compilation, allSeedSymbols);
 
             if (classesToPreserve.Count == 0) return;
@@ -89,7 +89,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             classesToGenerateFactory.AddRange(controllers);
             classesToGenerateFactory.AddRange(classesToPreserve);
 
-            spc.AddSource("HubconPreservers.g.cs", SourceText.From(sbFinal.ToString(), Encoding.UTF8));
+            spc.AddSource("HubconPreserverMetadata.g.cs", SourceText.From(sbFinal.ToString(), Encoding.UTF8));
             GenerateFactories(spc, classesToGenerateFactory, "HubconPreserversFactory.g.cs");
         }
 

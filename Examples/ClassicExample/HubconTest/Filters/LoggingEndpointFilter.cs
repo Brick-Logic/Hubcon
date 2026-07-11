@@ -1,4 +1,6 @@
-﻿namespace HubconTest.Filters
+﻿using Hubcon;
+
+namespace HubconTest.Filters
 {
     public class LoggingEndpointFilter : IEndpointFilter
     {

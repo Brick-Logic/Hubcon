@@ -119,13 +119,13 @@ namespace HubconTest
                 serverOptions.AutoRegisterControllers();
             });
 
-            // builder.Services.AddOpenApi();
+            builder.Services.AddOpenApi();
             
             var app = builder.Build();
 
             app.UseCors();
 
-            // app.MapOpenApi();
+            app.MapOpenApi();
             app.MapScalarApiReference();
             
             app.UseHubconHttpEndpoints();

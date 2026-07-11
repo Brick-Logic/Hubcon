@@ -326,7 +326,7 @@ namespace Hubcon.Analyzers.SourceGenerators
 
             foreach (var targetClass in targetClasses)
             {
-                if (targetClass is INamedTypeSymbol symbol)
+                if (targetClass is INamedTypeSymbol symbol && !symbol.IsGenericType)
                     result.Add(symbol);
             }
 
@@ -406,7 +406,8 @@ namespace Hubcon.Analyzers.SourceGenerators
 
         public static void CollectMarkedTypesInNamespace(INamespaceSymbol ns, List<INamedTypeSymbol> results)
         {
-            foreach (var member in ns.GetMembers())
+            var members = ns.GetMembers();
+            foreach (var member in members)
             {
                 if (member is INamespaceSymbol nestedNs)
                 {
@@ -414,14 +415,10 @@ namespace Hubcon.Analyzers.SourceGenerators
                 }
                 else if (member is INamedTypeSymbol type)
                 {
-                    if (member.ContainingNamespace.Name != "Hubcon")
-                        return;
-
                     if (HasPreserveAttribute(type))
                     {
                         results.Add(type);
                     }
-
                     if (type.GetTypeMembers().Length > 0)
                     {
                         CollectMarkedTypesInNested(type, results);
