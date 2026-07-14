@@ -47,7 +47,7 @@ namespace Hubcon.Server.Core.Pipelines
             _serviceProvider = serviceProvider;
         }
 
-        public async ValueTask<IHubconResponse> HandleWithoutResultAsync(IOperationRequest request,
+        public async ValueTask<IResponse> HandleWithoutResultAsync(IOperationRequest request,
             HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest,
             CancellationToken cancellationToken = default)
         {
@@ -65,7 +65,7 @@ namespace Hubcon.Server.Core.Pipelines
             return pipelineResult.Response;
         }
 
-        public async ValueTask<IHubconResponse> HandleSynchronousResult(IOperationRequest request,
+        public async ValueTask<IResponse> HandleSynchronousResult(IOperationRequest request,
             HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest,
             CancellationToken cancellationToken = default)
         {
@@ -85,7 +85,7 @@ namespace Hubcon.Server.Core.Pipelines
             return pipelineResult.Response;
         }
 
-        public async ValueTask<IHubconResponse> HandleSynchronous(IOperationRequest request,
+        public async ValueTask<IResponse> HandleSynchronous(IOperationRequest request,
             HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest,
             CancellationToken cancellationToken = default)
         {
@@ -101,7 +101,7 @@ namespace Hubcon.Server.Core.Pipelines
             return pipelineResult.Response!;
         }
 
-        public async ValueTask<IHubconResponse> GetStream(IOperationRequest request,
+        public async ValueTask<IResponse> GetStream(IOperationRequest request,
             HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest,
             CancellationToken cancellationToken = default)
         {
@@ -122,7 +122,7 @@ namespace Hubcon.Server.Core.Pipelines
             return res;
         }
 
-        public async ValueTask<IHubconResponse> HandleWithResultAsync(IOperationRequest request,
+        public async ValueTask<IResponse> HandleWithResultAsync(IOperationRequest request,
             HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest,
             CancellationToken cancellationToken = default)
         {
@@ -138,7 +138,7 @@ namespace Hubcon.Server.Core.Pipelines
             return pipelineResult.Response;
         }
 
-        public async ValueTask<IHubconResponse> HandleIngest(IOperationRequest request,
+        public async ValueTask<IResponse> HandleIngest(IOperationRequest request,
             HubconTransportAttribute transportAttribute, Dictionary<Guid, object> sources, IWrapper? wrappedRequest,
             CancellationToken cancellationToken = default)
         {

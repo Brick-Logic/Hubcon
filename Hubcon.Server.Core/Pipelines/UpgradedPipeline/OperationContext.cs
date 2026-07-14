@@ -14,7 +14,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public IOperationBlueprint Blueprint { get; init; } = default!;
         public IOperationRequest Request { get; init; } = default!;
         public IServiceProvider RequestServices { get; init; } = default!;
-        public IHubconResponse Response { get; set; } = default!;
+        public IResponse Response { get; set; } = default!;
         public ResultHandlerDelegate ResultHandler { get; internal set; }
         public ClaimsPrincipal? User { get; set; }
         public string OperationName { get; init; } = string.Empty;

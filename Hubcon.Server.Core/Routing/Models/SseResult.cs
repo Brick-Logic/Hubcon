@@ -57,19 +57,15 @@ namespace Hubcon.Server.Core.Routing.Models
 
                     if (item is null) continue;
 
-                    // 3. Formateamos el mensaje: data: {json}\n\n
                     var json = converter.Serialize(item);
                     var message = $"data: {json}\n\n";
 
-                    // 4. Escribimos directamente en el buffer de red
                     var bytes = Encoding.UTF8.GetBytes(message);
                     await writer.WriteAsync(bytes, httpContext.RequestAborted);
 
-                    // 5. El Flush es clave para que el cliente vea el token YA
                     await response.Body.FlushAsync(httpContext.RequestAborted);
                 }
 
-                // Opcional: Mandar el [DONE] para cerrar el ciclo
                 await response.WriteAsync("[DONE]\n\n");
             }
             catch

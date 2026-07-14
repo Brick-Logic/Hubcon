@@ -213,5 +213,10 @@ namespace Hubcon
         {
             return new HubconResponse(Success, Failure, Message, Error, StatusCode, Data!, OriginalResponse!, Exception!);
         }
+        
+        public object GetOriginal()
+        {
+            return this;
+        }
     }
 }

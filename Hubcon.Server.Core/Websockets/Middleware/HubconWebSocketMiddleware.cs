@@ -911,11 +911,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     await HandleError(streamInitMessage.Id, HubconResponse.Unauthorized(), context);
                     return;
                 }
-
+                
                 await context.RateLimiter.Link(context.ConnectionId, streamInitMessage.Id,
                     HubconTransportAttribute.GetDefault<WebSocketTransport>(), operationRequest);
 
-                var stream = streamResult.Data as IAsyncEnumerable<object?>;
+                var convertedStreamResult = (streamResult as IHubconResponse<object>)!;
+                var stream = convertedStreamResult.Data as IAsyncEnumerable<object?>;
 
                 await foreach (var item in stream!.WithCancellation(localCts.Token))
                 {

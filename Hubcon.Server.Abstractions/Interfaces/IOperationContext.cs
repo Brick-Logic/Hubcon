@@ -38,7 +38,7 @@ namespace Hubcon
         IServiceProvider RequestServices { get; init; }
 
         /// <summary>Gets or sets the response to be sent back to the client.</summary>
-        IHubconResponse Response { get; set; }
+        IResponse Response { get; set; }
 
         /// <summary>Gets or sets the security principal (identity) associated with the request.</summary>
         ClaimsPrincipal? User { get; set; }

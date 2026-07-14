@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using Hubcon.Shared.Core.Serialization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 #pragma warning disable CS1591
 
@@ -93,14 +94,58 @@ namespace Hubcon
                 }
             });
             
+            app.Use(async (context, next) =>
+            {
+                try
+                {
+                    await next(context);
+                }
+                catch (BadHttpRequestException)
+                {
+                    context.Response.StatusCode = 400;
+                    context.Response.ContentType = "application/json";
+
+                    var response = HubconResponse.BadRequest();
+                    await context.Response.WriteAsJsonAsync(response);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    context.Response.StatusCode = 403;
+                    context.Response.ContentType = "application/json";
+
+                    var response = HubconResponse.Unauthorized();
+                    await context.Response.WriteAsJsonAsync(response);
+                }
+                catch (Exception ex)
+                {
+                    context.Response.StatusCode = 500;
+                    context.Response.ContentType = "application/json";
+                    var logger = context.RequestServices.GetRequiredService<ILogger<IHubconMiddleware>>();
+                    var options = context.RequestServices.GetRequiredService<IInternalServerOptions>();
+                    logger.LogError("{Message}", ex.Message);
+
+                    HubconResponse response;
+
+                    if (options.DetailedErrorsEnabled)
+                    {
+                        response = HubconResponse.InternalError(ex, ex.Message);
+                    }
+                    else
+                    {
+                        response = HubconResponse.InternalError();
+                    }
+                    await context.Response.WriteAsJsonAsync(response);
+                }
+            });
+            
             app.UseStatusCodePages(async context =>
             {
                 if (context.HttpContext.Response.StatusCode == StatusCodes.Status404NotFound)
                 {
                     context.HttpContext.Response.ContentType = "application/json";
 
-                    IResponse notFoundResponse = HubconResponse.NotFound(null!, "Resource or endpoint not found.", null!);
-                    await context.HttpContext.Response.WriteAsJsonAsync(notFoundResponse);
+                    var response = HubconResponse.NotFound();
+                    await context.HttpContext.Response.WriteAsJsonAsync(response);
                 }
             });
 

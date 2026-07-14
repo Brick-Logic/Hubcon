@@ -366,6 +366,22 @@ namespace Hubcon.Shared.Core.Serialization
                 return "";
             }
         }
+        
+        /// <inheritdoc/>
+        public string Serialize(object? value, Type type)
+        {
+            if (value == null)
+                return "";
+            
+            try
+            {
+                return JsonSerializer.Serialize(value, type, JsonSerializerOptions);
+            }
+            catch (Exception)
+            {
+                return "";
+            }
+        }
 
         /// <inheritdoc/>
         public JsonElement SerializeToElement<T>(T value)

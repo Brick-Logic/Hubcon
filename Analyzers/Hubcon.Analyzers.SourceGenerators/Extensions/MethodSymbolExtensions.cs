@@ -46,132 +46,133 @@ namespace HubconAnalyzers.SourceGenerators.Extensions
             switch (type)
             {
                 case IArrayTypeSymbol arrayType:
-                    {
-                        var commas = new string(',', arrayType.Rank - 1);
-                        return $"{GetSymbolTypeString(arrayType.ElementType)}[{commas}]";
-                    }
+                {
+                    var commas = new string(',', arrayType.Rank - 1);
+                    return $"{GetSymbolTypeString(arrayType.ElementType)}[{commas}]";
+                }
 
                 case INamedTypeSymbol namedType:
+                {
+                    var sb = new StringBuilder();
+
+                    if (!namedType.ContainingNamespace.IsGlobalNamespace)
                     {
-                        var sb = new StringBuilder();
-
-                        if (!namedType.ContainingNamespace.IsGlobalNamespace)
-                        {
-                            sb.Append(namedType.ContainingNamespace.ToDisplayString());
-                            sb.Append(".");
-                        }
-
-                        // Nested types handling
-                        var containingType = namedType.ContainingType;
-                        if (containingType != null)
-                        {
-                            sb.Append(GetSymbolTypeString(containingType));
-                            sb.Append(".");
-                            sb.Append(namedType.Name);
-                        }
-                        else
-                        {
-                            sb.Append(namedType.Name);
-                        }
-
-                        if (namedType.TypeArguments.Length > 0)
-                        {
-                            sb.Append("<");
-
-                            for (int i = 0; i < namedType.TypeArguments.Length; i++)
-                            {
-                                if (i > 0)
-                                    sb.Append(", ");
-
-                                sb.Append(GetSymbolTypeString(namedType.TypeArguments[i]));
-                            }
-
-                            sb.Append(">");
-                        }
-
-                        return sb.ToString();
+                        sb.Append(namedType.ContainingNamespace.ToDisplayString());
+                        sb.Append(".");
                     }
+
+                    // Nested types handling
+                    var containingType = namedType.ContainingType;
+                    if (containingType != null)
+                    {
+                        sb.Append(GetSymbolTypeString(containingType));
+                        sb.Append(".");
+                        sb.Append(namedType.Name);
+                    }
+                    else
+                    {
+                        sb.Append(namedType.Name);
+                    }
+
+                    if (namedType.TypeArguments.Length > 0)
+                    {
+                        sb.Append("<");
+
+                        for (int i = 0; i < namedType.TypeArguments.Length; i++)
+                        {
+                            if (i > 0)
+                                sb.Append(", ");
+
+                            sb.Append(GetSymbolTypeString(namedType.TypeArguments[i]));
+                        }
+
+                        sb.Append(">");
+                    }
+
+                    return sb.ToString();
+                }
 
                 case ITypeParameterSymbol typeParam:
                     return typeParam.Name;
 
                 default:
                     return type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-                               .Replace("global::", "")
-                               .Replace('+', '.');
+                        .Replace("global::", "")
+                        .Replace('+', '.');
             }
         }
 
         public static string GetHubconResponseTypeFromMethod(this IMethodSymbol method)
         {
             var returnType = method.ReturnType.ToDisplayString();
-            
+
             if (returnType == "void")
             {
                 return "Hubcon.IResponse";
-            } 
-            
+            }
+
             if (returnType.StartsWith("Hubcon.HubconResponse<"))
             {
                 // Streaming
-                return returnType.Replace("Hubcon.HubconResponse<", "Hubcon.IHubconResponse<");;
+                return returnType.Replace("Hubcon.HubconResponse<", "Hubcon.HubconResponse<");
+                ;
             }
-            
-            if (returnType.StartsWith("Hubcon.IHubconResponse<"))
+
+            if (returnType.StartsWith("Hubcon.HubconResponse<"))
             {
                 // Streaming
                 return returnType;
-            } 
-            
+            }
+
             if (returnType == "Hubcon.HubconResponse")
             {
-                return "Hubcon.IHubconResponse";
-            } 
-            
+                return "Hubcon.HubconResponse";
+            }
+
             if (returnType.StartsWith("System.Collections.Generic.IAsyncEnumerable<"))
             {
                 return returnType;
-            } 
-            
+            }
+
             if (returnType.StartsWith("System.Threading.Tasks.Task<"))
             {
                 var generic = returnType.GetGenericArgument("System.Threading.Tasks.Task");
-                
+
                 if (generic.StartsWith("Hubcon.HubconResponse<"))
                 {
-                    return generic.Replace("Hubcon.HubconResponse<", "Hubcon.IHubconResponse<");
-                } 
-                
-                if (generic.StartsWith("Hubcon.IHubconResponse<"))
+                    return generic.Replace("Hubcon.HubconResponse<", "Hubcon.HubconResponse<");
+                }
+
+                if (generic.StartsWith("Hubcon.HubconResponse<"))
                 {
                     return generic;
-                } 
-            
+                }
+
                 if (returnType == "Hubcon.HubconResponse")
                 {
-                    return "Hubcon.IHubconResponse";
-                } 
-                
-                if (returnType == "Hubcon.IHubconResponse")
+                    return "Hubcon.HubconResponse";
+                }
+
+                if (returnType == "Hubcon.HubconResponse")
                 {
-                    return "Hubcon.IHubconResponse";
-                } 
-                
-                if (returnType == "Hubcon.IHubconResponse")
+                    return "Hubcon.HubconResponse";
+                }
+
+                if (returnType == "Hubcon.HubconResponse")
                 {
                     return "Hubcon.IResponse";
                 }
-                
-                return $"Hubcon.IHubconResponse<{generic}>";
+
+                return $"Hubcon.HubconResponse<{generic}>";
             }
-            
+
             if (returnType == "System.Threading.Tasks.Task")
             {
                 return "Hubcon.IResponse";
             }
-            
-            return $"Hubcon.IHubconResponse<{returnType}>";
-        } 
+
+            return $"Hubcon.HubconResponse<{returnType}>";
+        }
 
         //public static string GetMethodSymbolSignature(this IMethodSymbol method)
         //{

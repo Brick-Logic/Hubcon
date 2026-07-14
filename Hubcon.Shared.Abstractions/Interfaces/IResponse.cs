@@ -51,6 +51,11 @@ namespace Hubcon
         /// </summary>
         /// <returns>An instance of <see cref="IHubconResponse"/>.</returns>
         IHubconResponse GetBoxed();
+        
+        /// <summary>
+        /// Converts the current response into a boxed <see cref="object"/>.
+        /// </summary>
+        object GetOriginal();
     }
 
     /// <summary>

@@ -25,33 +25,33 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// <param name="wrappedRequest">The underlying transport-specific request object (e.g., HttpContext).</param>
         /// <param name="cancellationToken">A token to monitor for operation cancellation.</param>
         /// <returns>A <see cref="Task"/> resulting in a <see cref="IHubconResponse"/> containing the stream reference.</returns>
-        ValueTask<IHubconResponse> GetStream(IOperationRequest request, HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
+        ValueTask<IResponse> GetStream(IOperationRequest request, HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Handles high-throughput ingestion operations where multiple data sources are pushed to the server.
         /// </summary>
         /// <param name="sources">A dictionary mapping source identifiers to their respective data objects.</param>
-        ValueTask<IHubconResponse> HandleIngest(IOperationRequest request, HubconTransportAttribute transportAttribute, Dictionary<Guid, object> sources, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
+        ValueTask<IResponse> HandleIngest(IOperationRequest request, HubconTransportAttribute transportAttribute, Dictionary<Guid, object> sources, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes an operation synchronously. Used for low-latency calls that bypass 
         /// asynchronous scheduling overhead when possible.
         /// </summary>
-        ValueTask<IHubconResponse> HandleSynchronous(IOperationRequest request, HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
+        ValueTask<IResponse> HandleSynchronous(IOperationRequest request, HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Executes an operation synchronously and returns the computed result.
         /// </summary>
-        ValueTask<IHubconResponse> HandleSynchronousResult(IOperationRequest request, HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
+        ValueTask<IResponse> HandleSynchronousResult(IOperationRequest request, HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Asynchronously executes a method that does not return a value (Task/void).
         /// </summary>
-        ValueTask<IHubconResponse> HandleWithoutResultAsync(IOperationRequest request, HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
+        ValueTask<IResponse> HandleWithoutResultAsync(IOperationRequest request, HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Asynchronously executes a standard RPC method and returns the serialized result.
         /// </summary>
-        ValueTask<IHubconResponse> HandleWithResultAsync(IOperationRequest request, HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
+        ValueTask<IResponse> HandleWithResultAsync(IOperationRequest request, HubconTransportAttribute transportAttribute, IWrapper? wrappedRequest, CancellationToken cancellationToken = default);
     }
 }

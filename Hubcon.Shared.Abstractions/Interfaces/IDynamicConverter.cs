@@ -124,6 +124,14 @@ namespace Hubcon
         string Serialize<T>(T value);
 
         /// <summary>
+        /// Serializes an object of type <typeparamref name="T"/> into a JSON string.
+        /// </summary>
+        /// <param name="value">The value to serialize.</param>
+        /// <param name="type">The type of the value to serialize.</param>
+        /// <returns>A JSON string.</returns>
+        string Serialize(object? value, Type type);
+
+        /// <summary>
         /// Serializes a value of type <typeparamref name="T"/> into a <see cref="JsonElement"/>.
         /// </summary>
         /// <typeparam name="T">The type of the value.</typeparam>
