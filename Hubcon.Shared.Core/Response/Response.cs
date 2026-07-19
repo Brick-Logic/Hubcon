@@ -114,7 +114,7 @@ namespace Hubcon
     {
         /// <summary>Gets or sets the payload of the response.</summary>
         [JsonPropertyName("data")]
-        public T Data { get; set; }
+        public T? Data { get; set; }
         
         /// <summary>Gets or sets the protocol-specific status code.</summary>
         [JsonPropertyName("statusCode")]
@@ -130,11 +130,11 @@ namespace Hubcon
         
         /// <summary>Gets or sets the error message, if any.</summary>
         [JsonPropertyName("error")]
-        public string Error { get; set; }
+        public string? Error { get; set; }
         
         /// <summary>Gets or sets the success message.</summary>
         [JsonPropertyName("message")]
-        public string Message { get; set; }
+        public string? Message { get; set; }
         
         /// <summary>Gets the raw, original response object from the transport layer.</summary>
         [JsonIgnore]

@@ -180,8 +180,12 @@ namespace Hubcon.Server.Core.Pipelines
             }
 
             request.AssignArguments(dict!);
-            IOperationContext context = BuildContext(request, blueprint, PipelineResultHandlers.WithResultHandler,
-                wrappedRequest, cancellationToken);
+            
+            ResultHandlerDelegate resultHandler = blueprint.HasReturnType
+                ? PipelineResultHandlers.WithResultHandler
+                : PipelineResultHandlers.NoResultHandler;
+            
+            var context = BuildContext(request, blueprint, resultHandler, wrappedRequest, cancellationToken);
 
             var pipeline = blueprint.PipelineBuilder.Build(request, context, _serviceProvider);
             var pipelineResult = await pipeline.Execute();

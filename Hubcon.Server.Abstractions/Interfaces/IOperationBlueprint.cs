@@ -85,7 +85,7 @@ namespace Hubcon
         /// <summary>
         /// Gets the delegate used to invoke the operation.
         /// </summary>
-        IEndpointInvoker Invoker{ get; }
+        IEndpointInvoker Invoker { get; }
         
         /// <summary>
         /// The wrapper factory for endpoint invocations.

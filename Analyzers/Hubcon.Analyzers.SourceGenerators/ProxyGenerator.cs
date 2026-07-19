@@ -255,6 +255,7 @@ namespace Hubcon.Analyzers.SourceGenerators
                     var pairs = classesList.Select(x => new ControllerMetadata(x)).ToList();
 
                     GenerateDedicatedInvokers.Execute(spc, pairs, "EndpointInvokers.g.cs");
+                    GenerateTaskUnwrappers.Execute(spc, pairs, "EndpointTaskUnwrappers.g.cs");
                     GenerateHttpDelegates.Execute(spc, pairs, "EndpointDelegates.g.cs");
                     GenerateEndpointParameterWrappers.Execute(spc, pairs, "EndpointParameterWrappers.g.cs");
                     GenerateControllerPreservers.Execute(spc, pairs, "ControllerPreservers.g.cs");

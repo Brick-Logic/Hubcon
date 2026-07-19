@@ -7,7 +7,6 @@ namespace HubconTest.Filters
         public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
         {
             Console.WriteLine("Filtro solo en este endpoint");
-
             return await next(context);
         }
     }
@@ -17,7 +16,6 @@ namespace HubconTest.Filters
         public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
         {
             Console.WriteLine("Filtro desde la clase");
-
             return await next(context);
         }
     }

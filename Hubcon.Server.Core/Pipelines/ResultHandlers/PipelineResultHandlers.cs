@@ -1,4 +1,9 @@
-﻿using Hubcon.Shared.Abstractions.Standard.Interfaces;
+﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using Hubcon.Shared.Abstractions.Standard.Interfaces;
 
 namespace Hubcon.Server.Core.Pipelines.ResultHandlers
 {
@@ -58,23 +63,11 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
                 return HubconResponse.Ok(result!);
             }
         }
-
+        
         private static async ValueTask<object?> GetTaskResultAsync(Task task)
         {
             await task;
-
-            var type = task.GetType();
-
-            if (!type.IsGenericType) return null;
-            var resultProperty = type.GetProperty("Result");
-            var value = resultProperty?.GetValue(task);
-
-            if (value != null && value.GetType().FullName == "System.Threading.Tasks.VoidTaskResult")
-            {
-                return null;
-            }
-
-            return value;
+            return TaskUnwrapperRegistry.Unwrap(task);
         }
     }
 }

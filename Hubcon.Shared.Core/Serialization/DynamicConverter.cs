@@ -481,6 +481,7 @@ namespace Hubcon.Shared.Core.Serialization
                 _options!.MaxDepth = 64;
                 _options!.PropertyNameCaseInsensitive = true;
                 _options!.Converters.Add(new JsonStringEnumConverter<MessageType>(JsonNamingPolicy.CamelCase));
+                _options!.Converters.Add(new HubconResponseConverter());
 
                 if (SystemTypesContext.Default.Options.TypeInfoResolver != null)
                     _options.TypeInfoResolverChain.Add(SystemTypesContext.Default.Options.TypeInfoResolver);

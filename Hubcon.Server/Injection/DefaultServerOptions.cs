@@ -83,7 +83,6 @@ namespace Hubcon.Server.Injection
             var foundControllers = ControllerContractHelper.FindImplementations(assembly, [typeof(BaseClientProxyMarker)]).ToList();
             foreach (var controller in foundControllers)
             {
-                Console.WriteLine(controller.FullName);
                 HubconServerBuilder.AddHubconController(Builder, controller);
             }
         }

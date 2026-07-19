@@ -65,7 +65,7 @@ namespace Hubcon.Server.Core.Routing.Registries
             servicesToInject.Add(Injector);
 
             var interfaces = controllerType.GetInterfaces().Where(x => typeof(IControllerContract).IsAssignableFrom(x));
-            Console.WriteLine($"Controller: {controllerType.FullName} | Interfaces: {interfaces.Count()}");
+
             foreach (var interfaceType in interfaces)
             {
                 var methods = interfaceType
@@ -87,8 +87,6 @@ namespace Hubcon.Server.Core.Routing.Registries
 
                 foreach (var method in methods)
                 {
-                    Console.WriteLine($"Metodo {method.Name} del controlador {controllerType} encontrado.");
-                    
                     var returnType = method.ReturnType;
                     var parameters = method.GetParameters();
 

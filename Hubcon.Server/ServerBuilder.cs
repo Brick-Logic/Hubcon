@@ -131,7 +131,6 @@ namespace Hubcon.Server
             foreach (var service in services)
             {
                 service.Invoke(Services);
-                Console.WriteLine(service.ToString());
             }
 
             return builder;
@@ -158,7 +157,6 @@ namespace Hubcon.Server
             foreach (var service in services)
             {
                 service.Invoke(Services);
-                Console.WriteLine(service.ToString());
             }
             
             return builder;

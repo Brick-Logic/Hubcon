@@ -31,7 +31,7 @@ namespace Hubcon
         /// Gets the error message describing the failure, if applicable.
         /// </summary>
         [JsonPropertyName("error")]
-        string Error { get; }
+        string? Error { get; }
 
         /// <summary>
         /// Gets or sets the <see cref="Exception"/> associated with the response, if any.
@@ -44,7 +44,7 @@ namespace Hubcon
         /// Gets a descriptive message indicating the result of the operation.
         /// </summary>
         [JsonPropertyName("message")]
-        string Message { get; }
+        string? Message { get; }
 
         /// <summary>
         /// Converts the current response into a boxed <see cref="IHubconResponse"/> version.
@@ -55,7 +55,7 @@ namespace Hubcon
         /// <summary>
         /// Converts the current response into a boxed <see cref="object"/>.
         /// </summary>
-        object GetOriginal();
+        object? GetOriginal();
     }
 
     /// <summary>
@@ -69,12 +69,12 @@ namespace Hubcon
     /// Defines a strongly-typed response containing a data payload of type <typeparamref name="T"/>.
     /// </summary>
     /// <typeparam name="T">The type of the data contained in the response.</typeparam>
-    public interface IHubconResponse<T> : IResponse
+    public interface IHubconResponse<out T> : IResponse
     {
         /// <summary>
         /// Gets the data payload returned by the operation.
         /// </summary>
         [JsonPropertyName("data")]
-        T Data { get; }
+        T? Data { get; }
     }
 }

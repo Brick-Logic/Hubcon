@@ -104,7 +104,7 @@ namespace Hubcon.Server.Core.Routing
                         if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.stream_init, transport,
                                 operationRequest))
                         {
-                            return new HttpHubconResult(HubconResponse.TooManyRequests(), endpointReturnType);
+                            return HubconResponse.TooManyRequests();
                         }
 
                         IWrapper? wrapper = null;
@@ -112,7 +112,7 @@ namespace Hubcon.Server.Core.Routing
                         {
                             if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper internalWrapper)
                             {
-                                return new HttpHubconResult(HubconResponse.BadRequest(), endpointReturnType);
+                                return HubconResponse.BadRequest();
                             }
 
                             wrapper = internalWrapper;
@@ -127,7 +127,7 @@ namespace Hubcon.Server.Core.Routing
 
                         if (res!.Failure)
                         {
-                            return new HttpHubconResult(HubconResponse.InternalError(), endpointReturnType);
+                            return HubconResponse.InternalError();
                         }
 
                         return new SseResult((res.Data as IAsyncEnumerable<object?>)!, operationRequest);
@@ -145,7 +145,7 @@ namespace Hubcon.Server.Core.Routing
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
                             var response = HubconResponse.RequestTooLarge();
-                            return new HttpHubconResult(response, endpointReturnType);
+                            return response;
                         }
                         
                         var operationRequest = new OperationRequest(
@@ -161,12 +161,12 @@ namespace Hubcon.Server.Core.Routing
                         if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.stream_init, transport,
                                 operationRequest))
                         {
-                            return new HttpHubconResult(HubconResponse.TooManyRequests(), endpointReturnType);
+                            return HubconResponse.TooManyRequests();
                         }
                         
                         if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper wrapper)
                         {
-                            return new HttpHubconResult(HubconResponse.BadRequest(), endpointReturnType);
+                            return HubconResponse.BadRequest();
                         }
                         
                         var res = await DefaultEntrypoint.HandleMethodStream(
@@ -178,7 +178,7 @@ namespace Hubcon.Server.Core.Routing
 
                         if (res!.Failure)
                         {
-                            return new HttpHubconResult(HubconResponse.InternalError(), endpointReturnType);
+                            return HubconResponse.InternalError();
                         }
 
                         return new SseResult((res.Data! as IAsyncEnumerable<object?>)!, operationRequest);
@@ -210,7 +210,7 @@ namespace Hubcon.Server.Core.Routing
                                 transport,
                                 operationRequest))
                         {
-                            return new HttpHubconResult(HubconResponse.TooManyRequests(), endpointReturnType);
+                            return HubconResponse.TooManyRequests();
                         }
 
                         IWrapper? wrapper = null;
@@ -218,7 +218,7 @@ namespace Hubcon.Server.Core.Routing
                         {
                             if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper internalWrapper)
                             {
-                                return new HttpHubconResult(HubconResponse.BadRequest(), endpointReturnType);
+                                return HubconResponse.BadRequest();
                             }
 
                             wrapper = internalWrapper;
@@ -231,7 +231,7 @@ namespace Hubcon.Server.Core.Routing
                             wrapper,
                             cancellationToken);
 
-                        return new HttpHubconResult(res, endpointReturnType);
+                        return res.GetOriginal();
                     });
                 }
                 else
@@ -247,7 +247,7 @@ namespace Hubcon.Server.Core.Routing
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
                             var response = HubconResponse.RequestTooLarge();
-                            return new HttpHubconResult(response, endpointReturnType);
+                            return response;
                         }
                         
                         var operationRequest = new OperationRequest(
@@ -262,12 +262,12 @@ namespace Hubcon.Server.Core.Routing
 
                         if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_invoke, transport, operationRequest))
                         {
-                            return new HttpHubconResult(HubconResponse.TooManyRequests(), endpointReturnType);
+                            return HubconResponse.TooManyRequests();
                         }
 
                         if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper wrapper)
                         {
-                            return new HttpHubconResult(HubconResponse.BadRequest(), endpointReturnType);
+                            return HubconResponse.BadRequest();
                         }
                         
                         var res = await DefaultEntrypoint.HandleMethodWithResult(
@@ -277,7 +277,7 @@ namespace Hubcon.Server.Core.Routing
                             wrapper,
                             cancellationToken);
 
-                        return new HttpHubconResult(res, endpointReturnType);
+                        return res.GetOriginal();
                     });
                 }
             }
@@ -302,7 +302,7 @@ namespace Hubcon.Server.Core.Routing
                         if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_call, transport,
                                 operationRequest))
                         {
-                            return new HttpHubconResult(HubconResponse.TooManyRequests(), endpointReturnType);
+                            return HubconResponse.TooManyRequests();
                         }
                         
                         IWrapper? wrapper = null;
@@ -310,7 +310,7 @@ namespace Hubcon.Server.Core.Routing
                         {
                             if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper internalWrapper)
                             {
-                                return new HttpHubconResult(HubconResponse.BadRequest(), endpointReturnType);
+                                return HubconResponse.BadRequest();
                             }
 
                             wrapper = internalWrapper;
@@ -323,7 +323,7 @@ namespace Hubcon.Server.Core.Routing
                             wrapper,
                             cancellationToken);
 
-                        return new HttpHubconResult(res, endpointReturnType);
+                        return res.GetOriginal();
                     });
                 }
                 else
@@ -342,7 +342,7 @@ namespace Hubcon.Server.Core.Routing
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
                             var response = HubconResponse.RequestTooLarge();
-                            return new HttpHubconResult(response, endpointReturnType);
+                            return response;
                         }
                         
                         var operationRequest = new OperationRequest(
@@ -358,12 +358,12 @@ namespace Hubcon.Server.Core.Routing
                         if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_call, transport,
                                 operationRequest))
                         {
-                            return new HttpHubconResult(HubconResponse.TooManyRequests(), endpointReturnType);
+                            return HubconResponse.TooManyRequests();
                         }
                         
                         if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper wrapper)
                         {
-                            return new HttpHubconResult(HubconResponse.BadRequest(), endpointReturnType);
+                            return HubconResponse.BadRequest();
                         }
 
                         var res = await DefaultEntrypoint.HandleMethodVoid(
@@ -373,7 +373,7 @@ namespace Hubcon.Server.Core.Routing
                             wrapper,
                             cancellationToken);
 
-                        return new HttpHubconResult(res, endpointReturnType);
+                        return res.GetOriginal();
                     });
                 }
             }

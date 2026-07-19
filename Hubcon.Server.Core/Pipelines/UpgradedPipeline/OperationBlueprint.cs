@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using Hubcon.Server.Core.EndpointManagement;
+using Hubcon.Server.Core.Pipelines.ResultHandlers;
 using Hubcon.Shared.Abstractions.Standard.Extensions;
 
 namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
@@ -133,7 +134,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             ReturnsHubconResponse = ReturnType.IsGenericType
                 && (ReturnType.GetGenericTypeDefinition() == typeof(IHubconResponse<>) || ReturnType.GetGenericTypeDefinition() == typeof(HubconResponse<>));
-
+            
             var classAttributes = controllerType
                 .GetCustomAttributes()
                 .Where(x => x is AuthorizeAttribute or AllowAnonymousAttribute or AnonymousAttribute)
@@ -230,8 +231,6 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 PrecomputedPolicies.ToArray(), 
                 !RequiresAuthorization
             );
-            
-            Console.WriteLine($"Controller {ControllerName} cargado.");
         }
     }
 }
