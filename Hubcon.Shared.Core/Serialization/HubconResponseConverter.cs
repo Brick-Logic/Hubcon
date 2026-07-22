@@ -16,7 +16,7 @@ namespace Hubcon.Shared.Core.Serialization
             writer.WriteStartObject();
         
             writer.WriteBoolean("success", value.Success);
-            writer.WriteBoolean("failed", value.Failure);
+            writer.WriteBoolean("failure", value.Failure);
             if (value.Error != null) writer.WriteString("error", value.Error);
             if (value.Message != null) writer.WriteString("message", value.Message);
             

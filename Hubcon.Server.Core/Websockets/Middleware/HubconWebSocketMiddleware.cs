@@ -704,7 +704,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 }
 
                 await context.Sender.SendAsync(new IngestResultMessage(ingestInitMessage.Id, context.ConnectionId,
-                    context.Converter.SerializeToElement(result)));
+                    context.Converter.SerializeToElement(result.GetOriginal())));
             }
             catch (Exception ex)
             {
@@ -786,7 +786,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     var message = new OperationResponseMessage(
                         operationInvokeMessage.Id,
                         context.ConnectionId,
-                        context.Converter.SerializeToElement(response)
+                        context.Converter.SerializeToElement(response.GetOriginal())
                     );
 
                     await context.Sender.SendAsync(message);
@@ -1054,16 +1054,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         {
             if (context.ConnectionIsClosed)
                 return;
-
-            var errorResponse = context.Converter.Serialize(new HubconResponse<string>(
-                error.Success,
-                error.Failure,
-                error.Message,
-                error.Error,
-                error.StatusCode,
-                null!));
             
-            var localMessage = new ErrorMessage(id, context.ConnectionId, errorResponse);
+            var localMessage = new ErrorMessage(id, context.ConnectionId, context.Converter.Serialize(error));
 
             await context.Sender.SendAsync(localMessage);
         }

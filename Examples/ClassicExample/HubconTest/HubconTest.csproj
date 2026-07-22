@@ -8,15 +8,14 @@
 		<ServerGarbageCollection>false</ServerGarbageCollection>
 		<DockerfileContext>..\..\..</DockerfileContext>
 
-		<DebugSymbols>true</DebugSymbols>
-		<DebugType>portable</DebugType>
-
-		<StripSymbols>false</StripSymbols>
+<!--		<DebugSymbols>true</DebugSymbols>-->
+<!--		<DebugType>portable</DebugType>-->
+<!--		<StripSymbols>false</StripSymbols>-->
+<!--		<StackTraceSupport>true</StackTraceSupport>-->
 		
 		<PublishAot>true</PublishAot>
 		<IsAotCompatible>true</IsAotCompatible>
 		<TrimMode>link</TrimMode>
-		<StackTraceSupport>true</StackTraceSupport>
 
 		<PublishTrimmed>true</PublishTrimmed>
 		<IsTrimmable>true</IsTrimmable>
