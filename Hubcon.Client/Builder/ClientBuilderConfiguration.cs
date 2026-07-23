@@ -107,9 +107,9 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
-        public IServerModuleConfiguration ScaleMessageProcessors(int count = 1)
+        public IServerModuleConfiguration ScaleMessageProcessors(int count)
         {
-            builder.MessageProcessorsCount = 1;
+            builder.MessageProcessorsCount = count;
             return this;
         }
 
