@@ -108,6 +108,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             else
             {
+                httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return;
             }
 
@@ -120,7 +121,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 return;
             }
             
-            ClientWebSocketContext context = new ClientWebSocketContext(httpContext);
+            var context = new ClientWebSocketContext(httpContext);
             context.Initialize(connectionId, webSocket);
             connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, webSocket.Abort);
 
@@ -130,7 +131,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 TrimmedMemoryOwner? firstMessageJson;
 
-                CancellationTokenSource fmCts = new CancellationTokenSource(5000);
+                var fmCts = new CancellationTokenSource(5000);
                 try
                 {
                     firstMessageJson = await context.Receiver.ReceiveAsync(context.Token);

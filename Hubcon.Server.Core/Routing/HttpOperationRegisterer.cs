@@ -25,8 +25,8 @@ namespace Hubcon.Server.Core.Routing
 {
     public static class HttpOperationRegisterer
     {
-        private readonly static ConcurrentDictionary<string, RouteGroupBuilder> EndpointGroups = new();
-        private readonly static ConcurrentDictionary<RouteGroupBuilder, bool> RateLimiterApplied = new();
+        private static readonly ConcurrentDictionary<string, RouteGroupBuilder> EndpointGroups = new();
+        private static readonly ConcurrentDictionary<RouteGroupBuilder, bool> RateLimiterApplied = new();
 
         public static void RegisterEndpoint(
             this WebApplication app,
@@ -58,13 +58,11 @@ namespace Hubcon.Server.Core.Routing
                 method.GetParameters().Select(x => x.ParameterType).ToArray());
 
             var filters = controllerMethod!.GetCustomAttributes()
-                .Where(x => x is UseHttpEndpointFilterAttribute)
-                .Select(x => (UseHttpEndpointFilterAttribute)x)
+                .OfType<UseHttpEndpointFilterAttribute>()
                 .ToList();
 
             var classFilters = blueprint.ControllerType.GetCustomAttributes()
-                .Where(x => x is UseHttpEndpointFilterAttribute)
-                .Select(x => (UseHttpEndpointFilterAttribute)x)
+                .OfType<UseHttpEndpointFilterAttribute>()
                 .ToList();
             
             filters.AddRange(classFilters);
@@ -144,8 +142,7 @@ namespace Hubcon.Server.Core.Routing
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
-                            var response = HubconResponse.RequestTooLarge();
-                            return response;
+                            return HubconResponse.RequestTooLarge();
                         }
                         
                         var operationRequest = new OperationRequest(
@@ -246,8 +243,7 @@ namespace Hubcon.Server.Core.Routing
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
-                            var response = HubconResponse.RequestTooLarge();
-                            return response;
+                            return HubconResponse.RequestTooLarge();
                         }
                         
                         var operationRequest = new OperationRequest(
@@ -341,8 +337,7 @@ namespace Hubcon.Server.Core.Routing
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
-                            var response = HubconResponse.RequestTooLarge();
-                            return response;
+                            return HubconResponse.RequestTooLarge();
                         }
                         
                         var operationRequest = new OperationRequest(
