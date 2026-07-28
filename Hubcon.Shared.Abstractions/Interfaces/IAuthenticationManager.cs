@@ -24,17 +24,17 @@ namespace Hubcon
         /// <summary>
         /// Occurs when a valid session has been loaded or started and the application should treat the session as active.
         /// </summary>
-        public abstract event Action? OnSessionIsActive;
+        public event Action? OnSessionIsActive;
 
         /// <summary>
         /// Occurs when the session is no longer valid or the user signs out.
         /// </summary>
-        public abstract event Action? OnSessionIsInactive;
+        public event Action? OnSessionIsInactive;
 
         /// <summary>
         /// Occurs when the access token has been successfully refreshed.
         /// </summary>
-        public abstract event Action<IAuthResult>? OnTokenRefreshed;
+        public event Action<IAuthResult>? OnTokenRefreshed;
 
         /// <summary>
         /// Gets the current access token used for authenticating requests.

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ namespace Hubcon.Shared.Core.Tools
         private readonly Random _random = new();
         private int _isDisposed;
 
-        private class Entry
+        public class Entry
         {
             public readonly T Instance;
             public int ActiveRequestsCount;
@@ -21,6 +22,11 @@ namespace Hubcon.Shared.Core.Tools
             {
                 Instance = instance;
             }
+        }
+
+        public TResponse? ExecuteOnEntries<TResponse>(Func<Entry[], TResponse?> func)
+        {
+            return func.Invoke(_items);
         }
 
         public P2CPool(IServiceProvider provider, Func<IServiceProvider, T> factory, int count)

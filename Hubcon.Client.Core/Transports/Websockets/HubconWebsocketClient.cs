@@ -302,7 +302,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
         public async Task<HubconResponse<bool>> TryRefreshToken(string token)
         {
-            await EnsureConnectedAsync();
+            if (_webSocket?.State != WebSocketState.Open)
+                return HubconResponse.Fail<bool>("The websocket is not open.");
 
             var request = new TokenUpdateMessage(Guid.NewGuid(), _webSocket!.ConnectionId, token);
 

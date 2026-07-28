@@ -49,7 +49,7 @@ namespace HubconTest.ContractHandlers
         //[ProducesResponseType<IOperationResponse<string>>(200)]
         //[Consumes("application/json")]
         [AllowAnonymous]
-        public async Task<string> LoginAsync([Required][FromBody][ValidateObject] LoginCommand command, [FromQuery] string id)
+        public async Task<LoginResponse> LoginAsync([Required][FromBody][ValidateObject] LoginCommand command, [FromQuery] string id)
         {
             try
             {
@@ -60,19 +60,23 @@ namespace HubconTest.ContractHandlers
                     new Claim(ClaimTypes.Role, "Admin"),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
                 };
-
-
+                
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Program.Key));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+                var expiration = DateTimeOffset.UtcNow.AddSeconds(70);
+                
                 var token = new JwtSecurityToken(
                     issuer: "clave",
                     audience: "clave",
                     claims: claims,
-                    expires: DateTimeOffset.UtcNow.AddMinutes(10).DateTime,
+                    expires: expiration.DateTime,
                     signingCredentials: creds);
 
-                return new JwtSecurityTokenHandler().WriteToken(token);
+                var jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
+                
+                var response = new LoginResponse(jwtToken, "Bearer", "RefreshToken", expiration.ToUnixTimeSeconds());
+                return response;
             }
             catch (Exception ex)
             {

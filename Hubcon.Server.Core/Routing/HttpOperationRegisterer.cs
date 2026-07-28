@@ -238,7 +238,6 @@ namespace Hubcon.Server.Core.Routing
                     {
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
-                        var converter = services.GetRequiredService<IDynamicConverter>();
                         var cancellationToken = context.RequestAborted;
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)

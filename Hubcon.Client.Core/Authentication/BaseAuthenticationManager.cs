@@ -66,14 +66,14 @@ namespace Hubcon
                 if (string.IsNullOrEmpty(AccessToken) || !ExpiresAt.HasValue)
                     return false;
 
-                long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                var currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
                 return currentTime < ExpiresAt.Value;
             }
         }
 
         /// <summary>
-        /// Returns true if the session is nearing expiration and should be refreshed. It uses a 1 minute margin before expiration.
+        /// Returns true if the session is nearing expiration and should be refreshed. It uses a 1-minute margin before expiration.
         /// </summary>
         public bool ShouldRefreshSession
         {
@@ -82,10 +82,12 @@ namespace Hubcon
                 if (string.IsNullOrEmpty(AccessToken) || !ExpiresAt.HasValue)
                     return false;
 
-                long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                long refreshThreshold = ExpiresAt.Value - (shouldRefreshSessionMargin > 0 ? shouldRefreshSessionMargin : 60);
+                var marginSeconds = shouldRefreshSessionMargin > 0 ? shouldRefreshSessionMargin : 60;
+                
+                var expirationTime = DateTimeOffset.FromUnixTimeSeconds(ExpiresAt.Value);
+                var refreshWindow = expirationTime.AddSeconds(-marginSeconds);
 
-                return currentTime > refreshThreshold;
+                return DateTimeOffset.UtcNow >= refreshWindow;
             }
         }
 
@@ -202,8 +204,11 @@ namespace Hubcon
         {
             try
             {
+                if(!ShouldRefreshSession)
+                    return Result.Success();
+                
                 await _semaphore.WaitAsync();
-
+                
                 var refresh = await RefreshSessionAsync(RefreshToken!);
 
                 if (refresh.IsFailure)
@@ -218,7 +223,9 @@ namespace Hubcon
                 RefreshToken = refresh.RefreshToken;
                 ExpiresAt = refresh.ExpiresAt;
                 OnTokenRefreshed?.Invoke(refresh);
-                refreshTimer?.Start();
+                
+                if(refreshTimer!.Enabled == false)
+                    refreshTimer!.Start();
 
                 await SaveSessionAsync();
                 OnSessionIsActive?.Invoke();
@@ -369,14 +376,14 @@ namespace Hubcon
 
             shouldRefreshSessionMargin = (long)margin.TotalSeconds;
             refreshTimer = new System.Timers.Timer();
-            refreshTimer.Enabled = true;
             refreshTimer.AutoReset = true;
             refreshTimer.Interval = interval.TotalMilliseconds;
-            refreshTimer.Elapsed += async (object sender, System.Timers.ElapsedEventArgs e) =>
+            refreshTimer.Elapsed += async (_, _) =>
             {
                 if (ShouldRefreshSession) 
                     await TryRefreshSessionAsync();
             };
+            refreshTimer.Enabled = true;
             refreshTimer.Start();
         }
     }

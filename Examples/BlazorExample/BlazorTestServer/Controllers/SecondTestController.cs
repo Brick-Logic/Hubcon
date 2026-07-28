@@ -68,7 +68,7 @@ namespace BlazorTestServer.Controllers
             }
         }
 
-        public Task<string> LoginAsync(LoginCommand command, string id)
+        public Task<LoginResponse> LoginAsync(LoginCommand command, string id)
         {
             throw new NotImplementedException();
         }

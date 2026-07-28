@@ -1,6 +1,9 @@
-namespace Hubcon;
+using System.Collections.Generic;
 
-public interface IWrapper
+namespace Hubcon
 {
-    public void Populate(IReadOnlyDictionary<string, object> parameters);
+    public interface IWrapper
+    {
+        public void Populate(IReadOnlyDictionary<string, object> parameters);
+    }
 }

@@ -17,10 +17,10 @@ namespace HubconTest
 
             long coreMask = 0;
 
-            int? customCores = 11;
+            int? customCores = null;
             int cores = customCores ?? Environment.ProcessorCount - 1;
 
-            for (int i = 6; i <= cores; i++)
+            for (int i = 0; i <= cores; i++)
             {
                 coreMask |= 1L << i;
             }
@@ -109,7 +109,7 @@ namespace HubconTest
                 {
                         config
                             //.SetMaxConcurrentOperations(999999)
-                            //.SetGlobalRateLimiter(999999)
+                            .SetGlobalRateLimiter(999999)
                             .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
                             .EnableWebsocketsLogging()  
                             .DisableWebsocketPing()

@@ -108,11 +108,10 @@ namespace Hubcon.Client.Core.Transports.Websockets
                                 var response = await client.TryRefreshToken(authenticationManager.TokenType + " " +
                                                                             authenticationManager.AccessToken);
 
-                                if (context.ClientOptions.LoggingEnabled)
-                                    logger.LogInformation(
-                                        $"Token refresh response: {response.Success} | Message: {response.Message}");
+                                if (context.ClientOptions.LoggingEnabled) 
+                                    logger.LogInformation($"Token refresh response: {response.Success} | Message: {response.Message}");
                             };
-                            authenticationManager.OnSessionIsActive += async () => await client.EnsureConnectedAsync();
+                            // authenticationManager.OnSessionIsActive += async () => await client.EnsureConnectedAsync();
 
                             client.AuthenticationManagerProvider = () => authenticationManager;
                         }
@@ -148,15 +147,15 @@ namespace Hubcon.Client.Core.Transports.Websockets
         {
             try
             {
-                if (IsConnected()) await _clientPool.ExecuteAllAsync(static x => x.Disconnect());
+                if (IsConnected()) await _clientPool.ExecuteAllAsync(static async x => await x.Disconnect());
 
                 if (string.IsNullOrEmpty(url))
                 {
-                    await _clientPool.ExecuteAllAsync(x => x.EnsureConnectedAsync());
+                    await _clientPool.ExecuteAllAsync(static async x => await x.EnsureConnectedAsync());
                 }
                 else
                 {
-                    await _clientPool.ExecuteAllAsync(x => x.EnsureConnectedAsync(new Uri(url)));
+                    await _clientPool.ExecuteAllAsync(async x => await x.EnsureConnectedAsync(new Uri(url)));
                 }
 
                 return HubconResponse.Ok();
@@ -175,7 +174,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
                 if (!IsConnected())
                     return HubconResponse.Ok();
 
-                await _clientPool.ExecuteAllAsync(x => x.Disconnect());
+                await _clientPool.ExecuteAllAsync(static async x => await x.Disconnect());
                 return HubconResponse.Ok();
             }
             catch (Exception ex)
@@ -185,6 +184,9 @@ namespace Hubcon.Client.Core.Transports.Websockets
         }
 
         /// <inheritdoc/>
-        public bool IsConnected() => _clientPool.ExecuteAllAsync(async x => x.IsConnected).Result.All(x => x);
+        public bool IsConnected()
+        {
+            return _clientPool.ExecuteOnEntries(x => x.All(y => y.Instance.IsConnected));
+        }
     }
 }

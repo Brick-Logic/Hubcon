@@ -14,13 +14,13 @@ namespace HubconTestClient.Modules
         {
             server.WithBaseUrl("http://localhost:5000");
 
-            server.EnableWebsocketAutoReconnect(true);
+            server.EnableWebsocketAutoReconnect();
             server.GlobalLimit(200000000);
             server.EnableLogging();
             server.DisableAllLimiters();
             server.AllowRemoteCancellation();
             server.RequirePongResponse(false);
-            server.ScaleMessageProcessors(6);
+            server.ScaleMessageProcessors(12);
             //server.AddHeaderProvider("key", x => "value");
 
             //server.DisableAllLimiters();

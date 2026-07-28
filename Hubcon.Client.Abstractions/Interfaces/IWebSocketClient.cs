@@ -52,7 +52,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task DisconnectAsync();
-        
+
         /// <summary>
         /// Retrieves an ingest session for streaming operational requests of a specific type.
         /// </summary>
@@ -62,7 +62,8 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// <param name="operationOptions">Optional settings for the operation.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation.</param>
         /// <returns>A <see cref="Task{TResult}"/> that resolves to an <see cref="IIngestSession{T}"/>.</returns>
-        IIngestSession<T> GetIngestSession<T>(IOperationRequest operationRequest, bool useRemoteCancel, IOperationOptions? operationOptions = null, CancellationToken cancellationToken = default);
+        IIngestSession<T> GetIngestSession<T>(IOperationRequest operationRequest, bool useRemoteCancel,
+            IOperationOptions? operationOptions = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Retrieves a streaming session for sending and receiving operational payloads.
@@ -72,7 +73,8 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// <param name="useRemoteCancel">Whether to use a remote cancellation token for this session.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation.</param>
         /// <returns>A <see cref="Task{TResult}"/> that resolves to an <see cref="IStreamSession{T}"/>.</returns>
-        ValueTask<IStreamSession<T>> GetStreamSession<T>(IOperationRequest payload, bool useRemoteCancel, CancellationToken cancellationToken = default);
+        ValueTask<IStreamSession<T>> GetStreamSession<T>(IOperationRequest payload, bool useRemoteCancel,
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Sends a request message of type TRequest and awaits the corresponding response message.
@@ -82,7 +84,20 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// <param name="useRemoteCancel">Whether to use a remote cancellation token.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation.</param>
         /// <returns>A <see cref="Task"/> that resolves to the received response message.</returns>
-        ValueTask<BaseMessage?> SendAndReceiveAsync<TRequest>(TRequest message, bool useRemoteCancel, CancellationToken cancellationToken = default) where TRequest : BaseMessage;
+        ValueTask<BaseMessage?> SendAndReceiveAsync<TRequest>(TRequest message, bool useRemoteCancel,
+            CancellationToken cancellationToken = default) where TRequest : BaseMessage;
+
+        /// <summary>
+        /// Sends a request message of type TRequest and awaits the corresponding response message.
+        /// </summary>
+        /// <typeparam name="TRequest">The expected base message type for the request.</typeparam>
+        /// <param name="message">The message payload to send.</param>
+        /// <param name="useRemoteCancel">Whether to use a remote cancellation token.</param>
+        /// <param name="timeout">The request timeout.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation.</param>
+        /// <returns>A <see cref="Task"/> that resolves to the received response message.</returns>
+        ValueTask<BaseMessage?> SendAndReceiveAsync<TRequest>(TRequest message, bool useRemoteCancel, TimeSpan timeout,
+            CancellationToken cancellationToken = default) where TRequest : BaseMessage;
 
         /// <summary>
         /// Sends a message of type TRequest to the hub without expecting an immediate response.
@@ -92,6 +107,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// <param name="useRemoteCancel">Whether to use a remote cancellation token.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous send operation.</returns>
-        ValueTask SendAsync<TRequest>(TRequest message, bool useRemoteCancel, CancellationToken cancellationToken = default) where TRequest : BaseMessage;
+        ValueTask SendAsync<TRequest>(TRequest message, bool useRemoteCancel,
+            CancellationToken cancellationToken = default) where TRequest : BaseMessage;
     }
 }
