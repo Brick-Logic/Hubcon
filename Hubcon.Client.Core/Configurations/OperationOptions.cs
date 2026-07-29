@@ -17,12 +17,16 @@ namespace Hubcon.Client.Core.Configurations
         public MemberInfo MemberInfo { get; }
 
         public MemberType MemberType { get; }
+        
+        readonly ConcurrentDictionary<string, object?> _externalSettings = new();
+        public IReadOnlyDictionary<string, object?> ExternalSettings => _externalSettings;
 
         public HubconTransportAttribute? TransportType { get; private set; }
         public TokenBucketRateLimiterOptions? RateBucketOptions { get; private set; }
         public bool RateLimiterIsShared { get; private set; }
         public int RequestsPerSecond { get; private set; }
-        public Dictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; } = new();
+        readonly ConcurrentDictionary<string, Func<IServiceProvider, string>> _headerProviders = new();
+        public IReadOnlyDictionary<string, Func<IServiceProvider, string>> HeaderProviders => _headerProviders;
 
         ConcurrentDictionary<HookType, Func<IInvocationContext, Task>> _hooks = new();
         public IReadOnlyDictionary<HookType, Func<IInvocationContext, Task>> Hooks => _hooks;
@@ -137,7 +141,21 @@ namespace Hubcon.Client.Core.Configurations
 
         public IOperationConfigurator AddHeaderProvider(string key, Func<IServiceProvider, string> valueProvider)
         {
-            HeaderProviders.TryAdd(key, valueProvider);
+            _headerProviders.TryAdd(key, valueProvider);
+            return this;
+        }
+
+        public IOperationConfigurator AddSetting(string key, object? value)
+        {
+            if(_externalSettings.TryGetValue(key, out var result))
+            {
+                _externalSettings.TryUpdate(key, value, result);
+            }
+            else
+            {
+                _externalSettings.TryAdd(key, value);
+            }
+
             return this;
         }
     }

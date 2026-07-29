@@ -3,6 +3,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Models;
 using Hubcon.Shared.Abstractions.Standard.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Net.WebSockets;
@@ -332,5 +333,13 @@ namespace Hubcon
         /// clients to cancel operations; otherwise, <see langword="false"/>.</param>
         /// <returns>The current instance of <see cref="IServerModuleConfiguration"/> for method chaining.</returns>
         IServerModuleConfiguration AllowRemoteCancellation();
+
+        /// <summary>
+        /// Adds a new setting to the module's internal configurations, which is exposed to the used transports.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns>The current instance of <see cref="IServerModuleConfiguration"/> for method chaining.</returns>
+        IServerModuleConfiguration AddSetting(string key, object? value);
     }
 }

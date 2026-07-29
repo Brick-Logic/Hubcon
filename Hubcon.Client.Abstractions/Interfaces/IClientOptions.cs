@@ -16,6 +16,11 @@ namespace Hubcon.Client.Abstractions.Interfaces
     /// </summary>
     public interface IClientOptions
     {
+        /// <summary>
+        /// Externally added settings.
+        /// </summary>
+        IReadOnlyDictionary<string, object?> ExternalSettings { get; }
+        
         /// <summary>Gets the base URI of the Hubcon server.</summary>
         public Uri? BaseUri { get; }
 

@@ -88,5 +88,13 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// <param name="valueProvider">A delegate that resolves the header value from the <see cref="IServiceProvider"/> at runtime.</param>
         /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator AddHeaderProvider(string key, Func<IServiceProvider, string> valueProvider);
+        
+        /// <summary>
+        /// Adds a new setting to the module's internal configurations, which is exposed to the used transports.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
+        IOperationConfigurator AddSetting(string key, object? value);
     }
 }

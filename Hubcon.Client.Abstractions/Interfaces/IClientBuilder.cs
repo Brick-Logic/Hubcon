@@ -109,6 +109,13 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// <summary>Gets the collection of dynamic header providers.</summary>
         Dictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; }
 
+        /// <summary>
+        /// Adds a setting to the framework.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        void AddSetting(string key, object? value);
+
         #region Client Generation & Management
         /// <summary>
         /// Resolves or creates a strongly-typed proxy instance for a service contract.

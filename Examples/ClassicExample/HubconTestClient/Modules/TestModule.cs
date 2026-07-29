@@ -21,15 +21,18 @@ namespace HubconTestClient.Modules
             server.AllowRemoteCancellation();
             server.RequirePongResponse(false);
             server.ScaleMessageProcessors(12);
+            server.AddSetting("", new object());
             //server.AddHeaderProvider("key", x => "value");
 
             //server.DisableAllLimiters();
 
             server.Implements<IUserContract>(contractConfigurator =>
             {
+                contractConfigurator.AddSetting("", new object());
                 //contractConfigurator.AddHeaderProvider("key", x => "value2");
                 contractConfigurator
                     .ForOperation(x => x.GetTemperatureFromServer(default!, default!))
+                    .AddSetting("", new object())
                     .AddHook(HookType.OnSend, async ctx => { /*some operation logging or notification*/ })
                     .AddHook(HookType.OnAfterSend, async ctx => { /*some operation logging or notification*/ })
                     .AddHook(HookType.OnResponse, async ctx => { /*some operation logging or notification*/ })

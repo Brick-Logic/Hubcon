@@ -17,6 +17,11 @@ namespace Hubcon.Shared.Abstractions.Interfaces
     public interface IOperationOptions
     {
         /// <summary>
+        /// Externally added settings.
+        /// </summary>
+        public IReadOnlyDictionary<string, object?> ExternalSettings { get; }
+        
+        /// <summary>
         /// Gets the resolved transport protocol (WebSocket/HTTP) for this specific operation.
         /// If null, the operation inherits the transport from the contract or global settings.
         /// </summary>
@@ -73,7 +78,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// Gets a dictionary of dynamic header providers that resolve values at runtime 
         /// specifically for this operation's requests.
         /// </summary>
-        Dictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; }
+        IReadOnlyDictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; }
 
         /// <summary>
         /// Asynchronously triggers a specific lifecycle hook for the given invocation context.

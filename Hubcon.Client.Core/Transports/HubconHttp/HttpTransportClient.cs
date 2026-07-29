@@ -28,6 +28,7 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
             StringContent? content = null;
             HttpRequestMessage? httpRequest = null;
             HttpResponseMessage? response = null;
+
             try
             {
                 var url = "";

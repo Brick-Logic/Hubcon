@@ -393,5 +393,11 @@ namespace Hubcon.Client.Builder
             builder.AllowRemoteCancellation(true); 
             return this;
         }
+        
+        public IServerModuleConfiguration AddSetting(string key, object? value)
+        {
+            builder.AddSetting(key, value);
+            return this;
+        }
     }
 }

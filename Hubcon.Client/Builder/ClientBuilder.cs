@@ -38,6 +38,9 @@ namespace Hubcon.Client.Builder
 
         public string ServerModuleName { get; }
 
+        readonly ConcurrentDictionary<string, object?> _externalSettings = new();
+        public IReadOnlyDictionary<string, object?> ExternalSettings => _externalSettings;
+        
         private ConcurrentDictionary<Type, IContractOptions> _contractOptions { get; } = new ConcurrentDictionary<Type, IContractOptions>();
         private ConcurrentDictionary<InterceptorType, Func<IInvocationContext, Task>> _interceptors = new ConcurrentDictionary<InterceptorType, Func<IInvocationContext, Task>>();
         private readonly ConcurrentDictionary<Type, object> _clients = new ConcurrentDictionary<Type, object>();
@@ -165,6 +168,18 @@ namespace Hubcon.Client.Builder
 
         public Dictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; } = new();
         public bool RemoteCancellationIsAllowed { get; set; }
+
+        public void AddSetting(string key, object? value)
+        {
+            if(_externalSettings.TryGetValue(key, out var result))
+            {
+                _externalSettings.TryUpdate(key, value, result);
+            }
+            else
+            {
+                _externalSettings.TryAdd(key, value);
+            }
+        }
 
         public T GetOrCreateClient<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(IServiceProvider services, bool useCached = true) where T : IControllerContract
         {

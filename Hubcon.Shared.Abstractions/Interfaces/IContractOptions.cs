@@ -16,6 +16,11 @@ namespace Hubcon.Shared.Abstractions.Interfaces
     public interface IContractOptions
     {
         /// <summary>
+        /// Externally added settings.
+        /// </summary>
+        public IReadOnlyDictionary<string, object?> ExternalSettings { get; }
+        
+        /// <summary>
         /// Gets the <see cref="Type"/> of the service contract interface.
         /// </summary>
         Type ContractType { get; }
@@ -24,7 +29,7 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// Gets a thread-safe dictionary containing specialized options for 
         /// individual operations within this contract, keyed by method name.
         /// </summary>
-        ConcurrentDictionary<string, IOperationOptions> OperationOptions { get; }
+        IReadOnlyDictionary<string, IOperationOptions> OperationOptions { get; }
 
         /// <summary>
         /// Gets the collection of registered lifecycle hooks (e.g., Pre-Invocation, Post-Invocation) 
@@ -68,6 +73,6 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// <summary>
         /// Gets a dictionary of dynamic header providers that are specific to this contract's operations.
         /// </summary>
-        Dictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; }
+        IReadOnlyDictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; }
     }
 }

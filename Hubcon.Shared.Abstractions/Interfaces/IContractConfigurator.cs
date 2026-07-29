@@ -81,5 +81,13 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// <param name="expression"></param>
         /// <returns></returns>
         IOperationConfigurator ForOperation<TDelegate>(System.Linq.Expressions.Expression<Func<T, TDelegate>> expression);
+        
+        /// <summary>
+        /// Adds a new setting to the module's internal configurations, which is exposed to the used transports.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns>The current instance of <see cref="IContractConfigurator{T}"/> for method chaining.</returns>
+        IContractConfigurator<T> AddSetting(string key, object? value);
     }
 }
