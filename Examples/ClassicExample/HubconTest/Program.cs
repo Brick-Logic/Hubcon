@@ -113,7 +113,6 @@ namespace HubconTest
                             .AddSetting("", new object())
                             .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
                             .EnableWebsocketsLogging()  
-                            .DisableWebsocketPing()
                             .AllowRemoteTokenCancellation();
                 });
                 

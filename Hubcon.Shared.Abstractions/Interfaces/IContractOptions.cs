@@ -24,6 +24,11 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// Gets the <see cref="Type"/> of the service contract interface.
         /// </summary>
         Type ContractType { get; }
+        
+        /// <summary>
+        /// Determines if tracing is enabled.
+        /// </summary>
+        public bool? TracingEnabled { get; }
 
         /// <summary>
         /// Gets a thread-safe dictionary containing specialized options for 

@@ -15,13 +15,13 @@ namespace HubconTestClient.Modules
             server.WithBaseUrl("http://localhost:5000");
 
             server.EnableWebsocketAutoReconnect();
-            server.GlobalLimit(200000000);
+            server.GlobalLimit(0);
             server.EnableLogging();
             server.DisableAllLimiters();
             server.AllowRemoteCancellation();
-            server.RequirePongResponse(false);
-            server.ScaleMessageProcessors(12);
+            server.ScaleMessageProcessors(6);
             server.AddSetting("", new object());
+            server.AddTracing();
             //server.AddHeaderProvider("key", x => "value");
 
             //server.DisableAllLimiters();
@@ -50,7 +50,7 @@ namespace HubconTestClient.Modules
             });
 
             server.Implements<ISecondTestContract>();
-
+            
             server.ConfigureWebsocketClient((x, services) =>
             {
                 x.SetBuffer(4 * 1024, 4 * 1024);

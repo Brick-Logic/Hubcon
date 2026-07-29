@@ -1,6 +1,7 @@
 ﻿#pragma warning disable CS1591
 using Hubcon.Shared.Core.Websockets.Models;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
@@ -10,32 +11,6 @@ using System.Text.Json.Serialization;
 
 namespace Hubcon.Shared.Core.Websockets.Messages.Generic
 {
-    public static class MessageFactory<T> where T : BaseMessage
-    {
-        private static readonly Func<ReadOnlyMemory<byte>, Guid?, MessageType?, T> _ctor;
-
-        static MessageFactory()
-        {
-            var bufferParam = Expression.Parameter(typeof(ReadOnlyMemory<byte>), "buffer");
-            var idParam = Expression.Parameter(typeof(Guid?), "id");
-            var typeParam = Expression.Parameter(typeof(MessageType?), "type");
-
-            var ctorInfo = typeof(T).GetConstructor(
-                new[] { typeof(ReadOnlyMemory<byte>), typeof(Guid?), typeof(MessageType?) }
-            );
-
-            if (ctorInfo == null)
-                throw new InvalidOperationException($"Constructor no encontrado en {typeof(T).Name}");
-
-            var newExpr = Expression.New(ctorInfo, bufferParam, idParam, typeParam);
-            _ctor = Expression
-                .Lambda<Func<ReadOnlyMemory<byte>, Guid?, MessageType?, T>>(newExpr, bufferParam, idParam, typeParam)
-                .Compile();
-        }
-
-        public static T Create(ReadOnlyMemory<byte> buffer, Guid? id = null, MessageType? type = null) => _ctor(buffer, id, type);
-    }
-
     public class BaseMessage : IDisposable
     {
         private readonly TrimmedMemoryOwner? _buffer;
@@ -43,23 +18,28 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
         private Guid? _id;
         private string? _error;
         private MessageType? _type;
+        private RequestId? _requestId;
+        
 
         [JsonIgnore]
         public TrimmedMemoryOwner? Buffer => _buffer;
-
-        [JsonPropertyName("conn_id")]
-        public string ConnectionId => _connId ??= Extract<string>("conn_id")!;
+        
+        [JsonPropertyName("cid")]
+        public string ConnectionId => _connId ??= Extract<string>("cid")!;
 
         [JsonPropertyName("id")]
         public Guid Id => _id ??= Extract<Guid>("id");
 
-        [JsonPropertyName("type")]
-        public MessageType Type => _type ??= Extract<MessageType>("type");
+        [JsonPropertyName("t")]
+        public MessageType Type => _type ??= Extract<MessageType>("t");
 
-        [JsonPropertyName("error")]
+        [JsonPropertyName("rid")]
+        public RequestId RequestId => _requestId ??= Extract<RequestId>("rid");
+        
+        [JsonPropertyName("e")]
         public string? Error
         {
-            get => _error ??= Extract<string?>("error");
+            get => _error ??= Extract<string?>("e");
             set => _error = value;
         }
 
@@ -67,12 +47,13 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
         {
 
         }
-
+        
         public BaseMessage(BaseMessage baseMessage)
         {
             _type = baseMessage.Type;
             _id = baseMessage.Id;
             _buffer = baseMessage.Buffer;
+            _requestId = baseMessage._requestId;
             _connId = baseMessage.ConnectionId;
         }
 
@@ -82,7 +63,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             _type = type;
             _id = id;
             _error = error;
-            _connId= connectionId;
+            _connId = connectionId;
         }
 
         public BaseMessage(TrimmedMemoryOwner buffer, Guid? id = null, string? connectionId = null, MessageType? type = null)
@@ -133,6 +114,7 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
                     {
                         Type t when t == typeof(Guid) => (T)(object)reader.GetGuid(),
                         Type t when t == typeof(Guid[]) => (T)(object)ReadGuidArray(ref reader),
+                        Type t when t == typeof(RequestId) => (T)(object)ReadRequestId(ref reader),
                         Type t when t == typeof(bool) => (T)(object)reader.GetBoolean(),
                         Type t when t == typeof(string) => (T?)(object?)reader.GetString(),
                         Type t when t == typeof(MessageType) => (T)(object)ParseMessageType(reader.GetString()),
@@ -149,9 +131,43 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             }
             return default;
         }
+        
+        private static RequestId ReadRequestId(ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject) 
+                return RequestId.Empty;
 
-        // Método auxiliar AOT-Safe para evitar reflexión en Enums
-        private MessageType ParseMessageType(string? value) => value switch
+            ulong hi = 0;
+            ulong lo = 0;
+
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                    break;
+
+                if (reader.TokenType != JsonTokenType.PropertyName) continue;
+
+                if (reader.ValueTextEquals("hi"))
+                {
+                    reader.Read();
+                    hi = reader.GetUInt64();
+                }
+                else if (reader.ValueTextEquals("lo"))
+                {
+                    reader.Read();
+                    lo = reader.GetUInt64();
+                }
+                else
+                {
+                    reader.Read();
+                    reader.Skip();
+                }
+            }
+
+            return new RequestId(hi, lo);
+        }
+
+        private static MessageType ParseMessageType(string? value) => value switch
         {
             "connection_init" => MessageType.connection_init,
             "connection_ack" => MessageType.connection_ack,
@@ -180,11 +196,10 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
             "ingest_result" => MessageType.ingest_result,
             "cancel" => MessageType.cancel,
             "token_update" => MessageType.token_update,
-            "none" => MessageType.none,
             _ => MessageType.none
         };
 
-        protected static Guid[] ReadGuidArray(ref Utf8JsonReader reader)
+        private static Guid[] ReadGuidArray(ref Utf8JsonReader reader)
         {
             if (reader.TokenType != JsonTokenType.StartArray)
                 throw new JsonException("Expected StartArray token");
@@ -211,6 +226,9 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Generic
 
             return guids.ToArray();
         }
+
+        public void AddRequestId() => _requestId ??= RequestId.NewId();
+        public void AddRequestId(RequestId? requestId) => _requestId ??= requestId;
 
         public void Dispose()
         {

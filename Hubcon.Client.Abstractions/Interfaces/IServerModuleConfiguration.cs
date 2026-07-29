@@ -94,7 +94,7 @@ namespace Hubcon
         /// </summary>
         /// <param name="value">True to require pong response; otherwise, false.</param>
         /// <returns>The current instance of <see cref="IServerModuleConfiguration"/> for method chaining.</returns>
-        IServerModuleConfiguration RequirePongResponse(bool value);
+        IServerModuleConfiguration DisablePongResponseRequirement();
 
         /// <summary>
         /// Disabled. This feature has no effect.
@@ -341,5 +341,11 @@ namespace Hubcon
         /// <param name="value"></param>
         /// <returns>The current instance of <see cref="IServerModuleConfiguration"/> for method chaining.</returns>
         IServerModuleConfiguration AddSetting(string key, object? value);
+
+        /// <summary>
+        /// Determines if the operations should include tracing. This setting can be overriden by contract-level or operation-level settings.
+        /// </summary>
+        /// <returns>The current instance of <see cref="IServerModuleConfiguration"/> for method chaining.</returns>
+        IServerModuleConfiguration AddTracing(bool shouldTrace = true);
     }
 }

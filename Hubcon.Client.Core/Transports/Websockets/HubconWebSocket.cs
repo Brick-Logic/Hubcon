@@ -8,6 +8,7 @@ using Hubcon.Shared.Abstractions.Interfaces;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets;
+using Hubcon.Shared.Core.Websockets.Heartbeat;
 using Hubcon.Shared.Core.Websockets.Messages.Cancellation;
 using Hubcon.Shared.Core.Websockets.Messages.Connection;
 using Hubcon.Shared.Core.Websockets.Messages.Generic;
@@ -35,6 +36,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
         private readonly IClientOptions _clientOptions;
         private readonly IServiceProvider _serviceProvider;
 
+        private HeartbeatWatcher? _heartbeatWatcher;
+
         private readonly MessageSender _sender;
         private readonly MessageReceiver _receiver;
         private string connectionId = string.Empty;
@@ -58,6 +61,10 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
             _receiver = new MessageReceiver(this, context);
             _receiver.OnCloseReceived += async () => await DisconnectAsync();
+            
+            if(_clientOptions.WebsocketRequiresPong)
+                _receiver.Router.OnPongMessage += (_, _) => _heartbeatWatcher?.NotifyHeartbeat();
+            
             _sender = new MessageSender(this, context);
         }
 
@@ -110,7 +117,6 @@ namespace Hubcon.Client.Core.Transports.Websockets
             try
             {
                 _receiver.Router.BeginRequest(message.Id);
-
                 await _sender.SendMessageAsync(message, localCts.Token);
                 var response = await _receiver.Router.GetResponseAsync(message.Id, timeout, localCts.Token);
 
@@ -317,6 +323,9 @@ namespace Hubcon.Client.Core.Transports.Websockets
                 if (_loggingEnabled)
                     _logger?.LogInformation("Connection established.");
 
+                if(_clientOptions.WebsocketRequiresPong)
+                    _heartbeatWatcher = new HeartbeatWatcher(_clientOptions.WebsocketTimeout, async () => WebSocket.Abort());
+                
                 await _context.InterceptorManager.CallInterceptor(InterceptorType.OnConnected, _cts.Token);
             }
             catch
@@ -367,6 +376,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
             await _sender.DisposeAsync();
             await _receiver.DisposeAsync();
+            
+            if(_heartbeatWatcher != null) await _heartbeatWatcher.DisposeAsync();
 
             _cts.Dispose();
             WebSocket.Dispose();

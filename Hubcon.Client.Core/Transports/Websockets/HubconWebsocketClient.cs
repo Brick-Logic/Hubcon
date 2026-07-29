@@ -146,8 +146,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         {
             await EnsureConnectedAsync();
 
-            using var message = new OperationInvokeMessage(Guid.NewGuid(), _webSocket!.ConnectionId,
-                converter.SerializeToElement(request));
+            using var message = new OperationInvokeMessage(Guid.NewGuid(), _webSocket!.ConnectionId, converter.SerializeToElement(request));
             using var response = await _webSocket!.SendAndReceiveAsync(message, remoteCancelEnabled, cancellationToken);
 
             if (response?.Type != MessageType.operation_response)
@@ -310,7 +309,9 @@ namespace Hubcon.Client.Core.Transports.Websockets
             using var response = await _webSocket!.SendAndReceiveAsync(request, false, CancellationToken.None);
 
             if (response == null)
+            {
                 return HubconResponse.Fail<bool>("There was an unknown error or the request timed out.");
+            }
 
             var converted = new TokenUpdateResponseMessage(response);
             var result = HubconResponse.OkT(converted.Result, converted.Message);

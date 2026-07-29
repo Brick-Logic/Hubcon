@@ -16,6 +16,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public IServiceProvider RequestServices { get; init; } = default!;
         public IResponse Response { get; set; } = default!;
         public ResultHandlerDelegate ResultHandler { get; internal set; }
+        public RequestId RequestId { get; init; }
         public ClaimsPrincipal? User { get; set; }
         public string OperationName { get; init; } = string.Empty;
         public IDictionary<string, object> Items { get; } = new Dictionary<string, object>();

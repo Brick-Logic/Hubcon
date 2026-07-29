@@ -30,15 +30,11 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
     public sealed class MessageRouter : IMessageRouter, IAsyncDisposable
     {
         private volatile int _disposed;
-
-        /// <summary>
-        /// An event that's raised when the message router enters in an error state.
-        /// </summary>
+        
+        /// <inheritdoc/>
         public event EventHandler<Exception>? OnError;
 
-        /// <summary>
-        /// An event that's raised when the message router receives a pong message.
-        /// </summary>
+        /// <inheritdoc/>
         public event EventHandler<PongMessage>? OnPongMessage;
 
         private readonly IHubconWebSocket _webSocketClient;
@@ -143,10 +139,9 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
             IOperationOptions operationOptions,
             Action? onFinishedCallback = null)
         {
-            var payload = new StreamInitMessage(id, connectionId, _converter.SerializeToElement(request));
-            return (_ingests.GetOrAdd(payload.Id, _ => new IngestSession<T>(_webSocketClient, connectionId, _context, request, operationOptions, () =>
+            return (_ingests.GetOrAdd(id, _ => new IngestSession<T>(_webSocketClient, connectionId, _context, request, operationOptions, () =>
             {
-                _ingests.TryRemove(payload.Id, out var _);
+                _ingests.TryRemove(id, out var _);
                 onFinishedCallback?.Invoke();
             })) as IngestSession<T>)!;
         }

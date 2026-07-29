@@ -1,17 +1,21 @@
 ﻿#pragma warning disable CS1591
 using Hubcon.Client.Abstractions.Interfaces;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Hubcon.Shared.Abstractions.Interfaces;
 
 
 namespace Hubcon.Client.Integration.Client
 {
     public sealed class HubconClient : IHubconClient
     {
+        private static readonly ConcurrentDictionary<IOperationOptions, bool> _shouldTrace = new();
+        
         public async ValueTask SendAsync<T>(
             IOperationRequest request,
             IClientOperationContext context,
@@ -21,6 +25,10 @@ namespace Hubcon.Client.Integration.Client
             {
                 await context.AcquireRateLimiter();
 
+                var tracingEnabled = _shouldTrace.GetOrAdd(context.OperationOptions, _ => context.OperationOptions.TracingEnabled ?? context.ContractOptions.TracingEnabled ?? context.ClientOptions.TracingEnabled ?? false);
+                if(tracingEnabled) 
+                    HubconContext.Current.AddTracing();
+                
                 var authManager = WrappedContext.CurrentWrapped.ShouldCheckAuth ? context.AuthenticationManagerFactory?.Invoke() : null;
                 if (authManager != null && context.RequiresAuthentication && !authManager.IsSessionActive && authManager.ShouldRefreshSession)
                 {
@@ -75,6 +83,11 @@ namespace Hubcon.Client.Integration.Client
             try
             {
                 await context.AcquireRateLimiter();
+                
+                var tracingEnabled = _shouldTrace.GetOrAdd(context.OperationOptions, _ => context.OperationOptions.TracingEnabled ?? context.ContractOptions.TracingEnabled ?? context.ClientOptions.TracingEnabled ?? false);
+                if(tracingEnabled) 
+                    HubconContext.Current.AddTracing();
+                
                 await context.CallValidationHooks();
 
                 var authManager = WrappedContext.CurrentWrapped.ShouldCheckAuth ? context.AuthenticationManagerFactory?.Invoke() : null;
@@ -127,6 +140,11 @@ namespace Hubcon.Client.Integration.Client
             try
             {
                 await context.AcquireRateLimiter();
+                
+                var tracingEnabled = _shouldTrace.GetOrAdd(context.OperationOptions, _ => context.OperationOptions.TracingEnabled ?? context.ContractOptions.TracingEnabled ?? context.ClientOptions.TracingEnabled ?? false);
+                if(tracingEnabled) 
+                    HubconContext.Current.AddTracing();
+                
                 await context.CallValidationHooks();
 
                 var authManager = WrappedContext.CurrentWrapped.ShouldCheckAuth ? context.AuthenticationManagerFactory?.Invoke() : null;
@@ -172,6 +190,11 @@ namespace Hubcon.Client.Integration.Client
             try
             {
                 await context.AcquireRateLimiter();
+                
+                var tracingEnabled = _shouldTrace.GetOrAdd(context.OperationOptions, _ => context.OperationOptions.TracingEnabled ?? context.ContractOptions.TracingEnabled ?? context.ClientOptions.TracingEnabled ?? false);
+                if(tracingEnabled) 
+                    HubconContext.Current.AddTracing();
+                
                 await context.CallValidationHooks();
 
                 var authManager = WrappedContext.CurrentWrapped.ShouldCheckAuth ? context.AuthenticationManagerFactory?.Invoke() : null;

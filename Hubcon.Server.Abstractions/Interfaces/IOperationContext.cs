@@ -48,5 +48,8 @@ namespace Hubcon
 
         /// <summary>Handles the pipeline result according to the expected output.</summary>
         ResultHandlerDelegate ResultHandler { get; }
+        
+        /// <summary>The request's correlation ID for the tracing.</summary>
+        RequestId RequestId { get; }
     }
 }

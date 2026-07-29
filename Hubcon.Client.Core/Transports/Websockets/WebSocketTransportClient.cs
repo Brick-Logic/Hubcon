@@ -81,7 +81,6 @@ namespace Hubcon.Client.Core.Transports.Websockets
                     state.context.ExpectsHubconResponse, 
                     state.cancellationToken), 
                 (request, context, cancellationToken));
-
             
             await context.HandleResponse<T>(response);
         }

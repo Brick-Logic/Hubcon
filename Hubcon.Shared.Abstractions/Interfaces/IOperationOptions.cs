@@ -26,6 +26,11 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// If null, the operation inherits the transport from the contract or global settings.
         /// </summary>
         HubconTransportAttribute? TransportType { get; }
+        
+        /// <summary>
+        /// Determines if tracing is enabled.
+        /// </summary>
+        public bool? TracingEnabled { get; }
 
         /// <summary>
         /// Gets the reflection metadata for the specific method or property this operation represents.

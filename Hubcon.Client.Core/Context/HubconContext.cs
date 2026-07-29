@@ -331,6 +331,11 @@ namespace Hubcon.Shared.Core.Context
         }
 
         /// <summary>
+        /// The ID of the request used for tracing.
+        /// </summary>
+        public RequestId? CurrentRequestId { get; private set; }
+
+        /// <summary>
         /// Gets the service provider.
         /// </summary>
         public IServiceProvider Services { get; private set; }
@@ -388,6 +393,22 @@ namespace Hubcon.Shared.Core.Context
         {
             Exception ??= ex;
             IsSuccess = false;
+        }
+        
+        /// <summary>
+        /// Allows adding a request id to the ongoing operation.
+        /// </summary>
+        public void AddTracing()
+        {
+            CurrentRequestId ??= RequestId.NewId();
+        }
+
+        /// <summary>
+        /// Allows adding a request id to the ongoing operation.
+        /// </summary>
+        public void AddTracing(RequestId requestId)
+        {
+            CurrentRequestId ??= requestId;
         }
     }
 }

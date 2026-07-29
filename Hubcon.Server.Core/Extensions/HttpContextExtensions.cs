@@ -13,6 +13,40 @@ namespace Hubcon.Server.Core.Extensions
         {
             return await ReadBodyAsJsonElementAsync(context);
         }
+        
+        public static RequestId GetOrCreateRequestId(this HttpContext context)
+        {
+            var headers = context.Request.Headers;
+
+            // Try reading W3C Trace Context ("traceparent")
+            if (headers.TryGetValue("traceparent", out var traceparent) && traceparent.Count > 0)
+            {
+                string? headerValue = traceparent[0];
+                if (!string.IsNullOrEmpty(headerValue))
+                {
+                    return RequestId.ParseHeader(headerValue.AsSpan());
+                }
+            }
+
+            // Try X-Request-ID
+            if (headers.TryGetValue("X-Request-ID", out var requestIdHeader) && requestIdHeader.Count > 0)
+            {
+                string? headerValue = requestIdHeader[0];
+                if (!string.IsNullOrEmpty(headerValue))
+                {
+                    return RequestId.ParseHeader(headerValue.AsSpan());
+                }
+            }
+
+            // Fallback: use TraceIdentifier from ASP.NET
+            if (!string.IsNullOrEmpty(context.TraceIdentifier))
+            {
+                return RequestId.ParseHeader(context.TraceIdentifier.AsSpan());
+            }
+
+            // Or generate a new one
+            return RequestId.NewId();
+        }
 
         public static async Task<JsonReadResult> ReadBodyAsJsonElementAsync(HttpContext context)
         {

@@ -30,7 +30,7 @@ namespace Hubcon.Client.Builder
         public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; set; }
         public Action<HttpClient, IServiceProvider>? HttpClientOptions { get; set; }
         public bool UseSecureConnection { get; set; } = true;
-        public TimeSpan WebsocketPingInterval { get; set; } = TimeSpan.FromSeconds(15);
+        public TimeSpan WebsocketPingInterval { get; set; } = TimeSpan.FromSeconds(10);
         public bool WebsocketRequiresPong { get; set; } = true;
         public int MessageProcessorsCount { get; set; } = 1;
         public TimeSpan WebsocketTimeout { get; set; } = TimeSpan.FromSeconds(30);
@@ -168,6 +168,8 @@ namespace Hubcon.Client.Builder
 
         public Dictionary<string, Func<IServiceProvider, string>> HeaderProviders { get; } = new();
         public bool RemoteCancellationIsAllowed { get; set; }
+        
+        public bool? TracingEnabled { get; private set; }
 
         public void AddSetting(string key, object? value)
         {
@@ -301,6 +303,11 @@ namespace Hubcon.Client.Builder
         public void AllowRemoteCancellation(bool allowed)
         {
             RemoteCancellationIsAllowed = allowed;
+        }
+
+        public void AddTracing(bool shouldTrace = true)
+        {
+            TracingEnabled ??= shouldTrace;
         }
     }
 

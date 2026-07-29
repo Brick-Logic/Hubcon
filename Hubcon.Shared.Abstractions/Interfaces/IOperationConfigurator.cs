@@ -96,5 +96,11 @@ namespace Hubcon.Shared.Abstractions.Interfaces
         /// <param name="value"></param>
         /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
         IOperationConfigurator AddSetting(string key, object? value);
+
+        /// <summary>
+        /// Determines if the operations should include tracing. This setting overrides contract and global level settings.
+        /// </summary>
+        /// <returns>The current <see cref="IOperationConfigurator"/> instance for method chaining.</returns>
+        IOperationConfigurator AddTracing(bool shouldTrace = true);
     }
 }

@@ -154,5 +154,11 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// <summary>Sets whether client-side cancellation should be transmitted to the server.</summary>
         void AllowRemoteCancellation(bool allowed);
         #endregion
+
+        /// <summary>
+        /// Adds tracing support for this client.
+        /// </summary>
+        /// <param name="shouldTrace"></param>
+        void AddTracing(bool shouldTrace = true);
     }
 }

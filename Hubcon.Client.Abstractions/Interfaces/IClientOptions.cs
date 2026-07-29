@@ -21,6 +21,11 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// </summary>
         IReadOnlyDictionary<string, object?> ExternalSettings { get; }
         
+        /// <summary>
+        /// Determines if tracing is enabled.
+        /// </summary>
+        public bool? TracingEnabled { get; }
+        
         /// <summary>Gets the base URI of the Hubcon server.</summary>
         public Uri? BaseUri { get; }
 

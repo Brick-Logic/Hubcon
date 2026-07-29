@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
+
 #pragma warning disable CS1591
 
 namespace Hubcon.Client.Core.Configurations
@@ -17,7 +18,7 @@ namespace Hubcon.Client.Core.Configurations
         public MemberInfo MemberInfo { get; }
 
         public MemberType MemberType { get; }
-        
+
         readonly ConcurrentDictionary<string, object?> _externalSettings = new();
         public IReadOnlyDictionary<string, object?> ExternalSettings => _externalSettings;
 
@@ -32,7 +33,9 @@ namespace Hubcon.Client.Core.Configurations
         public IReadOnlyDictionary<HookType, Func<IInvocationContext, Task>> Hooks => _hooks;
 
         private RateLimiter? _rateBucket;
-        public RateLimiter? RateBucket => _rateBucket ??= RateBucketOptions != null ? new TokenBucketRateLimiter(RateBucketOptions) : null;
+
+        public RateLimiter? RateBucket => _rateBucket ??=
+            RateBucketOptions != null ? new TokenBucketRateLimiter(RateBucketOptions) : null;
 
         private Func<RequestValidationContext, Task>? _validationHook;
 
@@ -40,17 +43,19 @@ namespace Hubcon.Client.Core.Configurations
         {
             MemberInfo = memberInfo;
             MemberType = memberInfo switch
-        {
-            MethodInfo => MemberType.Method,
-            PropertyInfo => MemberType.Property,
-            _ => throw new ArgumentException("Unsupported member type", nameof(memberInfo))
-        };
+            {
+                MethodInfo => MemberType.Method,
+                PropertyInfo => MemberType.Property,
+                _ => throw new ArgumentException("Unsupported member type", nameof(memberInfo))
+            };
         }
 
         public bool? RemoteCancellationIsAllowed { get; private set; }
 
         public bool? AuthIsEnabled { get; private set; }
 
+        public bool? TracingEnabled { get; private set; }
+        
         public IOperationConfigurator LimitPerSecond(int requestsPerSecond, bool rateLimiterIsShared = true)
         {
             var requestsPerSec = requestsPerSecond == 0 ? 9999999 : requestsPerSecond;
@@ -117,7 +122,8 @@ namespace Hubcon.Client.Core.Configurations
             return this;
         }
 
-        public Task CallValidationHook(IServiceProvider services, IOperationRequest request, CancellationToken cancellationToken)
+        public Task CallValidationHook(IServiceProvider services, IOperationRequest request,
+            CancellationToken cancellationToken)
         {
             if (_validationHook != null)
             {
@@ -147,7 +153,7 @@ namespace Hubcon.Client.Core.Configurations
 
         public IOperationConfigurator AddSetting(string key, object? value)
         {
-            if(_externalSettings.TryGetValue(key, out var result))
+            if (_externalSettings.TryGetValue(key, out var result))
             {
                 _externalSettings.TryUpdate(key, value, result);
             }
@@ -156,6 +162,12 @@ namespace Hubcon.Client.Core.Configurations
                 _externalSettings.TryAdd(key, value);
             }
 
+            return this;
+        }
+
+        public IOperationConfigurator AddTracing(bool shouldTrace = true)
+        {
+            TracingEnabled ??= shouldTrace;
             return this;
         }
     }

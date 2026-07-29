@@ -101,9 +101,9 @@ namespace Hubcon.Client.Builder
             return this;
         }
 
-        public IServerModuleConfiguration RequirePongResponse(bool value = true)
+        public IServerModuleConfiguration DisablePongResponseRequirement()
         {
-            builder.WebsocketRequiresPong = value;
+            builder.WebsocketRequiresPong = false;
             return this;
         }
 
@@ -397,6 +397,12 @@ namespace Hubcon.Client.Builder
         public IServerModuleConfiguration AddSetting(string key, object? value)
         {
             builder.AddSetting(key, value);
+            return this;
+        }
+
+        public IServerModuleConfiguration AddTracing(bool shouldTrace = true)
+        {
+            builder.AddTracing(shouldTrace);
             return this;
         }
     }

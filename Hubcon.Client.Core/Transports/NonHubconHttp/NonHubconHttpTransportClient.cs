@@ -46,6 +46,9 @@ namespace Hubcon.Client.Core.Transports.NonHubconHttp
                 foreach (var header in await context.GetHeaders(context.ScopedServiceProvider))
                     httpRequest.Headers.Add(header.Key, header.Value);
 
+                if(HubconContext.Current.CurrentRequestId is { } requestId)
+                    httpRequest.Headers.Add("X-Request-ID", requestId.ToString());
+                
                 if (content != null)
                 {
                     httpMethod.ConfigureHeaders(content);
@@ -105,6 +108,9 @@ namespace Hubcon.Client.Core.Transports.NonHubconHttp
                 foreach (var header in await context.GetHeaders(context.ScopedServiceProvider))
                     httpRequest.Headers.Add(header.Key, header.Value);
 
+                if(HubconContext.Current.CurrentRequestId is { } requestId)
+                    httpRequest.Headers.Add("X-Request-ID", requestId.ToString());
+                
                 if (content != null)
                 {
                     httpMethod.ConfigureHeaders(content);
@@ -174,6 +180,9 @@ namespace Hubcon.Client.Core.Transports.NonHubconHttp
                 foreach (var header in await context.GetHeaders(context.ScopedServiceProvider))
                     httpRequest.Headers.Add(header.Key, header.Value);
 
+                if(HubconContext.Current.CurrentRequestId is { } requestId)
+                    httpRequest.Headers.Add("X-Request-ID", requestId.ToString());
+                
                 if (content != null)
                 {
                     httpMethod.ConfigureHeaders(content);

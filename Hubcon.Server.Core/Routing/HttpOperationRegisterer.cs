@@ -17,6 +17,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
+using Hubcon.Server.Core.Extensions;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 #pragma warning disable CS1591
@@ -89,13 +90,14 @@ namespace Hubcon.Server.Core.Routing
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
+                        var requestId = context.GetOrCreateRequestId();
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName);
                         var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
-
+                        
                         var rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
                         var remoteAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
@@ -121,6 +123,7 @@ namespace Hubcon.Server.Core.Routing
                             transport,
                             services,
                             wrapper,
+                            requestId,
                             cancellationToken) as IHubconResponse;
 
                         if (res!.Failure)
@@ -139,6 +142,7 @@ namespace Hubcon.Server.Core.Routing
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
+                        var requestId = context.GetOrCreateRequestId();
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
@@ -171,6 +175,7 @@ namespace Hubcon.Server.Core.Routing
                             transport,
                             services,
                             wrapper,
+                            requestId,
                             cancellationToken) as IHubconResponse;
 
                         if (res!.Failure)
@@ -192,6 +197,7 @@ namespace Hubcon.Server.Core.Routing
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
+                        var requestId = context.GetOrCreateRequestId();
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
@@ -226,6 +232,7 @@ namespace Hubcon.Server.Core.Routing
                             transport,
                             services,
                             wrapper,
+                            requestId,
                             cancellationToken);
 
                         return res.GetOriginal();
@@ -239,6 +246,7 @@ namespace Hubcon.Server.Core.Routing
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
+                        var requestId = context.GetOrCreateRequestId();
 
                         if (context.Request.ContentLength > options.MaxHttpMessageSize)
                         {
@@ -270,6 +278,7 @@ namespace Hubcon.Server.Core.Routing
                             transport,
                             services,
                             wrapper,
+                            requestId,
                             cancellationToken);
 
                         return res.GetOriginal();
@@ -286,6 +295,7 @@ namespace Hubcon.Server.Core.Routing
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
+                        var requestId = context.GetOrCreateRequestId();
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName);
 
@@ -316,6 +326,7 @@ namespace Hubcon.Server.Core.Routing
                             transport,
                             services,
                             wrapper,
+                            requestId,
                             cancellationToken);
 
                         return res.GetOriginal();
@@ -328,8 +339,8 @@ namespace Hubcon.Server.Core.Routing
                     {
                         var context = invocationContext.HttpContext;
                         var services = context.RequestServices;
-                        var converter = services.GetRequiredService<IDynamicConverter>();
                         var cancellationToken = context.RequestAborted;
+                        var requestId = context.GetOrCreateRequestId();
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
                         mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
@@ -365,6 +376,7 @@ namespace Hubcon.Server.Core.Routing
                             transport,
                             services,
                             wrapper,
+                            requestId,
                             cancellationToken);
 
                         return res.GetOriginal();

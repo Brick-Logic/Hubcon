@@ -64,6 +64,9 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
 
                 foreach (var header in await context.GetHeaders(context.ScopedServiceProvider))
                     httpRequest.Headers.Add(header.Key, header.Value);
+                
+                if(HubconContext.Current.CurrentRequestId is { } requestId)
+                    httpRequest.Headers.Add("X-Request-ID", requestId.ToString());
 
                 if (content != null)
                     httpRequest.Content = content;
@@ -131,6 +134,9 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
                 foreach (var header in await context.GetHeaders(context.ScopedServiceProvider))
                     httpRequest.Headers.Add(header.Key, header.Value);
 
+                if(HubconContext.Current.CurrentRequestId is { } requestId)
+                    httpRequest.Headers.Add("X-Request-ID", requestId.ToString());
+                
                 if (content != null)
                     httpRequest.Content = content;
 
@@ -206,6 +212,9 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
 
                 foreach (var header in await context.GetHeaders(context.ScopedServiceProvider))
                     httpRequest.Headers.Add(header.Key, header.Value);
+                
+                if(HubconContext.Current.CurrentRequestId is { } requestId)
+                    httpRequest.Headers.Add("X-Request-ID", requestId.ToString());
 
                 if (content != null)
                     httpRequest.Content = content;
@@ -328,7 +337,6 @@ namespace Hubcon.Client.Core.Transports.HubconHttp
         {
             _httpClient = configuration.ClientOptions.HttpClientFactory.Invoke(configuration.ProxyServiceProvider);
             configuration.ClientOptions.HttpClientOptions?.Invoke(_httpClient, configuration.ProxyServiceProvider);
-            ;
         }
     }
 }

@@ -690,6 +690,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     scope.ServiceProvider,
                     sources,
                     null,
+                    ingestInitMessage.RequestId,
                     localCts.Token);
 
                 await context.Sender.SendAsync(new IngestInitAckMessage(ingestInitMessage.Id, context.ConnectionId));
@@ -780,6 +781,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     HubconTransportAttribute.GetDefault<WebSocketTransport>(),
                     scope.ServiceProvider,
                     null,
+                    operationInvokeMessage.RequestId,
                     localCts.Token);
 
                 if (!context.ConnectionIsClosed)
@@ -830,6 +832,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     HubconTransportAttribute.GetDefault<WebSocketTransport>(),
                     scope.ServiceProvider,
                     null,
+                    operationCallMessage.RequestId,
                     localCts.Token);
 
                 if (response.Failure)
@@ -905,6 +908,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     HubconTransportAttribute.GetDefault<WebSocketTransport>(),
                     scope.ServiceProvider,
                     null,
+                    streamInitMessage.RequestId,
                     localCts.Token);
 
                 if (streamResult.Failure)

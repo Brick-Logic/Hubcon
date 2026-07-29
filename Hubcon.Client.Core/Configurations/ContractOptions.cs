@@ -26,6 +26,9 @@ namespace Hubcon.Client.Core.Configurations
         public IReadOnlyDictionary<HookType, Func<IInvocationContext, Task>> Hooks => _hooks;
 
         private readonly ConcurrentDictionary<string, Func<IServiceProvider, string>> _headerProviders = new();
+        
+        public bool? TracingEnabled { get; private set; }
+        
         public IReadOnlyDictionary<string, Func<IServiceProvider, string>> HeaderProviders => _headerProviders; 
         
         public bool? RemoteCancellationIsAllowed { get; private set; }
@@ -68,6 +71,12 @@ namespace Hubcon.Client.Core.Configurations
                 _externalSettings.TryAdd(key, value);
             }
 
+            return this;
+        }
+
+        public IContractConfigurator<T> AddTracing(bool shouldTrace = true)
+        {
+            TracingEnabled ??= shouldTrace;
             return this;
         }
 

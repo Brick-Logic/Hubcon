@@ -10,6 +10,8 @@ using Hubcon.Client.Abstractions.Interfaces;
 using Hubcon.Client.Abstractions.Models;
 using Hubcon.Shared.Core.Extensions;
 using Hubcon.Shared.Core.Websockets.Messages.Generic;
+using Hubcon.Shared.Core.Websockets.Messages.Operation;
+using Hubcon.Shared.Core.Websockets.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -78,6 +80,8 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
         {
             Throw.IfEqual(_disposed, 1, "The message sender has already been disposed.");
             
+            message.AddRequestId(HubconContext.Current?.CurrentRequestId);
+            
             var pipe = new Pipe();
             var writer = new Utf8JsonWriter(pipe.Writer);
 
@@ -92,7 +96,8 @@ namespace Hubcon.Client.Core.Transports.Websockets.MessageHandlers
             var bytes = buffer.ToArray();
             await pipe.Reader.CompleteAsync();
 
-            await _sendChannel.Writer.WriteAsync(new ByteMessage(bytes, connectionId, cancellationToken), cancellationToken);
+            var bytesToSend = new ByteMessage(bytes, connectionId, cancellationToken);
+            await _sendChannel.Writer.WriteAsync(bytesToSend, cancellationToken);
         }
 
         private async Task SendLoopAsync()

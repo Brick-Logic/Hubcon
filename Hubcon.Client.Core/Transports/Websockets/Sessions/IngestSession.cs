@@ -86,7 +86,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
             _clientOptions = context.ClientOptions;
             _operationOptions = operationOptions;
             _onFinishedCallback = onFinishedCallback;
-
+            
             _sourceTasks = new List<Task>();
             _initAckTcs = new TaskCompletionSource<bool>();
             _generalTcs = new TaskCompletionSource<IngestResultMessage>();
@@ -174,7 +174,7 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
                                     break;
 
                                 var message = new IngestDataMessage(source.Key, _connectionId, item);
-
+                                
                                 try
                                 {
                                     await RateLimiterHelper.AcquireAsync(_clientOptions, _clientOptions?.RateBucket, _clientOptions?.IngestRateBucket, limiter);
@@ -205,6 +205,8 @@ namespace Hubcon.Client.Core.Transports.Websockets.Sessions
 
                 var ingestRequest = new IngestInitMessage(_initialAckId, _connectionId, _sources.Keys.ToArray(), _converter.SerializeToElement(_operationRequest), default);
 
+                ingestRequest.AddRequestId(HubconContext.Current?.CurrentRequestId);
+                
                 try
                 {
                     var ack = await _webSocketClient.SendAndReceiveAsync(ingestRequest, false, cancellationToken);

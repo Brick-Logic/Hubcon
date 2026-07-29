@@ -17,7 +17,7 @@ namespace Hubcon.Client.Abstractions.Interfaces
         void TryComplete();
     }
 
-    public interface IStreamSession<T> : IStreamSession
+    public interface IStreamSession<out T> : IStreamSession
     {
         BaseMessage Payload { get; }
 
