@@ -1,4 +1,5 @@
-﻿using Hubcon.Server.Abstractions.Interfaces;
+﻿using System.Collections.Concurrent;
+using Hubcon.Server.Abstractions.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.IdentityModel.Tokens;
 using System.ComponentModel;
@@ -42,6 +43,7 @@ namespace Hubcon.Server.Core.Configuration
         private Dictionary<Type, HubconTransportAttribute> defaultTransportAttributes = new Dictionary<Type, HubconTransportAttribute>();
         private TokenBucketRateLimiterOptions? _globalRateLimiterOptions;
         private readonly Dictionary<HubconTransportAttribute, Type> _authHandlerTypes = new Dictionary<HubconTransportAttribute, Type>();
+        private readonly ConcurrentDictionary<string, object?> _externalSettings = new();
 
 
         private Func<TokenBucketRateLimiterOptions>? websocketReaderRateLimiter = null;
@@ -167,6 +169,8 @@ namespace Hubcon.Server.Core.Configuration
 
         /// <inheritdoc/>
         public IReadOnlyDictionary<HubconTransportAttribute, Type> AuthHandlerTypes => _authHandlerTypes;
+
+        public IReadOnlyDictionary<string, object?> ExternalSettings => _externalSettings;
 
         /// <inheritdoc/>
         public TokenBucketRateLimiterOptions GlobalRateLimiterOptions => _globalRateLimiterOptions ?? new TokenBucketRateLimiterOptions()
@@ -481,6 +485,22 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions SetTokenValidationParameters(TokenValidationParameters tokenValidationParameters)
         {
             this.tokenValidationParameters ??= tokenValidationParameters;
+            return this;
+        }
+
+        
+        /// <inheritdoc/>
+        public ICoreServerOptions AddSetting(string key, object? value)
+        {
+            if(_externalSettings.TryGetValue(key, out var result))
+            {
+                _externalSettings.TryUpdate(key, value, result);
+            }
+            else
+            {
+                _externalSettings.TryAdd(key, value);
+            }
+
             return this;
         }
     }

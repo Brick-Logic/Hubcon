@@ -110,6 +110,7 @@ namespace HubconTest
                         config
                             //.SetMaxConcurrentOperations(999999)
                             .SetGlobalRateLimiter(999999)
+                            .AddSetting("", new object())
                             .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
                             .EnableWebsocketsLogging()  
                             .DisableWebsocketPing()

@@ -296,6 +296,14 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// <param name="tokenValidationParameters">The <see cref="TokenValidationParameters"/> containing the rules for signature, issuer, and lifetime validation.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance for fluent configuration.</returns>
         ICoreServerOptions SetTokenValidationParameters(TokenValidationParameters tokenValidationParameters);
+
+        /// <summary>
+        /// Adds a new setting to the server, accessible from the <see cref="IInternalServerOptions"/> service.
+        /// </summary>
+        /// <param name="key">The key identifier for the setting.</param>
+        /// <param name="value">The value of the setting.</param>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance for fluent configuration.</returns>
+        ICoreServerOptions AddSetting(string key, object? value);
     }
 
     /// <summary>
@@ -504,5 +512,13 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Registered validation token parameters for authentication.
         /// </summary>
         TokenValidationParameters? TokenValidationParameters { get; }
+        
+        /// <summary>
+        /// Gets a read-only dictionary for external settings.
+        /// </summary>
+        /// <remarks>
+        /// Use this property to transport server settings to any part of the application.
+        /// </remarks>
+        IReadOnlyDictionary<string, object?> ExternalSettings { get; }
     }
 }
