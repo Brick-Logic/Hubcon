@@ -22,7 +22,7 @@ namespace HubconTest.ContractHandlers
             logger.LogInformation("CreateUser called.");
         }
 
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken)
         {
             return Task.FromResult(Random.Shared.Next(-10, 50));
@@ -255,6 +255,7 @@ namespace HubconTest.ContractHandlers
             logger.LogInformation("Ingest terminado exitosamente");
         }
 
+        [Authorize(Roles = "Manager")]
         public async Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default)
         {
             var response = HubconResponse.OkT(input);

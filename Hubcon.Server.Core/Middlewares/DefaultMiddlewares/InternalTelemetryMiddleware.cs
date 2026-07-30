@@ -1,212 +1,143 @@
-﻿using Hubcon.Server.Abstractions.Delegates;
+﻿using System.Collections.Concurrent;
+using System.Net.Mime;
+using Hubcon.Server.Abstractions.Delegates;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Telemetry;
 using Hubcon.Shared.Abstractions.Interfaces;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Hubcon.Core.Telemetry;
+using Hubcon.Shared.Abstractions.Models;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
-    /// <summary>
-    /// A special counter slot for telemetry.
-    /// </summary>
-    [StructLayout(LayoutKind.Explicit, Size = 64)] // Evita False Sharing
-    public struct CounterSlot
-    {
-        /// <summary>
-        /// Counter value.
-        /// </summary>
-        [FieldOffset(0)] public long Value;
-    }
-
-    /// <summary>
-    /// A specialized counter for telemetry.
-    /// </summary>
-    public class StripedCounter
-    {
-        private readonly CounterSlot[] _slots = new CounterSlot[Environment.ProcessorCount];
-
-        /// <summary>
-        /// Increment the counter.
-        /// </summary>
-        /// <param name="count"></param>
-        public void Add(int count)
-        {
-            int slotIdx = Thread.GetCurrentProcessorId() % _slots.Length;
-            Interlocked.Add(ref _slots[slotIdx].Value, count);
-        }
-
-        /// <summary>
-        /// Extracts the value and resets the counter.
-        /// </summary>
-        /// <returns></returns>
-        public long GetAndReset()
-        {
-            long total = 0;
-            for (int i = 0; i < _slots.Length; i++)
-            {
-                // Interlocked.Exchange extrae el valor actual y pone 0 de forma atómica
-                total += Interlocked.Exchange(ref _slots[i].Value, 0);
-            }
-            return total;
-        }
-    }
-
-    /// <inheritdoc/>
     public class InternalTelemetryMiddleware : ITelemetryMiddleware
     {
-        private int currentSubscriptionCount = 0;
-        private int currentStreamingsCount = 0;
-        private int currentIngestCount = 0;
+        private readonly StripedCounter[] _flatCounters;
+        private readonly int _numOperations;
+        private readonly TelemetryChannelPipeline<IOperationBlueprint> _pipeline;
+        private readonly OpenTelemetryBatchWorker _batchWorker;
 
-        private int currentWebSocketsRequestsCount = 0;
-
-        private int currentWebSocketsCallRequestsCount = 0;
-        private int currentWebSocketsRoundTripRequestsCount = 0;
-
-        private int currentHttpRequestsCount = 0;
-
-        private int currentHttpCallRequestsCount = 0;
-        private int currentHttpRoundTripRequestsCount = 0;
-
-        private int currentRequestsPerSecond = 0;
-        private int currentHttpRequestsPerSecond = 0;
-        private int requestAccumulator = 0;
-
-        private int currentSubscriptionPerSecond = 0;
-        private int currentStreamingsPerSecond = 0;
-        private int currentIngestPerSecond = 0;
-        private int currentWebSocketsRequestsPerSecond = 0;
-        private int currentWebSocketsCallRequestsPerSecond = 0;
-        private int currentWebSocketsRoundTripRequestsPerSecond = 0;
-        private int currentHttpCallRequestsPerSecond = 0;
-        private int currentHttpRoundTripRequestsPerSecond = 0;
-
-        /// <summary>
-        /// Default middleware constructor.
-        /// </summary>
-        /// <param name="telemetryProvider"></param>
         public InternalTelemetryMiddleware(ITelemetryProvider telemetryProvider)
         {
-            _matrix = new StripedCounter[5, 2];
+            _pipeline = new TelemetryChannelPipeline<IOperationBlueprint>();
+            _batchWorker = new OpenTelemetryBatchWorker(_pipeline);
 
-            for (int i = 0; i < 5; i++)
+            var transportsCount = HubconTransportAttribute.GetTransportsCount();
+            _numOperations = Enum.GetValuesAsUnderlyingType<OperationKind>().Length;
+
+            _flatCounters = new StripedCounter[transportsCount * _numOperations];
+            for (var i = 0; i < _flatCounters.Length; i++)
             {
-                for (int j = 0; j < 2; j++)
-                {
-                    _matrix[i, j] = new StripedCounter();
-                }
+                _flatCounters[i] = new StripedCounter();
             }
 
-            telemetryProvider.RegisterProvider(x => x.CurrentSubscriptionCount, () => currentSubscriptionCount);
-            telemetryProvider.RegisterProvider(x => x.CurrentStreamingsCount, () => currentStreamingsCount);
-            telemetryProvider.RegisterProvider(x => x.CurrentIngestCount, () => currentIngestCount);
-            telemetryProvider.RegisterProvider(x => x.CurrentWebSocketsRequestsCount, () => currentWebSocketsRequestsCount);
-            telemetryProvider.RegisterProvider(x => x.CurrentWebSocketsCallRequestsCount, () => currentWebSocketsCallRequestsCount);
-            telemetryProvider.RegisterProvider(x => x.CurrentWebSocketsRoundTripRequestsCount, () => currentWebSocketsRoundTripRequestsCount);
-            telemetryProvider.RegisterProvider(x => x.CurrentHttpCallRequestsCount, () => currentHttpCallRequestsCount);
-            telemetryProvider.RegisterProvider(x => x.CurrentHttpRoundTripRequestsCount, () => currentHttpRoundTripRequestsCount);
+            var transports = HubconTransportAttribute.GetAllTransports().Values;
 
-            telemetryProvider.RegisterProvider(x => x.CurrentRequestsPerSecond, () => currentRequestsPerSecond);
+            _ = StartRpsTimer(transports);
+            _ = _batchWorker.ExecuteAsync();
 
-            telemetryProvider.RegisterProvider(x => x.CurrentSubscriptionPerSecond, () => currentSubscriptionPerSecond);
-            telemetryProvider.RegisterProvider(x => x.CurrentStreamingsPerSecond, () => currentStreamingsPerSecond);
-            telemetryProvider.RegisterProvider(x => x.CurrentIngestPerSecond, () => currentIngestPerSecond);
-            telemetryProvider.RegisterProvider(x => x.CurrentWebSocketsRequestsPerSecond, () => currentWebSocketsRequestsPerSecond);
-            telemetryProvider.RegisterProvider(x => x.CurrentWebSocketsCallRequestsPerSecond, () => currentWebSocketsCallRequestsPerSecond);
-            telemetryProvider.RegisterProvider(x => x.CurrentWebSocketsRoundTripRequestsPerSecond, () => currentWebSocketsRoundTripRequestsPerSecond);
-
-
-            telemetryProvider.RegisterProvider(x => x.CurrentHttpRequestsPerSecond, () => currentHttpRequestsPerSecond);
-            telemetryProvider.RegisterProvider(x => x.CurrentHttpCallRequestsPerSecond, () => currentHttpCallRequestsPerSecond);
-            telemetryProvider.RegisterProvider(x => x.CurrentHttpRoundTripRequestsPerSecond, () => currentHttpRoundTripRequestsPerSecond);
-
-            _ = StartRpsTimer();
-
-            async Task StartRpsTimer()
+            async Task StartRpsTimer(IEnumerable<HubconTransportAttribute> transports)
             {
                 using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-
                 while (await timer.WaitForNextTickAsync())
                 {
-                    currentHttpCallRequestsPerSecond = (int)_matrix[0, 0].GetAndReset();
-                    currentHttpRoundTripRequestsPerSecond = (int)_matrix[1, 0].GetAndReset();
-                    currentHttpRequestsPerSecond = currentHttpCallRequestsPerSecond + currentHttpRoundTripRequestsPerSecond;
-
-                    currentWebSocketsCallRequestsPerSecond = (int)_matrix[0, 1].GetAndReset();
-                    currentWebSocketsRoundTripRequestsPerSecond = (int)_matrix[1, 1].GetAndReset();
-                    currentSubscriptionPerSecond = (int)_matrix[2, 1].GetAndReset();
-                    currentStreamingsPerSecond = (int)_matrix[3, 1].GetAndReset();
-                    currentIngestPerSecond = (int)_matrix[4, 1].GetAndReset();
-                    currentWebSocketsRequestsPerSecond = currentWebSocketsCallRequestsPerSecond + currentWebSocketsRoundTripRequestsPerSecond + currentSubscriptionPerSecond + currentStreamingsPerSecond + currentIngestPerSecond;
-
-                    currentRequestsPerSecond = currentHttpRequestsPerSecond + currentWebSocketsRequestsPerSecond;
-
-                    var data = new RequestsPerSecondSnapshot()
+                    var dict = new Dictionary<HubconTransportAttribute, Snapshot>();
+                    var operationsCount = Enum.GetValuesAsUnderlyingType<OperationKind>().Length;
+                    foreach (var transport in transports)
                     {
-                        SubscriptionsPerSecond = currentSubscriptionPerSecond,
-                        StreamingsPerSecond = currentStreamingsPerSecond,
-                        IngestsPerSecond = currentIngestPerSecond,
-                        WebSocketsRequestsPerSecond = currentWebSocketsRequestsPerSecond,
-                        WebSocketsCallRequestsPerSecond = currentWebSocketsCallRequestsPerSecond,
-                        WebSocketsRoundTripRequestsPerSecond = currentWebSocketsRoundTripRequestsPerSecond,
-                        HttpRequestsPerSecond = currentHttpRequestsPerSecond,
-                        HttpCallRequestsPerSecond = currentHttpCallRequestsPerSecond,
-                        HttpRoundTripRequestsPerSecond = currentHttpRoundTripRequestsPerSecond,
-                        RequestsPerSecond = currentRequestsPerSecond,
-                    };
+                        var globalSlotId = transport.TelemetryId * operationsCount;
 
+                        dict[transport] = new Snapshot()
+                        {
+                            Calls = _flatCounters[globalSlotId].GetAndReset(),
+                            Invokes = _flatCounters[globalSlotId + 1].GetAndReset(),
+                            StreamingsRequests = _flatCounters[globalSlotId + 2].GetAndReset(),
+                            IngestsRequests = _flatCounters[globalSlotId + 3].GetAndReset()
+                        };
+                        
+                    }
+                    
+                    var data = new RequestsPerSecondSnapshot(dict);
                     telemetryProvider.CallOnRequestsPerSecondUpdated(data);
                 }
             }
         }
 
-
-
-        private readonly StripedCounter[,] _matrix;
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ChangeCounts(int count, IOperationContext context)
+        private void IncrementCounter(int transportId, int opIdx)
         {
-            int protocolIdx = Unsafe.As<bool, byte>(ref Unsafe.AsRef(context.HttpContext.WebSockets.IsWebSocketRequest));
-            int opIdx = (int)context.Blueprint.Kind;
-            _matrix[opIdx, protocolIdx].Add(count);
-            //if (context.HttpContext!.WebSockets.IsWebSocketRequest)
-            //    Interlocked.Add(ref currentWebSocketsRequestsCount, count);
-            //else
-            //    Interlocked.Add(ref currentHttpRequestsCount, count);
-
-            //switch (context.Blueprint.Kind)
-            //{
-            //    case OperationKind.Subscription:
-            //        Interlocked.Add(ref currentSubscriptionCount, count);
-            //        break;
-            //    case OperationKind.Ingest:
-            //        Interlocked.Add(ref currentIngestCount, count);
-            //        break;
-            //    case OperationKind.CallMethod:
-            //        if (context.HttpContext!.WebSockets.IsWebSocketRequest)
-            //            Interlocked.Add(ref currentWebSocketsCallRequestsCount, count);
-            //        else
-            //            Interlocked.Add(ref currentHttpCallRequestsCount, count);
-            //        break;
-            //    case OperationKind.InvokeMethod:
-            //        if (context.HttpContext!.WebSockets.IsWebSocketRequest)
-            //            Interlocked.Add(ref currentWebSocketsRoundTripRequestsCount, count);
-            //        else
-            //            Interlocked.Add(ref currentHttpRoundTripRequestsCount, count);
-            //        break;
-            //    case OperationKind.Stream:
-            //        Interlocked.Add(ref currentStreamingsCount, count);
-            //        break;
-            //}
+            int index = (transportId * _numOperations) + opIdx;
+            _flatCounters[index].Add(1);
         }
 
         /// <inheritdoc/>
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
-            ChangeCounts(1, context);
-            await next();
+            long startTimestamp = Stopwatch.GetTimestamp();
+            var transportId = context.TransportType.TelemetryId;
+            var opKind = (ushort)context.Blueprint.Kind;
+
+            IncrementCounter(transportId, opKind);
+
+            byte status = 0;
+
+            try
+            {
+                await next();
+            }
+            catch (Exception ex)
+            {
+                status = 1; // 1 = Error
+                context.Exception = ex;
+            }
+            finally
+            {
+                long elapsedTicks = Stopwatch.GetElapsedTime(startTimestamp).Ticks;
+                
+                var traceEvent = new TraceEvent<IOperationBlueprint>(
+                    context.RequestId,
+                    context.Blueprint,
+                    context.TransportType,
+                    startTimestamp,
+                    elapsedTicks,
+                    status,
+                    context.Exception
+                );
+
+                _pipeline.Emit(in traceEvent);
+            }
+        }
+
+        [StructLayout(LayoutKind.Explicit, Size = 64)]
+        public struct CounterSlot
+        {
+            [FieldOffset(0)] public long Value;
+        }
+
+        public class StripedCounter
+        {
+            private readonly CounterSlot[] _slots = new CounterSlot[Environment.ProcessorCount];
+
+            public void Add(int count)
+            {
+                int slotIdx = Thread.GetCurrentProcessorId() % _slots.Length;
+                Interlocked.Add(ref _slots[slotIdx].Value, count);
+            }
+
+            public long GetAndReset()
+            {
+                long total = 0;
+                for (int i = 0; i < _slots.Length; i++)
+                {
+                    total += Interlocked.Exchange(ref _slots[i].Value, 0);
+                }
+
+                return total;
+            }
         }
     }
 }

@@ -12,7 +12,7 @@ namespace Hubcon
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Method | AttributeTargets.Property)]
     public abstract class HubconTransportAttribute : Attribute
     {
-        readonly static Dictionary<Type, HubconTransportAttribute> _defaultInstances = new();
+        static readonly Dictionary<Type, HubconTransportAttribute> _defaultInstances = new();
 
         /// <summary>
         /// Gets a default implementation for a Hubcon transport attribute and caches the result.
@@ -30,11 +30,33 @@ namespace Hubcon
 
             return (T)value;
         }
+        
+        /// <summary>
+        /// Gets the registered transport counts. The transports will only be registered on the server after they are used.
+        /// </summary>
+        /// <returns></returns>
+        public static IReadOnlyDictionary<Type, HubconTransportAttribute> GetAllTransports()
+        {
+            return _defaultInstances;
+        }
 
+        /// <summary>
+        /// Gets the registered transport counts. The transports will only be registered on the server after they are used.
+        /// </summary>
+        /// <returns></returns>
+        public static int GetTransportsCount()
+        {
+            return _defaultInstances.Count;
+        }
 
         /// <summary>
         /// The transport key used to identify the transport internally.
         /// </summary>
         public abstract string TransportKey { get; }
+        
+        /// <summary>
+        /// The ID used for high-speed telemetry.
+        /// </summary>
+        public abstract int TelemetryId { get; }
     }
 }

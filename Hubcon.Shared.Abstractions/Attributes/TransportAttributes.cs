@@ -13,6 +13,9 @@ namespace Hubcon
     {
         /// <inheritdoc/>
         public override string TransportKey => "Http";
+        
+        /// <inheritdoc/>
+        public override int TelemetryId => 0;
     }
 
     /// <summary>
@@ -23,6 +26,9 @@ namespace Hubcon
     {
         /// <inheritdoc/>
         public override string TransportKey => "WebSocket";
+        
+        /// <inheritdoc/>
+        public override int TelemetryId => 1;
     }
 
     /// <summary>
@@ -33,5 +39,8 @@ namespace Hubcon
     {
         /// <inheritdoc/>
         public override string TransportKey => "NonHubconHttp";
+        
+        /// <inheritdoc/>
+        public override int TelemetryId => 2;
     }
 }

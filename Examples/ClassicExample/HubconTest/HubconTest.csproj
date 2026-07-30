@@ -48,6 +48,8 @@
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
 		<PackageReference Include="Microsoft.ServiceFabric" Version="10.1.2493" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
+		<PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
+		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
 		<PackageReference Include="Scalar.AspNetCore" Version="2.0.34" />
 	</ItemGroup>
 

@@ -26,6 +26,11 @@ namespace Hubcon.Client.Core.Transports
             }
         }
 
+        public static int GetTransportsCount()
+        {
+            return _lookups.Count;
+        }
+
         public static IReadOnlyDictionary<Type, Type> GetMappings()
         {
             return _lookups.ToImmutableDictionary();

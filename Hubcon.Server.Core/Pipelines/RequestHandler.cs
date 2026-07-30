@@ -58,7 +58,7 @@ namespace Hubcon.Server.Core.Pipelines
             }
 
             IOperationContext context = BuildContext(request, blueprint!, PipelineResultHandlers.NoResultHandler,
-                wrappedRequest, requestId, cancellationToken);
+                wrappedRequest, requestId, transportAttribute, cancellationToken);
 
             var pipeline = blueprint!.PipelineBuilder.Build(request, context, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
@@ -77,7 +77,7 @@ namespace Hubcon.Server.Core.Pipelines
             }
 
             IOperationContext context = BuildContext(request, blueprint, PipelineResultHandlers.ResultHandler,
-                wrappedRequest, requestId, cancellationToken);
+                wrappedRequest, requestId, transportAttribute, cancellationToken);
 
             var pipeline = blueprint.PipelineBuilder.Build(request, context, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
@@ -94,7 +94,7 @@ namespace Hubcon.Server.Core.Pipelines
                 return HubconResponse.NotFound();
 
             IOperationContext context = BuildContext(request, blueprint, PipelineResultHandlers.NoResultHandler,
-                wrappedRequest, requestId, cancellationToken);
+                wrappedRequest, requestId, transportAttribute, cancellationToken);
 
             var pipeline = blueprint.PipelineBuilder.Build(request, context, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
@@ -110,7 +110,7 @@ namespace Hubcon.Server.Core.Pipelines
                 return HubconResponse.NotFound();
 
             IOperationContext context = BuildContext(request, blueprint, PipelineResultHandlers.StreamResultHandler,
-                wrappedRequest, requestId, cancellationToken);
+                wrappedRequest, requestId, transportAttribute, cancellationToken);
             var pipeline = blueprint.PipelineBuilder.Build(request, context, _serviceProvider);
             var pipelineTask = pipeline.Execute();
             await pipelineTask;
@@ -131,7 +131,7 @@ namespace Hubcon.Server.Core.Pipelines
                 return HubconResponse.NotFound();
 
             var context = BuildContext(request, blueprint, PipelineResultHandlers.WithResultHandler, wrappedRequest,
-                requestId, cancellationToken);
+                requestId, transportAttribute, cancellationToken);
             var pipeline = blueprint.PipelineBuilder.Build(request, context, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
 
@@ -186,7 +186,7 @@ namespace Hubcon.Server.Core.Pipelines
                 ? PipelineResultHandlers.WithResultHandler
                 : PipelineResultHandlers.NoResultHandler;
 
-            var context = BuildContext(request, blueprint, resultHandler, wrappedRequest, requestId, cancellationToken);
+            var context = BuildContext(request, blueprint, resultHandler, wrappedRequest, requestId, transportAttribute, cancellationToken);
 
             var pipeline = blueprint.PipelineBuilder.Build(request, context, _serviceProvider);
             var pipelineResult = await pipeline.Execute();
@@ -195,7 +195,7 @@ namespace Hubcon.Server.Core.Pipelines
         }
 
         private IOperationContext BuildContext(IOperationRequest request, IOperationBlueprint blueprint,
-            ResultHandlerDelegate resultHandler, IWrapper? wrappedRequest, RequestId requestId,
+            ResultHandlerDelegate resultHandler, IWrapper? wrappedRequest, RequestId requestId, HubconTransportAttribute transportAttribute,
             CancellationToken cancellationToken = default)
         {
             var context = new OperationContext()
@@ -207,6 +207,7 @@ namespace Hubcon.Server.Core.Pipelines
                 RequestId = requestId,
                 Request = request,
                 WrappedRequest = wrappedRequest,
+                TransportType = transportAttribute,
                 ResultHandler = resultHandler,
                 RequestAborted = cancellationToken
             };

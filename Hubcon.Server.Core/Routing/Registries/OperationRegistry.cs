@@ -250,7 +250,6 @@ namespace Hubcon.Server.Core.Routing.Registries
         public void MapTransport<T>(WebApplication app, Action<IReadOnlyDictionary<string, IOperationBlueprint>, WebApplication>? endpointRegisterer = null) where T : HubconTransportAttribute, new()
         {
             var transport = HubconTransportAttribute.GetDefault<T>();
-
             var tempCache = Build(transport);
             endpointRegisterer?.Invoke(tempCache, app);         
         }

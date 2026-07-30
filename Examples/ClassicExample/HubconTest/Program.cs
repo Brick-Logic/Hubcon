@@ -4,6 +4,10 @@ using Scalar.AspNetCore;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
+using Hubcon.Server.Core.Telemetry;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace HubconTest
 {
@@ -76,6 +80,19 @@ namespace HubconTest
             // });
             //
             
+            builder.Services.AddOpenTelemetry()
+                .ConfigureResource(resource => resource.AddService("Hubcon"))
+                .WithTracing(tracing =>
+                {
+                    tracing.AddSource(OpenTelemetryBatchWorker.HubconActivitySource.Name);
+                    tracing.SetSampler(new AlwaysOnSampler());
+                    tracing.AddOtlpExporter(options =>
+                    {
+                        options.Endpoint = new Uri("http://localhost:4317");
+                        options.Protocol = OtlpExportProtocol.Grpc;
+                    });
+                });
+
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
@@ -104,18 +121,18 @@ namespace HubconTest
                 serverOptions.AddTelemetry();
                 //serverOptions.AddConcurrencyLimiter();
                 serverOptions.UseTokenValidationParameters(tokenValidationParameters);
-                
+
                 serverOptions.ConfigureCore(config =>
                 {
-                        config
-                            //.SetMaxConcurrentOperations(999999)
-                            .SetGlobalRateLimiter(999999)
-                            .AddSetting("", new object())
-                            .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
-                            .EnableWebsocketsLogging()  
-                            .AllowRemoteTokenCancellation();
+                    config
+                        //.SetMaxConcurrentOperations(999999)
+                        .SetGlobalRateLimiter(999999)
+                        .AddSetting("", new object())
+                        .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
+                        .EnableWebsocketsLogging()
+                        .AllowRemoteTokenCancellation();
                 });
-                
+
                 serverOptions.AutoRegisterControllers();
             });
 
@@ -127,7 +144,7 @@ namespace HubconTest
 
             app.MapOpenApi();
             app.MapScalarApiReference();
-            
+
             app.UseHubconHttpEndpoints();
             app.UseHubconWebsocketEndpoints();
 
@@ -138,9 +155,30 @@ namespace HubconTest
             var telemetry = app.Services.GetRequiredService<ITelemetryService>();
             telemetry.OnRequestsPerSecondUpdated += (telemetry, rps) =>
             {
-                var title = $" RPS: {rps.RequestsPerSecond.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | Total requests: {TotalRequests.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} | CPU: {telemetry.CurrentCPU} | Threads: {telemetry.CurrentThreads} | WS clients: {telemetry.CurrentWebSocketClients} | WS req/s: {rps.WebSocketsRequestsPerSecond} | HTTP req/s: {rps.HttpRequestsPerSecond}";
+                var totalRps = rps.Snapshots
+                    .Select(x => x.Value)
+                    .Sum(x => x.Calls + x.Invokes + x.StreamingsRequests + x.IngestsRequests);
+
+                Interlocked.Add(ref TotalRequests, totalRps);
+                
+                var title = "";
+                title += $"| Total RPS: {totalRps.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))}\n" +
+                         $"| Total requests: {TotalRequests.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))}\n" +
+                         $"| Current WebSocket Connections: {telemetry.CurrentWebSocketClients}\n" +
+                         $"| Threads: {telemetry.CurrentThreads}\n";
+
+                foreach (var transport in rps.Snapshots)
+                {
+                    var total = transport.Value.Calls + transport.Value.Invokes + transport.Value.StreamingsRequests + transport.Value.IngestsRequests;
+                    title += $"[{transport.Key.GetType().Name}] " +
+                             $"Total: {total} " +
+                             $"| Calls: {transport.Value.Calls} " +
+                             $"| Invokes: {transport.Value.Invokes} " +
+                             $"| Streams: {transport.Value.StreamingsRequests} " +
+                             $"| Ingests: {transport.Value.IngestsRequests}\n";
+                }
+                
                 Console.Title = title;
-                Interlocked.Add(ref TotalRequests, rps.RequestsPerSecond);
                 logger.LogInformation(title);
             };
 

@@ -51,5 +51,8 @@ namespace Hubcon
         
         /// <summary>The request's correlation ID for the tracing.</summary>
         RequestId RequestId { get; }
+        
+        /// <summary>The attribute corresponding to the transport type.</summary>
+        HubconTransportAttribute TransportType { get; }
     }
 }

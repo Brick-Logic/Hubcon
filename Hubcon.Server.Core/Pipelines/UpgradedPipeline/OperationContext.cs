@@ -24,6 +24,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public Exception? Exception { get; set; } = default!;
         public CancellationToken RequestAborted { get; init; } = default!;
         public IWrapper? WrappedRequest { get; init; } = default!;
-        public bool IsTransportCalled { get; internal set; }
+        public bool IsTransportCalled { get; init; }
+        public HubconTransportAttribute TransportType { get; init; }
     }
 }

@@ -15,9 +15,9 @@ namespace HubconTestClient.Modules
             server.WithBaseUrl("http://localhost:5000");
 
             server.EnableWebsocketAutoReconnect();
-            server.GlobalLimit(0);
+            server.GlobalLimit(5);
             server.EnableLogging();
-            server.DisableAllLimiters();
+            // server.DisableAllLimiters();
             server.AllowRemoteCancellation();
             server.ScaleMessageProcessors(6);
             server.AddSetting("", new object());
