@@ -9,8 +9,19 @@ using System.Text;
 
 namespace Hubcon.Server.Core.Telemetry
 {
-    internal class TelemetryProvider : ITelemetryProvider
+    [HubconPreserve]
+    public sealed class TelemetryProvider : ITelemetryProvider
     {
+        private static readonly int Processors = Environment.ProcessorCount;
+        private static readonly Process _process = Process.GetCurrentProcess();
+        private static TimeSpan _lastCpuTime = _process.TotalProcessorTime;
+        private static long _lastSnapshotTicks = Stopwatch.GetTimestamp();
+        
+        public TelemetryProvider()
+        {
+            
+        }
+        
         public event Action? OnTelemetryUpdated;
         public event Action<IRequestsPerSecondSnapshot>? OnRequestsPerSecondUpdated;
 
@@ -27,41 +38,29 @@ namespace Hubcon.Server.Core.Telemetry
 
         public void CallOnRequestsPerSecondUpdated(IRequestsPerSecondSnapshot snapshot) => OnRequestsPerSecondUpdated?.Invoke(snapshot);
         public void CallOnTelemetryUpdated() => OnTelemetryUpdated?.Invoke();
+        
+        private static double GetCpuUsagePercentage()
+        {
+            var currentCpuTime = _process.TotalProcessorTime;
+            var currentTicks = Stopwatch.GetTimestamp();
 
-        // Process telemetry
-        public Func<double>? GetCurrentCPU { get; }
-        public Func<Process>? GetCurrentProcess { get; }
-        public Func<double>? GetCurrentHeapSize { get; }
-        public Func<int>? GetThreadCount { get; }
+            var cpuUsed = (currentCpuTime - _lastCpuTime).TotalMilliseconds;
+            var timePassed = (double)(currentTicks - _lastSnapshotTicks) / Stopwatch.Frequency * 1000;
 
-        // Websockets telemetry
+            _lastCpuTime = currentCpuTime;
+            _lastSnapshotTicks = currentTicks;
+
+            if (timePassed <= 0) return 0;
+
+            return (cpuUsed / (timePassed * Processors)) * 100;
+        }
+
+        public Func<double>? GetCurrentCPU { get; set; } =  GetCpuUsagePercentage;
+        public Func<Process>? GetCurrentProcess { get; set; } = static () => _process;
+        public Func<double>? GetCurrentHeapSize { get; set; } = static () => GC.GetTotalMemory(forceFullCollection: false);
+        public Func<int>? GetThreadCount { get; set; } = static () => ThreadPool.ThreadCount;
+        
         public Func<int>? GetCurrentWebsocketClients { get; }
-        public Func<int>? CurrentSubscriptionCount { get; }
-        public Func<int>? CurrentIngestCount { get; }
-        public Func<int>? CurrentStreamingsCount { get; }
-        public Func<int>? CurrentWebSocketsRequestsCount { get; }
-        public Func<int>? CurrentWebSocketsRoundTripRequestsCount { get; }
-        public Func<int>? CurrentWebSocketsCallRequestsCount { get; }
-
-        // HTTP telemetry
-        public Func<int>? ActiveHttpRequestsCount { get; }
-        public Func<int>? CurrentHttpRoundTripRequestsCount { get; }
-        public Func<int>? CurrentHttpCallRequestsCount { get; }
-
-        // RPS
-        public Func<int>? CurrentRequestsPerSecond { get; }
-
-        public Func<int>? CurrentSubscriptionPerSecond { get; }
-        public Func<int>? CurrentStreamingsPerSecond { get; }
-        public Func<int>? CurrentIngestPerSecond { get; }
-
-        public Func<int>? CurrentWebSocketsRequestsPerSecond { get; }
-        public Func<int>? CurrentWebSocketsCallRequestsPerSecond { get; }
-        public Func<int>? CurrentWebSocketsRoundTripRequestsPerSecond { get; }
-
-        public Func<int>? CurrentHttpRequestsPerSecond { get; }
-        public Func<int>? CurrentHttpCallRequestsPerSecond { get; }
-        public Func<int>? CurrentHttpRoundTripRequestsPerSecond { get; }
 
     }
 }

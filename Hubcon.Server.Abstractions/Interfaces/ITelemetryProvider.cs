@@ -20,6 +20,9 @@ namespace Hubcon.Server.Abstractions.Interfaces
         event Action<IRequestsPerSecondSnapshot>? OnRequestsPerSecondUpdated;
 
         #region Process & System Telemetry
+        /// <summary>Gets the number of currently connected WebSocket clients.</summary>
+        Func<int>? GetCurrentWebsocketClients { get; }
+        
         /// <summary>Gets a function that returns the current CPU usage percentage.</summary>
         Func<double>? GetCurrentCPU { get; }
 
@@ -32,73 +35,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// <summary>Gets a function that returns the current thread count of the process.</summary>
         Func<int>? GetThreadCount { get; }
         #endregion
-
-        #region WebSocket Telemetry (Stateful)
-        /// <summary>Gets the number of currently connected WebSocket clients.</summary>
-        Func<int>? GetCurrentWebsocketClients { get; }
-
-        /// <summary>Gets the total number of active subscriptions (Events/Topic-based).</summary>
-        Func<int>? CurrentSubscriptionCount { get; }
-
-        /// <summary>Gets the total number of active high-throughput ingestion flows.</summary>
-        Func<int>? CurrentIngestCount { get; }
-
-        /// <summary>Gets the total number of active data streams.</summary>
-        Func<int>? CurrentStreamingsCount { get; }
-
-        /// <summary>Gets the total count of requests processed via WebSockets.</summary>
-        Func<int>? CurrentWebSocketsRequestsCount { get; }
-
-        /// <summary>Gets the count of Fire-and-Forget (Call) requests processed via WebSockets.</summary>
-        Func<int>? CurrentWebSocketsCallRequestsCount { get; }
-
-        /// <summary>Gets the count of Round-Trip requests processed via WebSockets.</summary>
-        Func<int>? CurrentWebSocketsRoundTripRequestsCount { get; }
-        #endregion
-
-        #region HTTP Telemetry (Stateless)
-        /// <summary>Gets the number of HTTP requests currently being processed.</summary>
-        Func<int>? ActiveHttpRequestsCount { get; }
-
-        /// <summary>Gets the count of Round-Trip requests processed via HTTP.</summary>
-        Func<int>? CurrentHttpRoundTripRequestsCount { get; }
-
-        /// <summary>Gets the count of Fire-and-Forget (Call) requests processed via HTTP.</summary>
-        Func<int>? CurrentHttpCallRequestsCount { get; }
-        #endregion
-
-        #region Throughput Metrics (Requests Per Second)
-        /// <summary>Gets the global aggregated requests per second.</summary>
-        Func<int>? CurrentRequestsPerSecond { get; }
-
-        /// <summary>Gets the subscriptions initiated per second.</summary>
-        Func<int>? CurrentSubscriptionPerSecond { get; }
-
-        /// <summary>Gets the stream frames processed per second.</summary>
-        Func<int>? CurrentStreamingsPerSecond { get; }
-
-        /// <summary>Gets the ingestion packets processed per second.</summary>
-        Func<int>? CurrentIngestPerSecond { get; }
-
-        /// <summary>Gets the total WebSocket requests per second.</summary>
-        Func<int>? CurrentWebSocketsRequestsPerSecond { get; }
-
-        /// <summary>Gets the WebSocket fire-and-forget calls per second.</summary>
-        Func<int>? CurrentWebSocketsCallRequestsPerSecond { get; }
-
-        /// <summary>Gets the WebSocket round-trip calls per second.</summary>
-        Func<int>? CurrentWebSocketsRoundTripRequestsPerSecond { get; }
-
-        /// <summary>Gets the total HTTP requests per second.</summary>
-        Func<int>? CurrentHttpRequestsPerSecond { get; }
-
-        /// <summary>Gets the HTTP fire-and-forget calls per second.</summary>
-        Func<int>? CurrentHttpCallRequestsPerSecond { get; }
-
-        /// <summary>Gets the HTTP round-trip calls per second.</summary>
-        Func<int>? CurrentHttpRoundTripRequestsPerSecond { get; }
-        #endregion
-
+        
         /// <summary>
         /// Registers a specific telemetry provider delegate for a given property.
         /// </summary>

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Hubcon;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -166,18 +167,23 @@ namespace HubconTest
                 var title = "";
                 title += $"| Total RPS: {totalRps.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))}\n" +
                          $"| Total requests: {TotalRequests.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))}\n" +
-                         $"| Current WebSocket Connections: {telemetry.CurrentWebSocketClients}\n" +
+                         $"| Current WebSocket Connections: {telemetry.CurrentWebSocketClients.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))}\n" +
+                         $"| CPU usage: {telemetry.CurrentCPU:F2}%\n" +
+                         $"| Heap memory: {telemetry.CurrentHeapSize / (1024.0 * 1024.0):F2} MB\n" +
                          $"| Threads: {telemetry.CurrentThreads}\n";
 
                 foreach (var transport in rps.Snapshots)
                 {
                     var total = transport.Value.Calls + transport.Value.Invokes + transport.Value.StreamingsRequests + transport.Value.IngestsRequests;
+                    var totalTransportRequests = TotalRequestsPerTransport.AddOrUpdate(transport.Key, total, (x, y) => y + total);
+                    
                     title += $"[{transport.Key.GetType().Name}] " +
-                             $"Total: {total} " +
-                             $"| Calls: {transport.Value.Calls} " +
-                             $"| Invokes: {transport.Value.Invokes} " +
-                             $"| Streams: {transport.Value.StreamingsRequests} " +
-                             $"| Ingests: {transport.Value.IngestsRequests}\n";
+                             $"Total: {totalTransportRequests.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} " +
+                             $"| Total current: {transport.Value.Calls.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} " +
+                             $"| Calls: {transport.Value.Calls.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} " +
+                             $"| Invokes: {transport.Value.Invokes.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} " +
+                             $"| Streams: {transport.Value.StreamingsRequests.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))} " +
+                             $"| Ingests: {transport.Value.IngestsRequests.ToString("N0", CultureInfo.GetCultureInfo("es-ES"))}\n";
                 }
                 
                 Console.Title = title;
@@ -188,5 +194,6 @@ namespace HubconTest
         }
 
         static long TotalRequests = 0;
+        private static ConcurrentDictionary<HubconTransportAttribute, long> TotalRequestsPerTransport = new();
     }
 }

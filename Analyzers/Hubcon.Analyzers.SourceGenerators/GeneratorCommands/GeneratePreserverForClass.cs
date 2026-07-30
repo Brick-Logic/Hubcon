@@ -123,8 +123,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             int methodIndex = 0;
             foreach (var member in members)
             {
-                if (member is IMethodSymbol method && method.MethodKind == MethodKind.Ordinary &&
-                    method.DeclaredAccessibility == Accessibility.Public)
+                if (member is IMethodSymbol method && !method.IsGenericMethod && method.MethodKind == MethodKind.Ordinary && method.DeclaredAccessibility == Accessibility.Public && method.DeclaredAccessibility == Accessibility.Internal)
                 {
                     methodIndex++;
                     var paramsList = string.Join(", ", method.Parameters.Select(p =>
@@ -142,7 +141,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                         sb.AppendLine($"{baseIndent}            _ = {rI}.GetHashCode();");
                     }
                 }
-                else if (member is IPropertySymbol prop && prop.DeclaredAccessibility == Accessibility.Public)
+                else if (member is IPropertySymbol prop && prop.DeclaredAccessibility == Accessibility.Public && prop.DeclaredAccessibility == Accessibility.Internal)
                 {
                     sb.AppendLine($"{baseIndent}            _ = {targetVar}.{prop.Name}.GetHashCode();");
 

@@ -13,10 +13,10 @@ namespace Hubcon.Server.Core.Telemetry
         public event Action<ITelemetryService>? OnTelemetryUpdated;
         public event Action<ITelemetryService, IRequestsPerSecondSnapshot>? OnRequestsPerSecondUpdated;
 
-        private readonly ITelemetryProvider provider;
+        private readonly ITelemetryProvider _provider;
         public TelemetryService(ITelemetryProvider provider)
         {
-            this.provider = provider;
+            this._provider = provider;
             provider.OnTelemetryUpdated += Provider_OnTelemetryUpdated;
             provider.OnRequestsPerSecondUpdated += Provider_OnRequestsPerSecondUpdated;
         }
@@ -26,33 +26,19 @@ namespace Hubcon.Server.Core.Telemetry
         
         private static T GetValue<T>(Func<T>? provider, T defaultValue)
         {
-            if (provider == null)
-                return defaultValue;
-
-            return provider.Invoke();
+            return provider == null ? defaultValue : provider.Invoke();
         }
 
-        public int CurrentWebSocketClients => GetValue(provider.GetCurrentWebsocketClients, -1);
-        public double CurrentCPU => GetValue(provider.GetCurrentWebsocketClients, -1);
-        public Process CurrentProcess => GetValue(provider.GetCurrentProcess, default!);
-        public double CurrentHeapSize => GetValue(provider.GetCurrentHeapSize, -1);
-        public int CurrentThreads => GetValue(provider.GetThreadCount, -1);
-
-        public int ActiveSubscriptionCount => GetValue(provider.CurrentSubscriptionCount, -1);
-        public int ActiveIngestCount => GetValue(provider.CurrentIngestCount, -1);
-        public int ActiveStreamingsCount => GetValue(provider.CurrentStreamingsCount, -1);
-        public int ActiveWebSocketsRequestsCount => GetValue(provider.CurrentWebSocketsRequestsCount, -1);
-        public int ActiveWebSocketsCallRequestsCount => GetValue(provider.CurrentWebSocketsCallRequestsCount, -1);
-        public int ActiveWebSocketsRoundTripRequestsCount => GetValue(provider.CurrentWebSocketsRoundTripRequestsCount, -1);
-
-        public int ActiveHttpRequestsCount => GetValue(provider.ActiveHttpRequestsCount, -1);
-        public int ActiveHttpRoundTripRequestsCount => GetValue(provider.CurrentHttpRoundTripRequestsCount, -1);
-        public int ActiveHttpCallRequestsCount => GetValue(provider.CurrentHttpCallRequestsCount, -1);
-
+        public int CurrentWebSocketClients => GetValue(_provider.GetCurrentWebsocketClients, -1);
+        public double CurrentCPU => GetValue(_provider.GetCurrentCPU, -1);
+        public Process CurrentProcess => GetValue(_provider.GetCurrentProcess, null!);
+        public double CurrentHeapSize => GetValue(_provider.GetCurrentHeapSize, -1);
+        public int CurrentThreads => GetValue(_provider.GetThreadCount, -1);
+        
         ~TelemetryService()
         {
-            provider.OnTelemetryUpdated -= Provider_OnTelemetryUpdated;
-            provider.OnRequestsPerSecondUpdated -= Provider_OnRequestsPerSecondUpdated;
+            _provider.OnTelemetryUpdated -= Provider_OnTelemetryUpdated;
+            _provider.OnRequestsPerSecondUpdated -= Provider_OnRequestsPerSecondUpdated;
         }
     }
 }

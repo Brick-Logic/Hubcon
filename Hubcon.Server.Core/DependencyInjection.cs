@@ -44,14 +44,7 @@ namespace Hubcon.Server.Core
                 telemetryProvider.CallOnTelemetryUpdated();
             };
             worker.Start();
-
-            var process = Process.GetCurrentProcess();
-
-            telemetryProvider.RegisterProvider(x => x.GetCurrentProcess, () => process);
-            telemetryProvider.RegisterProvider(x => x.GetCurrentCPU, () => cpuUsage);
-            telemetryProvider.RegisterProvider(x => x.GetCurrentHeapSize, () => allocated);
-            telemetryProvider.RegisterProvider(x => x.GetThreadCount, () => threads);
-
+            
             builder.Services.AddSingleton<ITelemetryProvider>(x => telemetryProvider);
             builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
             return builder;
