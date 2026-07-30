@@ -67,7 +67,7 @@ public sealed class OpenTelemetryBatchWorker
                 activity.SetTag("rpc.service", evt.Data.SimpleContractName);
                 activity.SetTag("rpc.full_contract_name", evt.Data.ContractName);
                 activity.SetTag("rpc.contract_handler_name", evt.Data.ControllerName);
-                activity.SetTag("rpc.requires_auth", evt.Data.RequiresAuthorization);
+                activity.SetTag("rpc.requires_auth", evt.Data.RequiresAuthorization ? 1 : 0);
                 
                 var duration = TimeSpan.FromTicks((long)(evt.ElapsedTicks * ((double)TimeSpan.TicksPerSecond / Stopwatch.Frequency)));
                 activity.SetEndTime(activity.StartTimeUtc + duration);
