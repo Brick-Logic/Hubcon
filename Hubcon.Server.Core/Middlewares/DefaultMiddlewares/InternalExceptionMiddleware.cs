@@ -26,9 +26,13 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             {
                 context.Exception = _operationCanceledException;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (HandleException(ex, context))
             {
-                exception = ex;
+                
+            }
+            catch (Exception)
+            {
+                // Ignored
             }
             finally
             {
@@ -115,6 +119,12 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     logger?.LogError("{createdLogMessage}\n{request}\n{result}", createdLogMessage, request, result);
                 }
             }
+        }
+        
+        private static bool HandleException(Exception ex, IOperationContext operationContext)
+        {
+            operationContext.Exception = ex;
+            return false;
         }
     }
 }

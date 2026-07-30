@@ -14,22 +14,21 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
     {
         private static bool GlobalMiddlewaresFirst { get; set; } = false;
 
-        private static Type? GlobalInternalExceptionMiddleware { get; set; }
-        private static Type? GlobalExceptionMiddleware { get; set; }
         private static List<Type> GlobalTelemetryMiddlewares { get; } = new();
         private static List<Type> GlobalLoggingMiddlewares { get; } = new();
+        private static Type? GlobalInternalExceptionMiddleware { get; set; }
+        private static Type? GlobalExceptionMiddleware { get; set; }
         private static List<Type> GlobalAuthenticationMiddlewares { get; } = new();
-        private static List<Type> GlobalAuthorizationMiddlewares { get; } = new();
         private static List<Type> GlobalPreRequestMiddlewares { get; } = new();
-        private static Type GlobalRoutingMiddleware { get; set; }
+        private static Type GlobalRoutingMiddleware { get; set; } = null!;
         private static List<Type> GlobalPostRequestMiddlewares { get; } = new();
         private static List<Type> GlobalResponseMiddlewares { get; } = new();
-
-
-        private Type ExceptionMiddleware { get; set; }
+        
+        
+        private List<Type> TelemetryMiddlewares { get; } = new();
         private List<Type> LoggingMiddlewares { get; } = new();
+        private Type? ExceptionMiddleware { get; set; }
         private List<Type> AuthenticationMiddlewares { get; } = new();
-        private List<Type> AuthorizationMiddlewares { get; } = new();
         private List<Type> PreRequestMiddlewares { get; } = new();
         private List<Type> PostRequestMiddlewares { get; } = new();
         private List<Type> ResponseMiddlewares { get; } = new();
@@ -44,7 +43,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             if (typeof(IExceptionMiddleware).IsAssignableFrom(middlewareType))
                 ExceptionMiddleware = middlewareType;
             else if (typeof(ITelemetryMiddleware).IsAssignableFrom(middlewareType))
-                GlobalTelemetryMiddlewares.Add(middlewareType);
+                TelemetryMiddlewares.Add(middlewareType);
             else if (typeof(ILoggingMiddleware).IsAssignableFrom(middlewareType))
                 LoggingMiddlewares.Add(middlewareType);
             else if (typeof(IAuthenticationMiddleware).IsAssignableFrom(middlewareType))
@@ -56,7 +55,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             else if (typeof(IResponseMiddleware).IsAssignableFrom(middlewareType))
                 ResponseMiddlewares.Add(middlewareType);
             else
-                throw new NotImplementedException($"El tipo {middlewareType.FullName} no es un middleware válido.");
+                throw new NotSupportedException($"Type {middlewareType.FullName} is not a valid middleware.");
 
             return this;
         }
@@ -83,7 +82,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             else if (typeof(IResponseMiddleware).IsAssignableFrom(middlewareType))
                 GlobalResponseMiddlewares.Add(middlewareType);
             else
-                throw new NotImplementedException($"El tipo {middlewareType.FullName} no es un middleware válido.");
+                throw new NotSupportedException($"Type {middlewareType.FullName} is not a valid middleware.");
         }
 
         public void UseGlobalMiddlewaresFirst(bool? value = null)
@@ -102,30 +101,28 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                 return BuiltMiddlewares;
 
             var middlewares = new List<Type>();
-
-            if(GlobalInternalExceptionMiddleware != null) middlewares.Add(GlobalInternalExceptionMiddleware);
-
+            
             if (GlobalMiddlewaresFirst)
             {
+                middlewares.AddRange(GlobalTelemetryMiddlewares);
+                middlewares.AddRange(TelemetryMiddlewares);
+                
+                if(GlobalInternalExceptionMiddleware != null) middlewares.Add(GlobalInternalExceptionMiddleware);
+                
+                middlewares.AddRange(GlobalLoggingMiddlewares);
+                middlewares.AddRange(LoggingMiddlewares);
+                
                 if (GlobalExceptionMiddleware != null)
                     middlewares.Add(GlobalExceptionMiddleware);
 
                 if (ExceptionMiddleware != null)
                     middlewares.Add(ExceptionMiddleware);
 
-                middlewares.AddRange(GlobalTelemetryMiddlewares);
-
-                middlewares.AddRange(GlobalLoggingMiddlewares);
-                middlewares.AddRange(LoggingMiddlewares);
-
                 middlewares.AddRange(GlobalAuthenticationMiddlewares);
                 middlewares.AddRange(AuthenticationMiddlewares);
 
                 middlewares.AddRange(GlobalPreRequestMiddlewares);
                 middlewares.AddRange(PreRequestMiddlewares);
-
-                middlewares.AddRange(GlobalAuthorizationMiddlewares);
-                middlewares.AddRange(AuthorizationMiddlewares);
 
                 if (GlobalRoutingMiddleware != null)
                     middlewares.Add(GlobalRoutingMiddleware);
@@ -138,25 +135,25 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             }
             else
             {
+                middlewares.AddRange(TelemetryMiddlewares);
+                middlewares.AddRange(GlobalTelemetryMiddlewares);
+                
+                middlewares.AddRange(LoggingMiddlewares);
+                middlewares.AddRange(GlobalLoggingMiddlewares);
+                
+                if(GlobalInternalExceptionMiddleware != null) middlewares.Add(GlobalInternalExceptionMiddleware);
+                
                 if(ExceptionMiddleware != null)
                     middlewares.Add(ExceptionMiddleware);
 
                 if(GlobalExceptionMiddleware != null)
                     middlewares.Add(GlobalExceptionMiddleware);
 
-                middlewares.AddRange(GlobalTelemetryMiddlewares);
-
-                middlewares.AddRange(LoggingMiddlewares);
-                middlewares.AddRange(GlobalLoggingMiddlewares);
-
                 middlewares.AddRange(AuthenticationMiddlewares);
                 middlewares.AddRange(GlobalAuthenticationMiddlewares);
 
                 middlewares.AddRange(PreRequestMiddlewares);
                 middlewares.AddRange(GlobalPreRequestMiddlewares);
-
-                middlewares.AddRange(AuthorizationMiddlewares);
-                middlewares.AddRange(GlobalAuthorizationMiddlewares);
 
                 middlewares.Add(GlobalRoutingMiddleware);
 
@@ -180,16 +177,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public IPipelineExecutor Build(IOperationRequest request, IOperationContext context, IServiceProvider serviceProvider)
         {
             var middlewares = GetMiddlewares();
-
-            //PipelineDelegate current = () => Task.CompletedTask;
-
-            //foreach (var type in middlewares)
-            //{
-            //    var next = current;
-            //    var middleware = (IExecutableMiddleware)serviceProvider.GetRequiredService(type);
-            //    current = () => middleware.Execute(request, context, next);
-            //}
-
+            
             var state = new PipelineState()
             {
                 Context = context,
@@ -202,7 +190,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             return new PipelineExecutor(state);
         }
 
-        static Task InvokeNext(PipelineState state)
+        private static Task InvokeNext(PipelineState state)
         {
             if (state.Index >= state.Middlewares.Length)
                 return Task.CompletedTask;

@@ -79,16 +79,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                     break;
             }
 
-            try
-            {
-                context.Response = await context.ResultHandler.Invoke(mainTask);
-            }
-            catch (Exception e)
-            {
-                context.Exception = e;
-                return;
-            }
-            
+            context.Response = await context.ResultHandler.Invoke(mainTask);
             await next();
         }
     }

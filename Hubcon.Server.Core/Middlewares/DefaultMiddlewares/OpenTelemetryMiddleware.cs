@@ -24,21 +24,16 @@ public sealed class OpenTelemetryMiddleware : ITelemetryMiddleware
     public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
     {
         var startTimestamp = Stopwatch.GetTimestamp();
-        byte status = 0;
-
+        
         try
         {
             await next();
         }
-        catch (Exception ex)
-        {
-            status = 1; // 1 = Error
-            context.Exception = ex;
-        }
         finally
         {
-            long elapsedTicks = Stopwatch.GetElapsedTime(startTimestamp).Ticks;
-
+            var elapsedTicks = Stopwatch.GetElapsedTime(startTimestamp).Ticks;
+            var status = (byte)(context.Exception == null ? 0 : 1);
+            
             var traceEvent = new TraceEvent<IOperationBlueprint>(
                 context.RequestId,
                 context.Blueprint,
@@ -51,5 +46,11 @@ public sealed class OpenTelemetryMiddleware : ITelemetryMiddleware
 
             _pipeline.Emit(in traceEvent);
         }
+
+    }
+    private static bool Handle(out byte status)
+    {
+        status = 1;
+        return false;
     }
 }
