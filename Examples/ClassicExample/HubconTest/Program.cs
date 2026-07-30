@@ -80,18 +80,18 @@ namespace HubconTest
             // });
             //
             
-            builder.Services.AddOpenTelemetry()
-                .ConfigureResource(resource => resource.AddService("Hubcon"))
-                .WithTracing(tracing =>
-                {
-                    tracing.AddSource(OpenTelemetryBatchWorker.HubconActivitySource.Name);
-                    tracing.SetSampler(new AlwaysOnSampler());
-                    tracing.AddOtlpExporter(options =>
-                    {
-                        options.Endpoint = new Uri("http://localhost:4317");
-                        options.Protocol = OtlpExportProtocol.Grpc;
-                    });
-                });
+            // builder.Services.AddOpenTelemetry()
+            //     .ConfigureResource(resource => resource.AddService("Hubcon"))
+            //     .WithTracing(tracing =>
+            //     {
+            //         tracing.AddSource(OpenTelemetryBatchWorker.HubconActivitySource.Name);
+            //         tracing.SetSampler(new AlwaysOnSampler());
+            //         tracing.AddOtlpExporter(options =>
+            //         {
+            //             options.Endpoint = new Uri("http://localhost:4317");
+            //             options.Protocol = OtlpExportProtocol.Grpc;
+            //         });
+            //     });
 
             builder.Services.AddCors(options =>
             {
@@ -119,13 +119,15 @@ namespace HubconTest
             {
                 serverOptions.AddAuthentication();
                 serverOptions.AddTelemetry();
-                //serverOptions.AddConcurrencyLimiter();
+                serverOptions.AddOpenTelemetry();
+                serverOptions.AddConcurrencyLimiter();
+                
                 serverOptions.UseTokenValidationParameters(tokenValidationParameters);
 
                 serverOptions.ConfigureCore(config =>
                 {
                     config
-                        //.SetMaxConcurrentOperations(999999)
+                        .SetMaxConcurrentOperations(999999)
                         .SetGlobalRateLimiter(999999)
                         .AddSetting("", new object())
                         .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()

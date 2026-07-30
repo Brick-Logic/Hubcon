@@ -91,5 +91,10 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Add the concurrency limiter middleware to the pipeline
         /// </summary>
         public void AddConcurrencyLimiter();
+
+        /// <summary>
+        /// Enables open telemetry data collection.
+        /// </summary>
+        public void AddOpenTelemetry();
     }
 }

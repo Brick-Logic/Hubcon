@@ -134,5 +134,10 @@ namespace Hubcon.Server.Injection
         {
             HubconServerBuilder.AddGlobalMiddleware<InternalConcurrencyCheckMiddleware>((services, type) => services.TryAddSingleton(type));
         }
+
+        public void AddOpenTelemetry()
+        {
+            HubconServerBuilder.AddGlobalMiddleware<OpenTelemetryMiddleware>((services, type) => services.TryAddSingleton(type));
+        }
     }
 }

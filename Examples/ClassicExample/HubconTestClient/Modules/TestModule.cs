@@ -15,17 +15,15 @@ namespace HubconTestClient.Modules
             server.WithBaseUrl("http://localhost:5000");
 
             server.EnableWebsocketAutoReconnect();
-            server.GlobalLimit(5);
+            server.GlobalLimit(999999);
             server.EnableLogging();
-            // server.DisableAllLimiters();
+            server.DisableAllLimiters();
             server.AllowRemoteCancellation();
             server.ScaleMessageProcessors(6);
             server.AddSetting("", new object());
             server.AddTracing();
             //server.AddHeaderProvider("key", x => "value");
-
-            //server.DisableAllLimiters();
-
+            
             server.Implements<IUserContract>(contractConfigurator =>
             {
                 contractConfigurator.AddSetting("", new object());

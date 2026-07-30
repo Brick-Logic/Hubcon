@@ -14,18 +14,13 @@ using Hubcon.Shared.Abstractions.Models;
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
-    public class InternalTelemetryMiddleware : ITelemetryMiddleware
+    public sealed class InternalTelemetryMiddleware : ITelemetryMiddleware
     {
         private readonly StripedCounter[] _flatCounters;
         private readonly int _numOperations;
-        private readonly TelemetryChannelPipeline<IOperationBlueprint> _pipeline;
-        private readonly OpenTelemetryBatchWorker _batchWorker;
 
         public InternalTelemetryMiddleware(ITelemetryProvider telemetryProvider)
         {
-            _pipeline = new TelemetryChannelPipeline<IOperationBlueprint>();
-            _batchWorker = new OpenTelemetryBatchWorker(_pipeline);
-
             var transportsCount = HubconTransportAttribute.GetTransportsCount();
             _numOperations = Enum.GetValuesAsUnderlyingType<OperationKind>().Length;
 
@@ -35,10 +30,8 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
                 _flatCounters[i] = new StripedCounter();
             }
 
-            var transports = HubconTransportAttribute.GetAllTransports().Values;
-
-            _ = StartRpsTimer(transports);
-            _ = _batchWorker.ExecuteAsync();
+            var allTransports = HubconTransportAttribute.GetAllTransports().Values;
+            _ = StartRpsTimer(allTransports);
 
             async Task StartRpsTimer(IEnumerable<HubconTransportAttribute> transports)
             {
@@ -77,39 +70,11 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
         /// <inheritdoc/>
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
-            long startTimestamp = Stopwatch.GetTimestamp();
             var transportId = context.TransportType.TelemetryId;
             var opKind = (ushort)context.Blueprint.Kind;
 
             IncrementCounter(transportId, opKind);
-
-            byte status = 0;
-
-            try
-            {
-                await next();
-            }
-            catch (Exception ex)
-            {
-                status = 1; // 1 = Error
-                context.Exception = ex;
-            }
-            finally
-            {
-                long elapsedTicks = Stopwatch.GetElapsedTime(startTimestamp).Ticks;
-                
-                var traceEvent = new TraceEvent<IOperationBlueprint>(
-                    context.RequestId,
-                    context.Blueprint,
-                    context.TransportType,
-                    startTimestamp,
-                    elapsedTicks,
-                    status,
-                    context.Exception
-                );
-
-                _pipeline.Emit(in traceEvent);
-            }
+            await next();
         }
 
         [StructLayout(LayoutKind.Explicit, Size = 64)]
