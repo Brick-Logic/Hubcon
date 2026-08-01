@@ -46,7 +46,7 @@ namespace Hubcon
         /// <param name="permits">The number of permits to request. Defaults to 1.</param>
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> to monitor for cancellation.</param>
         /// <returns>A <see cref="ValueTask{TResult}"/> that is <see langword="true"/> if permits were acquired; otherwise, <see langword="false"/>.</returns>
-        ValueTask<bool> TryAcquireAsync(string anchorKey, MessageType type, Guid resourceId, int permits = 1, CancellationToken cancellationToken = default);
+        ValueTask<bool> TryAcquireAsync(string anchorKey, MessageType type, Guid resourceId, HubconTransportAttribute transport, int permits = 1, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Removes the link between an anchor key and an operation ID, typically called when 

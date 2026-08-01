@@ -25,8 +25,8 @@ namespace Hubcon.Server
     public class ServerBuilder
     {
         private static readonly AtomicPass _serverIsBuilt = new();
-        private static readonly IOperationRegistry _operationRegistry = new OperationRegistry();
-        private CoreServerOptions ServerOptions { get; } = new();
+        private static readonly IOperationRegistry _operationRegistry = new OperationRegistry(ServerOptions);
+        private static CoreServerOptions ServerOptions { get; } = new();
         private IServiceCollection Services;
 
         private static ServerBuilder _current = null!;
@@ -82,6 +82,7 @@ namespace Hubcon.Server
             Services.AddSingleton(_operationRegistry);
             Services.AddSingleton<IPermissionRegistry, PermissionRegistry>();
             Services.AddSingleton<IConnectionSupervisor, ConnectionSupervisor>();
+            Services.AddSingleton<IConnectionLimiter, ConnectionLimiter>();
             Services.AddSingleton<IDynamicConverter, DynamicConverter>();
             Services.AddSingleton(_operationRegistry);
             Services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
@@ -126,7 +127,7 @@ namespace Hubcon.Server
             if (_operationRegistry.ControllerExists(controllerType))
                 throw new InvalidOperationException($"Controller {controllerType.Name} has already been registered.");
             
-            _operationRegistry.RegisterOperations(controllerType, options, ServerOptions, out var services);
+            _operationRegistry.RegisterOperations(controllerType, options, out var services);
 
             foreach (var service in services)
             {
@@ -152,7 +153,7 @@ namespace Hubcon.Server
             if (_operationRegistry.ControllerExists(controllerType))
                 throw new InvalidOperationException($"Controller {controllerType.Name} has already been registered.");
 
-            _operationRegistry.RegisterOperations(controllerType, options, ServerOptions, out var services);
+            _operationRegistry.RegisterOperations(controllerType, options, out var services);
 
             foreach (var service in services)
             {
@@ -193,11 +194,6 @@ namespace Hubcon.Server
         internal void ConfigureCore(Action<ICoreServerOptions> coreServerOptions)
         {
             coreServerOptions.Invoke(ServerOptions);
-        }
-
-        internal void AddTokenValidationParameters(TokenValidationParameters tokenValidationParameters)
-        {
-            ServerOptions.SetTokenValidationParameters(tokenValidationParameters);
         }
     }
 }

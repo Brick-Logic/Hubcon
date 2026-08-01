@@ -39,7 +39,7 @@ namespace Hubcon.Server.Core.Routing.Models
             {
                 var response = httpContext.Response;
                 var services = httpContext.RequestServices;
-
+                var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
                 response.ContentType = "text/event-stream";
                 response.Headers.CacheControl = "no-cache";
                 response.Headers.Connection = "keep-alive";
@@ -47,13 +47,13 @@ namespace Hubcon.Server.Core.Routing.Models
 
                 rateLimiter = services.GetRequiredService<IGlobalRateLimiterManager>();
                 var remoteAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-                await rateLimiter.Link(remoteAddress, id, HubconTransportAttribute.GetDefault<HttpTransport>(), request);
+                await rateLimiter.Link(remoteAddress, id, transport, request);
 
                 writer = response.BodyWriter;
                 var converter = httpContext.RequestServices.GetRequiredService<IDynamicConverter>();
                 await foreach (var item in _stream.WithCancellation(httpContext.RequestAborted))
                 {
-                    await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.stream_data, id);
+                    await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.stream_data, id, transport);
 
                     if (item is null) continue;
 

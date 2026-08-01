@@ -2,105 +2,108 @@
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Shared.Abstractions.Interfaces;
 using System.Collections.Concurrent;
-
+using Hubcon.Shared.Core.Tools;
 #pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 {
-    public sealed class InternalConcurrencyCheckMiddleware : IPreRequestMiddleware
+    public sealed class InternalConcurrencyCheckMiddleware : IPreRequestMiddleware, IDisposable
     {
-        private readonly IInternalServerOptions internalServerOptions;
-        private readonly ConcurrentDictionary<string, ConcurrencyTracker> _semaphores;
+        private readonly IInternalServerOptions _internalServerOptions;
+        private readonly ConcurrentDictionary<string, IPConcurrencyTracker> _trackers;
+        private readonly PeriodicTimer _cleanupTimer;
+        private readonly Task _cleanupTask;
 
         public InternalConcurrencyCheckMiddleware(IInternalServerOptions internalServerOptions)
         {
-            _semaphores = new ConcurrentDictionary<string, ConcurrencyTracker>();
-            this.internalServerOptions = internalServerOptions;
-            _ = CheckSemaphores();
-        }
-
-        public async Task CheckSemaphores()
-        {
-            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(10));
-
-            while (await timer.WaitForNextTickAsync())
-            {
-                var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                foreach (var entry in _semaphores.Where(x => (x.Value.LastUsage + 1200) < now))
-                {
-                    if (_semaphores.TryGetValue(entry.Key, out var tracker) && tracker.CurrentCount == internalServerOptions.MaxConcurrentOperations)
-                    {                
-                        _semaphores.TryRemove(entry.Key, out var removed);
-                        removed?.Dispose();
-                    }
-                }
-            }
+            _internalServerOptions = internalServerOptions;
+            _trackers = new ConcurrentDictionary<string, IPConcurrencyTracker>();
+            _cleanupTimer = new PeriodicTimer(TimeSpan.FromMinutes(10));
+            _cleanupTask = RunCleanupLoopAsync();
         }
 
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
-            if(internalServerOptions.MaxConcurrentOperations == 0)
+            if (!_internalServerOptions.TransportSettings.TryGetValue(context.TransportType, out var settings))
+            {
+                settings = context.TransportType.DefaultTransportSettings;
+            }
+
+            var maxConcurrentPerIp = settings.MaxConcurrentRequestsPerIp;
+
+            if (maxConcurrentPerIp <= 0)
             {
                 await next();
                 return;
             }
 
-            bool allowed = false;
-            ConcurrencyTracker tracker = _semaphores.GetOrAdd(context.HttpContext!.Connection.RemoteIpAddress?.ToString()!, 
-                x => new ConcurrencyTracker(internalServerOptions.MaxConcurrentOperations));
+            var ipAddress = context.HttpContext?.Connection.RemoteIpAddress?.ToString()
+                            ?? context.HttpContext?.Connection.RemoteIpAddress?.ToString()
+                            ?? "unknown";
+
+            var tracker = _trackers.GetOrAdd(
+                ipAddress,
+                static (_, maxLimit) => new IPConcurrencyTracker(maxLimit),
+                maxConcurrentPerIp);
+
+            if (!tracker.Counter.TryIncrement())
+            {
+                context.Response = HubconResponse.TooManyRequests();
+                return;
+            }
+
+            tracker.UpdateLastUsage();
 
             try
             {
-                allowed = await tracker.WaitAsync();
-
-                if (!allowed)
-                {
-                    context.Response = HubconResponse.TooManyRequests();
-                    return;
-                }
-
                 await next();
-            }
-            catch (Exception)
-            {
-                throw;
             }
             finally
             {
-               if(allowed)
-                    tracker.Release();
+                tracker.Counter.Decrement();
+                tracker.UpdateLastUsage();
             }
         }
 
-        public class ConcurrencyTracker
+        private async Task RunCleanupLoopAsync()
         {
-            readonly SemaphoreSlim _dedicatedSemaphore;
-
-            public long _lastUsage;
-            public long LastUsage => _lastUsage;
-
-            public int CurrentCount => _dedicatedSemaphore.CurrentCount;
-
-            public ConcurrencyTracker(int count)
+            while (await _cleanupTimer.WaitForNextTickAsync())
             {
-                _dedicatedSemaphore = new SemaphoreSlim(count, count);
+                long now = Environment.TickCount64;
+
+                long expirationThreshold = 1_200_000;
+
+                foreach (var pair in _trackers)
+                {
+                    if (now - pair.Value.LastUsageTicks > expirationThreshold && pair.Value.Counter.Value == 0)
+                    {
+                        _trackers.TryRemove(pair.Key, out _);
+                    }
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            _cleanupTimer.Dispose();
+        }
+
+        private sealed class IPConcurrencyTracker
+        {
+            public AtomicCounter Counter { get; }
+            private long _lastUsageTicks;
+
+            public long LastUsageTicks => Volatile.Read(ref _lastUsageTicks);
+
+            public IPConcurrencyTracker(int maxConcurrentRequests)
+            {
+                Counter = new AtomicCounter(maxConcurrentRequests);
+                UpdateLastUsage();
             }
 
-            public Task<bool> WaitAsync(CancellationToken cancellationToken = default)
+            public void UpdateLastUsage()
             {
-                Interlocked.Exchange(ref _lastUsage, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
-                return _dedicatedSemaphore.WaitAsync(5000, cancellationToken);
-            }
-
-            public void Release()
-            {
-                Interlocked.Exchange(ref _lastUsage, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
-                _dedicatedSemaphore.Release();
-            }
-
-            public void Dispose()
-            {
-                _dedicatedSemaphore.Dispose();
+                Volatile.Write(ref _lastUsageTicks, Environment.TickCount64);
             }
         }
     }

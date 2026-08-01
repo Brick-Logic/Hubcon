@@ -18,6 +18,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using Hubcon.Server.Core.Extensions;
+using Hubcon.Shared.Core.Extensions;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 #pragma warning disable CS1591
@@ -37,11 +38,21 @@ namespace Hubcon.Server.Core.Routing
                 return;
 
             IEndpointConventionBuilder builder = null!;
-            var route = blueprint.HttpRoute!;
+
             var operationName = blueprint.OperationName;
             var simpleContractName = NamingHelper.GetCleanName(blueprint.ContractName);
             var options = app.Services.GetRequiredService<IInternalServerOptions>();
             var method = (MethodInfo)blueprint.MemberInfo!;
+            var transportAttribute = HubconTransportAttribute.GetDefault<HttpTransport>();
+
+            if (!options.TransportSettings.TryGetValue(transportAttribute, out var settings))
+            {
+                settings = transportAttribute.DefaultTransportSettings;
+            }
+                
+            var combinedRoute = method.GetRoute(settings.MethodOverloadingEnabled);
+            var route = settings.TransportPrefix + combinedRoute.Endpoint;
+            var endpointGroupName = combinedRoute.EndpointGroup;
             
             var endpointDelegate =
                 EndpointManager.GetDummyEndpointDelegate(blueprint.ControllerType, blueprint.ContractType, method);
@@ -52,7 +63,7 @@ namespace Hubcon.Server.Core.Routing
                 throw new HubconGenericException(
                     $"Could not find a suitable delegate for endpoint '{method.Name}', on contract '{blueprint.ContractName}'. This could mean the source generators had an error.");
 
-            if (options.MethodOverloadingIsEnabled) route = $"{method.GetMethodSignature()}";
+            if (settings.MethodOverloadingEnabled) route = $"{method.GetMethodSignature()}";
 
             var controllerMethod = blueprint.ControllerType.GetMethod(
                 method.Name,
@@ -68,7 +79,7 @@ namespace Hubcon.Server.Core.Routing
             
             filters.AddRange(classFilters);
 
-            var endpointGroup = EndpointGroups.GetOrAdd(blueprint.HttpEndpointGroupName!, x =>
+            var endpointGroup = EndpointGroups.GetOrAdd(endpointGroupName!, x =>
             {
                 var group = app
                     .MapGroup(x)
@@ -78,7 +89,7 @@ namespace Hubcon.Server.Core.Routing
             });
 
             HttpMethod verbResult = blueprint.HttpVerb!;
-            SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
+            // SetupEndpointGroup(options, builder, endpointGroup, blueprint, controllerMethod!, filters);
 
             if (blueprint.Kind == OperationKind.Stream)
             {
@@ -93,7 +104,7 @@ namespace Hubcon.Server.Core.Routing
                         var requestId = context.GetOrCreateRequestId();
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
-                        mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
+                        mrbs.MaxRequestBodySize = settings.MaxMessageSizeInBytes;
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName);
                         var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
@@ -132,7 +143,7 @@ namespace Hubcon.Server.Core.Routing
                         }
 
                         return new SseResult((res.Data as IAsyncEnumerable<object?>)!, operationRequest);
-                    });
+                    }).WithRequestTimeout(settings.StreamOperationTimeout);
                 }
                 else
                 {
@@ -144,7 +155,7 @@ namespace Hubcon.Server.Core.Routing
                         var cancellationToken = context.RequestAborted;
                         var requestId = context.GetOrCreateRequestId();
 
-                        if (context.Request.ContentLength > options.MaxHttpMessageSize)
+                        if (context.Request.ContentLength > settings.MaxMessageSizeInBytes)
                         {
                             return HubconResponse.RequestTooLarge();
                         }
@@ -184,7 +195,7 @@ namespace Hubcon.Server.Core.Routing
                         }
 
                         return new SseResult((res.Data! as IAsyncEnumerable<object?>)!, operationRequest);
-                    });
+                    }).WithRequestTimeout(settings.StreamOperationTimeout);
                 }
             }
             else if (blueprint.HasReturnType)
@@ -200,7 +211,7 @@ namespace Hubcon.Server.Core.Routing
                         var requestId = context.GetOrCreateRequestId();
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
-                        mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
+                        mrbs.MaxRequestBodySize = settings.MaxMessageSizeInBytes;
                         
                         var operationRequest = new OperationRequest(operationName, simpleContractName);
 
@@ -236,7 +247,7 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res.GetOriginal();
-                    });
+                    }).WithRequestTimeout(settings.InvokeOperationTimeout);
                 }
                 else
                 {
@@ -248,7 +259,7 @@ namespace Hubcon.Server.Core.Routing
                         var cancellationToken = context.RequestAborted;
                         var requestId = context.GetOrCreateRequestId();
 
-                        if (context.Request.ContentLength > options.MaxHttpMessageSize)
+                        if (context.Request.ContentLength > settings.MaxMessageSizeInBytes)
                         {
                             return HubconResponse.RequestTooLarge();
                         }
@@ -282,7 +293,7 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res.GetOriginal();
-                    });
+                    }).WithRequestTimeout(settings.InvokeOperationTimeout);
                 }
             }
             else
@@ -296,6 +307,14 @@ namespace Hubcon.Server.Core.Routing
                         var services = context.RequestServices;
                         var cancellationToken = context.RequestAborted;
                         var requestId = context.GetOrCreateRequestId();
+                        
+                        var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
+                        mrbs.MaxRequestBodySize = settings.MaxMessageSizeInBytes;
+
+                        if (context.Request.ContentLength > settings.MaxMessageSizeInBytes)
+                        {
+                            return HubconResponse.RequestTooLarge();
+                        }
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName);
 
@@ -330,7 +349,7 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res.GetOriginal();
-                    });
+                    }).WithRequestTimeout(settings.CallOperationTimeout);
                 }
                 else
                 {
@@ -343,9 +362,9 @@ namespace Hubcon.Server.Core.Routing
                         var requestId = context.GetOrCreateRequestId();
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
-                        mrbs.MaxRequestBodySize = options.MaxHttpMessageSize;
+                        mrbs.MaxRequestBodySize = settings.MaxMessageSizeInBytes;
 
-                        if (context.Request.ContentLength > options.MaxHttpMessageSize)
+                        if (context.Request.ContentLength > settings.MaxMessageSizeInBytes)
                         {
                             return HubconResponse.RequestTooLarge();
                         }
@@ -380,17 +399,18 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res.GetOriginal();
-                    });
+                    }).WithRequestTimeout(settings.CallOperationTimeout);
                 }
             }
 
-            builder.WithRequestTimeout(options.HttpTimeout);
             builder.WithMetadata(new ProducesResponseTypeMetadata(400, typeof(IHubconResponse<Dictionary<string, string[]>>), ["application/json"]));
             builder.WithMetadata(new ProducesResponseTypeMetadata(403, typeof(IResponse), ["application/json"]));
             builder.WithMetadata(new ProducesResponseTypeMetadata(404, typeof(IResponse), ["application/json"]));
             builder.WithMetadata(new ProducesResponseTypeMetadata(500, typeof(IResponse), ["application/json"]));
             
-            builder.AllowAnonymous();
+            if(settings.AllowAnonymousClients)
+                builder.AllowAnonymous();
+            
             options.EndpointConventions?.Invoke(builder);
         }
 
@@ -404,25 +424,25 @@ namespace Hubcon.Server.Core.Routing
         {
             options.EndpointConventions?.Invoke(builder);
 
-            if (!options.ThrottlingIsDisabled)
-            {
-                var limiterApplied = RateLimiterApplied.TryGetValue(endpointGroup, out var result);
-                if (!limiterApplied)
-                {
-                    var ContractRateLimiter = blueprint.ControllerType
-                        .GetCustomAttributes<UseHttpRateLimiterAttribute>().FirstOrDefault();
-                    if (ContractRateLimiter != null)
-                    {
-                        endpointGroup.RequireRateLimiting(ContractRateLimiter.Policy);
-                        RateLimiterApplied.TryAdd(endpointGroup, true);
-                    }
-                }
-
-                var OperationRateLimiter = controllerMethod!.GetCustomAttributes<UseHttpRateLimiterAttribute>()
-                    .FirstOrDefault();
-                if (OperationRateLimiter != null)
-                    builder.RequireRateLimiting(OperationRateLimiter.Policy);
-            }
+            // if (!options.ThrottlingIsDisabled)
+            // {
+            //     var limiterApplied = RateLimiterApplied.TryGetValue(endpointGroup, out var result);
+            //     if (!limiterApplied)
+            //     {
+            //         var ContractRateLimiter = blueprint.ControllerType
+            //             .GetCustomAttributes<UseHttpRateLimiterAttribute>().FirstOrDefault();
+            //         if (ContractRateLimiter != null)
+            //         {
+            //             endpointGroup.RequireRateLimiting(ContractRateLimiter.Policy);
+            //             RateLimiterApplied.TryAdd(endpointGroup, true);
+            //         }
+            //     }
+            //
+            //     var OperationRateLimiter = controllerMethod!.GetCustomAttributes<UseHttpRateLimiterAttribute>()
+            //         .FirstOrDefault();
+            //     if (OperationRateLimiter != null)
+            //         builder.RequireRateLimiting(OperationRateLimiter.Policy);
+            // }
 
             options.RouteHandlerBuilderConfig?.Invoke((builder as RouteHandlerBuilder)!);
         }

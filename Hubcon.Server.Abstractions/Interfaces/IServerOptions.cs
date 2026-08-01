@@ -76,12 +76,6 @@ namespace Hubcon.Server.Abstractions.Interfaces
         public void AddTransport<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>() where T : HubconTransportAttribute, new();
 
         /// <summary>
-        /// Configures the token validation parameters used by the framework.
-        /// </summary>
-        /// <param name="tokenValidationParameters">An instance of <see cref="TokenValidationParameters"/> defining the validation rules.</param>
-        public void UseTokenValidationParameters(TokenValidationParameters tokenValidationParameters);
-
-        /// <summary>
         /// Configures hubcon to use the provided <typeparamref name="T"/> type as the main cache implementation for the <see cref="IGlobalRateLimiterManager"/> service.
         /// </summary>
         /// <typeparam name="T"></typeparam>

@@ -24,6 +24,8 @@ namespace Hubcon.Server.Core.Routing.Registries
     [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class OperationRegistry : IOperationRegistry
     {
+        private readonly IInternalServerOptions _serverOptions;
+
         /// <summary>
         /// An event called when an operation is registered.
         /// </summary>
@@ -44,21 +46,22 @@ namespace Hubcon.Server.Core.Routing.Registries
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public OperationRegistry()
+        public OperationRegistry(IInternalServerOptions serverOptions)
         {
+            _serverOptions = serverOptions;
             var env = Environment.GetEnvironmentVariable("HUBCON_OPNAME_DEBUG_ENABLED");
             useHashedNames = !bool.TryParse(env, out var parsed) ? true : !parsed;
         }
 
         ///<inheritdoc/>
-        public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<IServiceCollection>> servicesToInject)
+        public void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, out List<Action<IServiceCollection>> servicesToInject)
         {
             if (_blueprintCache != null)
                 throw new InvalidOperationException("El registro de operaciones ya fue construido, no puede agregar mas operaciones.");
 
             if (!typeof(IControllerContract).IsAssignableFrom(controllerType))
                 throw new NotImplementedException($"El tipo {controllerType.FullName} no implementa la interfaz {nameof(IControllerContract)} o un tipo derivado.");
-
+            
             servicesToInject = new List<Action<IServiceCollection>>();
 
             void Injector(IServiceCollection x) => x.RegisterFactoryScoped(controllerType);
@@ -107,15 +110,6 @@ namespace Hubcon.Server.Core.Routing.Registries
                                         : !hasReturnType ? OperationKind.CallMethod : OperationKind.InvokeMethod;
 
                     if (method.IsStatic)
-                        continue;
-
-                    if (!serverOptions.WebSocketMethodsIsAllowed && (kind == OperationKind.CallMethod || kind == OperationKind.InvokeMethod))
-                        continue;
-
-                    if (!serverOptions.WebSocketIngestIsAllowed && kind == OperationKind.Ingest)
-                        continue;
-
-                    if (!serverOptions.WebSocketStreamIsAllowed && kind == OperationKind.Stream)
                         continue;
 
                     var parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
@@ -189,7 +183,7 @@ namespace Hubcon.Server.Core.Routing.Registries
                         controllerMethod,
                         kind,
                         pipelineBuilder,
-                        serverOptions,
+                        _serverOptions,
                         httpVerb
                     );
 
@@ -288,10 +282,23 @@ namespace Hubcon.Server.Core.Routing.Registries
         {
             var tempCache = _blueprintCache?.ToDictionary() ?? new Dictionary<string, IOperationBlueprint>();
             var tempOperations = _availableOperations.Where(x => x.Value.TransportAttributes.Any(x => x.Key == transport.GetType())).ToFrozenDictionary();
-
+            
+            if (!_serverOptions.TransportSettings.TryGetValue(transport, out var settings))
+                settings = transport.DefaultTransportSettings;
+                
             foreach (var operation in tempOperations)
             {
-                tempCache.TryAdd(transport.TransportKey + "_" + operation.Key, operation.Value);
+                switch (operation.Value.Kind)
+                {
+                    case OperationKind.CallMethod when !settings.CallOperationEnabled:
+                    case OperationKind.InvokeMethod when !settings.InvokeOperationEnabled:
+                    case OperationKind.Stream when !settings.StreamOperationEnabled:
+                    case OperationKind.Ingest when !settings.IngestOperationEnabled:
+                        continue;
+                    default:
+                        tempCache.TryAdd(transport.TransportKey + "_" + operation.Key, operation.Value);
+                        break;
+                }
             }
 
             _blueprintCache = tempCache.ToFrozenDictionary();

@@ -5,6 +5,7 @@ using Scalar.AspNetCore;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
+using System.Threading.RateLimiting;
 using Hubcon.Server.Core.Telemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
@@ -123,17 +124,42 @@ namespace HubconTest
                 serverOptions.AddOpenTelemetry();
                 serverOptions.AddConcurrencyLimiter();
                 
-                serverOptions.UseTokenValidationParameters(tokenValidationParameters);
-
                 serverOptions.ConfigureCore(config =>
                 {
-                    config
-                        .SetMaxConcurrentOperations(999999)
-                        .SetGlobalRateLimiter(999999)
-                        .AddSetting("", new object())
-                        .AddTransportAuth<WebSocketTransport, JwtAuthHandler>()
-                        .EnableWebsocketsLogging()
-                        .AllowRemoteTokenCancellation();
+                    config.ConfigureTransport<WebSocketTransport>(x =>
+                    {
+                        x.MaxConcurrentRequestsPerIp = 999_999;
+                        x.TransportLimiterOptions = new TokenBucketRateLimiterOptions()
+                        {
+                            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                            AutoReplenishment = true,
+                            TokenLimit = 1000,
+                            TokensPerPeriod = 1000,
+                            QueueLimit = 100
+                        };
+                        x.ConnectionAuthHandlerType = typeof(JwtAuthHandler);
+                        x.LoggingEnabled = true;
+                        x.AllowRemoteCancellation = true;
+                        x.MethodOverloadingEnabled = true;
+                        x.TokenValidationParameters = tokenValidationParameters;
+                    });
+                    
+                    config.ConfigureTransport<HttpTransport>(x =>
+                    {
+                        x.MaxConcurrentRequestsPerIp = 999_999;
+                        x.TransportLimiterOptions = new TokenBucketRateLimiterOptions()
+                        {
+                            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                            AutoReplenishment = true,
+                            TokenLimit = 1000,
+                            TokensPerPeriod = 1000,
+                            QueueLimit = 100
+                        };
+                        x.ConnectionAuthHandlerType = typeof(JwtAuthHandler);
+                        x.LoggingEnabled = true;
+                        x.AllowRemoteCancellation = true;
+                        x.TokenValidationParameters = tokenValidationParameters;
+                    });
                 });
 
                 serverOptions.AutoRegisterControllers();
@@ -147,7 +173,7 @@ namespace HubconTest
 
             app.MapOpenApi();
             app.MapScalarApiReference();
-
+            
             app.UseHubconHttpEndpoints();
             app.UseHubconWebsocketEndpoints();
 

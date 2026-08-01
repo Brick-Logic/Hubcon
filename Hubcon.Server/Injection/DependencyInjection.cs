@@ -18,26 +18,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Hubcon
 {
-    // internal sealed class RemoveNullableSchemaFilter : ISchemaFilter
-    // {
-    //     public void Apply(OpenApiSchema schema, SchemaFilterContext context)
-    //     {
-    //         if (schema.Type == "string")
-    //         {
-    //             schema.Nullable = false;
-    //             schema.Example = new OpenApiString("string");
-    //         }          
-    //
-    //         if (schema.Properties != null)
-    //         {
-    //             foreach (var prop in schema.Properties.Values.Where(x => x.Type == "string"))
-    //             {
-    //                 prop.Nullable = false;
-    //             }
-    //         }
-    //     }
-    // }
-
     public static class DependencyInjection
     {
         public static WebApplicationBuilder AddHubconServer(this WebApplicationBuilder builder, Action<IServerOptions>? controllerOptions = null)
@@ -74,6 +54,46 @@ namespace Hubcon
             controllerOptions?.Invoke(controllerConfig);
 
             return builder;
+        }
+
+        public static WebApplication MapHubconTransport<TTransport, TRegisterer>(this WebApplication app) 
+            where TTransport: HubconTransportAttribute, new()
+            where TRegisterer: TransportRegisterer, new()
+        {
+            var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
+            var options = app.Services.GetRequiredService<IInternalServerOptions>();
+            var registerer = new TRegisterer();
+            
+            operationRegistry.MapTransport<TTransport>(app, (operations, app) =>
+            {
+                registerer.Setup(app);
+                var settings = options.GetTransportSettings<TTransport>();
+                
+                foreach (var operation in operations)
+                {
+                    switch (operation.Value.Kind)
+                    {
+                        case OperationKind.CallMethod when !settings.CallOperationEnabled:
+                            registerer.RegisterCallOperation(operation.Value, app);
+                            break;
+                        case OperationKind.InvokeMethod when !settings.InvokeOperationEnabled:
+                            registerer.RegisterInvokeOperation(operation.Value, app);
+                            break;
+                        case OperationKind.Stream when !settings.StreamOperationEnabled:
+                            registerer.RegisterStreamOperation(operation.Value, app);
+                            break;
+                        case OperationKind.Ingest when !settings.IngestOperationEnabled:
+                            registerer.RegisterIngest(operation.Value, app);
+                            break;
+                        default:
+                            continue;
+                    }
+                }
+
+                registerer.PostRegister(app);
+            });
+
+            return app;
         }
 
         public static WebApplication UseHubconHttpEndpoints(this WebApplication app)

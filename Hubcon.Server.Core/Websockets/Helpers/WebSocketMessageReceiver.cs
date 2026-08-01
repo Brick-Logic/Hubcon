@@ -8,7 +8,7 @@ namespace Hubcon.Server.Core.Websockets.Helpers
     internal sealed class WebSocketMessageReceiver(WebSocket socket, IInternalServerOptions options)
     {
         private readonly WebSocket _socket = socket;
-        private readonly int _maxMessageSize = options.MaxWebSocketMessageSize;
+        private readonly long _maxMessageSize = options.GetTransportSettings<WebSocketTransport>().MaxMessageSizeInBytes;
 
         public async Task<TrimmedMemoryOwner?> ReceiveAsync(CancellationToken cancellationToken = default)
         {
@@ -66,9 +66,7 @@ namespace Hubcon.Server.Core.Websockets.Helpers
                     parts.Add(part);
                 }
                 while (!result.EndOfMessage);
-
-                // Llamamos a un método síncrono para la copia pesada
-                // Esto permite usar Spans y es mucho más rápido para el CPU
+                
                 return ConsolidateParts(parts, totalBytes);
             }
             catch { goto Cleanup; }
@@ -78,18 +76,17 @@ Cleanup:
             return null;
         }
 
-        // Este método es síncrono, por lo que permite el uso de Spans (ref structs)
         private TrimmedMemoryOwner ConsolidateParts(List<IMemoryOwner<byte>> parts, int totalBytes)
         {
             var finalOwner = MemoryPool<byte>.Shared.Rent(totalBytes);
-            var finalSpan = finalOwner.Memory.Span; // Ahora sí podés usar Span
+            var finalSpan = finalOwner.Memory.Span;
             int offset = 0;
 
             foreach (var p in parts)
             {
                 int toCopy = Math.Min(p.Memory.Length, totalBytes - offset);
                 p.Memory.Span.Slice(0, toCopy).CopyTo(finalSpan.Slice(offset));
-                offset += p.Memory.Length; // Usamos el largo original para el offset
+                offset += p.Memory.Length;
                 p.Dispose();
             }
 

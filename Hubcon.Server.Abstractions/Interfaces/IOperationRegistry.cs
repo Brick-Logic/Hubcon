@@ -54,8 +54,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// </summary>
         /// <param name="controllerType">The <see cref="Type"/> of the controller to scan.</param>
         /// <param name="options">Optional configuration settings for the controller.</param>
-        /// <param name="serverOptions">The current <see cref="IInternalServerOptions"/> used to validate registration constraints.</param>
         /// <param name="servicesToInject">When this method returns, contains a list of service registration actions required by the discovered operations.</param>
-        void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, IInternalServerOptions serverOptions, out List<Action<IServiceCollection>> servicesToInject);
+        void RegisterOperations(Type controllerType, Action<IControllerOptions>? options, out List<Action<IServiceCollection>> servicesToInject);
     }
 }

@@ -14,7 +14,7 @@ namespace Hubcon
     /// <summary>
     /// Hubcon's JWT token authentication handler.
     /// </summary>
-    public sealed class JwtAuthHandler : IAuthHandler
+    public sealed class JwtAuthHandler(IInternalServerOptions options) : IAuthHandler
     {
         ///<inheritdoc/>
         public async ValueTask<ClaimsPrincipal?> AuthenticateAsync(IOperationContext context, IUseAuthAttribute originAttribute)
@@ -27,7 +27,10 @@ namespace Hubcon
                 return cachedUser;
             }
 
-            var tokenValidationParameters = context.RequestServices.GetRequiredService<IInternalServerOptions>().TokenValidationParameters;
+            if (!options.TransportSettings.TryGetValue(context.TransportType, out var settings))
+                settings = context.TransportType.DefaultTransportSettings;
+            
+            var tokenValidationParameters = settings.TokenValidationParameters;
             var user = JwtHelper.ValidateJwtToken(token!, tokenValidationParameters!, out _);
 
             operationCache.Set(token!, user!, expirationMinutes:5);

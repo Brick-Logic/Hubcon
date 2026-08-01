@@ -51,9 +51,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public IList<Attribute> Attributes { get; }
         public ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         public ConcurrentDictionary<Type, Attribute> TransportAttributes { get; }
-
-        public string? HttpRoute { get; }
-        public string? HttpEndpointGroupName { get; }
+        
         public HttpMethod? HttpVerb { get; }
 
         public bool ReturnsHubconResponse { get; }
@@ -103,11 +101,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
                        methodInfo.ReturnType.GetGenericTypeDefinition() == typeof(Task<>)
                        ? methodInfo.ReturnType.GetGenericArguments()[0]
                        : methodInfo.ReturnType;
-
-                var combinedRoute = methodInfo.GetRoute(options.MethodOverloadingIsEnabled);
-                HttpRoute = options.HttpPathPrefix + combinedRoute.Endpoint;
-                HttpEndpointGroupName = combinedRoute.EndpointGroup;
-
+                
                 HasReturnType = ReturnType != typeof(void) && ReturnType != typeof(Task);
 
                 Attributes = ControllerType.GetMethod(

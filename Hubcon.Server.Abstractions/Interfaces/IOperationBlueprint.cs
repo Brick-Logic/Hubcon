@@ -43,11 +43,6 @@ namespace Hubcon
         bool HasReturnType { get; }
 
         /// <summary>
-        /// Gets the name of the HTTP endpoint group associated with the operation, if any.
-        /// </summary>
-        string? HttpEndpointGroupName { get; }
-
-        /// <summary>
         /// Gets metadata information about the member defining the operation.
         /// </summary>
         MemberInfo? MemberInfo { get; }
@@ -101,11 +96,6 @@ namespace Hubcon
         /// Gets the optional call wrapper type for the operation.
         /// </summary>
         Type? CallWrapperType { get; }
-
-        /// <summary>
-        /// Gets the HTTP route associated with the operation, if any.
-        /// </summary>
-        string? HttpRoute { get; }
 
         /// <summary>
         /// Gets the collection of configuration attributes associated with the operation.

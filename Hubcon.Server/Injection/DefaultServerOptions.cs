@@ -125,11 +125,6 @@ namespace Hubcon.Server.Injection
             HubconServerBuilder.AddTransport<T>(attribute);
         }
 
-        public void UseTokenValidationParameters(TokenValidationParameters tokenValidationParameters)
-        {
-            HubconServerBuilder.AddTokenValidationParameters(tokenValidationParameters);
-        }
-
         public void AddConcurrencyLimiter()
         {
             HubconServerBuilder.AddGlobalMiddleware<InternalConcurrencyCheckMiddleware>((services, type) => services.TryAddSingleton(type));

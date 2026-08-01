@@ -40,4 +40,10 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Include="Microsoft.IdentityModel.Tokens">
+	    <HintPath>..\..\..\.nuget\packages\microsoft.identitymodel.tokens\8.0.0\lib\netstandard2.0\Microsoft.IdentityModel.Tokens.dll</HintPath>
+	  </Reference>
+	</ItemGroup>
 </Project>

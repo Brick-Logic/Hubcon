@@ -64,6 +64,7 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
 
     public IConnectionSupervisor Supervisor { get; }
 
+    public ITransportSettings Settings { get; }
 
     public ClientWebSocketContext(HttpContext context)
     {
@@ -75,8 +76,9 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
         RateLimiter = context.RequestServices.GetRequiredService<IGlobalRateLimiterManager>();
         Logger = context.RequestServices.GetRequiredService<ILogger<HubconWebSocketMiddleware>>();
         Supervisor = context.RequestServices.GetRequiredService<IConnectionSupervisor>();
-
-        TimeoutSeconds = InternalServerOptions.WebSocketTimeout;
+        Settings = InternalServerOptions.GetTransportSettings<WebSocketTransport>();
+        
+        TimeoutSeconds = Settings.ConnectionTimeout;
 
         SettingsManager = new SettingsManager(OperationRegistry, OperationConfigRegistry);
     }

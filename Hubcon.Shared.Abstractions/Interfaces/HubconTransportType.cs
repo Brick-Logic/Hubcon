@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hubcon
 {
@@ -58,5 +55,10 @@ namespace Hubcon
         /// The ID used for high-speed telemetry.
         /// </summary>
         public abstract int TelemetryId { get; }
+        
+        /// <summary>
+        /// The default settings for this transport.
+        /// </summary>
+        public abstract TransportSettings DefaultTransportSettings { get; }
     }
 }
