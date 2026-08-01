@@ -26,8 +26,6 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Channels;
 using Hubcon.Server.Core.WebSockets.Middleware;
-using Hubcon.Shared.Core.Tools;
-using Microsoft.Extensions.Primitives;
 
 namespace Hubcon.Server.Core.Websockets.Middleware
 {
@@ -40,7 +38,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         private int clientCount;
         private readonly RequestDelegate next;
         private readonly IInternalServerOptions options;
-        private readonly ITransportSettings _settings;
+        private readonly WebSocketTransportSettings _settings;
 
         private static readonly HubconTransportAttribute _transport =
             HubconTransportAttribute.GetDefault<WebSocketTransport>();
@@ -63,7 +61,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             this.connectionSupervisor = connectionSupervisor;
             this.next = next;
             this.options = options;
-            _settings = options.GetTransportSettings<WebSocketTransport>();
+            _settings = options.GetTransportSettings<WebSocketTransport, WebSocketTransportSettings>();
 
             telemetryProvider.RegisterProvider(x => x.GetCurrentWebsocketClients, () => clientCount);
         }
@@ -105,7 +103,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             string connectionId = Guid.NewGuid().ToString();
             WebSocket webSocket = null!;
 
-            var userData = await IsAuthorized(httpContext, options, _settings);
+            var userData = await IsAuthorized(httpContext, _settings);
 
             if (userData != null)
             {
@@ -394,18 +392,14 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         }
 
         static async ValueTask<(ClaimsPrincipal ClaimsPrincipal, long ExpirationTime, string? AccessToken)?>
-            IsAuthorized(HttpContext context, IInternalServerOptions options, ITransportSettings settings)
+            IsAuthorized(HttpContext context, WebSocketTransportSettings settings)
         {
             if (settings.RequiresAuth)
             {
                 var token = context.Request.Query["access_token"];
                 context.Request.Headers["Authorization"] = token;
 
-                var authProvider =
-                    options.AuthHandlerTypes.TryGetValue(HubconTransportAttribute.GetDefault<WebSocketTransport>(),
-                        out var authHandlerType)
-                        ? authHandlerType
-                        : typeof(JwtAuthHandler);
+                var authProvider = settings.ConnectionAuthHandlerType ?? typeof(JwtAuthHandler);
 
                 if (string.IsNullOrWhiteSpace(token))
                 {
@@ -421,7 +415,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                             RequestServices = context.RequestServices,
                             HttpContext = context,
                             RequestAborted = context.RequestAborted,
-                            IsTransportCalled = true
+                            IsTransportCalled = true,
+                            TransportType = _transport
                         };
 
                         var claimsPrincipal = await Task.Run(async () =>
@@ -593,7 +588,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         }
 
         private static async Task HandleIngestInit(IngestInitMessage ingestInitMessage, ClientWebSocketContext context,
-            ITransportSettings transportSettings)
+            WebSocketTransportSettings transportSettings)
         {
             List<HeartbeatWatcher> watchers = null!;
 
@@ -886,7 +881,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         }
 
         private static async Task HandleStream(StreamInitMessage streamInitMessage, ClientWebSocketContext context,
-            ITransportSettings transportSettings)
+            WebSocketTransportSettings transportSettings)
         {
             try
             {
@@ -1005,7 +1000,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         }
 
         private static async Task HandleTokenRefresh(TokenUpdateMessage tokenUpdateMessage,
-            ClientWebSocketContext context, ITransportSettings transportSettings)
+            ClientWebSocketContext context, WebSocketTransportSettings transportSettings)
         {
             if (context.ConnectionIsClosed) return;
 
@@ -1019,7 +1014,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 return;
             }
 
-            var user = await IsAuthorized(context.HttpContext, context.InternalServerOptions, transportSettings);
+            var user = await IsAuthorized(context.HttpContext, transportSettings);
 
             try
             {

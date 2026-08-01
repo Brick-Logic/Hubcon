@@ -4,155 +4,109 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Hubcon
 {
-    /// <inheritdoc/>
-    public sealed class TransportSettings : ITransportSettings
+    /// <inheritdoc cref="ITransportSettings" />
+    public class TransportSettings : ITransportSettings, ITransportSettingsSetter
     {
-        /// <inheritdoc/>
-        public long MaxMessageSizeInBytes { get; set; } = 65535;
-        
-        /// <inheritdoc/>
-        public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(15);
-        
-        /// <inheritdoc/>
-        public int MaxConnections { get; set; } = 1000;
-        
-        /// <inheritdoc/>
-        public int MaxConnectionsPerIp { get; set; } = 10;
-        
-        /// <inheritdoc/>
-        public bool EnablePing { get; set; } = true;
-        
-        /// <inheritdoc/>
-        public TokenBucketRateLimiterOptions? PingOperationLimiterOptions { get; set; }
-        
-        /// <inheritdoc/>
-        public bool EnablePong { get; set; } = true;
-        
-        /// <inheritdoc/>
-        public string TransportPrefix { get; set; } = "/";
-        
-        /// <inheritdoc/>
-        public bool CallOperationEnabled { get; set; } = true;
-        
-        /// <inheritdoc/>
-        public TimeSpan CallOperationTimeout { get; set; }
-        
-        /// <inheritdoc/>
-        public TokenBucketRateLimiterOptions? CallOperationLimiterOptions { get; set; }
-        
-        /// <inheritdoc/>
-        public bool InvokeOperationEnabled { get; set; } = true;
-        
-        /// <inheritdoc/>
-        public TimeSpan InvokeOperationTimeout { get; set; }
-        
-        /// <inheritdoc/>
-        public TokenBucketRateLimiterOptions? InvokeOperationLimiterOptions { get; set; }
-        
-        /// <inheritdoc/>
-        public bool StreamOperationEnabled { get; set; } = true;
-        
-        /// <inheritdoc/>
-        public TimeSpan StreamOperationTimeout { get; set; }
-        
-        /// <inheritdoc/>
-        public TokenBucketRateLimiterOptions? StreamOperationLimiterOptions { get; set; }
-        
-        /// <inheritdoc/>
-        public bool IngestOperationEnabled { get; set; } = true;
-        
-        /// <inheritdoc/>
-        public TimeSpan IngestOperationTimeout { get; set; }
-        
-        /// <inheritdoc/>
-        public TokenBucketRateLimiterOptions? IngestOperationLimiterOptions { get; set; }
-        
-        /// <inheritdoc/>
-        public bool RetryableMessagesEnabled { get; set; }
-        
-        /// <inheritdoc/>
-        public bool UseRateLimiters { get; set; } = true;
-        
-        /// <inheritdoc/>
-        public bool LoggingEnabled { get; set; }
-        
-        /// <inheritdoc/>
-        public bool AllowRemoteCancellation { get; set; }
-        
-        /// <inheritdoc/>
-        public TokenBucketRateLimiterOptions? TransportLimiterOptions { get; set; }
-        
-        /// <inheritdoc/>
-        public bool MethodOverloadingEnabled { get; set; }
-        
-        /// <inheritdoc/>
-        public int MaxConcurrentRequestsPerIp { get; set; } = 10;
-        
-        /// <inheritdoc/>
-        public bool AllowAnonymousClients { get; set; } = true;
-        
-        /// <inheritdoc/>
-        public TokenValidationParameters? TokenValidationParameters { get; set; }
-        
-        /// <inheritdoc/>
-        public bool CheckTokenExpirationOnMessageReceived { get; set; }
-        
-        /// <inheritdoc/>
-        public TokenBucketRateLimiterOptions? ControlMessagesRateLimiterOptions { get; set; }
+        /// <inheritdoc cref="ITransportSettings.MaxMessageSizeInBytes" />
+        public virtual long MaxMessageSizeInBytes { get; set; } = 65535;
 
-        /// <inheritdoc/>
-        public Type? ConnectionAuthHandlerType { get; set; }
+        /// <inheritdoc cref="ITransportSettings.RequestTimeout" />
+        public virtual TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
-        /// <inheritdoc/>
-        public TimeSpan ConnectionTimeout { get; set; }
+        /// <inheritdoc cref="ITransportSettings.MaxConnections" />
+        public virtual int MaxConnections { get; set; } = 1000;
 
-        /// <inheritdoc/>
-        public bool RequiresAuth { get; set; } = true;
+        /// <inheritdoc cref="ITransportSettings.MaxConnectionsPerIp" />
+        public virtual int MaxConnectionsPerIp { get; set; } = 10;
 
+        /// <inheritdoc cref="ITransportSettings.EnablePing" />
+        public virtual bool EnablePing { get; set; } = true;
 
-        /// <summary>
-        /// Creates a new instance with the same property values.
-        /// </summary>
-        /// <returns></returns>
-        public TransportSettings GetCopy()
-        {
-            return new TransportSettings()
-            {
-                MaxMessageSizeInBytes = MaxMessageSizeInBytes,
-                RequestTimeout = RequestTimeout,
-                MaxConnections = MaxConnections,
-                MaxConnectionsPerIp = MaxConnectionsPerIp,
-                EnablePing = EnablePing,
-                PingOperationLimiterOptions = PingOperationLimiterOptions,
-                EnablePong = EnablePong,
-                TransportPrefix = TransportPrefix,
-                CallOperationEnabled = CallOperationEnabled,
-                CallOperationTimeout = CallOperationTimeout,
-                CallOperationLimiterOptions = CallOperationLimiterOptions,
-                InvokeOperationEnabled = InvokeOperationEnabled,
-                InvokeOperationTimeout = InvokeOperationTimeout,
-                InvokeOperationLimiterOptions = InvokeOperationLimiterOptions,
-                StreamOperationEnabled = StreamOperationEnabled,
-                StreamOperationTimeout = StreamOperationTimeout,
-                StreamOperationLimiterOptions = StreamOperationLimiterOptions,
-                IngestOperationEnabled = IngestOperationEnabled,
-                IngestOperationTimeout = IngestOperationTimeout,
-                IngestOperationLimiterOptions = IngestOperationLimiterOptions,
-                RetryableMessagesEnabled = RetryableMessagesEnabled,
-                UseRateLimiters = UseRateLimiters,
-                LoggingEnabled = LoggingEnabled,
-                AllowRemoteCancellation = AllowRemoteCancellation,
-                TransportLimiterOptions = TransportLimiterOptions,
-                MethodOverloadingEnabled = MethodOverloadingEnabled,
-                MaxConcurrentRequestsPerIp = MaxConcurrentRequestsPerIp,
-                AllowAnonymousClients = AllowAnonymousClients,
-                TokenValidationParameters = TokenValidationParameters,
-                CheckTokenExpirationOnMessageReceived = CheckTokenExpirationOnMessageReceived,
-                ControlMessagesRateLimiterOptions = ControlMessagesRateLimiterOptions,
-                ConnectionAuthHandlerType = ConnectionAuthHandlerType,
-                ConnectionTimeout = ConnectionTimeout,
-                RequiresAuth = RequiresAuth
-            };
-        }
+        /// <inheritdoc cref="ITransportSettings.PingOperationLimiterOptions" />
+        public virtual TokenBucketRateLimiterOptions? PingOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.EnablePong" />
+        public virtual bool EnablePong { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.TransportPrefix" />
+        public virtual string TransportPrefix { get; set; } = "/";
+
+        /// <inheritdoc cref="ITransportSettings.CallOperationEnabled" />
+        public virtual bool CallOperationEnabled { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.CallOperationTimeout" />
+        public virtual TimeSpan CallOperationTimeout { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.CallOperationLimiterOptions" />
+        public virtual TokenBucketRateLimiterOptions? CallOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.InvokeOperationEnabled" />
+        public virtual bool InvokeOperationEnabled { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.InvokeOperationTimeout" />
+        public virtual TimeSpan InvokeOperationTimeout { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.InvokeOperationLimiterOptions" />
+        public virtual TokenBucketRateLimiterOptions? InvokeOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.StreamOperationEnabled" />
+        public virtual bool StreamOperationEnabled { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.StreamOperationTimeout" />
+        public virtual TimeSpan StreamOperationTimeout { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.StreamOperationLimiterOptions" />
+        public virtual TokenBucketRateLimiterOptions? StreamOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.IngestOperationEnabled" />
+        public virtual bool IngestOperationEnabled { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.IngestOperationTimeout" />
+        public virtual TimeSpan IngestOperationTimeout { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.IngestOperationLimiterOptions" />
+        public virtual TokenBucketRateLimiterOptions? IngestOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.RetryableMessagesEnabled" />
+        public virtual bool RetryableMessagesEnabled { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.UseRateLimiters" />
+        public virtual bool UseRateLimiters { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.LoggingEnabled" />
+        public virtual bool LoggingEnabled { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.AllowRemoteCancellation" />
+        public virtual bool AllowRemoteCancellation { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.TransportLimiterOptions" />
+        public virtual TokenBucketRateLimiterOptions? TransportLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.MethodOverloadingEnabled" />
+        public virtual bool MethodOverloadingEnabled { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.MaxConcurrentRequestsPerIp" />
+        public virtual int MaxConcurrentRequestsPerIp { get; set; } = 10;
+
+        /// <inheritdoc cref="ITransportSettings.AllowAnonymousClients" />
+        public virtual bool AllowAnonymousClients { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.TokenValidationParameters" />
+        public virtual TokenValidationParameters? TokenValidationParameters { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.CheckTokenExpirationOnMessageReceived" />
+        public virtual bool CheckTokenExpirationOnMessageReceived { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.ControlMessagesRateLimiterOptions" />
+        public virtual TokenBucketRateLimiterOptions? ControlMessagesRateLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.ConnectionAuthHandlerType" />
+        public virtual Type? ConnectionAuthHandlerType { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.ConnectionTimeout" />
+        public virtual TimeSpan ConnectionTimeout { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.RequiresAuth" />
+        public virtual bool RequiresAuth { get; set; } = true;
     }
 }

@@ -24,10 +24,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
         {
-            if (!_internalServerOptions.TransportSettings.TryGetValue(context.TransportType, out var settings))
-            {
-                settings = context.TransportType.DefaultTransportSettings;
-            }
+            var settings = _internalServerOptions.GetTransportSettings(context.TransportType);
 
             var maxConcurrentPerIp = settings.MaxConcurrentRequestsPerIp;
 

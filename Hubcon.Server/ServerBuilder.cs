@@ -26,7 +26,7 @@ namespace Hubcon.Server
     {
         private static readonly AtomicPass _serverIsBuilt = new();
         private static readonly IOperationRegistry _operationRegistry = new OperationRegistry(ServerOptions);
-        private static CoreServerOptions ServerOptions { get; } = new();
+        private static CoreServerOptions ServerOptions => new();
         private IServiceCollection Services;
 
         private static ServerBuilder _current = null!;

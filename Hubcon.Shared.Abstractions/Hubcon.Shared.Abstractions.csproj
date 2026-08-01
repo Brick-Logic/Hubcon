@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net5.0;netstandard2.1</TargetFrameworks>
 		<Nullable>enable</Nullable>
-		<LangVersion>9.0</LangVersion>
+		<LangVersion>11</LangVersion>
 
 		<AssemblyName>$(AssemblyName)</AssemblyName>
 		<RootNamespace>$(AssemblyName)</RootNamespace>

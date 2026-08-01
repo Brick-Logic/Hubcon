@@ -45,13 +45,10 @@ namespace Hubcon.Server.Core.Routing
             var method = (MethodInfo)blueprint.MemberInfo!;
             var transportAttribute = HubconTransportAttribute.GetDefault<HttpTransport>();
 
-            if (!options.TransportSettings.TryGetValue(transportAttribute, out var settings))
-            {
-                settings = transportAttribute.DefaultTransportSettings;
-            }
+            var httpSettings = options.GetTransportSettings(transportAttribute);
                 
-            var combinedRoute = method.GetRoute(settings.MethodOverloadingEnabled);
-            var route = settings.TransportPrefix + combinedRoute.Endpoint;
+            var combinedRoute = method.GetRoute(httpSettings.MethodOverloadingEnabled);
+            var route = httpSettings.TransportPrefix + combinedRoute.Endpoint;
             var endpointGroupName = combinedRoute.EndpointGroup;
             
             var endpointDelegate =
@@ -63,7 +60,7 @@ namespace Hubcon.Server.Core.Routing
                 throw new HubconGenericException(
                     $"Could not find a suitable delegate for endpoint '{method.Name}', on contract '{blueprint.ContractName}'. This could mean the source generators had an error.");
 
-            if (settings.MethodOverloadingEnabled) route = $"{method.GetMethodSignature()}";
+            if (httpSettings.MethodOverloadingEnabled) route = $"{method.GetMethodSignature()}";
 
             var controllerMethod = blueprint.ControllerType.GetMethod(
                 method.Name,
@@ -104,7 +101,7 @@ namespace Hubcon.Server.Core.Routing
                         var requestId = context.GetOrCreateRequestId();
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
-                        mrbs.MaxRequestBodySize = settings.MaxMessageSizeInBytes;
+                        mrbs.MaxRequestBodySize = httpSettings.MaxMessageSizeInBytes;
 
                         var operationRequest = new OperationRequest(operationName, simpleContractName);
                         var transport = HubconTransportAttribute.GetDefault<HttpTransport>();
@@ -143,7 +140,7 @@ namespace Hubcon.Server.Core.Routing
                         }
 
                         return new SseResult((res.Data as IAsyncEnumerable<object?>)!, operationRequest);
-                    }).WithRequestTimeout(settings.StreamOperationTimeout);
+                    }).WithRequestTimeout(httpSettings.StreamOperationTimeout);
                 }
                 else
                 {
@@ -155,7 +152,7 @@ namespace Hubcon.Server.Core.Routing
                         var cancellationToken = context.RequestAborted;
                         var requestId = context.GetOrCreateRequestId();
 
-                        if (context.Request.ContentLength > settings.MaxMessageSizeInBytes)
+                        if (context.Request.ContentLength > httpSettings.MaxMessageSizeInBytes)
                         {
                             return HubconResponse.RequestTooLarge();
                         }
@@ -195,7 +192,7 @@ namespace Hubcon.Server.Core.Routing
                         }
 
                         return new SseResult((res.Data! as IAsyncEnumerable<object?>)!, operationRequest);
-                    }).WithRequestTimeout(settings.StreamOperationTimeout);
+                    }).WithRequestTimeout(httpSettings.StreamOperationTimeout);
                 }
             }
             else if (blueprint.HasReturnType)
@@ -211,7 +208,7 @@ namespace Hubcon.Server.Core.Routing
                         var requestId = context.GetOrCreateRequestId();
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
-                        mrbs.MaxRequestBodySize = settings.MaxMessageSizeInBytes;
+                        mrbs.MaxRequestBodySize = httpSettings.MaxMessageSizeInBytes;
                         
                         var operationRequest = new OperationRequest(operationName, simpleContractName);
 
@@ -247,7 +244,7 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res.GetOriginal();
-                    }).WithRequestTimeout(settings.InvokeOperationTimeout);
+                    }).WithRequestTimeout(httpSettings.InvokeOperationTimeout);
                 }
                 else
                 {
@@ -259,7 +256,7 @@ namespace Hubcon.Server.Core.Routing
                         var cancellationToken = context.RequestAborted;
                         var requestId = context.GetOrCreateRequestId();
 
-                        if (context.Request.ContentLength > settings.MaxMessageSizeInBytes)
+                        if (context.Request.ContentLength > httpSettings.MaxMessageSizeInBytes)
                         {
                             return HubconResponse.RequestTooLarge();
                         }
@@ -293,7 +290,7 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res.GetOriginal();
-                    }).WithRequestTimeout(settings.InvokeOperationTimeout);
+                    }).WithRequestTimeout(httpSettings.InvokeOperationTimeout);
                 }
             }
             else
@@ -309,9 +306,9 @@ namespace Hubcon.Server.Core.Routing
                         var requestId = context.GetOrCreateRequestId();
                         
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
-                        mrbs.MaxRequestBodySize = settings.MaxMessageSizeInBytes;
+                        mrbs.MaxRequestBodySize = httpSettings.MaxMessageSizeInBytes;
 
-                        if (context.Request.ContentLength > settings.MaxMessageSizeInBytes)
+                        if (context.Request.ContentLength > httpSettings.MaxMessageSizeInBytes)
                         {
                             return HubconResponse.RequestTooLarge();
                         }
@@ -349,7 +346,7 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res.GetOriginal();
-                    }).WithRequestTimeout(settings.CallOperationTimeout);
+                    }).WithRequestTimeout(httpSettings.CallOperationTimeout);
                 }
                 else
                 {
@@ -362,9 +359,9 @@ namespace Hubcon.Server.Core.Routing
                         var requestId = context.GetOrCreateRequestId();
 
                         var mrbs = context.Features.Get<IHttpMaxRequestBodySizeFeature>()!;
-                        mrbs.MaxRequestBodySize = settings.MaxMessageSizeInBytes;
+                        mrbs.MaxRequestBodySize = httpSettings.MaxMessageSizeInBytes;
 
-                        if (context.Request.ContentLength > settings.MaxMessageSizeInBytes)
+                        if (context.Request.ContentLength > httpSettings.MaxMessageSizeInBytes)
                         {
                             return HubconResponse.RequestTooLarge();
                         }
@@ -399,7 +396,7 @@ namespace Hubcon.Server.Core.Routing
                             cancellationToken);
 
                         return res.GetOriginal();
-                    }).WithRequestTimeout(settings.CallOperationTimeout);
+                    }).WithRequestTimeout(httpSettings.CallOperationTimeout);
                 }
             }
 
@@ -408,7 +405,7 @@ namespace Hubcon.Server.Core.Routing
             builder.WithMetadata(new ProducesResponseTypeMetadata(404, typeof(IResponse), ["application/json"]));
             builder.WithMetadata(new ProducesResponseTypeMetadata(500, typeof(IResponse), ["application/json"]));
             
-            if(settings.AllowAnonymousClients)
+            if(httpSettings.AllowAnonymousClients)
                 builder.AllowAnonymous();
             
             options.EndpointConventions?.Invoke(builder);

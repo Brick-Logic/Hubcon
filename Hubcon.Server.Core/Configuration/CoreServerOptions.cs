@@ -22,7 +22,7 @@ namespace Hubcon.Server.Core.Configuration
         private readonly Dictionary<Type, HubconTransportAttribute> _defaultTransportAttributes = new Dictionary<Type, HubconTransportAttribute>();
         private TokenBucketRateLimiterOptions? _globalRateLimiterOptions;
         private readonly Dictionary<HubconTransportAttribute, Type> _authHandlerTypes = new Dictionary<HubconTransportAttribute, Type>();
-        private readonly Dictionary<HubconTransportAttribute, TransportSettings> _transportSettings = new Dictionary<HubconTransportAttribute, TransportSettings>();
+        private readonly Dictionary<HubconTransportAttribute, ITransportSettings> _transportSettings = new Dictionary<HubconTransportAttribute, ITransportSettings>();
         private readonly ConcurrentDictionary<string, object?> _externalSettings = new();
         
         /// <inheritdoc/>
@@ -41,7 +41,7 @@ namespace Hubcon.Server.Core.Configuration
         public IReadOnlyDictionary<HubconTransportAttribute, Type> AuthHandlerTypes => _authHandlerTypes;
 
         /// <inheritdoc/>
-        public IReadOnlyDictionary<HubconTransportAttribute, TransportSettings> TransportSettings => _transportSettings;
+        public IReadOnlyDictionary<HubconTransportAttribute, ITransportSettings> TransportSettings => _transportSettings;
 
         /// <inheritdoc/>
         public bool ThrottlingIsDisabled => throttlingIsDisabled ?? false;
@@ -85,22 +85,6 @@ namespace Hubcon.Server.Core.Configuration
         public ICoreServerOptions DisableAllRateLimiters()
         {
             throttlingIsDisabled ??= true;
-            return this;
-        }
-        
-        /// <inheritdoc/>
-        public ICoreServerOptions ConfigureTransport<T>(Action<TransportSettings> configurator) where T : HubconTransportAttribute, new()
-        {
-            var transport = HubconTransportAttribute.GetDefault<T>();
-            if (_transportSettings.TryGetValue(transport, out var settings))
-            {
-                configurator.Invoke(settings);
-            }
-            else
-            {
-                _transportSettings.TryAdd(transport, transport.DefaultTransportSettings);
-            }
-
             return this;
         }
 
@@ -182,20 +166,64 @@ namespace Hubcon.Server.Core.Configuration
         }
         
         /// <inheritdoc/>
-        public TransportSettings GetTransportSettings<T>() where T: HubconTransportAttribute, new()
+        public TSettings GetTransportSettings<TAttribute, TSettings>()
+            where TAttribute : HubconTransportAttribute<TSettings>, new()
+            where TSettings : class, ITransportSettings, new()
         {
-            var defaultTransport = HubconTransportAttribute.GetDefault<T>();
+            var defaultTransport = (TAttribute)HubconTransportAttribute.GetDefault<TAttribute>();
             
-            if (_transportSettings.TryGetValue(defaultTransport, out var settings)) return settings;
+            if (_transportSettings.TryGetValue(defaultTransport, out var settings)) return (TSettings)settings;
             
             settings = defaultTransport.DefaultTransportSettings;
             _transportSettings.Add(defaultTransport, settings);
 
-            return settings;
+            return (TSettings)settings;
         }
         
+        public ICoreServerOptions ConfigureTransport<TAttribute>(Action<ITransportSettingsSetter> configurator) 
+            where TAttribute: HubconTransportAttribute, new()
+        {
+            var transport = (TAttribute)HubconTransportAttribute.GetDefault<TAttribute>();
+            
+            if (!_transportSettings.TryGetValue(transport, out var settings))
+                settings = transport.DefaultTransportSettings;
+                
+            configurator.Invoke((ITransportSettingsSetter)settings);
+            _transportSettings.TryAdd(transport, settings);
+            
+            return this;
+        }
+        
+        public ICoreServerOptions ConfigureTransport<TAttribute, TSettings>(Action<TSettings> configurator) 
+            where TAttribute: HubconTransportAttribute<TSettings>, new()
+            where TSettings: class, ITransportSettings, new()
+        {
+            var transport = (TAttribute)HubconTransportAttribute.GetDefault<TAttribute>();
+            
+            if (!_transportSettings.TryGetValue(transport, out var settings))
+                settings = transport.DefaultTransportSettings;
+                
+            configurator.Invoke((TSettings)settings);
+            _transportSettings.TryAdd(transport, settings);
+            
+            return this;
+        }
+        
+        public ITransportSettings GetTransportSettings<TAttribute>() where TAttribute : HubconTransportAttribute, new()
+        {
+            var transport = (TAttribute)HubconTransportAttribute.GetDefault<TAttribute>();
+            
+            if (_transportSettings.TryGetValue(transport, out var settings)) return settings;
+            
+            settings = transport.DefaultTransportSettings;
+            _transportSettings.Add(transport, settings);
+
+            return settings;
+        }
+
+        
         /// <inheritdoc/>
-        public TransportSettings GetTransportSettings(HubconTransportAttribute transport)
+        public ITransportSettings GetTransportSettings(HubconTransportAttribute transport)
         {
             if (_transportSettings.TryGetValue(transport, out var settings)) return settings;
             
@@ -203,6 +231,16 @@ namespace Hubcon.Server.Core.Configuration
             _transportSettings.Add(transport, settings);
 
             return settings;
+        }
+
+        public TSettings GetTransportSettings<TSettings>(HubconTransportAttribute<TSettings> transport) where TSettings : class, ITransportSettings, new()
+        {
+            if (_transportSettings.TryGetValue(transport, out var settings)) return (TSettings)settings;
+            
+            settings = transport.DefaultTransportSettings;
+            _transportSettings.Add(transport, settings);
+
+            return (TSettings)settings;
         }
     }
 }

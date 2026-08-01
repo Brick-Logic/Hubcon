@@ -24,13 +24,6 @@ namespace Hubcon.Server.Abstractions.Interfaces
         ICoreServerOptions EnableRequestDetailedErrors(bool enabled = true);
 
         /// <summary>
-        /// Defines settings for a single transport.
-        /// </summary>
-        /// <param name="configurator">A delegate to configure the settings of the transport.</param>
-        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
-        ICoreServerOptions ConfigureTransport<T>(Action<TransportSettings> configurator) where T : HubconTransportAttribute, new();
-
-        /// <summary>
         /// Disables all configured rate limiters on the server.
         /// </summary>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
@@ -99,6 +92,23 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// <param name="value">The value of the setting.</param>
         /// <returns>The current <see cref="ICoreServerOptions"/> instance for fluent configuration.</returns>
         ICoreServerOptions AddSetting(string key, object? value);
+        
+        /// <summary>
+        /// Defines settings for a transport.
+        /// </summary>
+        /// <param name="configurator">A delegate to configure the settings of the transport.</param>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
+        public ICoreServerOptions ConfigureTransport<TAttribute>(Action<ITransportSettingsSetter> configurator)
+            where TAttribute : HubconTransportAttribute, new();
+        
+        /// <summary>
+        /// Defines settings for a transport.
+        /// </summary>
+        /// <param name="configurator">A delegate to configure the settings of the transport.</param>
+        /// <returns>The current <see cref="ICoreServerOptions"/> instance, allowing method chaining.</returns>
+        public ICoreServerOptions ConfigureTransport<TAttribute, TSettings>(Action<TSettings> configurator) 
+            where TAttribute: HubconTransportAttribute<TSettings>, new()
+            where TSettings: class, ITransportSettings, new ();
     }
 
     /// <summary>
@@ -149,7 +159,7 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// <summary>
         /// Gets a read-only dictionary that maps transports to their max concurrent connection values.
         /// </summary>
-        IReadOnlyDictionary<HubconTransportAttribute, TransportSettings> TransportSettings { get; }
+        IReadOnlyDictionary<HubconTransportAttribute, ITransportSettings> TransportSettings { get; }
         
         /// <summary>
         /// Gets a read-only dictionary for external settings.
@@ -158,15 +168,29 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Use this property to transport server settings to any part of the application.
         /// </remarks>
         IReadOnlyDictionary<string, object?> ExternalSettings { get; }
+
+        /// <summary>
+        /// Gets the transport settings that match with the provided transport attribute.
+        /// </summary>
+        public TSettings GetTransportSettings<TAttribute, TSettings>()
+            where TAttribute : HubconTransportAttribute<TSettings>, new()
+            where TSettings : class, ITransportSettings, new();
+
+        /// <summary>
+        /// Gets the transport settings that match with the provided transport attribute.
+        /// </summary>
+        public ITransportSettings GetTransportSettings<TAttribute>()
+            where TAttribute : HubconTransportAttribute, new();
         
         /// <summary>
         /// Gets the transport settings that match with the provided transport attribute.
         /// </summary>
-        public TransportSettings GetTransportSettings<T>() where T: HubconTransportAttribute, new();
+        public ITransportSettings GetTransportSettings(HubconTransportAttribute transport);
         
         /// <summary>
         /// Gets the transport settings that match with the provided transport attribute.
         /// </summary>
-        public TransportSettings GetTransportSettings(HubconTransportAttribute transport);
+        public TSettings GetTransportSettings<TSettings>(HubconTransportAttribute<TSettings> transport)
+            where TSettings : class, ITransportSettings, new();
     }
 }

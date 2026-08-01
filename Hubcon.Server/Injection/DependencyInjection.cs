@@ -56,9 +56,10 @@ namespace Hubcon
             return builder;
         }
 
-        public static WebApplication MapHubconTransport<TTransport, TRegisterer>(this WebApplication app) 
-            where TTransport: HubconTransportAttribute, new()
-            where TRegisterer: TransportRegisterer, new()
+        public static WebApplication MapHubconTransport<TTransport, TSettings, TRegisterer>(this WebApplication app) 
+            where TTransport: HubconTransportAttribute<TSettings>, new()
+            where TSettings: class, ITransportSettings, new()
+            where TRegisterer: TransportRegisterer<TTransport, TSettings>, new()
         {
             var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
             var options = app.Services.GetRequiredService<IInternalServerOptions>();

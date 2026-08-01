@@ -17,7 +17,7 @@ namespace Hubcon.Shared.Core.Tools
         {
             Throw.If(maxCount <= 0, nameof(maxCount),
                 static x => new ArgumentOutOfRangeException(x, "Parameter maxCount cannot be 0 or negative."));
-            Throw.If(initialCount <= 0, nameof(initialCount),
+            Throw.If(initialCount < 0, nameof(initialCount),
                 static x => new ArgumentOutOfRangeException(x, "Parameter initialCount cannot be negative."));
             Throw.If(initialCount > maxCount, (nameof(maxCount), nameof(initialCount)),
                 static x => new ArgumentOutOfRangeException($"{x.Item1}, {x.Item2}", "Initial count cannot be greater than max count."));

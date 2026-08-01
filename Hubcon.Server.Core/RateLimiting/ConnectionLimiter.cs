@@ -36,7 +36,7 @@ public sealed class ConnectionLimiter : IConnectionLimiter
 
         if (globalCounter != null && !globalCounter.TryIncrement())
         {
-            return false; // Límite global alcanzado
+            return false;
         }
 
         if (maxPerIp <= 0)

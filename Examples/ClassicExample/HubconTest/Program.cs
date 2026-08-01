@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Threading.RateLimiting;
+using Hubcon.Server.Abstractions.Interfaces;
+using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Telemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
@@ -126,7 +128,7 @@ namespace HubconTest
                 
                 serverOptions.ConfigureCore(config =>
                 {
-                    config.ConfigureTransport<WebSocketTransport>(x =>
+                    config.ConfigureTransport<WebSocketTransport, WebSocketTransportSettings>(x =>
                     {
                         x.MaxConcurrentRequestsPerIp = 999_999;
                         x.TransportLimiterOptions = new TokenBucketRateLimiterOptions()
@@ -155,9 +157,7 @@ namespace HubconTest
                             TokensPerPeriod = 1000,
                             QueueLimit = 100
                         };
-                        x.ConnectionAuthHandlerType = typeof(JwtAuthHandler);
                         x.LoggingEnabled = true;
-                        x.AllowRemoteCancellation = true;
                         x.TokenValidationParameters = tokenValidationParameters;
                     });
                 });
@@ -221,5 +221,43 @@ namespace HubconTest
 
         static long TotalRequests = 0;
         private static ConcurrentDictionary<HubconTransportAttribute, long> TotalRequestsPerTransport = new();
+    }
+
+    public class WebSocketTransporttSettings : TransportSettings
+    {
+        
+    }
+
+    public class WebSocketTransporttAttribute : HubconTransportAttribute<WebSocketTransporttSettings>
+    {
+        public override string TransportKey { get; }
+        public override int TelemetryId { get; }
+    }
+    
+    public class WebSocketTransportRegisterer : TransportRegisterer<WebSocketTransporttAttribute, WebSocketTransporttSettings>
+    {
+        public override void Setup(WebApplication app)
+        {
+        }
+
+        public override void RegisterCallOperation(IOperationBlueprint blueprint, WebApplication app)
+        {
+        }
+
+        public override void RegisterInvokeOperation(IOperationBlueprint blueprint, WebApplication app)
+        {
+        }
+
+        public override void RegisterStreamOperation(IOperationBlueprint blueprint, WebApplication app)
+        {
+        }
+
+        public override void RegisterIngest(IOperationBlueprint blueprint, WebApplication app)
+        {
+        }
+
+        public override void PostRegister(WebApplication app)
+        {
+        }
     }
 }

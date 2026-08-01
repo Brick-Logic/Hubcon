@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Hubcon
 {
@@ -10,60 +12,116 @@ namespace Hubcon
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Method |
                     AttributeTargets.Property)]
-    public class HttpTransport : HubconTransportAttribute
+    public class HttpTransport : HubconTransportAttribute<HttpTransportSettings>
     {
         /// <inheritdoc/>
         public override string TransportKey => "Http";
 
         /// <inheritdoc/>
         public override int TelemetryId => 0;
+    }
 
-        /// <inheritdoc/>
-        public override TransportSettings DefaultTransportSettings { get; } = new TransportSettings()
-        {
-            MaxMessageSizeInBytes = 65535, // 64 KB
-            RequestTimeout = TimeSpan.FromSeconds(15),
-            ConnectionTimeout = TimeSpan.FromSeconds(15),
-            MaxConnections = 10000,
-            MaxConnectionsPerIp = 100,
-            MaxConcurrentRequestsPerIp = 50,
-            TransportPrefix = "/",
+    /// <inheritdoc/>
+    public class HttpTransportSettings : TransportSettings
+    {
+        /// <inheritdoc cref="ITransportSettings.RequestTimeout" />
+        public override TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
-            EnablePing = false,
-            EnablePong = false,
-            PingOperationLimiterOptions = null,
+        /// <inheritdoc cref="ITransportSettings.MaxConnections" />
+        public override int MaxConnections { get; set; } = 1000;
 
-            CallOperationEnabled = true,
-            CallOperationTimeout = TimeSpan.FromSeconds(10),
+        /// <inheritdoc cref="ITransportSettings.MaxConnectionsPerIp" />
+        public override int MaxConnectionsPerIp { get; set; } = 10;
 
-            InvokeOperationEnabled = true,
-            InvokeOperationTimeout = TimeSpan.FromSeconds(15),
+        /// <inheritdoc cref="ITransportSettings.EnablePing" />
+        public override bool EnablePing { get; set; } = true;
 
-            StreamOperationEnabled = true,
-            StreamOperationTimeout = TimeSpan.FromMinutes(2),
+        /// <inheritdoc cref="ITransportSettings.PingOperationLimiterOptions" />
+        public override TokenBucketRateLimiterOptions? PingOperationLimiterOptions { get; set; }
 
-            IngestOperationEnabled = false,
-            IngestOperationTimeout = TimeSpan.Zero,
+        /// <inheritdoc cref="ITransportSettings.EnablePong" />
+        public override bool EnablePong { get; set; } = true;
 
-            UseRateLimiters = true,
-            AllowAnonymousClients = true,
-            RequiresAuth = false,
-            AllowRemoteCancellation = true,
-            RetryableMessagesEnabled = true,
-            MethodOverloadingEnabled = false,
-            LoggingEnabled = false,
-            CheckTokenExpirationOnMessageReceived = false,
+        /// <inheritdoc cref="ITransportSettings.TransportPrefix" />
+        public override string TransportPrefix { get; set; } = "/";
 
-            TransportLimiterOptions = null,
-            CallOperationLimiterOptions = null,
-            InvokeOperationLimiterOptions = null,
-            StreamOperationLimiterOptions = null,
-            IngestOperationLimiterOptions = null,
-            ControlMessagesRateLimiterOptions = null,
+        /// <inheritdoc cref="ITransportSettings.CallOperationEnabled" />
+        public override bool CallOperationEnabled { get; set; } = true;
 
-            TokenValidationParameters = null,
-            ConnectionAuthHandlerType = null
-        };
+        /// <inheritdoc cref="ITransportSettings.CallOperationTimeout" />
+        public override TimeSpan CallOperationTimeout { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.CallOperationLimiterOptions" />
+        public override TokenBucketRateLimiterOptions? CallOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.InvokeOperationEnabled" />
+        public override bool InvokeOperationEnabled { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.InvokeOperationTimeout" />
+        public override TimeSpan InvokeOperationTimeout { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.InvokeOperationLimiterOptions" />
+        public override TokenBucketRateLimiterOptions? InvokeOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.StreamOperationEnabled" />
+        public override bool StreamOperationEnabled { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.StreamOperationTimeout" />
+        public override TimeSpan StreamOperationTimeout { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.StreamOperationLimiterOptions" />
+        public override TokenBucketRateLimiterOptions? StreamOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.IngestOperationEnabled" />
+        public override bool IngestOperationEnabled { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.IngestOperationTimeout" />
+        public override TimeSpan IngestOperationTimeout { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.IngestOperationLimiterOptions" />
+        public override TokenBucketRateLimiterOptions? IngestOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.RetryableMessagesEnabled" />
+        public override bool RetryableMessagesEnabled { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.UseRateLimiters" />
+        public override bool UseRateLimiters { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.LoggingEnabled" />
+        public override bool LoggingEnabled { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.AllowRemoteCancellation" />
+        public override bool AllowRemoteCancellation { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.TransportLimiterOptions" />
+        public override TokenBucketRateLimiterOptions? TransportLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.MethodOverloadingEnabled" />
+        public override bool MethodOverloadingEnabled { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.MaxConcurrentRequestsPerIp" />
+        public override int MaxConcurrentRequestsPerIp { get; set; } = 10;
+
+        /// <inheritdoc cref="ITransportSettings.AllowAnonymousClients" />
+        public override bool AllowAnonymousClients { get; set; } = true;
+
+        /// <inheritdoc cref="ITransportSettings.TokenValidationParameters" />
+        public override TokenValidationParameters? TokenValidationParameters { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.CheckTokenExpirationOnMessageReceived" />
+        public override bool CheckTokenExpirationOnMessageReceived { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.ControlMessagesRateLimiterOptions" />
+        public override TokenBucketRateLimiterOptions? ControlMessagesRateLimiterOptions { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.ConnectionAuthHandlerType" />
+        public override Type? ConnectionAuthHandlerType { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.ConnectionTimeout" />
+        public override TimeSpan ConnectionTimeout { get; set; }
+
+        /// <inheritdoc cref="ITransportSettings.RequiresAuth" />
+        public override bool RequiresAuth { get; set; } = true;
     }
 
     /// <summary>
@@ -71,60 +129,119 @@ namespace Hubcon
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Method |
                     AttributeTargets.Property)]
-    public sealed class WebSocketTransport : HubconTransportAttribute
+    public sealed class WebSocketTransport : HubconTransportAttribute<WebSocketTransportSettings>
     {
         /// <inheritdoc/>
         public override string TransportKey => "WebSocket";
 
         /// <inheritdoc/>
         public override int TelemetryId => 1;
+    }
+
+    /// <inheritdoc/>
+    public class WebSocketTransportSettings : TransportSettings
+    {
+        /// <inheritdoc/>
+        public override long MaxMessageSizeInBytes { get; set; } = 65535;
+
+        /// <inheritdoc/>w
+        public override TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         /// <inheritdoc/>
-        public override TransportSettings DefaultTransportSettings { get; } = new TransportSettings()
-        {
-            MaxMessageSizeInBytes = 65535,
-            RequestTimeout = TimeSpan.FromSeconds(30),
-            ConnectionTimeout = TimeSpan.FromMinutes(60),
-            MaxConnections = 50000,
-            MaxConnectionsPerIp = 50,
-            MaxConcurrentRequestsPerIp = 100,
-            TransportPrefix = "/ws",
+        public override int MaxConnections { get; set; } = 5000;
 
-            EnablePing = true,
-            EnablePong = true,
+        /// <inheritdoc/>
+        public override int MaxConnectionsPerIp { get; set; } = 25;
 
-            CallOperationEnabled = true,
-            CallOperationTimeout = TimeSpan.FromSeconds(10),
+        /// <inheritdoc/>
+        public override bool EnablePing { get; set; } = true;
 
-            InvokeOperationEnabled = true,
-            InvokeOperationTimeout = TimeSpan.FromSeconds(30),
+        /// <inheritdoc/>
+        public override TokenBucketRateLimiterOptions? PingOperationLimiterOptions { get; set; }
 
-            StreamOperationEnabled = true,
-            StreamOperationTimeout = TimeSpan.FromMinutes(30),
+        /// <inheritdoc/>
+        public override bool EnablePong { get; set; } = true;
 
-            IngestOperationEnabled = true,
-            IngestOperationTimeout = TimeSpan.FromMinutes(30),
+        /// <inheritdoc/>
+        public override string TransportPrefix { get; set; } = "/ws";
 
-            UseRateLimiters = true,
-            AllowAnonymousClients = true,
-            RequiresAuth = false,
-            AllowRemoteCancellation = true,
-            RetryableMessagesEnabled = true,
-            MethodOverloadingEnabled = false,
-            LoggingEnabled = false,
-            CheckTokenExpirationOnMessageReceived = true,
+        /// <inheritdoc/>
+        public override bool CallOperationEnabled { get; set; } = true;
 
-            PingOperationLimiterOptions = null,
-            TransportLimiterOptions = null,
-            CallOperationLimiterOptions = null,
-            InvokeOperationLimiterOptions = null,
-            StreamOperationLimiterOptions = null,
-            IngestOperationLimiterOptions = null,
-            ControlMessagesRateLimiterOptions = null,
+        /// <inheritdoc/>
+        public override TimeSpan CallOperationTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
-            TokenValidationParameters = null,
-            ConnectionAuthHandlerType = null
-        };
+        /// <inheritdoc/>
+        public override TokenBucketRateLimiterOptions? CallOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc/>
+        public override bool InvokeOperationEnabled { get; set; } = true;
+
+        /// <inheritdoc/>
+        public override TimeSpan InvokeOperationTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+        /// <inheritdoc/>
+        public override TokenBucketRateLimiterOptions? InvokeOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc/>
+        public override bool StreamOperationEnabled { get; set; } = true;
+
+        /// <inheritdoc/>
+        public override TimeSpan StreamOperationTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+        /// <inheritdoc/>
+        public override TokenBucketRateLimiterOptions? StreamOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc/>
+        public override bool IngestOperationEnabled { get; set; } = true;
+
+        /// <inheritdoc/>
+        public override TimeSpan IngestOperationTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+        /// <inheritdoc/>
+        public override TokenBucketRateLimiterOptions? IngestOperationLimiterOptions { get; set; }
+
+        /// <inheritdoc/>
+        public override bool RetryableMessagesEnabled { get; set; }
+
+        /// <inheritdoc/>
+        public override bool UseRateLimiters { get; set; } = true;
+
+        /// <inheritdoc/>
+        public override bool LoggingEnabled { get; set; }
+
+        /// <inheritdoc/>
+        public override bool AllowRemoteCancellation { get; set; }
+
+        /// <inheritdoc/>
+        public override TokenBucketRateLimiterOptions? TransportLimiterOptions { get; set; }
+
+        /// <inheritdoc/>
+        public override bool MethodOverloadingEnabled { get; set; } = true;
+
+        /// <inheritdoc/>
+        public override int MaxConcurrentRequestsPerIp { get; set; } = 25;
+
+        /// <inheritdoc/>
+        public override bool AllowAnonymousClients { get; set; } = true;
+
+        /// <inheritdoc/>
+        public override TokenValidationParameters? TokenValidationParameters { get; set; }
+
+        /// <inheritdoc/>
+        public override bool CheckTokenExpirationOnMessageReceived { get; set; } = true;
+
+        /// <inheritdoc/>
+        public override TokenBucketRateLimiterOptions? ControlMessagesRateLimiterOptions { get; set; }
+
+        /// <inheritdoc/>
+        public override Type? ConnectionAuthHandlerType { get; set; }
+
+        /// <inheritdoc/>
+        public override TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromMinutes(60);
+
+        /// <inheritdoc/>
+        public override bool RequiresAuth { get; set; } = true;
     }
 
     /// <summary>
@@ -139,52 +256,5 @@ namespace Hubcon
 
         /// <inheritdoc/>
         public override int TelemetryId => 2;
-
-        /// <inheritdoc/>
-        public override TransportSettings DefaultTransportSettings { get; } = new TransportSettings()
-        {
-            MaxMessageSizeInBytes = 1048576,
-            RequestTimeout = TimeSpan.FromSeconds(30),
-            ConnectionTimeout = TimeSpan.FromSeconds(30),
-            MaxConnections = 5000,
-            MaxConnectionsPerIp = 20,
-            MaxConcurrentRequestsPerIp = 10,
-            TransportPrefix = "/",
-
-            EnablePing = false,
-            EnablePong = false,
-            PingOperationLimiterOptions = null,
-
-            CallOperationEnabled = true,
-            CallOperationTimeout = TimeSpan.FromSeconds(15),
-
-            InvokeOperationEnabled = true,
-            InvokeOperationTimeout = TimeSpan.FromSeconds(30),
-
-            StreamOperationEnabled = true,
-            StreamOperationTimeout = TimeSpan.FromMinutes(2),
-
-            IngestOperationEnabled = false,
-            IngestOperationTimeout = TimeSpan.Zero,
-
-            UseRateLimiters = true,
-            AllowAnonymousClients = true,
-            RequiresAuth = false,
-            AllowRemoteCancellation = false,
-            RetryableMessagesEnabled = false,
-            MethodOverloadingEnabled = true,
-            LoggingEnabled = true,
-            CheckTokenExpirationOnMessageReceived = false,
-
-            TransportLimiterOptions = null,
-            CallOperationLimiterOptions = null,
-            InvokeOperationLimiterOptions = null,
-            StreamOperationLimiterOptions = null,
-            IngestOperationLimiterOptions = null,
-            ControlMessagesRateLimiterOptions = null,
-
-            TokenValidationParameters = null,
-            ConnectionAuthHandlerType = null
-        };
     }
 }

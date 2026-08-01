@@ -26,9 +26,8 @@ namespace Hubcon
             {
                 return cachedUser;
             }
-
-            if (!options.TransportSettings.TryGetValue(context.TransportType, out var settings))
-                settings = context.TransportType.DefaultTransportSettings;
+            
+            var settings = options.GetTransportSettings(context.TransportType);
             
             var tokenValidationParameters = settings.TokenValidationParameters;
             var user = JwtHelper.ValidateJwtToken(token!, tokenValidationParameters!, out _);
