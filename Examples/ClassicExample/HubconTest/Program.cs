@@ -128,9 +128,10 @@ namespace HubconTest
                 
                 serverOptions.ConfigureCore(config =>
                 {
-                    config.ConfigureTransport<WebSocketTransport, WebSocketTransportSettings>(x =>
+                    config.ConfigureTransport<WebSocketTransport>(x =>
                     {
                         x.MaxConcurrentRequestsPerIp = 999_999;
+                        x.MaxConnectionsPerIp = 6;
                         x.TransportLimiterOptions = new TokenBucketRateLimiterOptions()
                         {
                             ReplenishmentPeriod = TimeSpan.FromSeconds(1),

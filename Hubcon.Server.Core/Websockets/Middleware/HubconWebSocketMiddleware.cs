@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
+using System.Net;
 using System.Net.WebSockets;
 using System.Security.Claims;
 using System.Text.Json;
@@ -43,22 +44,26 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         private static readonly HubconTransportAttribute _transport =
             HubconTransportAttribute.GetDefault<WebSocketTransport>();
 
-        private readonly IConnectionSupervisor connectionSupervisor;
+        private readonly IConnectionSupervisor _connectionSupervisor;
+        private readonly IConnectionLimiter _connectionLimiter;
 
         /// <summary>
         /// Default constructor.
         /// </summary>
         /// <param name="next"></param>
         /// <param name="connectionSupervisor"></param>
+        /// <param name="connectionLimiter"></param>
         /// <param name="options"></param>
         /// <param name="telemetryProvider"></param>
         public HubconWebSocketMiddleware(
             RequestDelegate next,
             IConnectionSupervisor connectionSupervisor,
+            IConnectionLimiter connectionLimiter,
             IInternalServerOptions options,
             ITelemetryProvider telemetryProvider)
         {
-            this.connectionSupervisor = connectionSupervisor;
+            _connectionSupervisor = connectionSupervisor;
+            _connectionLimiter = connectionLimiter;
             this.next = next;
             this.options = options;
             _settings = options.GetTransportSettings<WebSocketTransport, WebSocketTransportSettings>();
@@ -78,6 +83,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 !(httpContext.Request.Path == _settings.TransportPrefix))
             {
                 await next(httpContext);
+                return;
+            }
+
+            if (!_connectionLimiter.TryAcquire(httpContext.Connection.RemoteIpAddress, _transport))
+            {
+                httpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 return;
             }
 
@@ -127,7 +138,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
             var context = new ClientWebSocketContext(httpContext);
             context.Initialize(connectionId, webSocket);
-            connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, webSocket.Abort);
+            _connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, webSocket.Abort);
 
             Interlocked.Increment(ref clientCount);
 
@@ -381,6 +392,24 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 try
                 {
                     await context.DisposeAsync();
+                }
+                catch
+                {
+                    // Ignored
+                }
+
+                try
+                {
+                    await _connectionSupervisor.UnregisterAsync(connectionId);
+                }
+                catch
+                {
+                    // Ignored
+                }
+                
+                try
+                {
+                    _connectionLimiter.Release(httpContext.Connection.RemoteIpAddress, _transport);
                 }
                 catch
                 {

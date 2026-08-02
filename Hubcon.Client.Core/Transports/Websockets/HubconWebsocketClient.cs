@@ -252,6 +252,9 @@ namespace Hubcon.Client.Core.Transports.Websockets
                                 case 403:
                                     logger?.LogError("WebSocket connection is missing the Origin header or has an incorrect value.");
                                     break;
+                                case 429:
+                                    logger?.LogError("The server reported too many active connections from the same IP. Please close other clients or reduce the connections count.");
+                                    break;
                                 default:
                                     logger?.LogError(ex.Message);
                                     break;
