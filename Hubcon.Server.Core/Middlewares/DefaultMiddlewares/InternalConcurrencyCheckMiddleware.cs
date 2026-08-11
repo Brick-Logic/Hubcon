@@ -35,7 +35,6 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
             }
 
             var ipAddress = context.HttpContext?.Connection.RemoteIpAddress?.ToString()
-                            ?? context.HttpContext?.Connection.RemoteIpAddress?.ToString()
                             ?? "unknown";
 
             var tracker = _trackers.GetOrAdd(

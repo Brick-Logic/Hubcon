@@ -176,34 +176,16 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
         public IPipelineExecutor Build(IOperationRequest request, IOperationContext context, IServiceProvider serviceProvider)
         {
-            var middlewares = GetMiddlewares();
-            
-            var state = new PipelineState()
+            var state = new PipelineState
             {
                 Context = context,
-                Middlewares = middlewares,
+                Middlewares = GetMiddlewares(),
                 Request = request,
                 ServiceProvider = serviceProvider,
-                Chain = InvokeNext
+                Index = 0
             };
 
             return new PipelineExecutor(state);
-        }
-
-        private static Task InvokeNext(PipelineState state)
-        {
-            if (state.Index >= state.Middlewares.Length)
-                return Task.CompletedTask;
-
-            var type = state.Middlewares[state.Index++];
-
-            var middleware = (IExecutableMiddleware)state.ServiceProvider.GetService(type)!;
-
-            return middleware.Execute(
-                state.Request,
-                state.Context,
-                () => InvokeNext(state)
-            );
         }
     }
 }

@@ -341,15 +341,12 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
         public async Task DisconnectAsync()
         {
+            if (_disposedPass.WasAcquired || !_connectionPass.WasAcquired) return;
+            
             try
             {
                 await _semaphoreSlim.WaitAsync(CancellationToken.None);
-
-                Throw.If(_disposedPass.WasAcquired, static ()
-                    => new HubconGenericException("This object has been disposed."));
-
-                Throw.IfNot(_connectionPass.WasAcquired, "The connection has not been established.");
-
+                
                 if (WebSocket.State != WebSocketState.Open && WebSocket.State != WebSocketState.CloseReceived &&
                     _disconnectionPass.TryAcquirePass()) return;
 

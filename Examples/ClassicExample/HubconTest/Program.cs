@@ -131,13 +131,14 @@ namespace HubconTest
                     config.ConfigureTransport<WebSocketTransport>(x =>
                     {
                         x.MaxConcurrentRequestsPerIp = 999_999;
-                        x.MaxConnectionsPerIp = 6;
+                        x.MaxConnectionsPerIp = 999_999;
+                        x.MaxConnections = 999_999;
                         x.TransportLimiterOptions = new TokenBucketRateLimiterOptions()
                         {
                             ReplenishmentPeriod = TimeSpan.FromSeconds(1),
                             AutoReplenishment = true,
-                            TokenLimit = 1000,
-                            TokensPerPeriod = 1000,
+                            TokenLimit = 100000,
+                            TokensPerPeriod = 100000,
                             QueueLimit = 100
                         };
                         x.ConnectionAuthHandlerType = typeof(JwtAuthHandler);

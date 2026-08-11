@@ -12,7 +12,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
             try
             {
                 OperationContextProvider.SetContext(state.Context);
-                await state.Chain.Invoke(state);
+                await state.InvokeNextAsync();
                 return state.Context;
             }
             finally

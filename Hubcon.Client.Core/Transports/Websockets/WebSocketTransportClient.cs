@@ -37,9 +37,10 @@ namespace Hubcon.Client.Core.Transports.Websockets
         public override async ValueTask CallAsync(IOperationRequest request, IClientOperationContext context,
             CancellationToken cancellationToken = default)
         {
-            await _clientPool.ExecuteAsync(static (x, state) => 
-                x.SendAsync(state.request, state.context.RemoteCancellationIsAllowed, state.cancellationToken), (request, context, cancellationToken));
-            
+            await _clientPool.ExecuteAsync(static (x, state) =>
+                    x.SendAsync(state.request, state.context.RemoteCancellationIsAllowed, state.cancellationToken),
+                (request, context, cancellationToken));
+
             await context.SetResponse(HubconResponse.OkT(true));
         }
 
@@ -48,8 +49,9 @@ namespace Hubcon.Client.Core.Transports.Websockets
             IClientOperationContext context, CancellationToken cancellationToken = default)
         {
             IObservable<JsonElement> observable;
-            observable = await _clientPool.ExecuteAsync(static (x, state) => 
-                x.Stream<JsonElement>(state.request, state.context.RemoteCancellationIsAllowed, state.cancellationToken), (request, context, cancellationToken));
+            observable = await _clientPool.ExecuteAsync(static (x, state) =>
+                x.Stream<JsonElement>(state.request, state.context.RemoteCancellationIsAllowed,
+                    state.cancellationToken), (request, context, cancellationToken));
 
             var observer = AsyncObserver.Create<JsonElement>(context.Converter);
             var disposable = observable.Subscribe(observer);
@@ -63,9 +65,10 @@ namespace Hubcon.Client.Core.Transports.Websockets
         public override async ValueTask Ingest<T>(IOperationRequest request, IClientOperationContext context,
             CancellationToken cancellationToken = default)
         {
-            var response = await _clientPool.ExecuteAsync(static (x, state) => 
-                x.IngestMultiple<JsonElement>(state.request, state.context.RemoteCancellationIsAllowed, state.context.OperationOptions, state.cancellationToken), (request, context, cancellationToken));
-            
+            var response = await _clientPool.ExecuteAsync(static (x, state) =>
+                x.IngestMultiple<JsonElement>(state.request, state.context.RemoteCancellationIsAllowed,
+                    state.context.OperationOptions, state.cancellationToken), (request, context, cancellationToken));
+
             await context.HandleResponse<T>(response!);
         }
 
@@ -73,15 +76,14 @@ namespace Hubcon.Client.Core.Transports.Websockets
         public override async ValueTask SendAsync<T>(IOperationRequest request, IClientOperationContext context,
             CancellationToken cancellationToken = default)
         {
-            
-            var response = await _clientPool.ExecuteAsync(static (x, state) => 
-                x.InvokeAsync<JsonElement>(
-                    state.request, 
-                    state.context.RemoteCancellationIsAllowed,
-                    state.context.ExpectsHubconResponse, 
-                    state.cancellationToken), 
+            var response = await _clientPool.ExecuteAsync(static (x, state) =>
+                    x.InvokeAsync<JsonElement>(
+                        state.request,
+                        state.context.RemoteCancellationIsAllowed,
+                        state.context.ExpectsHubconResponse,
+                        state.cancellationToken),
                 (request, context, cancellationToken));
-            
+
             await context.HandleResponse<T>(response);
         }
 
@@ -107,10 +109,10 @@ namespace Hubcon.Client.Core.Transports.Websockets
                                 var response = await client.TryRefreshToken(authenticationManager.TokenType + " " +
                                                                             authenticationManager.AccessToken);
 
-                                if (context.ClientOptions.LoggingEnabled) 
-                                    logger.LogInformation($"Token refresh response: {response.Success} | Message: {response.Message}");
+                                if (context.ClientOptions.LoggingEnabled)
+                                    logger.LogInformation(
+                                        $"Token refresh response: {response.Success} | Message: {response.Message}");
                             };
-                            // authenticationManager.OnSessionIsActive += async () => await client.EnsureConnectedAsync();
 
                             client.AuthenticationManagerProvider = () => authenticationManager;
                         }
@@ -123,22 +125,26 @@ namespace Hubcon.Client.Core.Transports.Websockets
         /// <inheritdoc/>
         public async Task<HubconResponse> Connect(string? url = null)
         {
-            if (IsConnected())
-                return HubconResponse.Ok();
+            if (IsConnected()) return HubconResponse.Ok();
 
+            var uri = url == null ? null : new Uri(url);
             try
             {
-                if (url == null)
-                    await _clientPool.ExecuteAllAsync(x => x.EnsureConnectedAsync());
-                else
-                    await _clientPool.ExecuteAllAsync(x => x.EnsureConnectedAsync(new Uri(url)));
-
-                return HubconResponse.Ok();
+                while (!IsConnected())
+                {
+                    if (url == null)
+                        await _clientPool.ExecuteAllAsync(static x => x.EnsureConnectedAsync());
+                    else
+                        await _clientPool.ExecuteAllAsync(uri, static (x, state) => x.EnsureConnectedAsync(state));
+                }
             }
             catch (Exception ex)
             {
+                await Disconnect();
                 return HubconResponse.InternalError(ex, ex.Message);
             }
+
+            return HubconResponse.Ok();
         }
 
         /// <inheritdoc/>
@@ -146,17 +152,16 @@ namespace Hubcon.Client.Core.Transports.Websockets
         {
             try
             {
-                if (IsConnected()) await _clientPool.ExecuteAllAsync(static async x => await x.Disconnect());
+                if (IsConnected()) await _clientPool.ExecuteAllAsync(static x => x.Disconnect());
 
-                if (string.IsNullOrEmpty(url))
+                var uri = url == null ? null : new Uri(url);
+                while (!IsConnected())
                 {
-                    await _clientPool.ExecuteAllAsync(static async x => await x.EnsureConnectedAsync());
+                    if (uri == null)
+                        await _clientPool.ExecuteAllAsync(static x => x.EnsureConnectedAsync());
+                    else
+                        await _clientPool.ExecuteAllAsync(uri, static (x, state) => x.EnsureConnectedAsync(state));
                 }
-                else
-                {
-                    await _clientPool.ExecuteAllAsync(async x => await x.EnsureConnectedAsync(new Uri(url)));
-                }
-
                 return HubconResponse.Ok();
             }
             catch (Exception ex)
@@ -170,10 +175,10 @@ namespace Hubcon.Client.Core.Transports.Websockets
         {
             try
             {
-                if (!IsConnected())
-                    return HubconResponse.Ok();
-
-                await _clientPool.ExecuteAllAsync(static async x => await x.Disconnect());
+                while(_clientPool.ExecuteOnEntries(static x => x.Any(y => y.Instance.IsConnected)))
+                {
+                    await _clientPool.ExecuteAllAsync(static x => x.Disconnect());
+                }
                 return HubconResponse.Ok();
             }
             catch (Exception ex)
@@ -186,6 +191,12 @@ namespace Hubcon.Client.Core.Transports.Websockets
         public bool IsConnected()
         {
             return _clientPool.ExecuteOnEntries(x => x.All(y => y.Instance.IsConnected));
+        }
+
+        /// <inheritdoc/>
+        public int GetConnectedClientsCount()
+        {
+            return _clientPool.ExecuteOnEntries(x => x.Count(y => y.Instance.IsConnected));
         }
     }
 }

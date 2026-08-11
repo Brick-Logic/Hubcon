@@ -12,14 +12,14 @@ namespace HubconTestClient.Modules
     {
         public override void Configure(IServerModuleConfiguration server)
         {
-            server.WithBaseUrl("http://localhost:5000");
+            server.WithBaseUrl("localhost:5000");
 
             server.EnableWebsocketAutoReconnect();
             server.GlobalLimit(999999);
-            server.EnableLogging();
+            // server.EnableLogging();
             server.DisableAllLimiters();
             server.AllowRemoteCancellation();
-            server.ScaleMessageProcessors(6);
+            server.ScaleMessageProcessors(10000);
             server.AddSetting("", new object());
             server.AddTracing();
             //server.AddHeaderProvider("key", x => "value");

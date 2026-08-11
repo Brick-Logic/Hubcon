@@ -85,7 +85,7 @@ internal class Program
 
         await TestLogin(authManager, logger);
         await Task.Delay(100);
-        
+
         await TestWebSocketConnectionFeatures(logger, client);
         await Task.Delay(100);
         await TestHubconResponse(client2, logger);
@@ -121,31 +121,89 @@ internal class Program
 
     private static async Task TestWebSocketConnectionFeatures(ILogger<IUserContract> logger, IUserContract client)
     {
-        logger.LogInformation($"Testing connection...");
-        
-        logger.LogInformation($"Is connected result: {client.IsConnected<WebSocketTransport>().Data}");
-        await Task.Delay(500);
+        // WebSocket connection.
+        logger.LogInformation($"Testing WebSocket connections...");
+        var transport = client.AsRealTimeTransport<WebSocketTransport>();
+        var connect = transport.Connect();
+        var counter = Task.Run(async () =>
+        {
+            while (!transport.IsConnected())
+            {
+                logger.LogInformation(transport.GetConnectedClientsCount().ToString());
+                await Task.Delay(500);
+            }
+        });
 
-        logger.LogInformation($"Testing if connection is open...");
-        logger.LogInformation($"Is connected result: {client.IsConnected<WebSocketTransport>().Data}");
-        await Task.Delay(500);
+        await Parallel.ForEachAsync([connect, counter], CancellationToken.None, async (task, ct) =>
+        {
+            await task;
+        });
 
-        logger.LogInformation($"Testing WebSocket graceful disconnection...");
-        await client.Disconnect<WebSocketTransport>();
-        logger.LogInformation($"Disconnected result: {client.IsConnected<WebSocketTransport>().Data}");
-        await Task.Delay(500);
-        
-        logger.LogInformation($"Testing WebSocket graceful reconnection...");
-        await client.Reconnect<WebSocketTransport>();
-        logger.LogInformation($"Reconnection result: {client.IsConnected<WebSocketTransport>().Data}");
-        await Task.Delay(500);
-        
-        logger.LogInformation($"Testing if connection is open after tests...");
-        var connectionResult = client.IsConnected<WebSocketTransport>().Data;
-        logger.LogInformation($"Is connected result: {connectionResult}");
-
-        if (!connectionResult)
+        if (transport.IsConnected())
+        {
+            logger.LogInformation($"Connection result: {transport.IsConnected()}");
+        }
+        else
+        {
+            logger.LogInformation($"Connection result: {transport.IsConnected()}");
             throw new Exception("A problem has been detected, the connection is not open.");
+        }
+        
+        // WebSocket disconnection.
+        logger.LogInformation($"Testing WebSocket graceful disconnection...");
+        var disconnect = transport.Disconnect();
+        var counter2 = Task.Run(async () =>
+        {
+            while (transport.GetConnectedClientsCount() > 0)
+            {
+                logger.LogInformation(transport.GetConnectedClientsCount().ToString());
+                await Task.Delay(500);
+            }
+        });
+
+        await Task.WhenAll(disconnect, counter2);
+        await Parallel.ForEachAsync([disconnect, counter2], CancellationToken.None, async (task, ct) =>
+        {
+            await task;
+        });
+
+        if (!transport.IsConnected())
+        {
+            logger.LogInformation($"Connection result: {transport.IsConnected()}");
+        }
+        else
+        {
+            logger.LogInformation($"Connection result: {transport.IsConnected()}");
+            throw new Exception("A problem has been detected, a connection is not closed.");
+        }
+        
+        // WebSocket reconnection.
+        var reconnect = transport.Reconnect();
+        var counter3 = Task.Run(async () =>
+        {
+            while (!transport.IsConnected())
+            {
+                logger.LogInformation(transport.GetConnectedClientsCount().ToString());
+                await Task.Delay(500);
+            }
+        });
+        
+        await Parallel.ForEachAsync([reconnect, counter3], CancellationToken.None, async (task, ct) =>
+        {
+            await task;
+        });
+
+        if (transport.IsConnected())
+        {
+            logger.LogInformation($"Connection result: {transport.IsConnected()}");
+        }
+        else
+        {
+            logger.LogInformation($"Connection result: {transport.IsConnected()}");
+            throw new Exception("A problem has been detected, a connection is not open.");
+        }
+        
+        logger.LogInformation("WebSocket tests OK.");
     }
 
     private static async Task<bool> Benchmark(Task[] tasks)
@@ -186,16 +244,18 @@ internal class Program
                 {
                     start = Stopwatch.GetTimestamp();
                 }
+
                 await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
 
                 if (shouldMeasure) stats.Record(start);
             }
         }, default, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap()).ToArray();
-     
+
         using System.Timers.Timer timer = new System.Timers.Timer(500);
         timer.Elapsed += (sender, e) =>
         {
-            Console.WriteLine($"Target samples: {totalSamples} | Collected samples: {Interlocked.Read(ref stats.totalSamples)}");
+            Console.WriteLine(
+                $"Target samples: {totalSamples} | Collected samples: {Interlocked.Read(ref stats.totalSamples)}");
         };
         timer.Start();
 
@@ -242,7 +302,8 @@ internal class Program
 
             while (counter <= testCount)
             {
-                var response = await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+                var response = await paralellClient.Execute(x =>
+                    x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
                 if (response.Success) counter++;
             }
         })).ToArray();

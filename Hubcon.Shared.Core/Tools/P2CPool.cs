@@ -210,6 +210,51 @@ namespace Hubcon.Shared.Core.Tools
                 }
             }
         }
+        
+        /// <summary>
+        /// Ejecuta una acción en paralelo sobre TODAS las instancias del pool.
+        /// </summary>
+        public async ValueTask ExecuteAllAsync<TState>(TState state, Func<T, TState, ValueTask> action)
+        {
+            Throw.If(_isDisposed != 0, static () => new ObjectDisposedException(nameof(P2CPool<T>)));
+            Throw.IfNull(action);
+
+            var tasks = new Task[_items.Length];
+
+            for (int i = 0; i < _items.Length; i++)
+            {
+                var entry = _items[i];
+                tasks[i] = RunEntryAsync(entry, state, action);
+            }
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+        }
+        
+        static async Task RunEntryAsync(Entry entry, Func<T, ValueTask> action)
+        {
+            Interlocked.Increment(ref entry.ActiveRequestsCount);
+            try
+            {
+                await action(entry.Instance).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref entry.ActiveRequestsCount);
+            }
+        }
+        
+        static async Task RunEntryAsync<TState>(Entry entry, TState state, Func<T, TState, ValueTask> action)
+        {
+            Interlocked.Increment(ref entry.ActiveRequestsCount);
+            try
+            {
+                await action(entry.Instance, state).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref entry.ActiveRequestsCount);
+            }
+        }
 
         /// <summary>
         /// Ejecuta una función en paralelo sobre TODAS las instancias del pool 

@@ -64,7 +64,7 @@ namespace HubconTest.ContractHandlers
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Program.Key));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-                var expiration = DateTimeOffset.UtcNow.AddSeconds(70);
+                var expiration = DateTimeOffset.UtcNow.AddMinutes(30);
                 
                 var token = new JwtSecurityToken(
                     issuer: "clave",

@@ -105,6 +105,12 @@ namespace Hubcon
         /// </summary>
         /// <returns>A <see cref="bool"/> indicating the connection status.</returns>
         public bool IsConnected();
+
+        /// <summary>
+        /// Gets the number of parallel connected clients. 
+        /// </summary>
+        /// <returns>An <see cref="int"/> indicating the connected client count.</returns>
+        public int GetConnectedClientsCount();
     }
 
     /// <summary>

@@ -290,15 +290,25 @@ namespace Hubcon.Client.Core.Transports.Websockets
             }
         }
 
+        private SemaphoreSlim _disconnectSemaphore = new SemaphoreSlim(1, 1);
         public async ValueTask Disconnect()
         {
-            isReady = false;
-
-            if (_webSocket != null)
+            await _disconnectSemaphore.WaitAsync();
+            
+            try
             {
-                await _webSocket.DisconnectAsync();
-                await _webSocket.DisposeAsync();
-                _webSocket = null;
+                isReady = false;
+
+                if (_webSocket != null)
+                {
+                    await _webSocket.DisconnectAsync();
+                    await _webSocket.DisposeAsync();
+                    _webSocket = null;
+                }
+            }
+            finally
+            {
+                _disconnectSemaphore.Release();
             }
         }
 

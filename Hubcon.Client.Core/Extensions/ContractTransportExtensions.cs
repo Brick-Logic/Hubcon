@@ -61,5 +61,16 @@ namespace Hubcon
 
             return HubconResponse.Fail<bool>("Specified transport is not being used by this contract or is not a real-time transport.");
         }
+
+        /// <summary>
+        /// Gets the transport for this contract as a <see cref="IRealTimeTransport"/> object if present.
+        /// </summary>
+        public static IRealTimeTransport AsRealTimeTransport<T>(this IControllerContract contract) where T : HubconTransportAttribute
+        {
+            if (contract is IContractDataAccessor accessor && accessor.GetTransportClient<T>() is not null and IRealTimeTransport client)
+                return client;
+
+            return null!;
+        }
     }
 }
