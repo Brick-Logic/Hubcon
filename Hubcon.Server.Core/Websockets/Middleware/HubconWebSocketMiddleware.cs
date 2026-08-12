@@ -1077,14 +1077,14 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 await context.Sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id,
                     context.ConnectionId, false,
                     "Operation cancelled."));
-                await context.CloseAsync(WebSocketCloseStatus.InternalServerError, "Operation cancelled.");
+
                 context.Logger.LogInformation("Token refresh update: Operation cancelled.");
             }
             catch (Exception ex)
             {
                 await context.Sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id,
                     context.ConnectionId, false, "Internal server error."));
-                await context.CloseAsync(WebSocketCloseStatus.InternalServerError, "Internal server error.");
+
                 context.Logger.LogError(ex.Message);
             }
             finally
@@ -1112,7 +1112,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 if (lastPingId == pingMessage.Id)
                 {
-                    await context.CloseAsync(WebSocketCloseStatus.InvalidPayloadData, "Ping error");
+                    context.Abort();
                     return;
                 }
 
