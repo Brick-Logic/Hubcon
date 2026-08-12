@@ -19,7 +19,7 @@ namespace HubconTestClient.Modules
             // server.EnableLogging();
             server.DisableAllLimiters();
             server.AllowRemoteCancellation();
-            server.ScaleMessageProcessors(10000);
+            server.ScaleMessageProcessors(30000);
             server.AddSetting("", new object());
             server.AddTracing();
             //server.AddHeaderProvider("key", x => "value");

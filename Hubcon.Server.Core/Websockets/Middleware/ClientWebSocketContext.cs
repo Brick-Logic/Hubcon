@@ -43,7 +43,6 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
     public WebSocketMessageSender Sender { get; private set; } = null!;
     public WebSocketMessageReceiver Receiver { get; private set; } = null!;
     public string ConnectionId { get; private set; } = "";
-    public HeartbeatWatcher? Watcher { get; private set; }
     public WebSocket? WebSocket { get; private set; }
 
 
@@ -65,6 +64,7 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
     public IConnectionSupervisor Supervisor { get; }
 
     public ITransportSettings Settings { get; }
+    public WebSocketTransportSettings WebSocketSettings { get; }
 
     public ClientWebSocketContext(HttpContext context)
     {
@@ -77,6 +77,7 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
         Logger = context.RequestServices.GetRequiredService<ILogger<HubconWebSocketMiddleware>>();
         Supervisor = context.RequestServices.GetRequiredService<IConnectionSupervisor>();
         Settings = InternalServerOptions.GetTransportSettings<WebSocketTransport>();
+        WebSocketSettings = InternalServerOptions.GetTransportSettings<WebSocketTransport, WebSocketTransportSettings>();
         
         TimeoutSeconds = Settings.ConnectionTimeout;
 
@@ -100,20 +101,6 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
         WebSocket = webSocket;
         Sender = new WebSocketMessageSender(webSocket, Converter);
         Receiver = new WebSocketMessageReceiver(webSocket, InternalServerOptions);
-    }
-
-    public void EnableHeartbeatWatcher()
-    {
-        Throw.IfNot(_isInitialized.WasAcquired,
-            static () => new HubconGenericException("This web socket context has not been initialized."));
-        Throw.If(_isDisposed.WasAcquired,
-            static () => new HubconGenericException("This context has already been disposed."));
-
-        Watcher ??= new HeartbeatWatcher(TimeoutSeconds, () =>
-        {
-            WebSocket?.Abort();
-            return _cts.CancelAsync();
-        });
     }
 
     public async Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription)
@@ -144,18 +131,6 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _cts.CancelAsync();
-        
-        if (Watcher != null)
-        {
-            try
-            {
-                await Watcher.DisposeAsync();
-            }
-            catch
-            {
-                // ignored
-            }
-        }
         
         await Supervisor.UnregisterAsync(ConnectionId);
 

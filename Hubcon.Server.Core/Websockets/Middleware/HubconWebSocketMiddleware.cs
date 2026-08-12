@@ -41,8 +41,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         private readonly IInternalServerOptions options;
         private readonly WebSocketTransportSettings _settings;
 
-        private static readonly HubconTransportAttribute _transport =
-            HubconTransportAttribute.GetDefault<WebSocketTransport>();
+        private static readonly HubconTransportAttribute _transport = HubconTransportAttribute.GetDefault<WebSocketTransport>();
 
         private readonly IConnectionSupervisor _connectionSupervisor;
         private readonly IConnectionLimiter _connectionLimiter;
@@ -138,7 +137,11 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
             var context = new ClientWebSocketContext(httpContext);
             context.Initialize(connectionId, webSocket);
-            _connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, webSocket.Abort);
+            var firstHeartbeatTime = _settings.EnablePing
+                ? DateTimeOffset.UtcNow.AddSeconds(_settings.HeartBeatInSeconds).ToUnixTimeSeconds()
+                : DateTimeOffset.MaxValue.ToUnixTimeSeconds();
+            
+            _connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, firstHeartbeatTime, webSocket.Abort);
 
             Interlocked.Increment(ref clientCount);
 
@@ -181,7 +184,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 if (_settings.EnablePing)
                 {
-                    context.EnableHeartbeatWatcher();
+                    var newHeartbeatExpiration =
+                        DateTimeOffset.UtcNow.ToUnixTimeSeconds() + _settings.HeartBeatInSeconds;
+                    _connectionSupervisor.NotifyAlive(connectionId, newHeartbeatExpiration);
                 }
 
                 while (webSocket.State == WebSocketState.Open)
@@ -1120,7 +1125,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return;
                 }
 
-                context.Watcher?.NotifyHeartbeat();
+                var newHeartbeatExpiration = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + context.WebSocketSettings.HeartBeatInSeconds;
+                context.Supervisor.NotifyAlive(context.ConnectionId, newHeartbeatExpiration);
                 await context.Sender.SendAsync(new PongMessage(pingMessage.Id, context.ConnectionId));
             }
             finally

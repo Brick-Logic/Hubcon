@@ -51,7 +51,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
             _context = context;
 
             WebSocket = new ClientWebSocket();
-
+            WebSocket.Options.KeepAliveInterval = TimeSpan.FromMinutes(5);
+            
             _converter = context.Converter;
             _clientOptions = context.ClientOptions;
             _serviceProvider = context.ProxyServiceProvider;
@@ -285,6 +286,8 @@ namespace Hubcon.Client.Core.Transports.Websockets
                 if (_loggingEnabled)
                     _logger?.LogInformation("Trying to connect to the server...");
 
+                _clientOptions.WebSocketOptions?.Invoke(WebSocket.Options, _serviceProvider);
+                
                 await WebSocket.ConnectAsync(uri, cancellationToken);
 
                 _receiver.Start();

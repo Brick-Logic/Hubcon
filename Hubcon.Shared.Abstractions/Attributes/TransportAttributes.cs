@@ -242,6 +242,11 @@ namespace Hubcon
 
         /// <inheritdoc/>
         public override bool RequiresAuth { get; set; } = true;
+
+        /// <summary>
+        /// Determines the heartbeat expiration seconds. If the connection does not receive a ping in time, it may be aborted.
+        /// </summary>
+        public int HeartBeatInSeconds { get; set; } = 30;
     }
 
     /// <summary>

@@ -184,10 +184,12 @@ namespace Hubcon
         {
             var operationRegistry = app.Services.GetRequiredService<IOperationRegistry>();
 
-            if(options != null)
-                app.UseWebSockets(options);
-            else
-                app.UseWebSockets();
+            var wsOptions = options ?? new WebSocketOptions()
+            {
+                KeepAliveInterval = TimeSpan.FromMinutes(5)
+            };
+            
+            app.UseWebSockets(wsOptions);
 
             app.UseMiddleware<HubconWebSocketMiddleware>();
 
