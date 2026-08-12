@@ -478,13 +478,17 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                 OperationContextProvider.SetContext(operationContext);
                                 return await provider.AuthenticateAsync(operationContext, null!);
                             }
+                            catch
+                            {
+                                return null;
+                            }
                             finally
                             {
                                 OperationContextProvider.ClearContext();
                             }
                         });
 
-                        if (claimsPrincipal is null)
+                        if (claimsPrincipal == null)
                         {
                             return null;
                         }
@@ -579,6 +583,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                context.Logger.LogError("{}", ex.Message);
+            }
             finally
             {
                 ingestCompleteMessage.Dispose();
@@ -608,6 +616,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 var ingestDataAckMessage = new IngestDataAckMessage(ingestDataWithAckMessage.Id, context.ConnectionId);
                 await context.Sender.SendAsync(ingestDataAckMessage);
             }
+            catch (Exception ex)
+            {
+                context.Logger.LogError("{}", ex.Message);
+            }
             finally
             {
                 ingestDataWithAckMessage.Dispose();
@@ -633,6 +645,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 ingest.Item3.NotifyHeartbeat();
                 ingest.Item1.OnNextElement(ingestDataMessage.Data);
             }
+            catch (Exception ex)
+            {
+                context.Logger.LogError("{}", ex.Message);
+            }
             finally
             {
                 ingestDataMessage.Dispose();
@@ -643,7 +659,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             WebSocketTransportSettings transportSettings)
         {
             List<HeartbeatWatcher> watchers = null!;
-
+            IResponse? result = null;
             try
             {
                 if (context.ConnectionIsClosed) return;
@@ -679,10 +695,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 {
                     RateLimitAttribute settings = sharedSettings ?? context.SettingsManager.GetSettings(
                         operationRequest,
-                        HubconTransportAttribute.GetDefault<WebSocketTransport>(), () => new RateLimitAttribute());
-
-                    if (context.IngestRouters.TryGetValue(id, out _))
-                        return;
+                        HubconTransportAttribute.GetDefault<WebSocketTransport>(), static () => new RateLimitAttribute());
 
                     var observable = new GenericObservable<JsonElement>(context.Converter);
 
@@ -749,8 +762,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     ingestInitMessage.RequestId,
                     localCts.Token);
 
-                await context.Sender.SendAsync(new IngestInitAckMessage(ingestInitMessage.Id, context.ConnectionId));
-                var result = await ingestTask;
+                await context.Sender.SendAsync(new IngestInitAckMessage(ingestInitMessage.Id, context.ConnectionId)); 
+                result = await ingestTask;
 
                 if (context.Sender.State != WebSocketState.Open)
                     return;
@@ -772,7 +785,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return;
 
                 await context.Sender.SendAsync(new IngestResultMessage(ingestInitMessage.Id, context.ConnectionId,
-                    context.Converter.SerializeToElement(ex.Message)));
+                    context.Converter.SerializeToElement(result ?? HubconResponse.StatusInternalError)));
             }
             finally
             {
@@ -851,6 +864,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     await context.Sender.SendAsync(message);
                 }
             }
+            catch (Exception ex)
+            {
+                context.Logger.LogError("{}", ex.Message);
+            }
             finally
             {
                 context.Tasks.TryRemove(operationInvokeMessage.Id, out _);
@@ -925,6 +942,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         await HandleError(ackMessage.Id, HubconResponse.TooManyRequests(), context);
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                context.Logger.LogError("{}", ex.Message);
             }
             finally
             {
@@ -1028,8 +1049,9 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 // Ignored
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                context.Logger.LogError("{}", ex.Message);
                 if (!context.ConnectionIsClosed)
                 {
                     await HandleError(streamInitMessage.Id, HubconResponse.InternalError<string>(), context);
@@ -1152,6 +1174,10 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                                              context.WebSocketSettings.HeartBeatInSeconds;
                 context.Supervisor.NotifyAlive(context.ConnectionId, newHeartbeatExpiration);
                 await context.Sender.SendAsync(new PongMessage(pingMessage.Id, context.ConnectionId));
+            }
+            catch (Exception ex)
+            {
+                context.Logger.LogError("{}", ex.Message);
             }
             finally
             {
