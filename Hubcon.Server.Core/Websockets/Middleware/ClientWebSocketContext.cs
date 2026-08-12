@@ -42,7 +42,7 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
     public ConcurrentDictionary<Guid, CancellationTokenSource> Tasks { get; private set; } = null!;
     public WebSocketMessageSender Sender { get; private set; } = null!;
     public WebSocketMessageReceiver Receiver { get; private set; } = null!;
-    public string ConnectionId { get; private set; } = "";
+    public string ConnectionId { get; private set; } = string.Empty;
     public WebSocket? WebSocket { get; private set; }
 
 
@@ -50,11 +50,10 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
     public IOperationRegistry OperationRegistry { get; }
     public IInternalServerOptions InternalServerOptions { get; }
     public SettingsManager SettingsManager { get; }
-    public TimeSpan TimeoutSeconds { get; }
     public HttpContext HttpContext { get; }
     public IDynamicConverter Converter { get; }
 
-    private readonly CancellationTokenSource _cts = new();
+    private readonly CancellationTokenSource _cts;
     public CancellationToken Token => _cts.Token;
 
     public IGlobalRateLimiterManager RateLimiter { get; }
@@ -79,8 +78,8 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
         Settings = InternalServerOptions.GetTransportSettings<WebSocketTransport>();
         WebSocketSettings = InternalServerOptions.GetTransportSettings<WebSocketTransport, WebSocketTransportSettings>();
         
-        TimeoutSeconds = Settings.ConnectionTimeout;
-
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+        
         SettingsManager = new SettingsManager(OperationRegistry, OperationConfigRegistry);
     }
 
@@ -110,7 +109,15 @@ internal sealed class ClientWebSocketContext : IAsyncDisposable
         Throw.If(_isDisposed.WasAcquired,
             static () => new HubconGenericException("This context has already been disposed."));
 
-        await WebSocket!.CloseAsync(closeStatus, statusDescription, _cts.Token);
+        try
+        {
+            if(WebSocket?.State == WebSocketState.Open)
+                await WebSocket!.CloseAsync(closeStatus, statusDescription, Token);
+        }
+        catch
+        {
+            // Ignored
+        }
     }
 
     public AsyncServiceScope CreateAsyncScope()

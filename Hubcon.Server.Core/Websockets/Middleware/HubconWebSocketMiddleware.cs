@@ -41,7 +41,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         private readonly IInternalServerOptions options;
         private readonly WebSocketTransportSettings _settings;
 
-        private static readonly HubconTransportAttribute _transport = HubconTransportAttribute.GetDefault<WebSocketTransport>();
+        private static readonly HubconTransportAttribute _transport =
+            HubconTransportAttribute.GetDefault<WebSocketTransport>();
 
         private readonly IConnectionSupervisor _connectionSupervisor;
         private readonly IConnectionLimiter _connectionLimiter;
@@ -91,68 +92,76 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 return;
             }
 
-            var corsService = httpContext.RequestServices.GetRequiredService<ICorsService>();
-            var corsPolicyProvider = httpContext.RequestServices.GetRequiredService<ICorsPolicyProvider>();
+            string? connectionId = null;
+            WebSocket? webSocket = null;
+            ClientWebSocketContext? context = null;
 
-            var policy = await corsPolicyProvider.GetPolicyAsync(httpContext, null);
-
-            if (policy != null)
+            try
             {
-                var corsResult = corsService.EvaluatePolicy(httpContext, policy);
+                var corsService = httpContext.RequestServices.GetRequiredService<ICorsService>();
+                var corsPolicyProvider = httpContext.RequestServices.GetRequiredService<ICorsPolicyProvider>();
 
-                if (!corsResult.IsOriginAllowed)
+                var policy = await corsPolicyProvider.GetPolicyAsync(httpContext, null);
+
+                if (policy != null)
                 {
-                    httpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    var corsResult = corsService.EvaluatePolicy(httpContext, policy);
+
+                    if (!corsResult.IsOriginAllowed)
+                    {
+                        httpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        return;
+                    }
+
+                    corsService.ApplyResult(corsResult, httpContext.Response);
+                }
+
+                long lastTokenExpirationDate;
+                connectionId = Guid.NewGuid().ToString("N");
+
+                var userData = await IsAuthorized(httpContext, _settings);
+
+                if (userData != null)
+                {
+                    httpContext.User = userData.Value.ClaimsPrincipal;
+                    lastTokenExpirationDate = userData.Value.ExpirationTime;
+                }
+                else
+                {
+                    httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
                     return;
                 }
 
-                corsService.ApplyResult(corsResult, httpContext.Response);
-            }
+                try
+                {
+                    webSocket = await httpContext.WebSockets.AcceptWebSocketAsync();
+                }
+                catch (Exception)
+                {
+                    return;
+                }
 
-            long lastTokenExpirationDate;
-            string connectionId = Guid.NewGuid().ToString();
-            WebSocket webSocket = null!;
+                context = new ClientWebSocketContext(httpContext);
+                context.Initialize(connectionId, webSocket);
+                var firstHeartbeatTime = _settings.EnablePing
+                    ? DateTimeOffset.UtcNow.AddSeconds(_settings.HeartBeatInSeconds).ToUnixTimeSeconds()
+                    : DateTimeOffset.MaxValue.ToUnixTimeSeconds();
 
-            var userData = await IsAuthorized(httpContext, _settings);
+                _connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, firstHeartbeatTime, webSocket.Abort);
 
-            if (userData != null)
-            {
-                httpContext.User = userData.Value.ClaimsPrincipal;
-                lastTokenExpirationDate = userData.Value.ExpirationTime;
-            }
-            else
-            {
-                httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                return;
-            }
+                Interlocked.Increment(ref clientCount);
 
-            try
-            {
-                webSocket = await httpContext.WebSockets.AcceptWebSocketAsync();
-            }
-            catch (Exception)
-            {
-                return;
-            }
-
-            var context = new ClientWebSocketContext(httpContext);
-            context.Initialize(connectionId, webSocket);
-            var firstHeartbeatTime = _settings.EnablePing
-                ? DateTimeOffset.UtcNow.AddSeconds(_settings.HeartBeatInSeconds).ToUnixTimeSeconds()
-                : DateTimeOffset.MaxValue.ToUnixTimeSeconds();
-            
-            _connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, firstHeartbeatTime, webSocket.Abort);
-
-            Interlocked.Increment(ref clientCount);
-
-            try
-            {
                 TrimmedMemoryOwner? firstMessageJson;
 
                 var fmCts = new CancellationTokenSource(5000);
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                    context.Token, 
+                    httpContext.RequestAborted
+                );
+                
                 try
                 {
-                    firstMessageJson = await context.Receiver.ReceiveAsync(context.Token);
+                    firstMessageJson = await context.Receiver.ReceiveAsync(fmCts.Token);
 
                     if (firstMessageJson == null || firstMessageJson.Memory.IsEmpty)
                     {
@@ -191,7 +200,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 while (webSocket.State == WebSocketState.Open)
                 {
-                    TrimmedMemoryOwner? tmo;
+                    TrimmedMemoryOwner? tmo = null;
 
                     try
                     {
@@ -199,12 +208,14 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                         if (tmo == null || tmo.Memory.IsEmpty)
                         {
+                            tmo?.Dispose();
                             return;
                         }
                     }
                     catch
                     {
                         webSocket.Abort();
+                        tmo?.Dispose();
                         return;
                     }
 
@@ -212,6 +223,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                         lastTokenExpirationDate < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
                     {
                         webSocket.Abort();
+                        tmo?.Dispose();
                         return;
                     }
 
@@ -220,11 +232,17 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     if (message.Id == Guid.Empty || !Guid.TryParse(message.ConnectionId, out _))
                     {
                         webSocket.Abort();
+                        tmo?.Dispose();
+                        message?.Dispose();
                         return;
                     }
 
                     if (message.ConnectionId != context.ConnectionId)
+                    {
+                        tmo?.Dispose();
+                        message?.Dispose();
                         continue;
+                    }
 
                     switch (message.Type)
                     {
@@ -379,15 +397,13 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             }
             catch (Exception ex)
             {
-                context.Logger.LogError(ex, "Critical error in Hubcon WebSocket Transport. Connection aborted.");
+                context?.Logger.LogError(ex, "Critical error in Hubcon WebSocket Transport. Connection aborted.");
             }
             finally
             {
                 try
                 {
-                    if (webSocket.State == WebSocketState.Open)
-                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected",
-                            CancellationToken.None);
+                    if (webSocket?.State != WebSocketState.Open) webSocket?.Abort();
                 }
                 catch
                 {
@@ -396,7 +412,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 try
                 {
-                    await context.DisposeAsync();
+                    if (context != null)
+                        await context.DisposeAsync();
                 }
                 catch
                 {
@@ -405,13 +422,14 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 try
                 {
-                    await _connectionSupervisor.UnregisterAsync(connectionId);
+                    if (connectionId != null)
+                        await _connectionSupervisor.UnregisterAsync(connectionId);
                 }
                 catch
                 {
                     // Ignored
                 }
-                
+
                 try
                 {
                     _connectionLimiter.Release(httpContext.Connection.RemoteIpAddress, _transport);
@@ -1036,22 +1054,22 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         private static async Task HandleTokenRefresh(TokenUpdateMessage tokenUpdateMessage,
             ClientWebSocketContext context, WebSocketTransportSettings transportSettings)
         {
-            if (context.ConnectionIsClosed) return;
-
-            using var localCts = new CancellationTokenSource();
-            await using var reg1 = context.Token.Register(CancelCtsDelegate, localCts);
-
-            if (!await context.RateLimiter.TryAcquireAsync(context.ConnectionId, MessageType.token_update,
-                    tokenUpdateMessage.Id, _transport, 1, CancellationToken.None))
-            {
-                await HandleError(tokenUpdateMessage.Id, HubconResponse.TooManyRequests(), context);
-                return;
-            }
-
-            var user = await IsAuthorized(context.HttpContext, transportSettings);
-
             try
             {
+                if (context.ConnectionIsClosed) return;
+
+                using var localCts = new CancellationTokenSource();
+                await using var reg1 = context.Token.Register(CancelCtsDelegate, localCts);
+
+                if (!await context.RateLimiter.TryAcquireAsync(context.ConnectionId, MessageType.token_update,
+                        tokenUpdateMessage.Id, _transport, 1, CancellationToken.None))
+                {
+                    await HandleError(tokenUpdateMessage.Id, HubconResponse.TooManyRequests(), context);
+                    return;
+                }
+
+                var user = await IsAuthorized(context.HttpContext, transportSettings);
+
                 if (!context.Tasks.TryAdd(tokenUpdateMessage.Id, localCts))
                     return;
 
@@ -1084,7 +1102,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             {
                 await context.Sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id,
                     context.ConnectionId, false, "Internal server error."));
-
                 context.Logger.LogError(ex.Message);
             }
             finally
@@ -1099,9 +1116,15 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             if (context.ConnectionIsClosed)
                 return;
 
-            var localMessage = new ErrorMessage(id, context.ConnectionId, context.Converter.Serialize(error));
-
-            await context.Sender.SendAsync(localMessage);
+            try
+            {
+                var errorMessage = new ErrorMessage(id, context.ConnectionId, context.Converter.Serialize(error));
+                await context.Sender.SendAsync(errorMessage);
+            }
+            catch
+            {
+                // Ignored
+            }
         }
 
         private static async Task HandlePing(Guid lastPingId, PingMessage pingMessage, ClientWebSocketContext context)
@@ -1125,7 +1148,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return;
                 }
 
-                var newHeartbeatExpiration = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + context.WebSocketSettings.HeartBeatInSeconds;
+                var newHeartbeatExpiration = DateTimeOffset.UtcNow.ToUnixTimeSeconds() +
+                                             context.WebSocketSettings.HeartBeatInSeconds;
                 context.Supervisor.NotifyAlive(context.ConnectionId, newHeartbeatExpiration);
                 await context.Sender.SendAsync(new PongMessage(pingMessage.Id, context.ConnectionId));
             }
