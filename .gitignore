@@ -416,3 +416,4 @@ FodyWeavers.xsd
 */dataSources.local.xml
 *.json
 */launchSettings.json
+.sonarqube/
