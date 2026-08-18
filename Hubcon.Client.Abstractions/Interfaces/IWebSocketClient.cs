@@ -43,9 +43,10 @@ namespace Hubcon.Client.Abstractions.Interfaces
         /// Asynchronously attempts to establish a connection to the specified URI.
         /// </summary>
         /// <param name="uri">The target URI for the WebSocket connection.</param>
+        /// <param name="authToken">The authentication token for the WebSocket connection. Use null if the server does not require authentication.</param>
         /// <param name="cancellationToken">A token that may be used to cancel the operation.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous connection operation.</returns>
-        ValueTask ConnectAsync(Uri uri, CancellationToken cancellationToken = default);
+        ValueTask ConnectAsync(Uri uri, string? authToken, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Closes the current connection, if the connection is established.

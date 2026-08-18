@@ -4,53 +4,93 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 
+
 public class LatencyHistogram
 {
-    // Usamos baldes de 10 microsegundos para alta precisión.
-    // 1000 baldes cubren de 0ms a 10ms. El último balde es para > 10ms.
     private const int BucketSizeMicros = 10;
-    private const int BucketCount = 1001;
+    private const int BucketCount = 10_001; 
     private readonly long[] _buckets = new long[BucketCount];
-    public long totalSamples = 0;
+    
+    private long _totalSamples;
+    private long _maxTicks;
+
+    public long TotalSamples => Volatile.Read(ref _totalSamples);
 
     public void Record(long startTicks)
     {
         long end = Stopwatch.GetTimestamp();
-        double elapsedMicros = (double)(end - startTicks) * 1_000_000 / Stopwatch.Frequency;
+        long elapsedTicks = end - startTicks;
+        if (elapsedTicks < 0) elapsedTicks = 0;
+
+        UpdateMax(elapsedTicks);
+
+        double elapsedMicros = (double)elapsedTicks * 1_000_000 / Stopwatch.Frequency;
         
         int bucketIndex = (int)(elapsedMicros / BucketSizeMicros);
         if (bucketIndex >= BucketCount) bucketIndex = BucketCount - 1;
 
         Interlocked.Increment(ref _buckets[bucketIndex]);
-        Interlocked.Increment(ref totalSamples);
+        Interlocked.Increment(ref _totalSamples);
     }
 
     public void PrintReport()
     {
-        long total = Volatile.Read(ref totalSamples);
-        if (total == 0) return;
+        long total = TotalSamples;
+        if (total == 0)
+        {
+            Console.WriteLine("\n--- Reporte de Latencia: Sin muestras ---");
+            return;
+        }
+
+        long maxTicks = Volatile.Read(ref _maxTicks);
+        double maxMicros = (double)maxTicks * 1_000_000 / Stopwatch.Frequency;
 
         Console.WriteLine("\n--- Reporte de Latencia ---");
-        Console.WriteLine($"Muestras totales: {total}");
-        Console.WriteLine($"P50: {GetPercentile(50):F2} ms");
-        Console.WriteLine($"P95: {GetPercentile(95):F2} ms");
-        Console.WriteLine($"P99: {GetPercentile(99):F2} ms");
-        Console.WriteLine($"Máx (>): {GetPercentile(100):F2} ms");
+        Console.WriteLine($"Muestras totales: {total:N0}");
+        Console.WriteLine($"P50 : {FormatMicros(GetPercentileMicros(50, total))}");
+        Console.WriteLine($"P95 : {FormatMicros(GetPercentileMicros(95, total))}");
+        Console.WriteLine($"P99 : {FormatMicros(GetPercentileMicros(99, total))}");
+        Console.WriteLine($"Max : {FormatMicros(maxMicros)}");
     }
 
-    private double GetPercentile(double percentile)
+    private double GetPercentileMicros(double percentile, long total)
     {
-        long target = (long)(percentile / 100.0 * totalSamples);
+        long target = (long)Math.Ceiling(percentile / 100.0 * total);
+        if (target == 0) target = 1;
+
         long currentSum = 0;
 
         for (int i = 0; i < BucketCount; i++)
         {
-            currentSum += _buckets[i];
+            currentSum += Volatile.Read(ref _buckets[i]);
             if (currentSum >= target)
             {
-                return (i * BucketSizeMicros) / 1000.0; // Convertir a ms
+                return (i + 1) * BucketSizeMicros; 
             }
         }
-        return (BucketCount * BucketSizeMicros) / 1000.0;
+
+        long maxTicks = Volatile.Read(ref _maxTicks);
+        return (double)maxTicks * 1_000_000 / Stopwatch.Frequency;
+    }
+
+    private void UpdateMax(long elapsedTicks)
+    {
+        long currentMax = Volatile.Read(ref _maxTicks);
+        while (elapsedTicks > currentMax)
+        {
+            long oldMax = Interlocked.CompareExchange(ref _maxTicks, elapsedTicks, currentMax);
+            if (oldMax == currentMax) break;
+            currentMax = oldMax;
+        }
+    }
+
+    private static string FormatMicros(double micros)
+    {
+        if (micros >= 1_000_000)
+            return $"{micros / 1_000_000.0:F2} s"; 
+        if (micros >= 1_000)
+            return $"{micros / 1_000.0:F2} ms";
+        
+        return $"{micros:F0} µs";
     }
 }

@@ -42,7 +42,7 @@ internal class Program
         long coreMask = 0;
 
         int minCore = 0;
-        int? maxCore = null;
+        int? maxCore = 0;
 
         int cores = maxCore ?? Environment.ProcessorCount - 1;
 
@@ -235,7 +235,7 @@ internal class Program
             var paralellClient = scope.ServiceProvider.GetRequiredService<IUserContract>();
 
 
-            while (Interlocked.Read(ref stats.totalSamples) < totalSamples)
+            while (stats.TotalSamples < totalSamples)
             {
                 long start = 0;
                 bool shouldMeasure = (counter++ % 100 == 0);
@@ -255,7 +255,7 @@ internal class Program
         timer.Elapsed += (sender, e) =>
         {
             Console.WriteLine(
-                $"Target samples: {totalSamples} | Collected samples: {Interlocked.Read(ref stats.totalSamples)}");
+                $"Target samples: {totalSamples} | Collected samples: {stats.TotalSamples}");
         };
         timer.Start();
 
@@ -272,7 +272,7 @@ internal class Program
 
     private static async Task TestRPS(IServiceScope scope)
     {
-        var taskCount = 256;
+        var taskCount = 1000;
 
         var tasks = Enumerable.Range(0, taskCount).Select(i => Task.Factory.StartNew(async () =>
         {

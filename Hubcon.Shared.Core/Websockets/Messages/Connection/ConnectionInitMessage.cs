@@ -9,6 +9,8 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Connection
 {
     public class ConnectionInitMessage : BaseMessage
     {
+        private string? _token;
+
         public ConnectionInitMessage(BaseMessage baseMessage) : base(baseMessage)
         {
             
@@ -18,8 +20,11 @@ namespace Hubcon.Shared.Core.Websockets.Messages.Connection
         }
 
         [JsonConstructor]
-        public ConnectionInitMessage(Guid id, string? error = null) : base(MessageType.connection_init, id, null!, error)
+        public ConnectionInitMessage(Guid id, string? error = null, string? token = null) : base(MessageType.connection_init, id, null!, error)
         {
+            _token = token;
         }
+        
+        public string? Token => _token ??= Extract<string>("token")!;
     }
 }

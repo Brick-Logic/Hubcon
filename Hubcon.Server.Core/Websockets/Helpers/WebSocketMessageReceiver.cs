@@ -7,7 +7,6 @@ namespace Hubcon.Server.Core.Websockets.Helpers
 {
     internal sealed class WebSocketMessageReceiver(WebSocket socket, IInternalServerOptions options)
     {
-        private readonly WebSocket _socket = socket;
         private readonly long _maxMessageSize = options.GetTransportSettings<WebSocketTransport>().MaxMessageSizeInBytes;
 
         public async Task<TrimmedMemoryOwner?> ReceiveAsync(CancellationToken cancellationToken = default)
@@ -16,14 +15,14 @@ namespace Hubcon.Server.Core.Websockets.Helpers
 
             try
             {
-                var result = await _socket.ReceiveAsync(firstPart.Memory, cancellationToken);
+                var result = await socket.ReceiveAsync(firstPart.Memory, cancellationToken);
 
                 if ((result.MessageType != WebSocketMessageType.Binary) | (result.Count > _maxMessageSize))
                 {
-                    if (result.MessageType == WebSocketMessageType.Close && _socket.State == WebSocketState.CloseReceived)
-                        await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
+                    if (result.MessageType == WebSocketMessageType.Close && socket.State == WebSocketState.CloseReceived)
+                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
                     else
-                        _socket.Abort();
+                        socket.Abort();
 
                     firstPart.Dispose();
                     return null;
@@ -54,7 +53,7 @@ namespace Hubcon.Server.Core.Websockets.Helpers
                 do
                 {
                     var part = MemoryPool<byte>.Shared.Rent(4096);
-                    result = await _socket.ReceiveAsync(part.Memory, ct);
+                    result = await socket.ReceiveAsync(part.Memory, ct);
 
                     if ((result.MessageType != WebSocketMessageType.Binary) | (totalBytes + result.Count > _maxMessageSize))
                     {

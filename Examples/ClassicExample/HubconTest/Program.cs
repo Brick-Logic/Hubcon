@@ -19,21 +19,23 @@ namespace HubconTest
     {
         static System.Timers.Timer worker;
 
-        public static void Start(ILogger<object> logger)
+        public static void Start()
         {
             var process = Process.GetCurrentProcess();
 
             long coreMask = 0;
 
-            int? customCores = null;
-            int cores = customCores ?? Environment.ProcessorCount - 1;
+            int minCore = 2;
+            int? maxCore = 3;
 
-            for (int i = 0; i <= cores; i++)
+            int cores = maxCore ?? Environment.ProcessorCount - 1;
+
+            for (int i = minCore; i <= cores; i++)
             {
                 coreMask |= 1L << i;
             }
 
-            // process.ProcessorAffinity = (IntPtr)coreMask;
+            process.ProcessorAffinity = (IntPtr)coreMask;
             // process.PriorityClass = ProcessPriorityClass.RealTime;
 
             //worker = new System.Timers.Timer();
@@ -75,7 +77,7 @@ namespace HubconTest
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
+            Watcher.Start();
             // builder.WebHost.ConfigureKestrel(options =>
             // {
             //     options.Limits.MaxConcurrentConnections = null;

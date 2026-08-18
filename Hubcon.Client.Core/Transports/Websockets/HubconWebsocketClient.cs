@@ -213,21 +213,26 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
                         var uriBuilder = new UriBuilder(url);
                         var authManager = AuthenticationManagerProvider?.Invoke();
-
-                        if (authManager is { IsSessionActive: true })
+                        StringBuilder? authTokenBuilder = null;
+                        var requiresAuth = authManager != null && context.ClientOptions.AuthIsEnabled;
+                        
+                        if (requiresAuth && authManager is { IsSessionActive: true })
                         {
-                            var authToken = "";
-                            if (!string.IsNullOrEmpty(authManager.TokenType))
-                                authToken += authManager.TokenType + " ";
-                            if (!string.IsNullOrEmpty(authManager.AccessToken))
-                                authToken += authManager.AccessToken;
+                            authTokenBuilder = new StringBuilder();
 
-                            uriBuilder.AddQueryParameter("access_token", authToken);
+                            if (!string.IsNullOrEmpty(authManager.TokenType))
+                            {
+                                authTokenBuilder.Append(authManager.TokenType);
+                                authTokenBuilder.Append(' ');
+                            }
+                            
+                            if (!string.IsNullOrEmpty(authManager.AccessToken))
+                                authTokenBuilder.Append(authManager.AccessToken);
                         }
 
                         await context.InterceptorManager.CallInterceptor(InterceptorType.OnConnecting, _cts.Token);
 
-                        await _webSocket.ConnectAsync(uriBuilder.Uri, _cts.Token);
+                        await _webSocket.ConnectAsync(uriBuilder.Uri, authTokenBuilder?.ToString(), _cts.Token);
 
                         _pingManager = new PingManager(_webSocket, context);
                         _pingManager.Start();

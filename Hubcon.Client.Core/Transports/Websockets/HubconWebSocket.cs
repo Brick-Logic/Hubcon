@@ -265,7 +265,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         private static readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
 
         /// <inheritdoc/>
-        public async ValueTask ConnectAsync(Uri uri, CancellationToken cancellationToken = default)
+        public async ValueTask ConnectAsync(Uri uri, string? authToken, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -297,7 +297,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
 
                 var msgId = Guid.NewGuid();
                 using var connectionResponse = await SendAndReceiveAsync(
-                    new ConnectionInitMessage(msgId),
+                    new ConnectionInitMessage(msgId, null, authToken),
                     false,
                     TimeSpan.FromMinutes(2),
                     cancellationToken);

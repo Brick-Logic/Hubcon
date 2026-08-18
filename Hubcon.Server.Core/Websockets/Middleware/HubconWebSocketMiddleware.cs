@@ -26,6 +26,7 @@ using System.Net.WebSockets;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Channels;
+using Hubcon.Server.Core.Websockets.Helpers;
 using Hubcon.Server.Core.WebSockets.Middleware;
 
 namespace Hubcon.Server.Core.Websockets.Middleware
@@ -86,18 +87,18 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 return;
             }
 
-            if (!_connectionLimiter.TryAcquire(httpContext.Connection.RemoteIpAddress, _transport))
-            {
-                httpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-                return;
-            }
-
             string? connectionId = null;
             WebSocket? webSocket = null;
             ClientWebSocketContext? context = null;
 
             try
             {
+                if (!_connectionLimiter.TryAcquire(httpContext.Connection.RemoteIpAddress, _transport))
+                {
+                    httpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                    return;
+                }
+                
                 var corsService = httpContext.RequestServices.GetRequiredService<ICorsService>();
                 var corsPolicyProvider = httpContext.RequestServices.GetRequiredService<ICorsPolicyProvider>();
 
@@ -119,19 +120,6 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 long lastTokenExpirationDate;
                 connectionId = Guid.NewGuid().ToString("N");
 
-                var userData = await IsAuthorized(httpContext, _settings);
-
-                if (userData != null)
-                {
-                    httpContext.User = userData.Value.ClaimsPrincipal;
-                    lastTokenExpirationDate = userData.Value.ExpirationTime;
-                }
-                else
-                {
-                    httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return;
-                }
-
                 try
                 {
                     webSocket = await httpContext.WebSockets.AcceptWebSocketAsync();
@@ -141,27 +129,18 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return;
                 }
 
-                context = new ClientWebSocketContext(httpContext);
-                context.Initialize(connectionId, webSocket);
-                var firstHeartbeatTime = _settings.EnablePing
-                    ? DateTimeOffset.UtcNow.AddSeconds(_settings.HeartBeatInSeconds).ToUnixTimeSeconds()
-                    : DateTimeOffset.MaxValue.ToUnixTimeSeconds();
-
-                _connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, firstHeartbeatTime, webSocket.Abort);
-
+                
                 Interlocked.Increment(ref clientCount);
 
                 TrimmedMemoryOwner? firstMessageJson;
 
-                var fmCts = new CancellationTokenSource(5000);
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                    context.Token, 
-                    httpContext.RequestAborted
-                );
-                
                 try
                 {
-                    firstMessageJson = await context.Receiver.ReceiveAsync(fmCts.Token);
+                    using var fmCts = new CancellationTokenSource(5000);
+                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(fmCts.Token, httpContext.RequestAborted);
+                    
+                    var receiver = new WebSocketMessageReceiver(webSocket, options);
+                    firstMessageJson = await receiver.ReceiveAsync(linkedCts.Token);
 
                     if (firstMessageJson == null || firstMessageJson.Memory.IsEmpty)
                     {
@@ -174,21 +153,37 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     webSocket.Abort();
                     return;
                 }
-                finally
-                {
-                    fmCts.Dispose();
-                }
-
-                var initMessage = new ConnectionInitMessage(firstMessageJson);
+                
+                using var initMessage = new ConnectionInitMessage(firstMessageJson);
 
                 if (initMessage.Type != MessageType.connection_init)
                 {
                     webSocket.Abort();
                     return;
                 }
+                
+                var userData = await Authorize(httpContext, initMessage.Token, _settings);
 
+                if (userData != null)
+                {
+                    lastTokenExpirationDate = userData.Value.ExpirationTime;
+                }
+                else
+                {
+                    httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return;
+                }
+                
+                context = new ClientWebSocketContext(httpContext);
+                context.Initialize(connectionId, webSocket);
+                
+                var firstHeartbeatTime = _settings.EnablePing
+                    ? DateTimeOffset.UtcNow.AddSeconds(_settings.HeartBeatInSeconds).ToUnixTimeSeconds()
+                    : DateTimeOffset.MaxValue.ToUnixTimeSeconds();
+                
+                _connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, firstHeartbeatTime, webSocket.Abort);
+                
                 await context.Sender.SendAsync(new ConnectionAckMessage(initMessage.Id, context.ConnectionId));
-
                 var lastPingId = Guid.Empty;
 
                 if (_settings.EnablePing)
@@ -444,12 +439,11 @@ namespace Hubcon.Server.Core.Websockets.Middleware
         }
 
         static async ValueTask<(ClaimsPrincipal ClaimsPrincipal, long ExpirationTime, string? AccessToken)?>
-            IsAuthorized(HttpContext context, WebSocketTransportSettings settings)
+            Authorize(HttpContext context, string? token, WebSocketTransportSettings settings)
         {
             if (settings.RequiresAuth)
             {
-                var token = context.Request.Query["access_token"];
-                context.Request.Headers["Authorization"] = token;
+                context.Request.Headers.Authorization = token;
 
                 var authProvider = settings.ConnectionAuthHandlerType ?? typeof(JwtAuthHandler);
 
@@ -497,7 +491,8 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                         if (exp is null)
                             return null;
-
+                        
+                        context.User = claimsPrincipal;
                         return (claimsPrincipal, long.Parse(exp.Value), token);
                     }
                     catch (Exception)
@@ -508,7 +503,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
 
                 return null;
             }
-
+            
             return (new ClaimsPrincipal(), long.MaxValue, null);
         }
 
@@ -1090,7 +1085,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     return;
                 }
 
-                var user = await IsAuthorized(context.HttpContext, transportSettings);
+                var user = await Authorize(context.HttpContext, tokenUpdateMessage.Token, transportSettings);
 
                 if (!context.Tasks.TryAdd(tokenUpdateMessage.Id, localCts))
                     return;
@@ -1100,13 +1095,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     await context.Sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id,
                         context.ConnectionId, false,
                         "Token refresh failed."));
+                    
                     await context.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Unauthorized");
                     context.Logger.LogInformation("Websocket re-authentication failed.");
                     return;
                 }
 
-                context.HttpContext.Request.Headers.Authorization = tokenUpdateMessage.Token;
-                context.HttpContext.User = user.Value.ClaimsPrincipal;
                 context.Supervisor.UpdateExpiration(context.ConnectionId, user.Value.ExpirationTime);
                 await context.Sender.SendAsync(new TokenUpdateResponseMessage(tokenUpdateMessage.Id,
                     context.ConnectionId, true,
