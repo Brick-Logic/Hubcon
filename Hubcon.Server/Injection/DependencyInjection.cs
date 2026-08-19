@@ -18,7 +18,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Hubcon
 {
-    public static class DependencyInjection
+    public static class ServerDependencyInjection
     {
         public static WebApplicationBuilder AddHubconServer(this WebApplicationBuilder builder, Action<IServerOptions>? controllerOptions = null)
         {

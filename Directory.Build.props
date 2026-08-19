@@ -12,17 +12,42 @@
         <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
         <Stage>rc</Stage>
         <UsePackages>false</UsePackages>
-      
         
-        <!-- Hubcon.Server version -->
-        <HubconServerVersion>2.0.0-rc2</HubconServerVersion>
+        <HubconUnifiedVersion>2.0.0-rc93</HubconUnifiedVersion>
+        
+        <!-- Client -->
+        <HubconClientVersion>2.0.0-rc93</HubconClientVersion>
+        <!-- Client Abstractions -->
+        <HubconClientAbstractionsVersion>2.0.0-rc93</HubconClientAbstractionsVersion>
+        <!-- Client Core -->
+        <HubconClientCoreVersion>2.0.0-rc93</HubconClientCoreVersion>
+        
+        <!-- Server -->
+        <HubconServerVersion>2.0.0-rc93</HubconServerVersion>
+        <!-- Server Abstractions -->
+        <HubconServerAbstractionsVersion>2.0.0-rc93</HubconServerAbstractionsVersion>
+        <!-- Server Core -->
+        <HubconServerCoreVersion>2.0.0-rc93</HubconServerCoreVersion>
+
+        <!-- Shared -->
+        <HubconSharedVersion>2.0.0-rc93</HubconSharedVersion>
+        <!-- Shared Abstractions -->
+        <HubconSharedAbstractionsVersion>2.0.0-rc93</HubconSharedAbstractionsVersion>
+        <!-- Shared Abstractions Standard -->
+        <HubconSharedAbstractionsStandardVersion>2.0.0-rc93</HubconSharedAbstractionsStandardVersion>
+        <!-- Shared Core -->
+        <HubconSharedCoreVersion>2.0.0-rc93</HubconSharedCoreVersion>
+        
+        
+        <HubconClientRange>[$(HubconServerVersion), 3.0.0)</HubconClientRange>
         <HubconServerRange>[$(HubconServerVersion), 3.0.0)</HubconServerRange>
+        <HubconSharedRange>[$(HubconServerVersion), 3.0.0)</HubconSharedRange>
         
         <!-- Analyzer versions -->
-        <AnalyzersVersion>2.0.0-rc2</AnalyzersVersion>
-        <AnalyzersCodeFixesVersion>2.0.0-rc2</AnalyzersCodeFixesVersion>
-        <AnalyzersDiagnosticSuppressorsVersion>2.0.0-rc2</AnalyzersDiagnosticSuppressorsVersion>
-        <SourceGeneratorsVersion>2.0.0-rc2</SourceGeneratorsVersion>
+        <AnalyzersVersion>2.0.0-rc93</AnalyzersVersion>
+        <AnalyzersCodeFixesVersion>2.0.0-rc93</AnalyzersCodeFixesVersion>
+        <AnalyzersDiagnosticSuppressorsVersion>2.0.0-rc93</AnalyzersDiagnosticSuppressorsVersion>
+        <SourceGeneratorsVersion>2.0.0-rc93</SourceGeneratorsVersion>
 
         <!-- Analyzer ranges for consuming packages -->
         <AnalyzersRange>[$(AnalyzersVersion), 3.0.0)</AnalyzersRange>

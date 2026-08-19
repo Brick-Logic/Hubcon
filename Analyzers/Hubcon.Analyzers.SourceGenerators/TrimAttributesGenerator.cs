@@ -18,31 +18,9 @@ namespace Hubcon.Analyzers.SourceGenerators
             var hasCallToInitializer = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: (node, _) => node is InvocationExpressionSyntax,
-                    transform: (ctx, _) =>
-                    {
-                        var invocation = (InvocationExpressionSyntax)ctx.Node;
-
-                        // 1a. Filtro rápido por nombre (No gasta CPU)
-                        var name = "";
-
-                        if (invocation.Expression is MemberAccessExpressionSyntax m)
-                            name = m.Name.Identifier.Text;
-                        else if (invocation.Expression is IdentifierNameSyntax i)
-                            name = i.Identifier.Text;
-                        else
-                            name = null;
-
-
-                        if (name != "AddHubconClient") return false;
-
-                        // 1b. Validación Semántica (La verdad absoluta)
-                        var symbol = ctx.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
-                        if (symbol == null) return false;
-
-                        // Verificamos: Namespace == "Hubcon" && Clase == "DependencyInjection"
-                        return symbol.ContainingType?.Name == "DependencyInjection" &&
-                               symbol.ContainingNamespace?.ToDisplayString() == "Hubcon";
-                    })
+                    transform: (ctx, _) => 
+                        ctx.MethodIsInUse("AddHubconClient", "DependencyInjection", "Hubcon")
+                        || ctx.MethodIsInUse("AddHubconServer", "ServerDependencyInjection", "Hubcon"))
                 .Where(found => found)
                 .Collect()
                 .Select((calls, _) => calls.Any());

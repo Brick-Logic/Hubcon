@@ -1,5 +1,5 @@
 <Project>
 	<ItemGroup Condition="$(SuppressHubconGenerators) != true">
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[2.0.0-rc1, 3.0.0)" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[$(SourceGeneratorsVersion), 3.0.0)" />
 	</ItemGroup>
 </Project>

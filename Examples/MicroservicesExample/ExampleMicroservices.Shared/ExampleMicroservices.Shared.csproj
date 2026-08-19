@@ -4,9 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-	<IsHubconServer>true</IsHubconServer>
+    <UseHubconServer>true</UseHubconServer>
   </PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Hubcon" Version="2.0.0-rc1" />
+        <PackageReference Include="Hubcon" Version="$(HubconUnifiedVersion)"/>
 	</ItemGroup>
 </Project>

@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
 
-  <ItemGroup>
-	  <PackageReference Include="Hubcon" Version="2.0.0-rc1" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Hubcon" Version="$(HubconUnifiedVersion)"/>
+    </ItemGroup>
 </Project>

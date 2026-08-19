@@ -13,26 +13,8 @@ namespace Hubcon.Analyzers.SourceGenerators.Extensions
             return context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: (node, _) => node is InvocationExpressionSyntax,
-                    transform: (ctx, _) =>
-                    {
-                        var invocation = (InvocationExpressionSyntax)ctx.Node;
-                        var name = "";
-
-                        if (invocation.Expression is MemberAccessExpressionSyntax m)
-                            name = m.Name.Identifier.Text;
-                        else if (invocation.Expression is IdentifierNameSyntax i)
-                            name = i.Identifier.Text;
-                        else
-                            name = null;
-                        
-                        if (name != "AddHubconClient") return false;
-
-                        var symbol = ctx.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
-                        if (symbol == null) return false;
-
-                        return symbol.ContainingType?.Name == "DependencyInjection" &&
-                               symbol.ContainingNamespace?.ToDisplayString() == "Hubcon";
-                    })
+                    transform: (ctx, _) => 
+                        ctx.MethodIsInUse("AddHubconClient", "DependencyInjection", "Hubcon"))
                 .Where(found => found)
                 .Collect()
                 .Select((calls, _) => calls.Any());
@@ -43,26 +25,8 @@ namespace Hubcon.Analyzers.SourceGenerators.Extensions
             return context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: (node, _) => node is InvocationExpressionSyntax,
-                    transform: (ctx, _) =>
-                    {
-                        var invocation = (InvocationExpressionSyntax)ctx.Node;
-                        var name = "";
-
-                        if (invocation.Expression is MemberAccessExpressionSyntax m)
-                            name = m.Name.Identifier.Text;
-                        else if (invocation.Expression is IdentifierNameSyntax i)
-                            name = i.Identifier.Text;
-                        else
-                            name = null;
-                        
-                        if (name != "AddHubconServer") return false;
-
-                        var symbol = ctx.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
-                        if (symbol == null) return false;
-
-                        return symbol.ContainingType?.Name == "DependencyInjection" &&
-                               symbol.ContainingNamespace?.ToDisplayString() == "Hubcon";
-                    })
+                    transform: (ctx, _) => 
+                        ctx.MethodIsInUse("AddHubconServer", "ServerDependencyInjection", "Hubcon"))
                 .Where(found => found)
                 .Collect()
                 .Select((calls, _) => calls.Any());

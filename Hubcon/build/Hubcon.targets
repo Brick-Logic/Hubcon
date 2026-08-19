@@ -1,9 +1,9 @@
 <Project>
-	<ItemGroup Condition="( '$(UsingMicrosoftNETSdkWeb)' == 'true'  and '$(IsHubconServer)' != 'false' ) or ( '$(UsingMicrosoftNETSdkWeb)' != 'true' and '$(IsHubconServer)' == 'true' )">
-		<PackageReference Include="Hubcon.Server" Version="[2.0.0-rc1, 3.0.0)" />
+	<ItemGroup Condition="( '$(UsingMicrosoftNETSdkWeb)' == 'true'  and '$(UseHubconServer)' != 'false' ) or ( '$(UsingMicrosoftNETSdkWeb)' != 'true' and '$(UseHubconServer)' == 'true' )">
+		<PackageReference Include="Hubcon.Server" Version="[$(HubconServerVersion), 3.0.0)" />
 	</ItemGroup>
 
 	<ItemGroup Condition="$(SuppressHubconGenerators) != true">
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[2.0.0-rc1, 3.0.0)" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[$(SourceGeneratorsVersion), 3.0.0)" />
 	</ItemGroup>
 </Project>

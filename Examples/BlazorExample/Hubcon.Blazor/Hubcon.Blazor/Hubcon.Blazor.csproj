@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-	  <PackageReference Include="Hubcon" Version="2.0.0-rc1" />
+    <PackageReference Include="Hubcon" Version="$(HubconUnifiedVersion)"/>
 	  <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.15" />
   </ItemGroup>
 

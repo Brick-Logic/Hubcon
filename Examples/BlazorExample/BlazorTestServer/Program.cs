@@ -56,8 +56,6 @@ namespace BlazorTestServer
             {
                 serverOptions.ConfigureCore(coreOptions =>
                 {
-                    coreOptions.SetWebSocketTimeout(TimeSpan.FromSeconds(15));
-
                     coreOptions
                         .DisableAllRateLimiters()
                         .EnableRequestDetailedErrors();

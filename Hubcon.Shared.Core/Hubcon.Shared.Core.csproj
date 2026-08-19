@@ -11,7 +11,7 @@
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageOutputPath>../nupkgs</PackageOutputPath>
-		<Version>2.0.0-rc2</Version>
+		<Version>$(HubconSharedCoreVersion)</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<Description>Shared core implementations for Hubcon.</Description>

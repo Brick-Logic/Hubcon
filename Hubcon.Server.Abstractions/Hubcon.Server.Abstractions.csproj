@@ -14,7 +14,7 @@
 		<Description>Server-side abstractions for Hubcon.</Description>
 		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
 		<PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
-		<Version>2.0.0-rc2</Version>
+		<Version>$(HubconServerAbstractionsVersion)</Version>
 		<Authors>$(Authors)</Authors>
 		<Company>$(Company)</Company>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>

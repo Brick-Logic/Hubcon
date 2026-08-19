@@ -26,30 +26,8 @@ namespace Hubcon.Analyzers.SourceGenerators
                 .CreateSyntaxProvider(
                     predicate: (node, _) => node is InvocationExpressionSyntax,
                     transform: (ctx, _) =>
-                    {
-                        var invocation = (InvocationExpressionSyntax)ctx.Node;
-
-                        // 1a. Filtro rápido por nombre (No gasta CPU)
-                        var name = "";
-
-                        if (invocation.Expression is MemberAccessExpressionSyntax m)
-                            name = m.Name.Identifier.Text;
-                        else if (invocation.Expression is IdentifierNameSyntax i)
-                            name = i.Identifier.Text;
-                        else
-                            name = null;
-
-
-                        if (name != "AddHubconClient") return false;
-
-                        // 1b. Validación Semántica (La verdad absoluta)
-                        var symbol = ctx.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
-                        if (symbol == null) return false;
-
-                        // Verificamos: Namespace == "Hubcon" && Clase == "DependencyInjection"
-                        return symbol.ContainingType?.Name == "DependencyInjection" &&
-                               symbol.ContainingNamespace?.ToDisplayString() == "Hubcon";
-                    })
+                        ctx.MethodIsInUse("AddHubconClient", "DependencyInjection", "Hubcon")
+                        || ctx.MethodIsInUse("AddHubconServer", "ServerDependencyInjection", "Hubcon"))
                 .Where(found => found)
                 .Collect()
                 .Select((calls, _) => calls.Any());
@@ -57,7 +35,8 @@ namespace Hubcon.Analyzers.SourceGenerators
             var localTypes = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: (s, _) => s is ClassDeclarationSyntax cds && cds.BaseList != null,
-                    transform: (ctx, _) => GetIfDerived(ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) as INamedTypeSymbol))
+                    transform: (ctx, _) =>
+                        GetIfDerived(ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) as INamedTypeSymbol))
                 .Where(t => t != null);
 
             var referencedTypes = context.CompilationProvider.Select((compilation, _) =>
@@ -71,6 +50,7 @@ namespace Hubcon.Analyzers.SourceGenerators
                         CollectImplementations(assembly.GlobalNamespace, results);
                     }
                 }
+
                 return results.ToImmutableArray();
             });
 
@@ -103,6 +83,7 @@ namespace Hubcon.Analyzers.SourceGenerators
                 if (current.ToDisplayString().StartsWith(TargetBaseType)) return symbol;
                 current = current.BaseType;
             }
+
             return null;
         }
 
@@ -113,10 +94,12 @@ namespace Hubcon.Analyzers.SourceGenerators
                 var match = GetIfDerived(type);
                 if (match != null && match.DeclaredAccessibility == Accessibility.Public) results.Add(match);
             }
+
             foreach (var nestedNs in ns.GetNamespaceMembers()) CollectImplementations(nestedNs, results);
         }
 
-        private static void Execute(ImmutableArray<INamedTypeSymbol> local, ImmutableArray<INamedTypeSymbol> referenced, SourceProductionContext context)
+        private static void Execute(ImmutableArray<INamedTypeSymbol> local, ImmutableArray<INamedTypeSymbol> referenced,
+            SourceProductionContext context)
         {
             var combined = local.AddRange(referenced).Distinct(SymbolEqualityComparer.Default);
             if (combined.Count() == 0) return;
@@ -132,10 +115,12 @@ namespace Hubcon.Analyzers.SourceGenerators
 
             // --- POLYFILLS ---
             sb.AppendLine("    #if !NET5_0_OR_GREATER");
-            sb.AppendLine("    namespace System.Runtime.CompilerServices { [AttributeUsage(AttributeTargets.Method)] internal sealed class ModuleInitializerAttribute : Attribute { } }");
+            sb.AppendLine(
+                "    namespace System.Runtime.CompilerServices { [AttributeUsage(AttributeTargets.Method)] internal sealed class ModuleInitializerAttribute : Attribute { } }");
             sb.AppendLine("    #endif");
             sb.AppendLine("    #if !NETCOREAPP3_0_OR_GREATER");
-            sb.AppendLine("    namespace System.Diagnostics.CodeAnalysis { [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)] internal sealed class DynamicDependencyAttribute : Attribute { public DynamicDependencyAttribute(DynamicallyAccessedMemberTypes memberTypes, Type type) { } } }");
+            sb.AppendLine(
+                "    namespace System.Diagnostics.CodeAnalysis { [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)] internal sealed class DynamicDependencyAttribute : Attribute { public DynamicDependencyAttribute(DynamicallyAccessedMemberTypes memberTypes, Type type) { } } }");
             sb.AppendLine("    #endif");
             sb.AppendLine();
             sb.AppendLine("    internal static class TransportClientPreserver");
@@ -145,10 +130,12 @@ namespace Hubcon.Analyzers.SourceGenerators
             foreach (INamedTypeSymbol type in combined)
             {
                 string typeName = GetSafeTypeName(type);
-                sb.AppendLine("        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(" + typeName + "))]");
+                sb.AppendLine("        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(" + typeName +
+                              "))]");
             }
 
-            sb.AppendLine("        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
+            sb.AppendLine(
+                "        #if UNITY_2017_1_OR_NEWER\r\n        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]\r\n        #else\r\n        [ModuleInitializer]\r\n        #endif");
             sb.AppendLine("        public static void Init()");
             sb.AppendLine("        {");
             sb.AppendLine($"            {Tools.GetCondition()}");
@@ -160,16 +147,23 @@ namespace Hubcon.Analyzers.SourceGenerators
 
                 // Constructores
                 int i = 0;
-                foreach (var ctor in type.InstanceConstructors.Where(c => c.DeclaredAccessibility == Accessibility.Public))
+                foreach (var ctor in type.InstanceConstructors.Where(c =>
+                             c.DeclaredAccessibility == Accessibility.Public))
                 {
                     i++;
-                    sb.AppendLine($"                {typeName} {type.Name}Variable{i} = new " + typeName + "(" + GetDefaultArgs(ctor) + ");");
+                    sb.AppendLine($"                {typeName} {type.Name}Variable{i} = new " + typeName + "(" +
+                                  GetDefaultArgs(ctor) + ");");
 
                     // Métodos
-                    foreach (var method in type.GetMembers().OfType<IMethodSymbol>().Where(m => m.MethodKind == MethodKind.Ordinary && m.DeclaredAccessibility == Accessibility.Public))
+                    foreach (var method in type.GetMembers().OfType<IMethodSymbol>().Where(m =>
+                                 m.MethodKind == MethodKind.Ordinary &&
+                                 m.DeclaredAccessibility == Accessibility.Public))
                     {
-                        string methodName = method.IsGenericMethod ? method.Name + "<" + string.Join(", ", method.TypeParameters.Select(tp => "object")) + ">" : method.Name;
-                        sb.AppendLine($"                {type.Name}Variable{i}." + methodName + "(" + GetDefaultArgs(method) + ");");
+                        string methodName = method.IsGenericMethod
+                            ? method.Name + "<" + string.Join(", ", method.TypeParameters.Select(tp => "object")) + ">"
+                            : method.Name;
+                        sb.AppendLine($"                {type.Name}Variable{i}." + methodName + "(" +
+                                      GetDefaultArgs(method) + ");");
                     }
                 }
             }
@@ -189,12 +183,15 @@ namespace Hubcon.Analyzers.SourceGenerators
             {
                 name += "<" + string.Join(", ", type.TypeParameters.Select(tp => "object")) + ">";
             }
+
             return name;
         }
 
         private static string GetDefaultArgs(IMethodSymbol method)
         {
-            return string.Join(", ", method.Parameters.Select(p => "default(" + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")"));
+            return string.Join(", ",
+                method.Parameters.Select(p =>
+                    "default(" + p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")"));
         }
     }
 }

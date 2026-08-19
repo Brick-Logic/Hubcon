@@ -35,7 +35,6 @@ namespace Hubcon.Analyzers.SourceGenerators
                 .Where(c => c != null)
                 .Collect();
 
-            // Tipos marcados locales (tienen el atributo físicamente en el código)
             var localMarkedTypes = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: (node, token) =>
@@ -97,7 +96,7 @@ namespace Hubcon.Analyzers.SourceGenerators
                 .Where(symbol => symbol != null)
                 .Collect();
 
-// Capturamos todas las referencias de compilación para buscar interfaces en proyectos referenciados
+            // Capturamos todas las referencias de compilación para buscar interfaces en proyectos referenciados
             var referencedInterfaces = context.CompilationProvider.Select((compilation, _) =>
             {
                 var interfaces = new List<INamedTypeSymbol>();
