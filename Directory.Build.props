@@ -50,10 +50,10 @@
         <SourceGeneratorsVersion>2.0.0-rc93</SourceGeneratorsVersion>
 
         <!-- Analyzer ranges for consuming packages -->
-        <AnalyzersRange>[$(AnalyzersVersion), 3.0.0)</AnalyzersRange>
-        <AnalyzersCodeFixesRange>[$(AnalyzersCodeFixesVersion), 3.0.0)</AnalyzersCodeFixesRange>
-        <AnalyzersDiagnosticSuppressorsRange>[$(AnalyzersDiagnosticSuppressorsVersion), 3.0.0)</AnalyzersDiagnosticSuppressorsRange>
-        <SourceGeneratorsRange>[$(SourceGeneratorsVersion), 3.0.0)</SourceGeneratorsRange>
+        <AnalyzersRange>[2.0.0-rc1, 3.0.0)</AnalyzersRange>
+        <AnalyzersCodeFixesRange>[2.0.0-rc1, 3.0.0)</AnalyzersCodeFixesRange>
+        <AnalyzersDiagnosticSuppressorsRange>[2.0.0-rc1, 3.0.0)</AnalyzersDiagnosticSuppressorsRange>
+        <SourceGeneratorsRange>[2.0.0-rc1, 3.0.0)</SourceGeneratorsRange>
     </PropertyGroup>
 
     <ItemGroup>
