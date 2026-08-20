@@ -1,19 +1,16 @@
-﻿# -----------------------------------------------------------------------------
-# ARG Globales
-# Pass ENABLE_AOT=true desde Coolify para AOT, o false para JIT tradicional.
-# -----------------------------------------------------------------------------
+﻿# ARG Globales
 ARG BUILD_CONFIGURATION=Release
 ARG ENABLE_AOT=false
 
 # Base Runtime para JIT
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base-jit
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base-false
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
 # Base Runtime para AOT
-FROM mcr.microsoft.com/dotnet/nightly/chiseled/extra:latest AS base-aot
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0 AS base-true
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
@@ -64,11 +61,11 @@ RUN if [ "$ENABLE_AOT" = "true" ]; then \
     fi
 
 # Final Stage Selección Dinámica
-FROM base-${ENABLE_AOT:-jit} AS final
+FROM base-${ENABLE_AOT} AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
 # Si es AOT se ejecuta el binario nativo directamente; si es JIT se arranca con 'dotnet'
 ARG ENABLE_AOT
 ENV IS_AOT=$ENABLE_AOT
-ENTRYPOINT ["sh", "-c", "if [ \"$IS_AOT\" = \"true\" ]; then ./HubconTest; else dotnet HubconTest.dll; fi"]
+CMD if [ "$IS_AOT" = "true" ]; then ./HubconTest; else dotnet HubconTest.dll; fi
