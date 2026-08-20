@@ -7,6 +7,8 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY ["README.md", "./"]
+COPY ["LICENSE", "./"]
 COPY ["Examples/ClassicExample/HubconTest/HubconTest.csproj", "Examples/ClassicExample/HubconTest/"]
 COPY ["Hubcon.Client/Hubcon.Client.csproj", "Hubcon.Client/"]
 COPY ["Hubcon.Client.Abstractions/Hubcon.Client.Abstractions.csproj", "Hubcon.Client.Abstractions/"]
