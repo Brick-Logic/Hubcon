@@ -4,8 +4,6 @@
         <Authors>Brick-Logic</Authors>
         <Company>Brick-Logic</Company>
         <Copyright>Copyright © $(Company) $([System.DateTime]::Now.Year)</Copyright>
-        <PackageLicenseFile>LICENSE</PackageLicenseFile>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
         <RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <RepositoryBranch>main</RepositoryBranch>
@@ -55,9 +53,4 @@
         <AnalyzersDiagnosticSuppressorsRange>[2.0.0-rc1, 3.0.0)</AnalyzersDiagnosticSuppressorsRange>
         <SourceGeneratorsRange>[2.0.0-rc1, 3.0.0)</SourceGeneratorsRange>
     </PropertyGroup>
-
-    <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" Condition="Exists('$(MSBuildThisFileDirectory)LICENSE')"/>
-        <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Condition="Exists('$(MSBuildThisFileDirectory)README.md')"/>
-    </ItemGroup>
 </Project>

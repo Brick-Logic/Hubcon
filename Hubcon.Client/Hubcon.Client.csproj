@@ -9,6 +9,8 @@
 		<RootNamespace>Hubcon.Client</RootNamespace>
 
 		<PackageOutputPath>../nupkgs</PackageOutputPath>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageId>Hubcon.Client</PackageId>
@@ -57,11 +59,9 @@
 	<ItemGroup>
 		<None Include="build\Hubcon.Client.targets" Pack="true" PackagePath="build\" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
-		<None Update="README.md">
-			<PackagePath>./</PackagePath>
-			<Pack>true</Pack>
-		</None>
+		<None Include="$(MSBuildThisFileDirectory)/../README.md" Pack="true" PackagePath="\" />
+		<None Include="$(MSBuildThisFileDirectory)/../LICENSE" Pack="true" PackagePath="\" />
 	</ItemGroup>
 </Project>

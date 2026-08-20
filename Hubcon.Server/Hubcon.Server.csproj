@@ -9,6 +9,8 @@
         <RootNamespace>$(AssemblyName)</RootNamespace>
         <PackageId>$(AssemblyName)</PackageId>
         <PackageOutputPath>../nupkgs</PackageOutputPath>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <IsPackable>true</IsPackable>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Description>Hubcon's .NET server package to build multi-transport servers, allowing integrations using C# interfaces or OpenAPI clients.</Description>
@@ -58,9 +60,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Update="README.md">
-            <PackagePath>./</PackagePath>
-            <Pack>true</Pack>
-        </None>
+        <None Include="$(MSBuildThisFileDirectory)/../README.md" Pack="true" PackagePath="\" />
+        <None Include="$(MSBuildThisFileDirectory)/../LICENSE" Pack="true" PackagePath="\" />
     </ItemGroup>
 </Project>

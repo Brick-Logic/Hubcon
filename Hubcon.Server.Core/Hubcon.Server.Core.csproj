@@ -9,6 +9,8 @@
 		<RootNamespace>$(AssemblyName)</RootNamespace>
 		<PackageId>$(AssemblyName)</PackageId>
 		<PackageOutputPath>../nupkgs</PackageOutputPath>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Description>Core server-side implementations for Hubcon.</Description>
@@ -39,5 +41,10 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Hubcon.Server.Abstractions\Hubcon.Server.Abstractions.csproj" />
 		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="$(MSBuildThisFileDirectory)/../README.md" Pack="true" PackagePath="\" />
+		<None Include="$(MSBuildThisFileDirectory)/../LICENSE" Pack="true" PackagePath="\" />
 	</ItemGroup>
 </Project>

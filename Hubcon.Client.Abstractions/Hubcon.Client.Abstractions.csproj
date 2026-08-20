@@ -9,6 +9,8 @@
         <RootNamespace>$(AssemblyName)</RootNamespace>
         <PackageId>$(AssemblyName)</PackageId>
         <PackageOutputPath>../nupkgs</PackageOutputPath>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <IsPackable>true</IsPackable>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Description>Client-side abstractions for Hubcon.</Description>
@@ -34,5 +36,10 @@
         <ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj"/>
         <ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj"/>
         <ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)/../README.md" Pack="true" PackagePath="\" />
+        <None Include="$(MSBuildThisFileDirectory)/../LICENSE" Pack="true" PackagePath="\" />
     </ItemGroup>
 </Project>

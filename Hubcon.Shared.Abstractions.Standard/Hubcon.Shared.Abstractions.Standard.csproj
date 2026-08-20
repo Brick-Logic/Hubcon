@@ -7,6 +7,8 @@
 		<RootNamespace>$(AssemblyName)</RootNamespace>
 		<PackageId>$(AssemblyName)</PackageId>
 		<PackageOutputPath>../nupkgs</PackageOutputPath>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Description>Shared abstractions for Hubcon using .NET Standard framework.</Description>
@@ -34,5 +36,10 @@
 	
 	<ItemGroup>
 	  <Folder Include="Models\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="$(MSBuildThisFileDirectory)/../README.md" Pack="true" PackagePath="\" />
+		<None Include="$(MSBuildThisFileDirectory)/../LICENSE" Pack="true" PackagePath="\" />
 	</ItemGroup>
 </Project>
