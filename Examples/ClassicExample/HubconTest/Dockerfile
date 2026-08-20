@@ -1,5 +1,4 @@
 ﻿# ARG Globales
-ARG BUILD_CONFIGURATION=Release
 ARG ENABLE_AOT=false
 
 # Base Runtime para JIT
@@ -17,7 +16,6 @@ EXPOSE 8081
 
 # Build & Publish
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-ARG BUILD_CONFIGURATION
 ARG ENABLE_AOT
 
 WORKDIR /src
@@ -55,10 +53,10 @@ WORKDIR "/src/Examples/ClassicExample/HubconTest"
 
 # Publish condicional según el flag ENABLE_AOT
 RUN if [ "$ENABLE_AOT" = "true" ]; then \
-        dotnet publish ./HubconTest.csproj -c $BUILD_CONFIGURATION -r linux-x64 -o /app/publish --self-contained  \
+        dotnet publish ./HubconTest.csproj -c Release -r linux-x64 -o /app/publish --self-contained  \
     else \
         dotnet publish ./HubconTest.csproj \
-            -c $BUILD_CONFIGURATION \
+            -c Release \
             -o /app/publish \
             --no-self-contained \
             /p:PublishAot=false \
