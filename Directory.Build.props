@@ -39,9 +39,9 @@
         <HubconSharedCoreVersion>2.0.0-rc93</HubconSharedCoreVersion>
         
         
-        <HubconClientRange>[$(HubconServerVersion), 3.0.0)</HubconClientRange>
-        <HubconServerRange>[$(HubconServerVersion), 3.0.0)</HubconServerRange>
-        <HubconSharedRange>[$(HubconServerVersion), 3.0.0)</HubconSharedRange>
+        <HubconClientRange>[2.0.0-rc1, 3.0.0)</HubconClientRange>
+        <HubconServerRange>[2.0.0-rc1, 3.0.0)</HubconServerRange>
+        <HubconSharedRange>[2.0.0-rc1, 3.0.0)</HubconSharedRange>
         
         <!-- Analyzer versions -->
         <AnalyzersVersion>2.0.0-rc93</AnalyzersVersion>

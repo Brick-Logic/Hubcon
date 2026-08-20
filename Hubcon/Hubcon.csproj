@@ -39,13 +39,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hubcon.Analyzers" Version="$(AnalyzersRange)" />
-		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="$(AnalyzersCodeFixesRange)"/>
-		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="$(AnalyzersDiagnosticSuppressorsRange)" />
+		<PackageReference Include="Hubcon.Analyzers" Version="[2.0.0-rc1, 3.0.0)" />
+		<PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="[2.0.0-rc1, 3.0.0)"/>
+		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="[2.0.0-rc1, 3.0.0)" />
 	</ItemGroup>
 	
 	<ItemGroup Condition="$(SuppressHubconGenerators) == DEADCODE">
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="$(SourceGeneratorsRange)" />
+		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[2.0.0-rc1, 3.0.0)" />
 	</ItemGroup>
 	
 	<ItemGroup>
