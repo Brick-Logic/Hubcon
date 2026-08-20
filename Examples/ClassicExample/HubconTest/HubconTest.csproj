@@ -81,5 +81,8 @@
 		<Content Update="runtimeconfig.template.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
+		<Content Include="..\..\..\.dockerignore">
+		  <Link>.dockerignore</Link>
+		</Content>
 	</ItemGroup>
 </Project>
