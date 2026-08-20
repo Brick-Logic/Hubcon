@@ -55,9 +55,23 @@ WORKDIR "/src/Examples/ClassicExample/HubconTest"
 
 # Publish condicional según el flag ENABLE_AOT
 RUN if [ "$ENABLE_AOT" = "true" ]; then \
-        dotnet publish "./HubconTest.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:PublishAot=true /p:SelfContained=true ; \
+        dotnet publish "./HubconTest.csproj" \
+            -c $BUILD_CONFIGURATION \
+            -r linux-x64 \
+            --self-contained \
+            -o /app/publish \
+            /p:PublishAot=true \
+            /p:PublishTrimmed=true ; \
     else \
-        dotnet publish "./HubconTest.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:PublishAot=false /p:SelfContained=false /p:UseAppHost=false ; \
+        dotnet publish "./HubconTest.csproj" \
+            -c $BUILD_CONFIGURATION \
+            -o /app/publish \
+            --no-self-contained \
+            /p:PublishAot=false \
+            /p:PublishTrimmed=false \
+            /p:IsAotCompatible=false \
+            /p:IsTrimmable=false \
+            /p:UseAppHost=false ; \
     fi
 
 # Final Stage Selección Dinámica

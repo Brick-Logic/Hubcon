@@ -45,10 +45,6 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-	  <PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Include="$(MSBuildThisFileDirectory)/../README.md" Pack="true" PackagePath="\" />
 		<None Include="$(MSBuildThisFileDirectory)/../LICENSE" Pack="true" PackagePath="\" />
 	</ItemGroup>
