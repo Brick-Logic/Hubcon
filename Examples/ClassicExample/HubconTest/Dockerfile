@@ -60,8 +60,6 @@ RUN if [ "$ENABLE_AOT" = "true" ]; then \
             -r linux-x64 \
             --self-contained \
             -o /app/publish \
-            /p:PublishAot=true \
-            /p:PublishTrimmed=true ; \
     else \
         dotnet publish "./HubconTest.csproj" \
             -c $BUILD_CONFIGURATION \

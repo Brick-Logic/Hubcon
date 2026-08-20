@@ -12,14 +12,14 @@ namespace HubconTestClient.Modules
     {
         public override void Configure(IServerModuleConfiguration server)
         {
-            server.WithBaseUrl("localhost:5000");
+            server.WithBaseUrl("http://coolify.local:9080/");
 
             server.EnableWebsocketAutoReconnect();
-            server.GlobalLimit(999999);
+            server.GlobalLimit(1000);
             // server.EnableLogging();
             server.DisableAllLimiters();
             server.AllowRemoteCancellation();
-            server.ScaleMessageProcessors(1);
+            server.ScaleMessageProcessors(1000);
             server.AddSetting("", new object());
             server.AddTracing();
             //server.AddHeaderProvider("key", x => "value");
