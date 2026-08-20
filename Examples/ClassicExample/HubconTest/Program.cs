@@ -77,7 +77,12 @@ namespace HubconTest
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            Watcher.Start();
+
+            bool.TryParse(Environment.GetEnvironmentVariable("USE_CPU_AFFINITY"), out var useCpuAffinity);
+            
+            if(useCpuAffinity)
+                Watcher.Start();
+            
             // builder.WebHost.ConfigureKestrel(options =>
             // {
             //     options.Limits.MaxConcurrentConnections = null;
