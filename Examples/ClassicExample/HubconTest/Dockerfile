@@ -1,12 +1,37 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+﻿# -----------------------------------------------------------------------------
+# ARG Globales
+# Pass ENABLE_AOT=true desde Coolify para AOT, o false para JIT tradicional.
+# -----------------------------------------------------------------------------
+ARG BUILD_CONFIGURATION=Release
+ARG ENABLE_AOT=false
+
+# Base Runtime para JIT
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base-jit
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
+# Base Runtime para AOT
+FROM mcr.microsoft.com/dotnet/nightly/chiseled/extra:latest AS base-aot
+WORKDIR /app
+EXPOSE 8080
+EXPOSE 8081
+
+# Build & Publish
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-ARG BUILD_CONFIGURATION=Release
+ARG BUILD_CONFIGURATION
+ARG ENABLE_AOT
+
 WORKDIR /src
+
+# Instalar toolchain de C/C++ solo si ENABLE_AOT es true
+RUN if [ "$ENABLE_AOT" = "true" ]; then \
+        apt-get update \
+        && apt-get install -y --no-install-recommends clang zlib1g-dev \
+        && rm -rf /var/lib/apt/lists/* ; \
+    fi
+
 COPY ["README.md", "./"]
 COPY ["LICENSE", "./"]
 COPY ["Examples/ClassicExample/HubconTest/HubconTest.csproj", "Examples/ClassicExample/HubconTest/"]
@@ -25,16 +50,25 @@ COPY ["Analyzers/Hubcon.Analyzers.SourceGenerators/Hubcon.Analyzers.SourceGenera
 COPY ["Analyzers/Hubcon.Analyzers.DiagnosticSuppressors/Hubcon.Analyzers.DiagnosticSuppressors.csproj", "Analyzers/Hubcon.Analyzers.DiagnosticSuppressors/"]
 COPY ["Analyzers/Hubcon.Analyzers.CodeFixes/Hubcon.Analyzers.CodeFixes.csproj", "Analyzers/Hubcon.Analyzers.CodeFixes/"]
 COPY ["Analyzers/Hubcon.Analyzers/Hubcon.Analyzers.csproj", "Analyzers/Hubcon.Analyzers/"]
+
 RUN dotnet restore "Examples/ClassicExample/HubconTest/HubconTest.csproj"
+
 COPY . .
 WORKDIR "/src/Examples/ClassicExample/HubconTest"
-RUN dotnet build "./HubconTest.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./HubconTest.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+# Publish condicional según el flag ENABLE_AOT
+RUN if [ "$ENABLE_AOT" = "true" ]; then \
+        dotnet publish "./HubconTest.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:PublishAot=true ; \
+    else \
+        dotnet publish "./HubconTest.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:PublishAot=false /p:UseAppHost=false ; \
+    fi
 
-FROM base AS final
+# Final Stage Selección Dinámica
+FROM base-${ENABLE_AOT:-jit} AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "HubconTest.dll"]
+COPY --from=build /app/publish .
+
+# Si es AOT se ejecuta el binario nativo directamente; si es JIT se arranca con 'dotnet'
+ARG ENABLE_AOT
+ENV IS_AOT=$ENABLE_AOT
+ENTRYPOINT ["sh", "-c", "if [ \"$IS_AOT\" = \"true\" ]; then ./HubconTest; else dotnet HubconTest.dll; fi"]
