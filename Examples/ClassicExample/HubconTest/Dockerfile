@@ -1,5 +1,5 @@
 ﻿# ARG Globales
-ARG ENABLE_AOT=false
+ARG ENABLE_AOT=true
 
 # Base Runtime para JIT
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base-false
@@ -57,7 +57,7 @@ RUN if [ "$ENABLE_AOT" = "true" ]; then \
             -c Release \
             -o /app/publish \
             -r linux-x64 \
-            --self-contained \
+            --self-contained; \
     else \
         dotnet publish ./HubconTest.csproj \
             -c Release \
@@ -67,8 +67,12 @@ RUN if [ "$ENABLE_AOT" = "true" ]; then \
             /p:PublishTrimmed=false \
             /p:IsAotCompatible=false \
             /p:IsTrimmable=false \
-            /p:UseAppHost=false \
-    ; fi   
+            /p:UseAppHost=false; \
+    fi   
+
+
+
+
 
 # Final Stage Selección Dinámica
 FROM base-${ENABLE_AOT} AS final
