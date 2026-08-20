@@ -1,56 +1,53 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFrameworks>net5.0;netstandard2.1</TargetFrameworks>
-		<Nullable>enable</Nullable>
-		<LangVersion>9.0</LangVersion>
-		
-		<AssemblyName>$(AssemblyName)</AssemblyName>
-		<RootNamespace>$(AssemblyName)</RootNamespace>
-		<PackageId>$(AssemblyName)</PackageId>
-		<PackageOutputPath>../nupkgs</PackageOutputPath>
-		<PackageLicenseFile>LICENSE</PackageLicenseFile>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<IsPackable>true</IsPackable>
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Description>Core client-side implementations for Hubcon.</Description>
-		<RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
-		<PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
-		<Version>$(HubconClientCoreVersion)</Version>
-		<Authors>$(Authors)</Authors>
-		<Company>$(Company)</Company>
-		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-	</PropertyGroup>
+    <PropertyGroup>
+        <TargetFrameworks>net5.0;net6.0;net7.0;net8.0;net9.0;net10.0;netstandard2.1</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <LangVersion>11.0</LangVersion>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<DebugType>embedded</DebugType>
-		<Deterministic>True</Deterministic>
-	</PropertyGroup>
+        <AssemblyName>$(AssemblyName)</AssemblyName>
+        <RootNamespace>$(AssemblyName)</RootNamespace>
+        <PackageId>$(AssemblyName)</PackageId>
+        <PackageOutputPath>../nupkgs</PackageOutputPath>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <IsPackable>true</IsPackable>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Description>Core client-side implementations for Hubcon.</Description>
+        <RepositoryUrl>https://github.com/Brick-Logic/Hubcon</RepositoryUrl>
+        <PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
+        <Version>$(HubconClientCoreVersion)</Version>
+        <Authors>$(Authors)</Authors>
+        <Company>$(Company)</Company>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<DebugType>embedded</DebugType>
-		<Deterministic>True</Deterministic>
-	</PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+        <DebugType>embedded</DebugType>
+        <Deterministic>True</Deterministic>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <DebugType>embedded</DebugType>
+        <Deterministic>True</Deterministic>
+    </PropertyGroup>
 	
-	<ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
-		<PackageReference Include="System.IO.Pipelines" Version="[8.0.0, 11.0.0)" />
-	</ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="System.IO.Pipelines" Version="[8.0.0, 11.0.0)"/>
+        <PackageReference Include="System.Reactive" Version="[5.0.0, 7.0.0)"/>
+        <PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)"/>
+    </ItemGroup>
 
-	<ItemGroup>
-	  <PackageReference Include="System.Reactive" Version="[5.0.0, 7.0.0)" />
-	  <PackageReference Include="System.Text.Json" Version="[8.0.6, 11.0.0)" />
-	</ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj"/>
+        <ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj"/>
+        <ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj"/>
+        <ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj"/>
+        <ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj"/>
+    </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\Hubcon.Client.Abstractions\Hubcon.Client.Abstractions.csproj" />
-		<ProjectReference Include="..\Hubcon.Shared.Core\Hubcon.Shared.Core.csproj" />
-		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj" />
-		<ProjectReference Include="..\Hubcon.Shared.Abstractions.Standard\Hubcon.Shared.Abstractions.Standard.csproj"/>
-		<ProjectReference Include="..\Hubcon.Shared.Abstractions\Hubcon.Shared.Abstractions.csproj"/>
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Include="$(MSBuildThisFileDirectory)/../README.md" Pack="true" PackagePath="\" />
-		<None Include="$(MSBuildThisFileDirectory)/../LICENSE" Pack="true" PackagePath="\" />
-	</ItemGroup>
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)/../README.md" Pack="true" PackagePath="\"/>
+        <None Include="$(MSBuildThisFileDirectory)/../LICENSE" Pack="true" PackagePath="\"/>
+    </ItemGroup>
 </Project>

@@ -5,6 +5,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+		<SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
 		<ServerGarbageCollection>false</ServerGarbageCollection>
 		<DockerfileContext>..\..\..</DockerfileContext>
 

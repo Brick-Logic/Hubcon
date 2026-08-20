@@ -13,7 +13,7 @@ namespace Hubcon.Shared.Core.Tools
             try
             {
 #if NET8_0_OR_GREATER
-                return await task.WaitAsync(timeout, System.Threading.TimeProvider.System, cancellationToken);
+                return await task.WaitAsync(timeout, System.TimeProvider.System, cancellationToken);
 #else
                 cancellationToken.ThrowIfCancellationRequested();
 
