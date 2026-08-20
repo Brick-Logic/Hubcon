@@ -55,9 +55,9 @@ WORKDIR "/src/Examples/ClassicExample/HubconTest"
 
 # Publish condicional según el flag ENABLE_AOT
 RUN if [ "$ENABLE_AOT" = "true" ]; then \
-        dotnet publish "./HubconTest.csproj" -c $BUILD_CONFIGURATION -r linux-x64 -o /app/publish --self-contained  \
+        dotnet publish ./HubconTest.csproj -c $BUILD_CONFIGURATION -r linux-x64 -o /app/publish --self-contained  \
     else \
-        dotnet publish "./HubconTest.csproj" \
+        dotnet publish ./HubconTest.csproj \
             -c $BUILD_CONFIGURATION \
             -o /app/publish \
             --no-self-contained \
