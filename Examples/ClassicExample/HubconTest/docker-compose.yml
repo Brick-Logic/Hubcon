@@ -1,6 +1,6 @@
 ﻿services:
   hubcontest:
-    image: hubcontestdp
+    image: hubcontest
     build:
-      context: ./
-      dockerfile: Examples/ClassicExample/HubconTest/Dockerfile
+      context: .
+      dockerfile: Dockerfile
