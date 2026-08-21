@@ -1,16 +1,20 @@
 ﻿# ARG Globales
-ARG ENABLE_AOT=true
+ARG ENABLE_AOT=false
 ARG BUILD_CONFIGURATION=Release
 
 # Base Runtime para JIT
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base-false
 USER $APP_UID
+ARG ENABLE_AOT
+ARG BUILD_CONFIGURATION
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
 # Base Runtime para AOT
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0 AS base-true
+ARG ENABLE_AOT
+ARG BUILD_CONFIGURATION
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
@@ -18,6 +22,7 @@ EXPOSE 8081
 # Build & Publish
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG ENABLE_AOT
+ARG BUILD_CONFIGURATION
 
 WORKDIR /src
 
@@ -74,9 +79,10 @@ RUN if [ "${ENABLE_AOT}" = "true" ]; then \
 # Final Stage Selección Dinámica
 FROM base-${ENABLE_AOT} AS final
 WORKDIR /app
+ARG ENABLE_AOT
+ARG BUILD_CONFIGURATION
 COPY --from=build /app/publish .
 
 # Si es AOT se ejecuta el binario nativo directamente; si es JIT se arranca con 'dotnet'
-ARG ENABLE_AOT
 ENV IS_AOT=${ENABLE_AOT}
 CMD if [ "${IS_AOT}" = "true" ]; then ./HubconTest; else dotnet HubconTest.dll; fi
