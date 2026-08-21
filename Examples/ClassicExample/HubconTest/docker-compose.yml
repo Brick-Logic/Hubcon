@@ -1,0 +1,6 @@
+﻿services:
+  hubcontest:
+    image: hubcontest
+    build:
+      context: ../../../
+      dockerfile: ./Dockerfile
