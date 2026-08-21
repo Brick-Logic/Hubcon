@@ -83,12 +83,6 @@ namespace HubconTest
             if(useCpuAffinity)
                 Watcher.Start();
             
-            builder.WebHost.ConfigureKestrel(options =>
-            {
-                options.Limits.MaxConcurrentConnections = 1000000;
-                options.Limits.MaxConcurrentUpgradedConnections = 1000000;
-            });
-            
             // builder.WebHost.ConfigureKestrel(options =>
             // {
             //     options.Limits.MaxConcurrentConnections = null;
@@ -138,6 +132,7 @@ namespace HubconTest
                 serverOptions.AddTelemetry();
                 serverOptions.AddOpenTelemetry();
                 serverOptions.AddConcurrencyLimiter();
+                serverOptions.SetMaxSoftSocketLimit();
                 
                 serverOptions.ConfigureCore(config =>
                 {

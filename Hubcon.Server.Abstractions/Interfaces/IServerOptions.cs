@@ -90,5 +90,16 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Enables open telemetry data collection.
         /// </summary>
         public void AddOpenTelemetry();
+
+        /// <summary>
+        /// Sets the soft socket limit value. Limits how many sockets can be alive concurrently at the process level.
+        /// </summary>
+        /// <param name="socketCount">The allowed active socket count.</param>
+        public void SetSoftSocketLimit(long socketCount);
+        
+        /// <summary>
+        /// Sets the soft socket limit value to the hard socket limit value. Limits how many sockets can be alive concurrently at the process level.
+        /// </summary>
+        public void SetMaxSoftSocketLimit();
     }
 }

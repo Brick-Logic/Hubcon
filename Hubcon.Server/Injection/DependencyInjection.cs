@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Hubcon.Server.Core.Configuration;
 using Hubcon.Shared.Core.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;

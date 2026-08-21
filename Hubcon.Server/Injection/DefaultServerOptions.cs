@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using System.Reflection;
+using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.EndpointManagement;
 
 namespace Hubcon.Server.Injection
@@ -133,6 +134,16 @@ namespace Hubcon.Server.Injection
         public void AddOpenTelemetry()
         {
             HubconServerBuilder.AddGlobalMiddleware<OpenTelemetryMiddleware>((services, type) => services.TryAddSingleton(type));
+        }
+
+        public void SetSoftSocketLimit(long socketCount)
+        {
+            FileDescriptorLimit.SetSoftLimit(socketCount);
+        }
+
+        public void SetMaxSoftSocketLimit()
+        {
+            FileDescriptorLimit.RaiseToHardLimit();
         }
     }
 }
