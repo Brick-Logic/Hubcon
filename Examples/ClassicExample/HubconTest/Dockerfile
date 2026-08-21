@@ -22,7 +22,7 @@ ARG ENABLE_AOT
 WORKDIR /src
 
 # Instalar toolchain de C/C++ solo si ENABLE_AOT es true
-RUN if [ "$ENABLE_AOT" = "true" ]; then \
+RUN if [ "${ENABLE_AOT}" = "true" ]; then \
         apt-get update \
         && apt-get install -y --no-install-recommends clang zlib1g-dev \
         && rm -rf /var/lib/apt/lists/* ; \
@@ -53,15 +53,15 @@ COPY . .
 WORKDIR "/src/Examples/ClassicExample/HubconTest"
 
 # Publish condicional según el flag ENABLE_AOT
-RUN if [ "$ENABLE_AOT" = "true" ]; then \
+RUN if [ "${ENABLE_AOT}" = "true" ]; then \
         dotnet publish ./HubconTest.csproj  \
-            -c $BUILD_CONFIGURATION \
+            -c ${BUILD_CONFIGURATION} \
             -o /app/publish \
             -r linux-x64 \
             --self-contained; \
     else \
         dotnet publish ./HubconTest.csproj \
-            -c $BUILD_CONFIGURATION \
+            -c ${BUILD_CONFIGURATION} \
             -o /app/publish \
             --no-self-contained \
             /p:PublishAot=false \
@@ -78,5 +78,5 @@ COPY --from=build /app/publish .
 
 # Si es AOT se ejecuta el binario nativo directamente; si es JIT se arranca con 'dotnet'
 ARG ENABLE_AOT
-ENV IS_AOT=$ENABLE_AOT
-CMD if [ "$IS_AOT" = "true" ]; then ./HubconTest; else dotnet HubconTest.dll; fi
+ENV IS_AOT=${ENABLE_AOT}
+CMD if [ "${IS_AOT}" = "true" ]; then ./HubconTest; else dotnet HubconTest.dll; fi
