@@ -3,4 +3,4 @@
     image: hubcontest
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Examples/ClassicExample/HubconTest/Dockerfile
