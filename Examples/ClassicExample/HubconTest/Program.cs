@@ -83,6 +83,12 @@ namespace HubconTest
             if(useCpuAffinity)
                 Watcher.Start();
             
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.Limits.MaxConcurrentConnections = 1000000;
+                options.Limits.MaxConcurrentUpgradedConnections = 1000000;
+            });
+            
             // builder.WebHost.ConfigureKestrel(options =>
             // {
             //     options.Limits.MaxConcurrentConnections = null;
@@ -140,6 +146,7 @@ namespace HubconTest
                         x.MaxConcurrentRequestsPerIp = 999_999;
                         x.MaxConnectionsPerIp = 999_999;
                         x.MaxConnections = 999_999;
+                        x.UseRateLimiters = false;
                         x.TransportLimiterOptions = new TokenBucketRateLimiterOptions()
                         {
                             ReplenishmentPeriod = TimeSpan.FromSeconds(1),
@@ -158,6 +165,7 @@ namespace HubconTest
                     config.ConfigureTransport<HttpTransport>(x =>
                     {
                         x.MaxConcurrentRequestsPerIp = 999_999;
+                        x.UseRateLimiters = false;
                         x.TransportLimiterOptions = new TokenBucketRateLimiterOptions()
                         {
                             ReplenishmentPeriod = TimeSpan.FromSeconds(1),
