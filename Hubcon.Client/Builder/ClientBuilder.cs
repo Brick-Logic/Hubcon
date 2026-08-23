@@ -30,7 +30,8 @@ namespace Hubcon.Client.Builder
         public Action<ClientWebSocketOptions, IServiceProvider>? WebSocketOptions { get; set; }
         public Action<HttpClient, IServiceProvider>? HttpClientOptions { get; set; }
         public bool UseSecureConnection { get; set; } = true;
-        public TimeSpan WebsocketPingInterval { get; set; } = TimeSpan.FromSeconds(10);
+        public TimeSpan WebsocketPingInterval { get; set; } = TimeSpan.FromSeconds(30);
+        public TimeSpan WebsocketPongTime { get; set; } = TimeSpan.FromSeconds(90);
         public bool WebsocketRequiresPong { get; set; } = true;
         public int MessageProcessorsCount { get; set; } = 1;
         public TimeSpan WebsocketTimeout { get; set; } = TimeSpan.FromSeconds(30);

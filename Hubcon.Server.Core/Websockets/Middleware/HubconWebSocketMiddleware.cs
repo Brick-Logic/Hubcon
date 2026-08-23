@@ -91,14 +91,14 @@ namespace Hubcon.Server.Core.Websockets.Middleware
             WebSocket? webSocket = null;
             ClientWebSocketContext? context = null;
 
+            if (!_connectionLimiter.TryAcquire(httpContext.Connection.RemoteIpAddress, _transport))
+            {
+                httpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                return;
+            }
+            
             try
             {
-                if (!_connectionLimiter.TryAcquire(httpContext.Connection.RemoteIpAddress, _transport))
-                {
-                    httpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-                    return;
-                }
-                
                 var corsService = httpContext.RequestServices.GetRequiredService<ICorsService>();
                 var corsPolicyProvider = httpContext.RequestServices.GetRequiredService<ICorsPolicyProvider>();
 
@@ -180,7 +180,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 var firstHeartbeatTime = _settings.EnablePing
                     ? DateTimeOffset.UtcNow.AddSeconds(_settings.HeartBeatInSeconds).ToUnixTimeSeconds()
                     : DateTimeOffset.MaxValue.ToUnixTimeSeconds();
-                
+
                 _connectionSupervisor.Register(connectionId, userData.Value.ExpirationTime, firstHeartbeatTime, webSocket.Abort);
                 
                 await context.Sender.SendAsync(new ConnectionAckMessage(initMessage.Id, context.ConnectionId));
@@ -227,14 +227,12 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     if (message.Id == Guid.Empty || !Guid.TryParse(message.ConnectionId, out _))
                     {
                         webSocket.Abort();
-                        tmo?.Dispose();
                         message?.Dispose();
                         return;
                     }
 
                     if (message.ConnectionId != context.ConnectionId)
                     {
-                        tmo?.Dispose();
                         message?.Dispose();
                         continue;
                     }
@@ -242,16 +240,49 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                     switch (message.Type)
                     {
                         case MessageType.ping:
-
                             await context.RateLimiter.TryAcquireAsync(context.ConnectionId, MessageType.ping,
                                 message.Id, _transport, 0, context.Token);
-
+                            
                             if (!_settings.EnablePing)
                             {
                                 break;
                             }
 
-                            _ = HandlePing(lastPingId, new PingMessage(message), context);
+                            var pingMessage = new PingMessage(message);
+                            
+                            try
+                            {
+                                if (context.ConnectionIsClosed) return;
+
+                                if (lastPingId == pingMessage.Id)
+                                {
+                                    context.Abort();
+                                    return;
+                                }
+
+                                if (!await context.RateLimiter.TryAcquireAsync(context.ConnectionId, MessageType.ping, pingMessage.Id,
+                                        _transport,
+                                        1,
+                                        CancellationToken.None))
+                                {
+                                    await HandleError(pingMessage.Id, HubconResponse.TooManyRequests(), context);
+                                    return;
+                                }
+
+                                var newHeartbeatExpiration = DateTimeOffset.UtcNow.AddSeconds(_settings.HeartBeatInSeconds).ToUnixTimeSeconds();
+                                
+                                context.Supervisor.NotifyAlive(context.ConnectionId, newHeartbeatExpiration);
+                                await context.Sender.SendAsync(new PongMessage(pingMessage.Id, context.ConnectionId));
+                            }
+                            catch (Exception ex)
+                            {
+                                context.Logger.LogError("{}", ex.Message);
+                            }
+                            finally
+                            {
+                                pingMessage.Dispose();
+                            }
+                            
                             break;
 
                         case MessageType.stream_init:
@@ -1142,43 +1173,7 @@ namespace Hubcon.Server.Core.Websockets.Middleware
                 // Ignored
             }
         }
-
-        private static async Task HandlePing(Guid lastPingId, PingMessage pingMessage, ClientWebSocketContext context)
-        {
-            try
-            {
-                if (context.ConnectionIsClosed) return;
-
-                if (lastPingId == pingMessage.Id)
-                {
-                    context.Abort();
-                    return;
-                }
-
-                if (!await context.RateLimiter.TryAcquireAsync(context.ConnectionId, MessageType.ping, pingMessage.Id,
-                        _transport,
-                        1,
-                        CancellationToken.None))
-                {
-                    await HandleError(pingMessage.Id, HubconResponse.TooManyRequests(), context);
-                    return;
-                }
-
-                var newHeartbeatExpiration = DateTimeOffset.UtcNow.ToUnixTimeSeconds() +
-                                             context.WebSocketSettings.HeartBeatInSeconds;
-                context.Supervisor.NotifyAlive(context.ConnectionId, newHeartbeatExpiration);
-                await context.Sender.SendAsync(new PongMessage(pingMessage.Id, context.ConnectionId));
-            }
-            catch (Exception ex)
-            {
-                context.Logger.LogError("{}", ex.Message);
-            }
-            finally
-            {
-                pingMessage.Dispose();
-            }
-        }
-
+        
         private static readonly Action<object?> CancelCtsDelegate =
             static state => ((CancellationTokenSource)state!).Cancel();
     }

@@ -246,7 +246,7 @@ namespace Hubcon
         /// <summary>
         /// Determines the heartbeat expiration seconds. If the connection does not receive a ping in time, it may be aborted.
         /// </summary>
-        public int HeartBeatInSeconds { get; set; } = 30;
+        public int HeartBeatInSeconds { get; set; } = 90;
     }
 
     /// <summary>

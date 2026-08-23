@@ -100,6 +100,12 @@ namespace Hubcon.Client.Builder
             builder.WebsocketPingInterval = timeSpan;
             return this;
         }
+        
+        public IServerModuleConfiguration SetWebsocketPongTime(TimeSpan timeSpan)
+        {
+            builder.WebsocketPongTime = timeSpan;
+            return this;
+        }
 
         public IServerModuleConfiguration DisablePongResponseRequirement()
         {

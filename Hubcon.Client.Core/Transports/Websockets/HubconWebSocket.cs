@@ -51,7 +51,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
             _context = context;
 
             WebSocket = new ClientWebSocket();
-            WebSocket.Options.KeepAliveInterval = TimeSpan.FromMinutes(5);
+            WebSocket.Options.KeepAliveInterval = TimeSpan.Zero;
             
             _converter = context.Converter;
             _clientOptions = context.ClientOptions;
@@ -327,7 +327,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
                     _logger?.LogInformation("Connection established.");
 
                 if(_clientOptions.WebsocketRequiresPong)
-                    _heartbeatWatcher = new HeartbeatWatcher(_clientOptions.WebsocketTimeout, async () => WebSocket.Abort());
+                    _heartbeatWatcher = new HeartbeatWatcher(_clientOptions.WebsocketPongTime, async () => WebSocket.Abort());
                 
                 await _context.InterceptorManager.CallInterceptor(InterceptorType.OnConnected, _cts.Token);
             }

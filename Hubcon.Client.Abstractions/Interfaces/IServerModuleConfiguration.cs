@@ -90,6 +90,14 @@ namespace Hubcon
         IServerModuleConfiguration SetWebsocketPingInterval(TimeSpan timeSpan);
 
         /// <summary>
+        /// Sets the allowed window for WebSocket pong messages to arrive to the client.
+        /// </summary>
+        /// <param name="timeSpan">The ping interval.</param>
+        /// <returns>The current instance of <see cref="IServerModuleConfiguration"/> for method chaining.</returns>
+        public IServerModuleConfiguration SetWebsocketPongTime(TimeSpan timeSpan);
+
+
+        /// <summary>
         /// Specifies whether a pong response is required for WebSocket pings. True by default.
         /// </summary>
         /// <param name="value">True to require pong response; otherwise, false.</param>

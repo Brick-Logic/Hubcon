@@ -187,7 +187,7 @@ namespace Hubcon
 
             var wsOptions = options ?? new WebSocketOptions()
             {
-                KeepAliveInterval = TimeSpan.FromMinutes(5)
+                KeepAliveInterval = TimeSpan.Zero
             };
             
             app.UseWebSockets(wsOptions);

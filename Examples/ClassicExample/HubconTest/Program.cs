@@ -172,8 +172,10 @@ namespace HubconTest
                         x.LoggingEnabled = true;
                         x.TokenValidationParameters = tokenValidationParameters;
                     });
-                });
 
+                    config.DisableAllRateLimiters();
+                });
+                
                 serverOptions.AutoRegisterControllers();
             });
 

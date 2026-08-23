@@ -1,23 +1,25 @@
 ﻿using Hubcon.Shared.Abstractions.Interfaces;
 using System.Collections.Concurrent;
+using Hubcon.Shared.Core.Tools;
 using Hubcon.Shared.Core.Websockets.Heartbeat;
 
 #pragma warning disable CS1591
 
 namespace Hubcon.Server.Core.Supervisor
 {
-    public class ConnectionSupervisor : IConnectionSupervisor, IDisposable
+    public sealed class ConnectionSupervisor : IConnectionSupervisor, IDisposable
     {
+        private readonly AtomicPass _disposed = new AtomicPass(); 
         private readonly ConcurrentDictionary<string, ConnectionSupervisionMetadata> _connections = new();
 
         private readonly SemaphoreSlim _cleanupSemaphore = new(1, 1);
-        private readonly Timer _timer;
         private readonly TimeSpan _checkInterval;
+        private readonly Task supervisorTask;  
 
         public ConnectionSupervisor(TimeSpan? checkInterval = null)
         {
             _checkInterval = checkInterval ?? TimeSpan.FromMinutes(1);
-            _timer = new Timer(async _ => await CleanupExpiredAsync(), null, _checkInterval, _checkInterval);
+            supervisorTask = CleanupExpiredAsync();
         }
 
         public void Register(string id, long expiration, long heartbeatExpiration, Action cancellationCallback)
@@ -40,20 +42,22 @@ namespace Hubcon.Server.Core.Supervisor
                 entry.HeartbeatExpiration = newExpiration;
             }
         }
-
+        
         public async Task UnregisterAsync(string id)
-        {
-            await RemoveConnectionAsync(id);
-        }
-
-        private async Task RemoveConnectionAsync(string id)
         {
             await _cleanupSemaphore.WaitAsync();
             try
             {
                 if (_connections.TryRemove(id, out var entry))
                 {
-                    entry.CancellationCallback();
+                    try
+                    {
+                        entry.CancellationCallback();
+                    }
+                    catch
+                    {
+                        // Ignored
+                    }
                 }
             }
             finally
@@ -64,31 +68,46 @@ namespace Hubcon.Server.Core.Supervisor
 
         private async Task CleanupExpiredAsync()
         {
-            var nowTimeInSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-
-            var expiredIds = _connections
-                .Where(kv => kv.Value.IsExpired(nowTimeInSeconds))
-                .Select(kv => kv.Key)
-                .ToList();
-
-            foreach (var id in expiredIds)
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+            
+            while (!_disposed.WasAcquired)
             {
-                await RemoveConnectionAsync(id);
+                try
+                {
+                    var nowTimeInSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+                    var expiredIds = _connections
+                        .Where(kv => kv.Value.IsExpired(nowTimeInSeconds))
+                        .Select(kv => kv.Key)
+                        .ToList();
+
+                    foreach (var id in expiredIds)
+                    {
+                        await UnregisterAsync(id);
+                    }
+                }
+                catch
+                {
+                    // Ignored
+                }
+
+                await timer.WaitForNextTickAsync();
             }
         }
 
         public void Dispose()
         {
-            _timer.Dispose();
-
+            if (!_disposed.TryAcquirePass()) return;
+                
             foreach (var kv in _connections)
             {
                 try
                 {
                     kv.Value.CancellationCallback();
                 }
-                finally
+                catch
                 {
+                    // Ignored
                 }
             }
 

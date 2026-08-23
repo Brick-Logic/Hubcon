@@ -55,6 +55,9 @@ namespace Hubcon.Client.Abstractions.Interfaces
 
         /// <summary>Gets the interval for sending WebSocket keep-alive pings.</summary>
         TimeSpan WebsocketPingInterval { get; }
+        
+        /// <summary>Gets the WebSocket keep-alive pongs time.</summary>
+        TimeSpan WebsocketPongTime { get; }
 
         /// <summary>Gets a value indicating whether the client expects a pong response for every ping sent.</summary>
         bool WebsocketRequiresPong { get; }
