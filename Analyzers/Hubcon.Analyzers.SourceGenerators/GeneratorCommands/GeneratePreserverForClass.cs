@@ -51,13 +51,13 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 
             if (constructors.Count == 0)
             {
-                GeneratePreservationBlock(sb, baseIndent, typeFullName, allMembers, allInterfaces, null, 0);
+                GeneratePreservationBlock(sb, typeSymbol, baseIndent, typeFullName, allMembers, allInterfaces, null, 0);
             }
             else
             {
                 for (int cIdx = 0; cIdx < constructors.Count; cIdx++)
                 {
-                    GeneratePreservationBlock(sb, baseIndent, typeFullName, allMembers, allInterfaces,
+                    GeneratePreservationBlock(sb, typeSymbol, baseIndent, typeFullName, allMembers, allInterfaces,
                         constructors[cIdx], cIdx);
                 }
             }
@@ -73,8 +73,8 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             return (sb.ToString(), preserverMethod);
         }
 
-        private static void GeneratePreservationBlock(
-            StringBuilder sb,
+        private static void GeneratePreservationBlock(StringBuilder sb,
+            INamedTypeSymbol typeSymbol,
             string baseIndent,
             string typeFullName,
             List<ISymbol> allMembers,
@@ -93,9 +93,10 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 
             sb.AppendLine($"{baseIndent}            var {pVar} = new {typeFullName}({ctorArgs});");
 
-            ProcessMembersPreservation(sb, baseIndent, allMembers, pVar, constructorIndex, "gen");
+            ProcessMembersPreservation(sb, typeSymbol, baseIndent, allMembers, pVar, constructorIndex, "gen");
 
             int ifaceIndex = 0;
+            
             foreach (var iface in interfaces)
             {
                 ifaceIndex++;
@@ -105,15 +106,15 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                 sb.AppendLine($"{baseIndent}            {ifaceTypeFullName} {ifaceVar} = ({ifaceTypeFullName}){pVar};");
 
                 var ifaceMembers = iface.GetMembers().ToList();
-                ProcessMembersPreservation(sb, baseIndent, ifaceMembers, ifaceVar, constructorIndex,
+                ProcessMembersPreservation(sb, typeSymbol,  baseIndent, ifaceMembers, ifaceVar, constructorIndex,
                     $"iface{ifaceIndex}");
             }
 
             sb.AppendLine();
         }
 
-        private static void ProcessMembersPreservation(
-            StringBuilder sb,
+        private static void ProcessMembersPreservation(StringBuilder sb,
+            INamedTypeSymbol typeSymbol,
             string baseIndent,
             List<ISymbol> members,
             string targetVar,
@@ -121,8 +122,19 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             string suffix)
         {
             int methodIndex = 0;
+            
+            var attributes = new List<AttributeData>();
+
+            foreach (var attr in typeSymbol.GetAttributes())
+            {
+                attributes.Add(attr);
+            }
+            
             foreach (var member in members)
             {
+                var attributeArray = member.GetAllParameterAndPropertyAttributes();
+                attributes.AddRange(attributeArray);
+                
                 if (member is IMethodSymbol method && !method.IsGenericMethod && method.MethodKind == MethodKind.Ordinary && method.DeclaredAccessibility == Accessibility.Public && method.DeclaredAccessibility == Accessibility.Internal)
                 {
                     methodIndex++;
@@ -145,10 +157,28 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                 {
                     sb.AppendLine($"{baseIndent}            _ = {targetVar}.{prop.Name}.GetHashCode();");
 
-                    if (!prop.IsReadOnly && prop.SetMethod?.DeclaredAccessibility == Accessibility.Public)
+                    if (!prop.IsReadOnly)
                     {
                         sb.AppendLine($"{baseIndent}            {targetVar}.{prop.Name} = default!;");
                     }
+                }
+            }
+            
+            var distinctAttributeTypes = attributes
+                .Select(a => a.AttributeClass)
+                .Where(c => c != null)
+                .Distinct(SymbolEqualityComparer.Default)
+                .Cast<ITypeSymbol>()
+                .ToList();
+
+            foreach (var attribute in distinctAttributeTypes)
+            {
+                if (attribute != null)
+                {
+                    var name = $"attr_{targetVar}_{attribute.GetSafeName()}";
+                    
+                    sb.AppendLine($"{baseIndent}            var {name} = typeof({typeSymbol.ToDisplayString()}).GetCustomAttribute<{attribute.ToDisplayString()}>();");
+                    sb.AppendLine($"{baseIndent}            {name}?.GetHashCode();");
                 }
             }
         }

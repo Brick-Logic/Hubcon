@@ -60,12 +60,11 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                     var wrapper = context.WrappedRequest ??
                                   context.Blueprint.ParameterWrapper.GetWrapped(context.Request.Arguments);
-                    var validationResults = new List<ValidationResult>();
-                    var validationContext = new ValidationContext(wrapper);
-                    if (!Validator.TryValidateObject(wrapper, validationContext, validationResults, true))
+                    
+                    if (!wrapper.TryValidate(out var validationResults))
                     {
                         var errors = validationResults
-                            .SelectMany(static r => r is CompositeValidationResult comp ? comp.Results : new[] { r })
+                            .SelectMany(static r => r is CompositeValidationResult comp ? comp.Results : [r])
                             .ToDictionary(
                                 static k => k.MemberNames.FirstOrDefault() ?? "error",
                                 static v => new[] { v.ErrorMessage ?? "Invalid value" }

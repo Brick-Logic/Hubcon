@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.ComponentModel.DataAnnotations;
 using Hubcon;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -9,6 +10,7 @@ using System.Threading.RateLimiting;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Telemetry;
+using HubconTestDomain;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -79,6 +81,10 @@ namespace HubconTest
             var builder = WebApplication.CreateBuilder(args);
 
             bool.TryParse(Environment.GetEnvironmentVariable("USE_CPU_AFFINITY"), out var useCpuAffinity);
+            
+            Console.WriteLine(
+                $"¿Es Native AOT?: {System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported == false}");
+
             
             if(useCpuAffinity)
                 Watcher.Start();
@@ -174,6 +180,7 @@ namespace HubconTest
                     });
 
                     config.DisableAllRateLimiters();
+                    config.EnableRequestDetailedErrors();
                 });
                 
                 serverOptions.AutoRegisterControllers();
@@ -182,6 +189,26 @@ namespace HubconTest
             builder.Services.AddOpenApi();
             
             var app = builder.Build();
+            
+            var at = new RequiredAttribute();
+            var test = new LoginCommand("null", null!, true, new ("", null!));
+            var errors = new List<ValidationResult>();
+            var attributes = new List<ValidationAttribute>() { new RequiredAttribute() };
+            
+            Validator.TryValidateValue(test.Username, new ValidationContext(test) { MemberName = nameof(LoginCommand.Username) }, errors, attributes);
+            
+            Validator.TryValidateValue(test.Password, new ValidationContext(test) { MemberName = nameof(LoginCommand.Password) }, errors, attributes);
+            
+            Validator.TryValidateValue(test.ValidationTest, new ValidationContext(test) { MemberName = nameof(LoginCommand.ValidationTest) }, errors, attributes);
+            
+            Validator.TryValidateValue(test.ValidationTest.Username, new ValidationContext(test.ValidationTest) { MemberName = nameof(ValidationTestClass.Username) }, errors, attributes);
+            
+            Validator.TryValidateValue(test.ValidationTest.ValidationTestClass2, new ValidationContext(test.ValidationTest) { MemberName = nameof(ValidationTestClass.ValidationTestClass2) }, errors, attributes);
+
+            foreach (var error in errors)
+            {
+                Console.WriteLine(error.ErrorMessage);
+            }
 
             app.UseCors();
 

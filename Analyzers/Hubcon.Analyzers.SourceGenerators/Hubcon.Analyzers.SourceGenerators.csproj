@@ -20,6 +20,8 @@
 		<PackageTags>rpc;dotnet;high-performance;native-aot;tcp;http;websockets</PackageTags>
 
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+
+		<LangVersion>10</LangVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

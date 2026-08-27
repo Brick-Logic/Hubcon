@@ -18,6 +18,84 @@ namespace Hubcon.Analyzers.SourceGenerators
                    && classSyntax.BaseList != null
                    && !classSyntax.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.AbstractKeyword);
         }
+        
+        private static List<AttributeData> GetAllParameterAndPropertyAttributes(this IMethodSymbol method)
+        {
+            var attributes = new List<AttributeData>();
+            var visitedTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+
+            foreach (var parameter in method.Parameters)
+            {
+                attributes.AddRange(parameter.GetAttributes());
+                CollectAttributesFromType(parameter.Type, attributes, visitedTypes);
+            }
+
+            return attributes;
+        }
+        
+        public static List<AttributeData> GetAllParameterAndPropertyAttributes(this ISymbol symbol)
+        {
+            if (symbol is IMethodSymbol method)
+            {
+                return method.GetAllParameterAndPropertyAttributes();
+            } 
+            
+            if (symbol is IPropertySymbol propertySymbol)
+            {
+                return propertySymbol.GetAllParameterAndPropertyAttributes();
+            }
+            
+            return new List<AttributeData>();
+        }
+        
+        private static List<AttributeData> GetAllParameterAndPropertyAttributes(this IPropertySymbol typeSymbol)
+        {
+            var attributes = new List<AttributeData>();
+            var visitedTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+
+            foreach (var property in typeSymbol.Type
+                         .GetMembers()
+                         .Select(x => x as IPropertySymbol)
+                         .Where(x => x != null))
+            {
+                attributes.AddRange(property.GetAttributes());
+                CollectAttributesFromType(property.Type, attributes, visitedTypes);
+            }
+
+            return attributes;
+        }
+
+        public static void CollectAttributesFromType(
+            this ITypeSymbol typeSymbol, 
+            List<AttributeData> attributes, 
+            HashSet<ITypeSymbol> visitedTypes)
+        {
+            if (typeSymbol == null || 
+                typeSymbol.SpecialType != SpecialType.None || 
+                !visitedTypes.Add(typeSymbol))
+            {
+                return;
+            }
+            
+            if (!typeSymbol.Locations.Any(loc => loc.IsInSource))
+            {
+                return;
+            }
+
+            if (typeSymbol.TypeKind != TypeKind.Class && typeSymbol.TypeKind != TypeKind.Struct)
+            {
+                return;
+            }
+
+            foreach (var member in typeSymbol.GetMembers())
+            {
+                if (member is IPropertySymbol property)
+                {
+                    attributes.AddRange(property.GetAttributes());
+                    CollectAttributesFromType(property.Type, attributes, visitedTypes);
+                }
+            }
+        }
 
         public static INamedTypeSymbol GetClassSymbolIfImplementsInterface(GeneratorSyntaxContext context)
         {
@@ -88,7 +166,8 @@ namespace Hubcon.Analyzers.SourceGenerators
             }
         }
 
-        public static void MapPropertyAttributes(Endpoint endpoint, StringBuilder sb, bool useBodyAttributes)
+        public static void MapPropertyAttributes(Endpoint endpoint, string wrapperClassName, StringBuilder sb,
+            bool useBodyAttributes)
         {
             foreach (var param in endpoint.Parameters)
             {
@@ -190,6 +269,11 @@ namespace Hubcon.Analyzers.SourceGenerators
 
                 sb.AppendLine(
                     $"        public {typeName}{(isNullable ? "?" : "")} {paramName} {{ get; set; }}");
+                
+                sb.AppendLine($"        private static global::System.ComponentModel.DataAnnotations.ValidationAttribute[] {paramName}_attributes = ");
+                sb.AppendLine($"            (typeof({wrapperClassName}).GetProperty(nameof({wrapperClassName}.{paramName}))?.GetCustomAttributes(typeof(global::System.ComponentModel.DataAnnotations.ValidationAttribute), true) as global::System.ComponentModel.DataAnnotations.ValidationAttribute[]) is {{ Length: > 0 }} attrs_{paramName}");
+                sb.AppendLine($"                ? attrs_{paramName}");
+                sb.AppendLine($"                : new global::System.ComponentModel.DataAnnotations.ValidationAttribute[] {{ new global::System.Diagnostics.CodeAnalysis.Validation.ValidateObjectAttribute() }};");
                 sb.AppendLine();
             }
         }

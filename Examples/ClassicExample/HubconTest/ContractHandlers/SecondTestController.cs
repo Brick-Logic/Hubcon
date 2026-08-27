@@ -49,7 +49,7 @@ namespace HubconTest.ContractHandlers
         //[ProducesResponseType<IOperationResponse<string>>(200)]
         //[Consumes("application/json")]
         [AllowAnonymous]
-        public async Task<LoginResponse> LoginAsync([Required][FromBody][ValidateObject] LoginCommand command, [FromQuery] string id)
+        public async Task<LoginResponse> LoginAsync([FromBody][ValidateObject] LoginCommand? command, [FromQuery] string id)
         {
             try
             {

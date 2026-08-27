@@ -116,7 +116,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
                     result.Error = options.DetailedErrorsEnabled ? createdResponseMsg : result.Error;
                     context.Response = result;
-                    logger?.LogError("{createdLogMessage}\n{request}\n{result}", createdLogMessage, request, result);
+                    logger?.LogInformation("{createdLogMessage}\n{request}\n{result}", createdLogMessage, request, result);
                 }
             }
         }

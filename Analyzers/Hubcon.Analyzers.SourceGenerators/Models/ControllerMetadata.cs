@@ -44,9 +44,7 @@ namespace Hubcon.Analyzers.SourceGenerators.Models
             Endpoints = endpointsList;
         }
     }
-
-// --- Comparador utilitario para el HashSet ---
-// Evita que si se repite exactamente el mismo atributo en la interfaz y en el controller, se duplique en el .g.cs
+    
     internal class AttributeTypeEqualityComparer : IEqualityComparer<AttributeData>
     {
         public static readonly AttributeTypeEqualityComparer Instance = new AttributeTypeEqualityComparer();

@@ -31,6 +31,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 
             var sbFinal = new StringBuilder();
             sbFinal.AppendLine("using System;");
+            sbFinal.AppendLine("using System.Reflection;");
             sbFinal.AppendLine("using System.Runtime.CompilerServices;");
             sbFinal.AppendLine();
             sbFinal.AppendLine("namespace Hubcon.Generated.Preservers");
@@ -101,6 +102,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine("using System.Collections.Generic;");
             sb.AppendLine("using System.Collections.Immutable;");
             sb.AppendLine("using System.Runtime.CompilerServices;");
+            sb.AppendLine("using System.Reflection;");
             sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
             sb.AppendLine();
             sb.AppendLine("namespace Hubcon.Generated");

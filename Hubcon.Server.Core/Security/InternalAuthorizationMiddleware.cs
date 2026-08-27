@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Security.Claims;
 using System.Security.Principal;
@@ -23,7 +24,7 @@ namespace Hubcon.Server.Core.Security
                 await next();
                 return;
             }
-
+            
             var policy = context.Blueprint.SecurityPolicy;
 
             ClaimsPrincipal? principal = await policy.Execute(context, context.RequestServices);

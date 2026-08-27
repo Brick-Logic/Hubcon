@@ -3,6 +3,7 @@ using Hubcon.Shared.Abstractions.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Reflection;
 
 namespace Hubcon
@@ -86,6 +87,11 @@ namespace Hubcon
         /// The wrapper factory for endpoint invocations.
         /// </summary>
         IParameterWrapper? ParameterWrapper { get; }
+        
+        /// <summary>
+        /// The wrapper properties.
+        /// </summary>
+        public IImmutableList<PropertyInfo> WrapperProperties { get; }
 
         /// <summary>
         /// Gets the pipeline builder used for the operation.

@@ -8,6 +8,7 @@ using Hubcon.Shared.Core.Tools;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
@@ -51,6 +52,8 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
         public IList<Attribute> Attributes { get; }
         public ConcurrentDictionary<Type, Attribute> ConfigurationAttributes { get; }
         public ConcurrentDictionary<Type, Attribute> TransportAttributes { get; }
+        
+        public IImmutableList<PropertyInfo> WrapperProperties { get; }
         
         public HttpMethod? HttpVerb { get; }
 
@@ -212,7 +215,7 @@ namespace Hubcon.Server.Core.Pipelines.UpgradedPipeline
 
             
             ParameterWrapper = ParameterTypes.IsEmpty ? null : new ParameterWrapper(ControllerType, contractType, methodInfo);
-
+            
             CallWrapperType = EndpointManager.GetWrapperType(ControllerType, contractType, methodInfo);
             
             var handlerTypes = controllerType.GetCustomAttributes()
