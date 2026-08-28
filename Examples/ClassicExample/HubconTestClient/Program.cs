@@ -12,7 +12,9 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis.Validation;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -76,7 +78,7 @@ internal class Program
         var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserContract>>();
         var openAi = scope.ServiceProvider.GetRequiredService<IOpenAIContract>();
-
+        
         logger.LogInformation("Press any key to start the tests...");
         Console.ReadKey();
 
@@ -134,10 +136,7 @@ internal class Program
             }
         });
 
-        await Parallel.ForEachAsync([connect, counter], CancellationToken.None, async (task, ct) =>
-        {
-            await task;
-        });
+        await Parallel.ForEachAsync([connect, counter], CancellationToken.None, async (task, ct) => { await task; });
 
         if (transport.IsConnected())
         {
@@ -148,7 +147,7 @@ internal class Program
             logger.LogInformation($"Connection result: {transport.IsConnected()}");
             throw new Exception("A problem has been detected, the connection is not open.");
         }
-        
+
         // WebSocket disconnection.
         logger.LogInformation($"Testing WebSocket graceful disconnection...");
         var disconnect = transport.Disconnect();
@@ -162,10 +161,8 @@ internal class Program
         });
 
         await Task.WhenAll(disconnect, counter2);
-        await Parallel.ForEachAsync([disconnect, counter2], CancellationToken.None, async (task, ct) =>
-        {
-            await task;
-        });
+        await Parallel.ForEachAsync([disconnect, counter2], CancellationToken.None,
+            async (task, ct) => { await task; });
 
         if (!transport.IsConnected())
         {
@@ -176,7 +173,7 @@ internal class Program
             logger.LogInformation($"Connection result: {transport.IsConnected()}");
             throw new Exception("A problem has been detected, a connection is not closed.");
         }
-        
+
         // WebSocket reconnection.
         var reconnect = transport.Reconnect();
         var counter3 = Task.Run(async () =>
@@ -187,11 +184,8 @@ internal class Program
                 await Task.Delay(500);
             }
         });
-        
-        await Parallel.ForEachAsync([reconnect, counter3], CancellationToken.None, async (task, ct) =>
-        {
-            await task;
-        });
+
+        await Parallel.ForEachAsync([reconnect, counter3], CancellationToken.None, async (task, ct) => { await task; });
 
         if (transport.IsConnected())
         {
@@ -202,7 +196,7 @@ internal class Program
             logger.LogInformation($"Connection result: {transport.IsConnected()}");
             throw new Exception("A problem has been detected, a connection is not open.");
         }
-        
+
         logger.LogInformation("WebSocket tests OK.");
     }
 

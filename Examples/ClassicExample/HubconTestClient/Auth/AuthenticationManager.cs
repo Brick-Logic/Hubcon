@@ -16,7 +16,7 @@ namespace HubconTestClient.Auth
 
         protected override async Task<IAuthResult> AuthenticateAsync(string username, string password)
         {
-            var response = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand(username, password, true), "5"));
+            var response = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand(username, password, true, null), "5"));
             var loginResponse = response.Data!;
             
             return AuthResult.Success(
@@ -38,7 +38,7 @@ namespace HubconTestClient.Auth
 
         protected override async Task<PersistedSession?> LoadPersistedSessionAsync()
         {
-            var response = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand("username", "password", true), "5"));
+            var response = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand("username", "password", true, null), "5"));
             var loginResponse = response.Data!;
             
             return new PersistedSession()
@@ -52,7 +52,7 @@ namespace HubconTestClient.Auth
 
         protected override async Task<IAuthResult> RefreshSessionAsync(string refreshToken)
         {
-            var response = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand("username", "password", true), "5"));
+            var response = await secondTestContract.Execute(x => x.LoginAsync(new LoginCommand("username", "password", true, null), "5"));
             var loginResponse = response.Data!;
             
             return AuthResult.Success(

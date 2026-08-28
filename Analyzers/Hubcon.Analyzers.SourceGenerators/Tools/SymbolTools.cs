@@ -18,7 +18,7 @@ namespace Hubcon.Analyzers.SourceGenerators
                    && classSyntax.BaseList != null
                    && !classSyntax.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.AbstractKeyword);
         }
-        
+
         private static List<AttributeData> GetAllParameterAndPropertyAttributes(this IMethodSymbol method)
         {
             var attributes = new List<AttributeData>();
@@ -32,22 +32,22 @@ namespace Hubcon.Analyzers.SourceGenerators
 
             return attributes;
         }
-        
+
         public static List<AttributeData> GetAllParameterAndPropertyAttributes(this ISymbol symbol)
         {
             if (symbol is IMethodSymbol method)
             {
                 return method.GetAllParameterAndPropertyAttributes();
-            } 
-            
+            }
+
             if (symbol is IPropertySymbol propertySymbol)
             {
                 return propertySymbol.GetAllParameterAndPropertyAttributes();
             }
-            
+
             return new List<AttributeData>();
         }
-        
+
         private static List<AttributeData> GetAllParameterAndPropertyAttributes(this IPropertySymbol typeSymbol)
         {
             var attributes = new List<AttributeData>();
@@ -66,17 +66,17 @@ namespace Hubcon.Analyzers.SourceGenerators
         }
 
         public static void CollectAttributesFromType(
-            this ITypeSymbol typeSymbol, 
-            List<AttributeData> attributes, 
+            this ITypeSymbol typeSymbol,
+            List<AttributeData> attributes,
             HashSet<ITypeSymbol> visitedTypes)
         {
-            if (typeSymbol == null || 
-                typeSymbol.SpecialType != SpecialType.None || 
+            if (typeSymbol == null ||
+                typeSymbol.SpecialType != SpecialType.None ||
                 !visitedTypes.Add(typeSymbol))
             {
                 return;
             }
-            
+
             if (!typeSymbol.Locations.Any(loc => loc.IsInSource))
             {
                 return;
@@ -173,11 +173,34 @@ namespace Hubcon.Analyzers.SourceGenerators
             {
                 if (param.Type.ToDisplayString() == "System.Threading.CancellationToken")
                     continue;
-                
-                string typeName = param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+                var typeName = "";
+
+                if (param.ControllerParameter.Type.NullableAnnotation == NullableAnnotation.Annotated)
+                { 
+                    typeName =
+                        param.ControllerParameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+                    if (!typeName.EndsWith("?"))
+                        typeName += "?";
+                }
+                else if (param.ContractParameter.Type.NullableAnnotation == NullableAnnotation.Annotated)
+                { 
+                    typeName =
+                        param.ContractParameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+                    if (!typeName.EndsWith("?"))
+                        typeName += "?";
+                }
+                else
+                {
+                    typeName = param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                }
+
                 string paramName = param.Name;
 
                 bool hasExplicitBindingAttribute = false;
+                sb.AppendLine();
 
                 foreach (var attr in param.Attributes)
                 {
@@ -228,53 +251,79 @@ namespace Hubcon.Analyzers.SourceGenerators
                     }
                 }
 
-                var isNullable = false;
-
                 if (useBodyAttributes && param.HasExplicitDefaultValue)
                 {
                     object defaultVal = param.ExplicitDefaultValue;
                     string valStr;
 
-                    if (defaultVal == null)
+                    switch (defaultVal)
                     {
-                        isNullable = true;
-                    }
-                    else
-                    {
-                        switch (defaultVal)
-                        {
-                            case string s:
-                                valStr = "\"" + s + "\"";
-                                break;
-                            case bool b:
-                                valStr = b ? "true" : "false";
-                                break;
-                            case double d:
-                                valStr = d.ToString(System.Globalization.CultureInfo.InvariantCulture) + "d";
-                                break;
-                            case float f:
-                                valStr = f.ToString(System.Globalization.CultureInfo.InvariantCulture) + "f";
-                                break;
-                            case decimal dec:
-                                valStr = dec.ToString(System.Globalization.CultureInfo.InvariantCulture) + "m";
-                                break;
-                            default:
-                                valStr = defaultVal.ToString();
-                                break;
-                        }
+                        case string s:
+                            valStr = "\"" + s + "\"";
+                            break;
+                        case bool b:
+                            valStr = b ? "true" : "false";
+                            break;
+                        case double d:
+                            valStr = d.ToString(System.Globalization.CultureInfo.InvariantCulture) + "d";
+                            break;
+                        case float f:
+                            valStr = f.ToString(System.Globalization.CultureInfo.InvariantCulture) + "f";
+                            break;
+                        case decimal dec:
+                            valStr = dec.ToString(System.Globalization.CultureInfo.InvariantCulture) + "m";
+                            break;
+                        case System.Collections.IEnumerable enumerable:
+                            var items = new List<string>();
+                            foreach (var item in enumerable)
+                            {
+                                if (item == null)
+                                {
+                                    items.Add("null");
+                                }
+                                else if (item is string strItem)
+                                {
+                                    items.Add("\"" + strItem + "\"");
+                                }
+                                else if (item is bool boolItem)
+                                {
+                                    items.Add(boolItem ? "true" : "false");
+                                }
+                                else if (item is double doubleItem)
+                                {
+                                    items.Add(
+                                        doubleItem.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                                        "d");
+                                }
+                                else if (item is float floatItem)
+                                {
+                                    items.Add(
+                                        floatItem.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                                        "f");
+                                }
+                                else if (item is decimal decimalItem)
+                                {
+                                    items.Add(decimalItem.ToString(
+                                        System.Globalization.CultureInfo.InvariantCulture) + "m");
+                                }
+                                else
+                                {
+                                    items.Add(item.ToString());
+                                }
+                            }
 
-                        sb.AppendLine($"        [System.ComponentModel.DefaultValue({valStr})]");
+                            valStr = $"{string.Join(", ", items)}";
+                            break;
+                        default:
+                            valStr = defaultVal.ToString();
+                            break;
                     }
+
+                    sb.AppendLine($"        [System.ComponentModel.DefaultValue({valStr})]");
                 }
 
                 sb.AppendLine(
-                    $"        public {typeName}{(isNullable ? "?" : "")} {paramName} {{ get; set; }}");
-                
-                sb.AppendLine($"        private static global::System.ComponentModel.DataAnnotations.ValidationAttribute[] {paramName}_attributes = ");
-                sb.AppendLine($"            (typeof({wrapperClassName}).GetProperty(nameof({wrapperClassName}.{paramName}))?.GetCustomAttributes(typeof(global::System.ComponentModel.DataAnnotations.ValidationAttribute), true) as global::System.ComponentModel.DataAnnotations.ValidationAttribute[]) is {{ Length: > 0 }} attrs_{paramName}");
-                sb.AppendLine($"                ? attrs_{paramName}");
-                sb.AppendLine($"                : new global::System.ComponentModel.DataAnnotations.ValidationAttribute[] {{ new global::System.Diagnostics.CodeAnalysis.Validation.ValidateObjectAttribute() }};");
-                sb.AppendLine();
+                    $"        public {typeName} {paramName} {{ get; set; }}");
             }
         }
 
@@ -283,10 +332,24 @@ namespace Hubcon.Analyzers.SourceGenerators
             var attrName = attr.AttributeClass.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             var args = new List<string>();
 
-            // 1. Argumentos Posicionales (Constructor)
+
+            var enumerator = attr.AttributeConstructor.Parameters.GetEnumerator();
             foreach (var posArg in attr.ConstructorArguments)
             {
-                args.Add(FormatTypedConstant(posArg));
+                if (enumerator.MoveNext())
+                {
+                    if (enumerator.Current.IsParams)
+                    {
+                        foreach (var item in posArg.Values)
+                        {
+                            args.Add(FormatTypedConstant(item));
+                        }
+                    }
+                    else
+                    {
+                        args.Add(FormatTypedConstant(posArg));
+                    }
+                }
             }
 
             // 2. Argumentos Nombrados (Propiedades/Fields seteados explícitamente)
@@ -358,7 +421,7 @@ namespace Hubcon.Analyzers.SourceGenerators
 
             return constant.Value.ToString();
         }
-        
+
         public static INamedTypeSymbol GetSymbolIfHasPreserveAttribute(GeneratorSyntaxContext ctx)
         {
             var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) as INamedTypeSymbol;
@@ -503,6 +566,7 @@ namespace Hubcon.Analyzers.SourceGenerators
                     {
                         results.Add(type);
                     }
+
                     if (type.GetTypeMembers().Length > 0)
                     {
                         CollectMarkedTypesInNested(type, results);

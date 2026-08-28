@@ -49,13 +49,13 @@ namespace HubconTest.ContractHandlers
         //[ProducesResponseType<IOperationResponse<string>>(200)]
         //[Consumes("application/json")]
         [AllowAnonymous]
-        public async Task<LoginResponse> LoginAsync([FromBody][ValidateObject] LoginCommand? command, [FromQuery] string id)
+        public async Task<LoginResponse> LoginAsync([FromBody] LoginCommand loginCommand, [FromQuery][System.ComponentModel.DataAnnotations.AllowedValues("", "5", null)] string? id)
         {
             try
             {
                 var claims = new[]
                 {
-                    new Claim(JwtRegisteredClaimNames.Sub, command.Username),
+                    new Claim(JwtRegisteredClaimNames.Sub, loginCommand.Username),
                     new Claim(ClaimTypes.Role, "Manager"),
                     new Claim(ClaimTypes.Role, "Admin"),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())

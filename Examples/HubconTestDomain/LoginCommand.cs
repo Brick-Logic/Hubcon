@@ -4,50 +4,33 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace HubconTestDomain
 {
-    public record LoginCommand
+    public class LoginCommand(string username, string password, bool rememberMe, ValidationTestClass validationTest)
     {
-        public LoginCommand(string Username, string Password, bool RememberMe, ValidationTestClass validationTest)
-        {
-            this.Username = Username;
-            this.Password = Password;
-            this.RememberMe = RememberMe;
-            ValidationTest = validationTest;
-        }
+        [Required]
+        public string Username { get; } = username;
 
         [Required]
-        [System.ComponentModel.DataAnnotations.EmailAddress]
-        public string Username { get; }
-        
+        public string Password { get; } = password;
+
         [Required]
-        public string Password { get; }
-        
+        public bool RememberMe { get; } = rememberMe;
+
         [Required]
-        public bool RememberMe { get; }
-        
-        [Required]
-        public ValidationTestClass ValidationTest { get; }
+        public ValidationTestClass ValidationTest { get; } = validationTest;
     }
 
-    public class ValidationTestClass
+    public class ValidationTestClass(string username, ValidationTestClass2 validationTestClass2)
     {
-        public ValidationTestClass(string username, ValidationTestClass2 validationTestClass2)
-        {
-            Username = username;
-            ValidationTestClass2 = validationTestClass2;
-        }
+        [Required]
+        public string Username { get; } = username;
 
         [Required]
-        [System.ComponentModel.DataAnnotations.EmailAddress]
-        public string Username { get; }
-        
-        [Required]
-        public ValidationTestClass2 ValidationTestClass2 { get; }
+        public ValidationTestClass2 ValidationTestClass2 { get; } = validationTestClass2;
     }
     
-    public class ValidationTestClass2
+    public class ValidationTestClass2(string username2)
     {
         [Required]
-        [System.ComponentModel.DataAnnotations.EmailAddress]
-        public string Username2 { get; }
+        public string Username2 { get; } = username2;
     }
 }
