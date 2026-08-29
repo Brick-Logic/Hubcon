@@ -125,7 +125,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                     var visitedTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
 
                     foreach (var param in nonCancelParams)
-                        CollectAndEmitNestedValidators(sb, param.Type, "        ", visitedTypes, emittedValidators);
+                        ValidatorTools.CollectAndEmitNestedValidators(sb, param.Type, "        ", visitedTypes, emittedValidators, true);
 
                     // ValidatorNode principal del wrapper
                     sb.AppendLine();
@@ -134,7 +134,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                     sb.AppendLine($"            global::Hubcon.Validation.ValidatorNode<{wrapperClassName}>.Create()");
                     
                     foreach (var param in nonCancelParams)
-                        EmitBuilderEntry(sb, param.Name, param.Type, "Array.Empty<System.ComponentModel.DataAnnotations.ValidationAttribute>()", emittedValidators,
+                        ValidatorTools.EmitBuilderEntry(sb, param.Name, param.Type, "Array.Empty<System.ComponentModel.DataAnnotations.ValidationAttribute>()", emittedValidators,
                             "                ");
 
                     sb.AppendLine("                .Build();");
@@ -163,7 +163,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                     {
                         string typeName = param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                         sb.AppendLine(
-                            $"             {param.Name} = ({typeName})parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()}[\"{param.Name}\"];");
+                            $"             {param.Name} = parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()}.TryGetValue(\"{param.Name}\", out var {param.Name}_value) && {param.Name}_value != null ? ({typeName.Trim('?')}){param.Name}_value : default!;");
                     }
 
                     sb.AppendLine("        }");
@@ -193,234 +193,6 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 
             sb.AppendLine("}");
             spc.AddSource(fileName, SourceText.From(sb.ToString(), Encoding.UTF8));
-        }
-
-        /// <summary>
-        /// Recorre el árbol de tipos bottom-up y emite un ValidatorNode&lt;T&gt; por cada
-        /// tipo complejo encontrado, garantizando que los hijos se emiten antes que los padres.
-        /// </summary>
-        private static void CollectAndEmitNestedValidators(
-            StringBuilder sb,
-            ITypeSymbol type,
-            string indent,
-            HashSet<ITypeSymbol> visited,
-            Dictionary<ITypeSymbol, string> emitted)
-        {
-            // Desenvolver Nullable<T> y obtener el tipo de elemento si es colección
-            var baseType = UnwrapNullable(type);
-            var elementType = GetCollectionElementType(baseType);
-            var target = elementType ?? baseType;
-
-            if (!IsComplexType(target)) return;
-            if (!visited.Add(target)) return; // ciclo o ya procesado
-
-            // Primero recurrir en propiedades (bottom-up)
-            foreach (var prop in GetPublicInstanceProperties(target))
-                CollectAndEmitNestedValidators(sb, prop.Type, indent, visited, emitted);
-
-            // Emitir nodo de este tipo
-            var fieldName = GetValidatorFieldName(target);
-            var qualifiedName = target.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-
-            sb.AppendLine();
-            sb.AppendLine(
-                $"{indent}private static readonly global::Hubcon.Validation.ValidatorNode<{qualifiedName}> {fieldName} =");
-            sb.AppendLine($"{indent}    global::Hubcon.Validation.ValidatorNode<{qualifiedName}>.Create()");
-
-            foreach (var prop in GetPublicInstanceProperties(target))
-            {
-                var attrs = prop.GetAttributes().Where(IsValidationAttribute).ToArray();
-
-                var propBase = UnwrapNullable(prop.Type);
-                var propElem = GetCollectionElementType(propBase);
-                var propTarget = propElem ?? propBase;
-                bool hasChild = IsComplexType(propTarget) && emitted.ContainsKey(propTarget);
-
-                // Omitir propiedades sin atributos ni hijo
-                if (!hasChild && attrs.Length == 0) continue;
-
-                var inlineAttrs = attrs.Length > 0
-                    ? string.Join(", ", attrs.Select(EmitAttributeInstantiation))
-                    : string.Empty;
-
-                EmitBuilderEntry(sb, prop.Name, prop.Type, inlineAttrs, emitted, $"{indent}        ");
-            }
-
-            sb.AppendLine($"{indent}        .Build();");
-
-            emitted[target] = fieldName;
-        }
-
-        /// <summary>
-        /// Emite una línea .Leaf / .Branch / .Collection según el tipo de la propiedad.
-        /// <paramref name="attributesCode"/> puede ser un nombre de campo
-        /// o atributos inline ("new RequiredAttribute(), new MaxLengthAttribute(10)").
-        /// </summary>
-        private static void EmitBuilderEntry(
-            StringBuilder sb,
-            string memberName,
-            ITypeSymbol memberType,
-            string attributesCode,
-            Dictionary<ITypeSymbol, string> emitted,
-            string indent)
-        {
-            var baseType = UnwrapNullable(memberType);
-            var elementType = GetCollectionElementType(baseType);
-            var typeToCheck = elementType ?? baseType;
-
-            var childField = "";
-            bool hasChild = IsComplexType(typeToCheck) && emitted.TryGetValue(typeToCheck, out childField);
-            string attrsArg = attributesCode.Length > 0 ? $", {attributesCode}" : string.Empty;
-
-            if (elementType is not null && hasChild)
-            {
-                // Colección de tipos complejos: .Collection<TItem>(...)
-                var elemQualified = typeToCheck.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                sb.AppendLine(
-                    $"{indent}.Collection<{elemQualified}>(\"{memberName}\", static o => o.{memberName}, {childField}{attrsArg})");
-            }
-            else if (hasChild)
-            {
-                // Tipo complejo simple: .Branch(...)
-                sb.AppendLine($"{indent}.Branch(\"{memberName}\", static o => o.{memberName}, {childField}{attrsArg})");
-            }
-            else if (attributesCode.Length > 0)
-            {
-                // Tipo primitivo/string con atributos: .Leaf(...)
-                sb.AppendLine($"{indent}.Leaf(\"{memberName}\", static o => o.{memberName}{attrsArg})");
-            }
-            // Si no hay hijo ni atributos, no se emite nada — es un noop
-        }
-
-        private static ITypeSymbol UnwrapNullable(ITypeSymbol type)
-        {
-            if (type is INamedTypeSymbol { IsGenericType: true } named &&
-                named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
-                return named.TypeArguments[0];
-            return type;
-        }
-
-        /// <summary>Devuelve el tipo de elemento si el tipo es array o implementa IEnumerable&lt;T&gt;.</summary>
-        private static ITypeSymbol GetCollectionElementType(ITypeSymbol type)
-        {
-            if (type is IArrayTypeSymbol array) return array.ElementType;
-
-            if (type is INamedTypeSymbol named && named.IsGenericType)
-                foreach (var iface in named.AllInterfaces)
-                    if (iface.IsGenericType &&
-                        iface.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.IEnumerable<T>")
-                        return iface.TypeArguments[0];
-
-            return null;
-        }
-
-        /// <summary>
-        /// Un tipo es "complejo" si es una clase/struct definida fuera de los namespaces
-        /// del framework — es decir, un tipo de usuario que puede tener data annotations.
-        /// </summary>
-        private static bool IsComplexType(ITypeSymbol type)
-        {
-            if (type.SpecialType != SpecialType.None) return false;
-            if (type.TypeKind == TypeKind.Enum) return false;
-
-            var ns = type.ContainingNamespace?.ToDisplayString() ?? string.Empty;
-            if (ns.StartsWith("System") || ns.StartsWith("Microsoft")) return false;
-
-            return type.TypeKind is TypeKind.Class or TypeKind.Struct;
-        }
-
-        private static bool IsValidationAttribute(AttributeData attr)
-        {
-            var current = attr.AttributeClass;
-            while (current is not null)
-            {
-                if (current.ToDisplayString() == "System.ComponentModel.DataAnnotations.ValidationAttribute")
-                    return true;
-                current = current.BaseType;
-            }
-
-            return false;
-        }
-
-        /// <summary>Recorre la jerarquía de herencia para no perder propiedades de clases base.</summary>
-        private static List<IPropertySymbol> GetPublicInstanceProperties(ITypeSymbol type)
-        {
-            var result = new List<IPropertySymbol>();
-            var seen = new HashSet<string>();
-            var current = type;
-
-            while (current is not null && current.SpecialType == SpecialType.None)
-            {
-                foreach (var member in current.GetMembers().OfType<IPropertySymbol>())
-                    if (member.DeclaredAccessibility == Accessibility.Public &&
-                        !member.IsStatic && !member.IsIndexer && seen.Add(member.Name))
-                        result.Add(member);
-
-                current = current.BaseType;
-            }
-
-            return result;
-        }
-
-        private static string GetValidatorFieldName(ITypeSymbol type) =>
-            "_validator_" + type
-                .ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-                .Replace("global::", "")
-                .Replace(".", "_")
-                .Replace("<", "_Of_")
-                .Replace(">", "")
-                .Replace(",", "_And_")
-                .Replace(" ", "");
-
-        // Reconstrucción de atributos
-
-        private static string EmitAttributeInstantiation(AttributeData attr)
-        {
-            var fqn = attr.AttributeClass!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            var sb = new StringBuilder();
-            sb.Append($"new {fqn}(");
-
-            if (attr.ConstructorArguments.Length > 0)
-                sb.Append(string.Join(", ", attr.ConstructorArguments.Select(EmitTypedConstant)));
-
-            sb.Append(')');
-
-            if (attr.NamedArguments.Length > 0)
-            {
-                sb.Append(" { ");
-                sb.Append(string.Join(", ",
-                    attr.NamedArguments.Select(na => $"{na.Key} = {EmitTypedConstant(na.Value)}")));
-                sb.Append(" }");
-            }
-
-            return sb.ToString();
-        }
-
-        private static string EmitTypedConstant(TypedConstant c)
-        {
-            if (c.IsNull) return "null";
-            return c.Kind switch
-            {
-                TypedConstantKind.Primitive => c.Value switch
-                {
-                    string s => $"@\"{s.Replace("\"", "\"\"")}\"",
-                    bool b => b ? "true" : "false",
-                    char ch => $"'\\u{(int)ch:X4}'",
-                    float f => $"{f}F",
-                    double d => $"{d}D",
-                    long l => $"{l}L",
-                    ulong ul => $"{ul}UL",
-                    uint u => $"{u}U",
-                    _ => c.Value?.ToString() ?? "null"
-                },
-                TypedConstantKind.Type =>
-                    $"typeof({((ITypeSymbol)c.Value!).ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)})",
-                TypedConstantKind.Enum =>
-                    $"({c.Type!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}){c.Value}",
-                TypedConstantKind.Array =>
-                    $"new {c.Type!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {{ {string.Join(", ", c.Values.Select(EmitTypedConstant))} }}",
-                _ => c.Value?.ToString() ?? "null"
-            };
         }
     }
 }

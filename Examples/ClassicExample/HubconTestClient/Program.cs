@@ -79,6 +79,14 @@ internal class Program
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserContract>>();
         var openAi = scope.ServiceProvider.GetRequiredService<IOpenAIContract>();
         
+        var login = new LoginCommand("username", "53535", true, new("353", new("456")));
+        var results = new List<ValidationResult>();
+        
+        NodeValidator.TryValidate(login, results);
+        
+        foreach(var item in results)
+            Console.WriteLine(item.ErrorMessage);
+        
         logger.LogInformation("Press any key to start the tests...");
         Console.ReadKey();
 

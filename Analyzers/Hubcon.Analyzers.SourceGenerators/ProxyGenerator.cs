@@ -79,10 +79,18 @@ namespace Hubcon.Analyzers.SourceGenerators
                     transform: (ctx, _) => SymbolTools.GetClassSymbolIfImplementsInterface(ctx))
                 .Where(c => c != null)
                 .Collect();
+            
+            var typesToValidate = context.SyntaxProvider
+                .CreateSyntaxProvider(
+                    predicate: (node, _) => SymbolTools.IsCandidateClass(node),
+                    transform: (ctx, _) => SymbolTools.GetSymbolIfHasValidatorAttribute(ctx))
+                .Where(c => c != null)
+                .Collect();
 
             var allMarkedTypes = localMarkedTypes
                 .Combine(referencedMarkedTypes)
                 .Combine(controllerClasses)
+                .Combine(typesToValidate)
                 .Combine(context.CompilationProvider);
 
             var shouldExecute = shouldExecuteForClient.Combine(shouldExecuteForServer);
@@ -139,7 +147,7 @@ namespace Hubcon.Analyzers.SourceGenerators
 
                 var (interfaceList, classesList) = interfacesAndClasses;
 
-                var (((localMarked, referencedMarked), controllersArray), compilation) = markedTypesTuple;
+                var ((((localMarked, referencedMarked), controllersArray), typesMarkedToValidate), compilation) = markedTypesTuple;
 
                 var generateForClient = shouldGenerate.Left;
                 var generateForServer = shouldGenerate.Right;
@@ -242,13 +250,18 @@ namespace Hubcon.Analyzers.SourceGenerators
                 // 4. Generar el Resolver de Metadatos (Incluyendo el .Instance y el mapa de tipos)
                 GenerateMetadataResolver.Execute(spc, resolverClassName, filteredTypes, $"{resolverClassName}.g.cs");
                 generatedResolverClasses.Add("Hubcon.Shared.Core.Serialization.SystemTypesContext");
-
+                
                 // Al final, generas el archivo global
                 if (generatedResolverClasses.Any())
                 {
                     GenerateGlobalTypeResolver.Execute(spc, generatedResolverClasses, "HubconGlobalSerialization.g.cs");
                 }
-
+                GenerateValidatorNodes.Execute(spc, 
+                    typesMarkedToValidate, 
+                    filteredTypes.Where(x => !x.Name.StartsWith("HubconResponse") || x.ContainingNamespace.Name.StartsWith("System")).ToImmutableHashSet(),  
+                    "NodeValidators",
+                    "HubconValidatorNodes.g.cs");
+                
                 if (generateForServer)
                 {
                     var pairs = classesList.Select(x => new ControllerMetadata(x)).ToList();

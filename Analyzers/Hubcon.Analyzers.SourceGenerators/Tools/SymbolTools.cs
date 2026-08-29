@@ -441,6 +441,26 @@ namespace Hubcon.Analyzers.SourceGenerators
 
             return null;
         }
+        
+        public static INamedTypeSymbol GetSymbolIfHasValidatorAttribute(GeneratorSyntaxContext ctx)
+        {
+            var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) as INamedTypeSymbol;
+            if (symbol == null) return null;
+
+            var attributes = symbol.GetAttributes();
+            for (int i = 0; i < attributes.Length; i++)
+            {
+                var attrClass = attributes[i].AttributeClass;
+                if (attrClass != null &&
+                    attrClass.Name == "UseNodeValidatorAttribute" &&
+                    attrClass.ContainingNamespace?.ToDisplayString() == "Hubcon")
+                {
+                    return symbol;
+                }
+            }
+
+            return null;
+        }
 
         public static bool HasPreserveAttribute(INamedTypeSymbol symbol)
         {

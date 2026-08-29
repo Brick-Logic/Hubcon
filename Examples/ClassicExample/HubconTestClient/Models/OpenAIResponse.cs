@@ -1,8 +1,11 @@
-﻿namespace HubconTestClient.Models
+﻿using Hubcon;
+
+namespace HubconTestClient.Models
 {
     using System.Text.Json.Serialization;
     using System.Collections.Generic;
 
+    [UseNodeValidator]
     public class CreateResponseCommand
     {
         [JsonPropertyName("model")]
