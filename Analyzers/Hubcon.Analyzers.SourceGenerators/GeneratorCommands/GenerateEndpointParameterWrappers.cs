@@ -123,21 +123,37 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                     // ValidatorNode
                     var emittedValidators = new Dictionary<ITypeSymbol, string>(SymbolEqualityComparer.Default);
                     var visitedTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
-
+                    
                     foreach (var param in nonCancelParams)
                         ValidatorTools.CollectAndEmitNestedValidators(sb, param.Type, "        ", visitedTypes, emittedValidators, true);
 
                     // ValidatorNode principal del wrapper
                     sb.AppendLine();
-                    sb.AppendLine(
-                        $"        private static readonly global::Hubcon.Validation.ValidatorNode<{wrapperClassName}> _validatorNode =");
-                    sb.AppendLine($"            global::Hubcon.Validation.ValidatorNode<{wrapperClassName}>.Create()");
-                    
-                    foreach (var param in nonCancelParams)
-                        ValidatorTools.EmitBuilderEntry(sb, param.Name, param.Type, "Array.Empty<System.ComponentModel.DataAnnotations.ValidationAttribute>()", emittedValidators,
-                            "                ");
+                    var mainValidatorExists = false;
+                    if (nonCancelParams.Any(x => x.Attributes.Count > 0))
+                    {
+                        sb.AppendLine(
+                            $"        private static readonly global::Hubcon.Validation.ValidatorNode<{wrapperClassName}> _validatorNode =");
+                        sb.AppendLine(
+                            $"            global::Hubcon.Validation.ValidatorNode<{wrapperClassName}>.Create()");
 
-                    sb.AppendLine("                .Build();");
+                        foreach (var param in nonCancelParams)
+                        {
+                            var attrs = param.Attributes.Where(ValidatorTools.IsValidationAttribute).ToArray();
+
+                            if (attrs.Length == 0)
+                                continue;
+                            
+                            var inlineAttrs = ValidatorTools.GetInlineAttributes(attrs);
+                            ValidatorTools.EmitBuilderEntry(sb, param.Name, param.Type,
+                                inlineAttrs,
+                                emittedValidators,
+                                "                ");
+                        }
+
+                        sb.AppendLine("                .Build();");
+                        mainValidatorExists = true;
+                    }
 
                     // GetWrapped / Populate
                     sb.AppendLine();
@@ -149,7 +165,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                     {
                         string typeName = param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                         sb.AppendLine(
-                            $"             wrapped.{param.Name} = ({typeName})parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()}[\"{param.Name}\"];");
+                            $"             wrapped.{param.Name} = parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()}.TryGetValue(\"{param.Name}\", out var {param.Name}_value) && {param.Name}_value != null ? ({typeName.Trim('?')}){param.Name}_value : default!;");
                     }
 
                     sb.AppendLine("             return wrapped;");
@@ -178,12 +194,24 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
 
                     // TryValidate
                     sb.AppendLine();
+
                     sb.AppendLine(
-                        "        public bool TryValidate(out List<System.ComponentModel.DataAnnotations.ValidationResult> errors)");
+                        "        public bool TryValidate(out IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult> errors)");
                     sb.AppendLine("        {");
-                    sb.AppendLine(
-                        "            errors = new List<System.ComponentModel.DataAnnotations.ValidationResult>();");
-                    sb.AppendLine("            return _validatorNode.TryValidate(this, errors);");
+                    
+                    if (mainValidatorExists)
+                    {
+                        sb.AppendLine("            var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();");
+                        sb.AppendLine("            var validationResult = _validatorNode.TryValidate(this, results);");
+                        sb.AppendLine("            errors = results;");
+                        sb.AppendLine("            return validationResult;");
+                    }
+                    else
+                    {
+                        sb.AppendLine("            errors = Array.Empty<System.ComponentModel.DataAnnotations.ValidationResult>();");
+                        sb.AppendLine("            return true;");
+                    }
+
                     sb.AppendLine("        }");
 
                     sb.AppendLine("    }");

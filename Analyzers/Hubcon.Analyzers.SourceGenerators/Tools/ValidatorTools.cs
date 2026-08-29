@@ -35,21 +35,10 @@ public static class ValidatorTools
         var fieldName = GetValidatorFieldName(target);
         var qualifiedName = target.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-        sb.AppendLine();
-
-        if (getFromNodeValidatorProvider)
-        {
-            sb.AppendLine($"{indent}private static global::Hubcon.Validation.ValidatorNode<{qualifiedName}> {fieldName} => (Hubcon.Validation.ValidatorNode<{qualifiedName}>)Hubcon.Generated.NodeValidators.GetNodeValidator(typeof({qualifiedName}))!;");
-            emitted[target] = fieldName;
-            return;
-        }
-        else
-        {
-            sb.AppendLine($"{indent}private static readonly global::Hubcon.Validation.ValidatorNode<{qualifiedName}> {fieldName} =");
-        }
+        var sbInternal = new StringBuilder();
+        sbInternal.AppendLine();
         
-        sb.AppendLine($"{indent}    global::Hubcon.Validation.ValidatorNode<{qualifiedName}>.Create()");
-
+        var shouldEmit = false;
         foreach (var prop in GetPublicInstanceProperties(target))
         {
             var attrs = prop.GetAttributes().Where(IsValidationAttribute).ToArray();
@@ -62,16 +51,37 @@ public static class ValidatorTools
             // Omitir propiedades sin atributos ni hijo
             if (!hasChild && attrs.Length == 0) continue;
 
-            var inlineAttrs = attrs.Length > 0
-                ? string.Join(", ", attrs.Select(EmitAttributeInstantiation))
-                : string.Empty;
-
-            EmitBuilderEntry(sb, prop.Name, prop.Type, inlineAttrs, emitted, $"{indent}        ");
+            shouldEmit = true;
+            
+            var inlineAttrs = GetInlineAttributes(attrs);
+            EmitBuilderEntry(sbInternal, prop.Name, prop.Type, inlineAttrs, emitted, $"{indent}        ");
         }
+        
+        sbInternal.AppendLine($"{indent}        .Build();");
+        
+        if (shouldEmit)
+        {
+            if (getFromNodeValidatorProvider)
+            {
+                sb.AppendLine($"{indent}private static global::Hubcon.Validation.ValidatorNode<{qualifiedName}> {fieldName} => (Hubcon.Validation.ValidatorNode<{qualifiedName}>)Hubcon.Generated.NodeValidators.GetNodeValidator(typeof({qualifiedName}))!;");
+                emitted[target] = fieldName;
+                return;
+            }
+            
+            sb.AppendLine($"{indent}private static readonly global::Hubcon.Validation.ValidatorNode<{qualifiedName}> {fieldName} =");
+            sb.AppendLine($"{indent}    global::Hubcon.Validation.ValidatorNode<{qualifiedName}>.Create()");
+            sb.Append(sbInternal);
+            
+            emitted[target] = fieldName;
+        }
+    }
 
-        sb.AppendLine($"{indent}        .Build();");
-
-        emitted[target] = fieldName;
+    public static string GetInlineAttributes(AttributeData[] attrs)
+    {
+        var inlineAttrs = attrs.Length > 0
+            ? string.Join(", ", attrs.Select(EmitAttributeInstantiation))
+            : string.Empty;
+        return inlineAttrs;
     }
 
     public static void CollectAndEmitValidators(

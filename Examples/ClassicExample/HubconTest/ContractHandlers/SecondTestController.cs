@@ -60,7 +60,7 @@ namespace HubconTest.ContractHandlers
                     new Claim(ClaimTypes.Role, "Admin"),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
                 };
-                
+                id?.GetHashCode();
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Program.Key));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

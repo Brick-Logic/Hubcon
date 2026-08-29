@@ -13,7 +13,8 @@ namespace Hubcon.Validation
 
         public bool TryValidate(T instance, List<ValidationResult> results, string? pathPrefix = null)
         {
-            if (instance is null) return true;
+            if (_entries.Length == 0) return true;
+            
             int before = results.Count;
 
             foreach (ref readonly var entry in _entries.AsSpan())
@@ -111,7 +112,7 @@ namespace Hubcon.Validation
                     memberName,
                     o => getter(o),
                     finalAttributes,
-                    (obj, res, prefix) => child.TryValidate((TValue)obj, res, prefix)));
+                    (obj, res, prefix) => child.TryValidate((TValue?)obj!, res, prefix)));
 
                 return this;
             }

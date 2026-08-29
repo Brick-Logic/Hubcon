@@ -2,6 +2,7 @@
 
 namespace HubconTest.Middlewares
 {
+    [HubconPreserve]
     public class ExceptionMiddleware(ILogger<ExceptionMiddleware> logger) : IExceptionMiddleware
     {
         public async Task Execute(IOperationRequest request, IOperationContext context, PipelineDelegate next)
