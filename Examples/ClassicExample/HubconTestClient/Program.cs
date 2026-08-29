@@ -44,7 +44,7 @@ internal class Program
         long coreMask = 0;
 
         int minCore = 0;
-        int? maxCore = 0;
+        int? maxCore = null;
 
         int cores = maxCore ?? Environment.ProcessorCount - 1;
 
@@ -247,7 +247,7 @@ internal class Program
                     start = Stopwatch.GetTimestamp();
                 }
 
-                await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+                await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass("658","346","546"), default));
 
                 if (shouldMeasure) stats.Record(start);
             }
@@ -282,7 +282,7 @@ internal class Program
 
             while (true)
             {
-                await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+                await paralellClient.Execute(x => x.GetTemperatureFromServerWithInput(new TestInputClass("658","346","546"), default));
             }
         }, default, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap()).ToArray();
 
@@ -305,7 +305,7 @@ internal class Program
             while (counter <= testCount)
             {
                 var response = await paralellClient.Execute(x =>
-                    x.GetTemperatureFromServerWithInput(new TestInputClass(), default));
+                    x.GetTemperatureFromServerWithInput(new TestInputClass("658","346","546"), default));
                 if (response.Success) counter++;
             }
         })).ToArray();

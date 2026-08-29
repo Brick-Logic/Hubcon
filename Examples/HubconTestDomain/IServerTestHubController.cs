@@ -1,6 +1,7 @@
 ﻿using Hubcon;
 using Hubcon.Shared.Abstractions.Attributes;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,11 +15,19 @@ namespace HubconTestDomain
         Task ShowTempOnServerFromClient();
     }
 
-    public class TestInputClass
+    public class TestInputClass(string name, string description, string type)
     {
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public string Type { get; set; }
+        [Required]
+        [StringLength(maximumLength:50, MinimumLength = 0)]
+        public string Name { get; set; } = name;
+        
+        [Required]
+        [StringLength(maximumLength:50, MinimumLength = 0)]
+        public string Description { get; set; } = description;
+        
+        [Required]
+        [StringLength(maximumLength:50, MinimumLength = 0)]
+        public string Type { get; set; } = type;
     }
 
     [WebSocketTransport]
@@ -27,7 +36,7 @@ namespace HubconTestDomain
     {
         Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken = default);
 
-        Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput(TestInputClass input, CancellationToken cancellationToken = default);
+        Task<HubconResponse<TestInputClass>> GetTemperatureFromServerWithInput([Required] TestInputClass input, CancellationToken cancellationToken = default);
 
         Task<HubconResponse<bool>> GetTemperatureFromServerCancelable(CancellationToken cancellationToken);
 
