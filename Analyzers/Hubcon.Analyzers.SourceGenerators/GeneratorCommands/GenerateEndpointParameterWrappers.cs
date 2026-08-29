@@ -162,7 +162,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                     {
                         string typeName = param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                         sb.AppendLine(
-                            $"             wrapped.{param.Name} = parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()}.TryGetValue(\"{param.Name}\", out var {param.Name}_value) && {param.Name}_value != null ? ({typeName.Trim('?')}){param.Name}_value : default!;");
+                            $"             wrapped.{param.Name} = parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()}.TryGetValue(\"{param.Name}\", out var {param.Name}_value) && {param.Name}_value != null ? ({typeName.Trim('?')}){param.Name}_value : {(typeName.EndsWith("?") ? "null" : "default!")};");
                     }
 
                     sb.AppendLine("             return wrapped;");
@@ -176,7 +176,7 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                     {
                         string typeName = param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                         sb.AppendLine(
-                            $"             {param.Name} = parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()}.TryGetValue(\"{param.Name}\", out var {param.Name}_value) && {param.Name}_value != null ? ({typeName.Trim('?')}){param.Name}_value : default!;");
+                            $"             {param.Name} = parameters_{endpoint.ControllerMethod.GetMethodSymbolSignature()}.TryGetValue(\"{param.Name}\", out var {param.Name}_value) && {param.Name}_value != null ? ({typeName.Trim('?')}){param.Name}_value : {(typeName.EndsWith("?") ? "null" : "default!")};");
                     }
 
                     sb.AppendLine("        }");
