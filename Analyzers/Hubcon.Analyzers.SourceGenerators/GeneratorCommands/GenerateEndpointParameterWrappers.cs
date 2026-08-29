@@ -140,9 +140,6 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
                         foreach (var param in nonCancelParams)
                         {
                             var attrs = param.Attributes.Where(ValidatorTools.IsValidationAttribute).ToArray();
-
-                            if (attrs.Length == 0)
-                                continue;
                             
                             var inlineAttrs = ValidatorTools.GetInlineAttributes(attrs);
                             ValidatorTools.EmitBuilderEntry(sb, param.Name, param.Type,

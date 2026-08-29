@@ -53,9 +53,7 @@ namespace Hubcon.Server.Core.Routing
             
             var endpointDelegate =
                 EndpointManager.GetDummyEndpointDelegate(blueprint.ControllerType, blueprint.ContractType, method);
-
-            var endpointReturnType = endpointDelegate!.Method.ReturnType;
-
+            
             if (endpointDelegate == null)
                 throw new HubconGenericException(
                     $"Could not find a suitable delegate for endpoint '{method.Name}', on contract '{blueprint.ContractName}'. This could mean the source generators had an error.");
@@ -111,6 +109,7 @@ namespace Hubcon.Server.Core.Routing
                         if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.stream_init, transport,
                                 operationRequest))
                         {
+                            context.Response.StatusCode = 429;
                             return HubconResponse.StatusTooManyRequests;
                         }
 
@@ -119,6 +118,7 @@ namespace Hubcon.Server.Core.Routing
                         {
                             if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper internalWrapper)
                             {
+                                context.Response.StatusCode = 400;
                                 return HubconResponse.StatusBadRequest;
                             }
 
@@ -132,9 +132,10 @@ namespace Hubcon.Server.Core.Routing
                             wrapper,
                             requestId,
                             cancellationToken) as IHubconResponse;
-
+                        
                         if (res!.Failure)
                         {
+                            context.Response.StatusCode = res.StatusCode;
                             return HubconResponse.StatusInternalError;
                         }
 
@@ -166,6 +167,7 @@ namespace Hubcon.Server.Core.Routing
                         var connectionLimiter = services.GetRequiredService<IConnectionLimiter>();
                         if (!connectionLimiter.TryAcquire(context.Connection.RemoteIpAddress!, transport))
                         {
+                            context.Response.StatusCode = 429;
                             return HubconResponse.StatusTooManyRequests;
                         }
 
@@ -174,11 +176,13 @@ namespace Hubcon.Server.Core.Routing
                         if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.stream_init, transport,
                                 operationRequest))
                         {
+                            context.Response.StatusCode = 429;
                             return HubconResponse.StatusTooManyRequests;
                         }
                         
                         if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper wrapper)
                         {
+                            context.Response.StatusCode = 400;
                             return HubconResponse.StatusBadRequest;
                         }
                         
@@ -192,6 +196,7 @@ namespace Hubcon.Server.Core.Routing
 
                         if (res!.Failure)
                         {
+                            context.Response.StatusCode = res.StatusCode;
                             return HubconResponse.StatusInternalError;
                         }
 
@@ -225,6 +230,7 @@ namespace Hubcon.Server.Core.Routing
                                 transport,
                                 operationRequest))
                         {
+                            context.Response.StatusCode = 429;
                             return HubconResponse.StatusTooManyRequests;
                         }
 
@@ -233,6 +239,7 @@ namespace Hubcon.Server.Core.Routing
                         {
                             if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper internalWrapper)
                             {
+                                context.Response.StatusCode = 400;
                                 return HubconResponse.StatusBadRequest;
                             }
 
@@ -247,6 +254,7 @@ namespace Hubcon.Server.Core.Routing
                             requestId,
                             cancellationToken);
 
+                        context.Response.StatusCode = res.StatusCode;
                         return res.GetOriginal();
                     }).WithRequestTimeout(httpSettings.InvokeOperationTimeout);
                 }
@@ -277,11 +285,13 @@ namespace Hubcon.Server.Core.Routing
 
                         if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_invoke, transport, operationRequest))
                         {
+                            context.Response.StatusCode = 429;
                             return HubconResponse.StatusTooManyRequests;
                         }
 
                         if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper wrapper)
                         {
+                            context.Response.StatusCode = 400;
                             return HubconResponse.StatusBadRequest;
                         }
                         
@@ -293,6 +303,7 @@ namespace Hubcon.Server.Core.Routing
                             requestId,
                             cancellationToken);
 
+                        context.Response.StatusCode = res.StatusCode;
                         return res.GetOriginal();
                     }).WithRequestTimeout(httpSettings.InvokeOperationTimeout);
                 }
@@ -327,6 +338,7 @@ namespace Hubcon.Server.Core.Routing
                         if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_call, transport,
                                 operationRequest))
                         {
+                            context.Response.StatusCode = 429;
                             return HubconResponse.StatusTooManyRequests;
                         }
                         
@@ -335,6 +347,7 @@ namespace Hubcon.Server.Core.Routing
                         {
                             if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper internalWrapper)
                             {
+                                context.Response.StatusCode = 400;
                                 return HubconResponse.StatusBadRequest;
                             }
 
@@ -349,6 +362,7 @@ namespace Hubcon.Server.Core.Routing
                             requestId,
                             cancellationToken);
 
+                        context.Response.StatusCode = res.StatusCode;
                         return res.GetOriginal();
                     }).WithRequestTimeout(httpSettings.CallOperationTimeout);
                 }
@@ -367,6 +381,7 @@ namespace Hubcon.Server.Core.Routing
 
                         if (context.Request.ContentLength > httpSettings.MaxMessageSizeInBytes)
                         {
+                            context.Response.StatusCode = 429;
                             return HubconResponse.StatusRequestTooLarge;
                         }
                         
@@ -383,11 +398,13 @@ namespace Hubcon.Server.Core.Routing
                         if (!await rateLimiter.TryAcquireAsync(remoteAddress, MessageType.operation_call, transport,
                                 operationRequest))
                         {
+                            context.Response.StatusCode = 429;
                             return HubconResponse.StatusTooManyRequests;
                         }
                         
                         if (invocationContext.Arguments.Count == 0 || invocationContext.Arguments.FirstOrDefault() is not IWrapper wrapper)
                         {
+                            context.Response.StatusCode = 400;
                             return HubconResponse.StatusBadRequest;
                         }
 
@@ -399,6 +416,7 @@ namespace Hubcon.Server.Core.Routing
                             requestId,
                             cancellationToken);
 
+                        context.Response.StatusCode = res.StatusCode;
                         return res.GetOriginal();
                     }).WithRequestTimeout(httpSettings.CallOperationTimeout);
                 }
