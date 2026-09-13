@@ -14,29 +14,31 @@ namespace Hubcon
         {
             var attribute = originAttribute as UseApiKeyAttribute;
 
-            if (context.HttpContext!.Request.Headers.TryGetValue("X-API-KEY", out var apiKey))
+            if (!context.HttpContext!.Request.Headers.TryGetValue("X-API-KEY", out var apiKey))
+                return ValueTask.FromResult<ClaimsPrincipal?>(null);
+            
+            var key = apiKey.ToString();
+
+            if (key != attribute!.Key) return ValueTask.FromResult<ClaimsPrincipal?>(null);
+            
+            var claims = new List<Claim>
             {
-                var key = apiKey.ToString();
-
-                if(key == attribute!.Key)
-                {
-                    var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.Name, "APIKeyUser")
-                    };
-
-                    if(attribute.ShouldOverrideAuthorization)
-                    {
-                        claims.Add(new Claim(ClaimTypes.Role, "AuthOverride"));
-                    }
-
-                    var identity = new ClaimsIdentity(claims, "ApiKey");
-                    var principal = new ClaimsPrincipal(identity);
-                    return ValueTask.FromResult<ClaimsPrincipal?>(principal);
-                }
+                new(ClaimTypes.Name, "APIKeyUser")
+            };
+            
+            if(attribute.ShouldOverrideAuthorization)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, "AuthOverride"));
+            }
+            else
+            {
+                claims.AddRange(attribute.AdditionalRoles.Select(claim => new Claim(ClaimTypes.Role, claim)));
             }
 
-            return ValueTask.FromResult<ClaimsPrincipal?>(null);
+            var identity = new ClaimsIdentity(claims, "ApiKey");
+            var principal = new ClaimsPrincipal(identity);
+            return ValueTask.FromResult<ClaimsPrincipal?>(principal);
+
         }
     }
 }

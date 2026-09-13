@@ -16,8 +16,9 @@ namespace Hubcon
     /// If <see langword="true"/>, this API Key requirement takes precedence over other 
     /// global or contract-level authorization policies.
     /// </param>
-    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
-    public sealed class UseApiKeyAttribute(string key, bool overrideAuthorization = true) : UseAuthAttribute<ApiKeyHandler>
+    /// <param name="additionalRoles">Roles added to the authenticated user.</param>
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Interface)]
+    public sealed class UseApiKeyAttribute(string key, bool overrideAuthorization = true, params string[] additionalRoles) : UseAuthAttribute<ApiKeyHandler>
     {
         /// <summary>
         /// Gets the shared secret key required for successful authentication.
@@ -28,6 +29,11 @@ namespace Hubcon
         /// Gets or sets a value indicating whether this attribute should bypass or 
         /// supplement existing authorization requirements.
         /// </summary>
-        public bool ShouldOverrideAuthorization { get; set; } = overrideAuthorization;
+        public bool ShouldOverrideAuthorization { get; } = overrideAuthorization;
+        
+        /// <summary>
+        /// Roles added to the user.
+        /// </summary>
+        public string[] AdditionalRoles { get; } = additionalRoles;
     }
 }
