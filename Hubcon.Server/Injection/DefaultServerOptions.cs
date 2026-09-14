@@ -78,16 +78,71 @@ namespace Hubcon.Server.Injection
                 HubconServerBuilder.AddHubconController(Builder, controller);
             }
         }
-
-        public void RegisterControllersFromAssembly(Assembly assembly)
+        
+        public void RegisterControllersFromAssembly(Assembly targetAssembly)
         {
-            var foundControllers = ControllerContractHelper.FindImplementations(assembly, [typeof(BaseClientProxyMarker)]).ToList();
+            var foundControllers = ControllerMetadata
+                .GetAvailableControllers()
+                .Where(x => x.Assembly == targetAssembly);
+            
+            foreach (var controller in foundControllers)
+            {
+                HubconServerBuilder.AddHubconController(Builder, controller);
+            }
+        }
+        
+        public void RegisterControllersFromAssembly(string targetAssemblyName)
+        {
+            var foundControllers = ControllerMetadata
+                .GetAvailableControllers()
+                .Where(x => x.Assembly.GetName().Name == targetAssemblyName);
+            
             foreach (var controller in foundControllers)
             {
                 HubconServerBuilder.AddHubconController(Builder, controller);
             }
         }
 
+        public void RegisterControllersFromNamespace(string targetNamespace)
+        {
+            var foundControllers = ControllerMetadata
+                .GetAvailableControllers()
+                .Where(x => x.Namespace == targetNamespace);
+            
+            foreach (var controller in foundControllers)
+            {
+                HubconServerBuilder.AddHubconController(Builder, controller);
+            }
+        }
+        
+        public void RegisterControllers(params Type[] controllerTypes)
+        {
+            foreach (var controllerType in controllerTypes)
+            {
+                HubconServerBuilder.AddHubconController(Builder, controllerType);
+            }
+        }
+        
+        public void RegisterControllersWithQuery(Func<Type, bool> predicate)
+        {
+            var foundControllers = ControllerMetadata
+                .GetAvailableControllers()
+                .Where(predicate);
+            
+            foreach (var controller in foundControllers)
+            {
+                HubconServerBuilder.AddHubconController(Builder, controller);
+            }
+        }
+
+        public void RegisterController<T>() where T : class, IControllerContract
+        {
+            var controller = ControllerMetadata
+                .GetAvailableControllers()
+                .First(x => x == typeof(T));
+            
+            HubconServerBuilder.AddHubconController(Builder, controller);
+        }
 
         public void AddHttpRateLimiter(Action<RateLimiterOptions> options)
         {

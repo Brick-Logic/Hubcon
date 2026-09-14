@@ -10,6 +10,7 @@ using System.Threading.RateLimiting;
 using Hubcon.Server.Abstractions.Interfaces;
 using Hubcon.Server.Core.Configuration;
 using Hubcon.Server.Core.Telemetry;
+using HubconTest.ContractHandlers;
 using HubconTestDomain;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
@@ -175,7 +176,7 @@ namespace HubconTest
                     config.EnableRequestDetailedErrors();
                 });
                 
-                serverOptions.AutoRegisterControllers();
+                serverOptions.RegisterControllersFromAssembly(typeof(Program).Assembly);
             });
 
             builder.Services.AddOpenApi();

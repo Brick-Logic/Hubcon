@@ -52,11 +52,37 @@ namespace Hubcon.Server.Abstractions.Interfaces
         /// Scans loaded assemblies and automatically registers all controllers that implement the required interfaces.
         /// </summary>
         public void AutoRegisterControllers();
+        
+        /// <summary>
+        /// Registers all Hubcon controllers in the target assembly.
+        /// </summary>
+        public void RegisterControllersFromAssembly(Assembly targetAssembly);
+        
+        /// <summary>
+        /// Registers all Hubcon controllers in the target assembly name.
+        /// </summary>
+        public void RegisterControllersFromAssembly(string targetAssemblyName);
+        
+        /// <summary>
+        /// Registers all Hubcon controllers in the target namespace.
+        /// </summary>
+        public void RegisterControllersFromNamespace(string targetNamespace);
 
         /// <summary>
-        /// Scans the provided assembly and automatically registers all Hubcon controllers.
+        /// Registers all the Hubcon controllers provided.
         /// </summary>
-        public void RegisterControllersFromAssembly(Assembly assembly);
+        public void RegisterControllers(params Type[] controllerTypes);
+        
+        /// <summary>
+        /// Registers all the Hubcon controllers that match the provided predicate. 
+        /// </summary>
+        public void RegisterControllersWithQuery(Func<Type, bool> predicate);
+        
+        /// <summary>
+        /// Registers a single controller.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        public void RegisterController<T>() where T: class, IControllerContract;
 
         /// <summary>
         /// Adds and configures a rate limiter for HTTP requests.
