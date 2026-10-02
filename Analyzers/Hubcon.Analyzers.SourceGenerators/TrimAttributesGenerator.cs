@@ -10,8 +10,7 @@ using System.Threading;
 
 namespace Hubcon.Analyzers.SourceGenerators
 {
-    [Generator]
-    public class TrimAttributesGenerator : IIncrementalGenerator
+    public class TrimAttributesGenerator
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {

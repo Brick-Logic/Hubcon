@@ -1,0 +1,48 @@
+﻿@page "/counter"
+@using HubconTestDomain
+@using HubconBlazorTest.Auth
+@using Hubcon;
+
+@inject AuthenticationManager _authenticationManager
+@inject ILogger<Counter> _logger
+@inject IUserContract _userService
+
+<button class="btn btn-primary" @onclick="Login">Login</button>
+@* <button class="btn btn-primary" @onclick="TestSubscribe">TestSubscribe</button> *@
+<button class="btn btn-primary" @onclick="TestCreateUser">TestCreateUser</button>
+<button class="btn btn-primary" @onclick="TestStream">TestStream</button>
+
+@code {
+    protected async void Login()
+    {
+        var res = await _authenticationManager.LoginAsync("36ytwse3", "asasasas");
+
+        if (res.IsSuccess)
+            _logger.LogInformation($"Login OK. Token: {_authenticationManager.AccessToken}");
+        else
+            _logger.LogInformation($"Login failure. Info: {res.ErrorMessage}");
+    }
+    
+    protected async Task TestCreateUser()
+    {
+        var result = await _userService.Execute(x => x.CreateUser());
+        _logger.LogInformation($"CreateUser {result.Success}");
+    }
+
+    protected async Task TestStream()
+    {
+        var stream = await _userService.Execute(x => x.GetMessages(10));
+        
+        await foreach (var item in stream.Data!)
+        {
+            _logger.LogInformation($"Item de stream recibidos: {item}");
+        }
+        
+        var stream2 = _userService.GetMessages(10);
+        
+        await foreach (var item in stream2)
+        {
+            _logger.LogInformation($"Item de stream2 recibidos: {item}");
+        }
+    }
+}

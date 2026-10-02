@@ -1,6 +1,8 @@
 ﻿using Hubcon.Client.Core.Proxies;
 using System;
 using System.Threading.Tasks;
+using Hubcon.Client.Abstractions.Interfaces;
+
 #pragma warning disable CS1591
 
 namespace Hubcon
@@ -45,7 +47,13 @@ namespace Hubcon
             try
             {
                 var data = await call.Invoke(contract);
-                response = WrappedContext.CurrentWrapped.GetResponse<TOut>() ?? HubconResponse.OkT(data)!;
+                
+                if (data is IHubconStream stream)
+                {
+                    await stream.InitializeAsync();
+                }
+                
+                response = WrappedContext.CurrentWrapped.GetResponse<TOut>() ?? HubconResponse.OkT(data);
             }
             catch (Exception ex)
             {
@@ -80,7 +88,7 @@ namespace Hubcon
 
             try
             {
-                var data = await call.Invoke(contract);
+                await call.Invoke(contract);
                 response = (WrappedContext.CurrentWrapped.GetRawResponse() as HubconResponse<TOut?>)! ?? HubconResponse.OkT<TOut>()!;
             }
             catch (Exception ex)
@@ -117,7 +125,13 @@ namespace Hubcon
             try
             {
                 var data = call.Invoke(contract);
-                response = WrappedContext.CurrentWrapped.GetResponse<TOut>() as IHubconResponse<TOut?> ?? HubconResponse.OkT(data)!;
+
+                if (data is IHubconStream stream)
+                {
+                    await stream.InitializeAsync();
+                }
+                
+                response = WrappedContext.CurrentWrapped.GetResponse<TOut>() as IHubconResponse<TOut?> ?? HubconResponse.OkT(data);
             }
             catch (Exception ex)
             {

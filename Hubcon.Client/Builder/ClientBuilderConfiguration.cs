@@ -79,7 +79,15 @@ namespace Hubcon.Client.Builder
             
             ConfigureHttpClientHandler((_, options) =>
             {
-                options.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+
+                try
+                {
+                    options.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                }
+                catch
+                {
+                    // Ignored for browsers
+                }
                 options.AllowAutoRedirect = false;
             });
             

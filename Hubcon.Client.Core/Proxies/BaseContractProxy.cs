@@ -15,6 +15,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+
 #pragma warning disable CS1591
 
 namespace Hubcon.Client.Core.Proxies
@@ -70,14 +71,16 @@ namespace Hubcon.Client.Core.Proxies
             var useHashed = !bool.TryParse(env, out var parsed) ? true : !parsed;
 
             IContractOptions contractOptions = clientOptions.GetContractOptions(_contractType);
-            var interceptorManager = new InterceptorManager(rootServiceProvider, clientOptions, contractOptions, null, null);
+            var interceptorManager =
+                new InterceptorManager(rootServiceProvider, clientOptions, contractOptions, null, null);
 
             Dictionary<Type, ITransportClient> transports = new();
 
             foreach (var method in methods)
             {
                 var signature = method.GetMethodSignature();
-                IClientOperationContext context = new ClientOperationContext(method, interceptorManager, rootServiceProvider, clientOptions, contractOptions, _contractType, transports);
+                IClientOperationContext context = new ClientOperationContext(method, interceptorManager,
+                    rootServiceProvider, clientOptions, contractOptions, _contractType, transports);
                 tempOperations.Add(signature, context);
             }
 
@@ -86,16 +89,19 @@ namespace Hubcon.Client.Core.Proxies
             return _operations;
         }
 
-        public async Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public async Task<T> InvokeAsync<T>(string methodSignature, Dictionary<string, object> arguments,
+            CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
-                OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
+                OperationRequest request =
+                    new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
                 _ = WrappedContext.CurrentWrapped;
                 var wrapped = WrappedContext.Current;
 
                 using var scope = rootServiceProvider.CreateScope();
-                var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped, cancellationToken);
+                var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped,
+                    cancellationToken);
                 HubconContext.UseContext(callContext);
 
                 var interceptorContext = new InterceptorManager(
@@ -127,16 +133,19 @@ namespace Hubcon.Client.Core.Proxies
             }
         }
 
-        public async Task CallAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public async Task CallAsync(string methodSignature, Dictionary<string, object> arguments,
+            CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
-                OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
+                OperationRequest request =
+                    new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
                 _ = WrappedContext.CurrentWrapped;
                 var wrapped = WrappedContext.Current;
 
                 using var scope = rootServiceProvider.CreateScope();
-                var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped, cancellationToken);
+                var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped,
+                    cancellationToken);
                 HubconContext.UseContext(callContext);
 
                 var interceptorContext = new InterceptorManager(
@@ -156,16 +165,19 @@ namespace Hubcon.Client.Core.Proxies
             }
         }
 
-        public async Task<T> IngestAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public async Task<T> IngestAsync<T>(string methodSignature, Dictionary<string, object> arguments,
+            CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
-                OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
+                OperationRequest request =
+                    new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
                 _ = WrappedContext.CurrentWrapped;
                 var wrapped = WrappedContext.Current;
 
                 using var scope = rootServiceProvider.CreateScope();
-                var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped, cancellationToken);
+                var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped,
+                    cancellationToken);
                 HubconContext.UseContext(callContext);
 
                 var interceptorContext = new InterceptorManager(
@@ -197,16 +209,19 @@ namespace Hubcon.Client.Core.Proxies
             }
         }
 
-        public async Task IngestAsync(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
+        public async Task IngestAsync(string methodSignature, Dictionary<string, object> arguments,
+            CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
-                OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
+                OperationRequest request =
+                    new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
                 _ = WrappedContext.CurrentWrapped;
                 var wrapped = WrappedContext.Current;
 
                 using var scope = rootServiceProvider.CreateScope();
-                var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped, cancellationToken);
+                var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped,
+                    cancellationToken);
                 HubconContext.UseContext(callContext);
 
                 var interceptorContext = new InterceptorManager(
@@ -224,57 +239,86 @@ namespace Hubcon.Client.Core.Proxies
             {
                 throw new Exception($"Could not find the operation '{methodSignature}'.");
             }
+        }
 
+        public struct StreamState
+        {
+            public IClientOperationContext Context { get; set; }
+            public string SimpleContractName { get; set; }
+            public Dictionary<string, object> Arguments { get; set; }
+            public CancellationToken CancellationToken { get; set; }
+            public IAuthenticationManager? AuthenticationManager { get; set; }
+            public IServiceProvider RootServiceProvider { get; set; }
+            public IHubconClient Client { get; set; }
         }
 
         public IAsyncEnumerable<T> StreamAsync<T>(string methodSignature, Dictionary<string, object> arguments, CancellationToken cancellationToken)
         {
             if (_operations.TryGetValue(methodSignature, out IClientOperationContext? context))
             {
-                OperationRequest request = new OperationRequest(context.MethodSignature, SimpleContractName, arguments!);
-                _ = WrappedContext.CurrentWrapped;
-                var wrapped = WrappedContext.Current;
+                var state = new StreamState
+                {
+                    Context = context,
+                    SimpleContractName = SimpleContractName,
+                    Arguments = arguments,
+                    CancellationToken = cancellationToken,
+                    AuthenticationManager = AuthenticationManager,
+                    RootServiceProvider = rootServiceProvider,
+                    Client = _client
+                };
 
-                using var scope = rootServiceProvider.CreateScope();
-                var callContext = new CallContext(scope.ServiceProvider, request, AuthenticationManager, wrapped, cancellationToken);
-                HubconContext.UseContext(callContext);
+                var stream = new HubconStream<T, StreamState>(static async (state, ct) =>
+                {
+                    var request = new OperationRequest(state.Context.MethodSignature, state.SimpleContractName, state.Arguments);
+                    _ = WrappedContext.CurrentWrapped;
+                    var wrapped = WrappedContext.Current;
+                    var selectedCancellationToken = wrapped ? ct : state.CancellationToken;
 
-                var interceptorContext = new InterceptorManager(
-                    scope.ServiceProvider,
-                    context.ClientOptions,
-                    context.ContractOptions,
-                    context.OperationOptions,
-                    callContext);
+                    using var scope = state.RootServiceProvider.CreateScope();
+                    var callContext = new CallContext(scope.ServiceProvider, request, state.AuthenticationManager!, wrapped, selectedCancellationToken);
+                    HubconContext.UseContext(callContext);
 
-                InterceptorContext.UseContext(interceptorContext);
+                    var interceptorContext = new InterceptorManager(
+                        scope.ServiceProvider,
+                        state.Context.ClientOptions,
+                        state.Context.ContractOptions,
+                        state.Context.OperationOptions,
+                        callContext);
 
-                IAsyncEnumerable<JsonElement> stream = _client.GetStream(request, context, cancellationToken).Result;
+                    InterceptorContext.UseContext(interceptorContext);
 
-                var receivedResponse = WrappedContext.CurrentWrapped.GetResponse<IAsyncEnumerable<JsonElement>>();
+                    var stream = await state.Client.GetStream(request, state.Context, selectedCancellationToken);
 
-                var response = new HubconResponse<IAsyncEnumerable<T>?>(
-                    receivedResponse.Success,
-                    !receivedResponse.Success,
-                    receivedResponse.Message,
-                    receivedResponse.Error,
-                    receivedResponse.StatusCode,
-                    receivedResponse.Data == null ? default : ConvertStream<T>(stream, context, cancellationToken),
-                    null
-                );
+                    var receivedResponse = WrappedContext.CurrentWrapped.GetResponse<IAsyncEnumerable<JsonElement>>();
 
-                context.SetResponse(response);
-                return (response.Data ?? default)!;
+                    var response = new HubconResponse<IAsyncEnumerable<T>?>(
+                        receivedResponse.Success,
+                        !receivedResponse.Success,
+                        receivedResponse.Message!,
+                        receivedResponse.Error!,
+                        receivedResponse.StatusCode,
+                        receivedResponse.Data == null ? null! : ConvertStream<T>(stream, state.Context, selectedCancellationToken),
+                        null!
+                    );
+
+                    await state.Context.SetResponse(response);
+
+                    return response.Data!;
+                }, state);
+                
+                return stream;
             }
             else
             {
                 throw new Exception($"Could not find the operation '{methodSignature}'.");
             }
         }
-
-        public async IAsyncEnumerable<T> ConvertStream<T>(IAsyncEnumerable<JsonElement> stream, IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        
+        private static async IAsyncEnumerable<TStream> ConvertStream<TStream>(IAsyncEnumerable<JsonElement> stream,
+            IClientOperationContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var enumerator = stream.GetAsyncEnumerator(cancellationToken);
-            T? item;
+            TStream? item;
             while (true)
             {
                 try
@@ -284,7 +328,7 @@ namespace Hubcon.Client.Core.Proxies
 
                     await context.AcquireRateLimiter();
 
-                    item = context.Converter.DeserializeJsonElement<T>(enumerator.Current)!;
+                    item = context.Converter.DeserializeJsonElement<TStream>(enumerator.Current)!;
                 }
                 catch (Exception ex)
                 {
@@ -308,7 +352,7 @@ namespace Hubcon.Client.Core.Proxies
 
         public ITransportClient? GetTransportClient<T>() where T : HubconTransportAttribute
         {
-            if(_transports.TryGetValue(typeof(T), out var value))
+            if (_transports.TryGetValue(typeof(T), out var value))
             {
                 return value;
             }
@@ -318,6 +362,7 @@ namespace Hubcon.Client.Core.Proxies
             }
         }
 
-        public IAuthenticationManager? AuthenticationManager => _clientOptions.AuthenticationManagerFactory?.GetValue<IAuthenticationManager>(rootServiceProvider);
+        public IAuthenticationManager? AuthenticationManager =>
+            _clientOptions.AuthenticationManagerFactory?.GetValue<IAuthenticationManager>(rootServiceProvider);
     }
 }

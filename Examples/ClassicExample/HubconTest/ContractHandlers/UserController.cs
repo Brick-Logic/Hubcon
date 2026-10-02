@@ -57,15 +57,6 @@ namespace HubconTest.ContractHandlers
             }
         }
 
-        //[StreamingSettings(1000)]
-        public async IAsyncEnumerable<string> GetMessages([EnumeratorCancellation] CancellationToken cancellationToken)
-        {
-            while(!cancellationToken.IsCancellationRequested)
-            {
-                yield return "hola2";
-            }
-        }
-
         [RateLimit(10000000)]
         public async IAsyncEnumerable<string> GetMessages2(CancellationToken cancellationToken)
         {
