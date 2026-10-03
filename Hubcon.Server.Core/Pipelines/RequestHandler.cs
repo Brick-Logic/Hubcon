@@ -54,7 +54,7 @@ namespace Hubcon.Server.Core.Pipelines
             if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute,
                     out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.CallMethod))
             {
-                return HubconResponse.NotFound();
+                return HubconResponse.StatusNotFound;
             }
 
             IOperationContext context = BuildContext(request, blueprint!, PipelineResultHandlers.NoResultHandler,
@@ -73,7 +73,7 @@ namespace Hubcon.Server.Core.Pipelines
                       out IOperationBlueprint? blueprint)
                   && blueprint?.Kind == OperationKind.InvokeMethod))
             {
-                return HubconResponse.NotFound();
+                return HubconResponse.StatusNotFound;
             }
 
             IOperationContext context = BuildContext(request, blueprint, PipelineResultHandlers.ResultHandler,
@@ -91,7 +91,7 @@ namespace Hubcon.Server.Core.Pipelines
         {
             if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute,
                     out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.CallMethod))
-                return HubconResponse.NotFound();
+                return HubconResponse.StatusNotFound;
 
             IOperationContext context = BuildContext(request, blueprint, PipelineResultHandlers.NoResultHandler,
                 wrappedRequest, requestId, transportAttribute, cancellationToken);
@@ -107,7 +107,7 @@ namespace Hubcon.Server.Core.Pipelines
         {
             if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute,
                     out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Stream))
-                return HubconResponse.NotFound();
+                return HubconResponse.StatusNotFound;
 
             IOperationContext context = BuildContext(request, blueprint, PipelineResultHandlers.StreamResultHandler,
                 wrappedRequest, requestId, transportAttribute, cancellationToken);
@@ -117,7 +117,7 @@ namespace Hubcon.Server.Core.Pipelines
             var res = pipelineTask.Result.Response;
 
             if (res == null)
-                return HubconResponse.InternalError();
+                return HubconResponse.StatusInternalError;
 
             return res;
         }
@@ -128,7 +128,7 @@ namespace Hubcon.Server.Core.Pipelines
         {
             if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute,
                     out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.InvokeMethod))
-                return HubconResponse.NotFound();
+                return HubconResponse.StatusNotFound;
 
             var context = BuildContext(request, blueprint, PipelineResultHandlers.WithResultHandler, wrappedRequest,
                 requestId, transportAttribute, cancellationToken);
@@ -145,7 +145,7 @@ namespace Hubcon.Server.Core.Pipelines
         {
             if (!(_operationRegistry.TryGetOperationBlueprint(request, transportAttribute,
                     out IOperationBlueprint? blueprint) && blueprint?.Kind == OperationKind.Ingest))
-                return HubconResponse.NotFound();
+                return HubconResponse.StatusNotFound;
 
             var dict = request.Arguments.ToDictionary();
 
@@ -155,7 +155,7 @@ namespace Hubcon.Server.Core.Pipelines
                 || count == 0
                 || count != dict?.Count)
             {
-                return HubconResponse.InternalError();
+                return HubconResponse.StatusInternalError;
             }
 
             foreach (var parameterType in blueprint!.ParameterTypes)

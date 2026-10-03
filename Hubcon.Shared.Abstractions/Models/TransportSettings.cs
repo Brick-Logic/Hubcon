@@ -67,10 +67,10 @@ namespace Hubcon
 
         /// <inheritdoc />
         public int IngestOperationLimitPerSecond { get; set; }
-        
+
         /// <inheritdoc />
         public int ControlMessagesLimitPerSecond { get; set; }
-        
+
         /// <inheritdoc />
         public int ControlMessagesPerSecond { get; set; }
 
@@ -85,7 +85,7 @@ namespace Hubcon
 
         /// <inheritdoc />
         public virtual bool AllowRemoteCancellation { get; set; }
-        
+
         /// <inheritdoc />
         public int TransportLimitPerSecond { get; set; }
 
@@ -115,5 +115,10 @@ namespace Hubcon
 
         /// <inheritdoc />
         public virtual bool RequiresAuth { get; set; } = true;
+    }
+    
+    /// <inheritdoc />
+    public class ClientSettings : ISettableClientSettings
+    {
     }
 }

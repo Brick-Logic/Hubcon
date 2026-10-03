@@ -57,7 +57,7 @@ namespace Hubcon.Client.Integration.Client
 
                 if (HubconContext.Current?.IsWrapped == true)
                 {
-                    await context.SetResponse(HubconResponse.Cancelled());
+                    await context.SetResponse(HubconResponse.StatusCancelled);
                     return;
                 }
 
@@ -112,7 +112,7 @@ namespace Hubcon.Client.Integration.Client
 
                 if (HubconContext.Current?.IsWrapped == true)
                 {
-                    await context.SetResponse(HubconResponse.Cancelled());
+                    await context.SetResponse(HubconResponse.StatusCancelled);
                     return;
                 }
 

@@ -16,8 +16,6 @@ public class Program
         builder.Services.AddHubconClient();
         builder.Services.AddRemoteServerModule<TestModule>();
         
-        builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-
         await builder.Build().RunAsync();
     }
 }

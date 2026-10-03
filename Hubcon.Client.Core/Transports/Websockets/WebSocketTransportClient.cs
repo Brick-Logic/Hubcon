@@ -125,7 +125,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
         /// <inheritdoc/>
         public async Task<HubconResponse> Connect(string? url = null)
         {
-            if (IsConnected()) return HubconResponse.Ok();
+            if (IsConnected()) return HubconResponse.StatusOk;
 
             var uri = url == null ? null : new Uri(url);
             try
@@ -144,7 +144,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
                 return HubconResponse.InternalError(ex, ex.Message);
             }
 
-            return HubconResponse.Ok();
+            return HubconResponse.StatusOk;
         }
 
         /// <inheritdoc/>
@@ -162,7 +162,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
                     else
                         await _clientPool.ExecuteAllAsync(uri, static (x, state) => x.EnsureConnectedAsync(state));
                 }
-                return HubconResponse.Ok();
+                return HubconResponse.StatusOk;
             }
             catch (Exception ex)
             {
@@ -179,7 +179,7 @@ namespace Hubcon.Client.Core.Transports.Websockets
                 {
                     await _clientPool.ExecuteAllAsync(static x => x.Disconnect());
                 }
-                return HubconResponse.Ok();
+                return HubconResponse.StatusOk;
             }
             catch (Exception ex)
             {

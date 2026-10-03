@@ -91,7 +91,7 @@ namespace Hubcon.Server.Core.Security
 
         private static void SetUnauthorized(IOperationContext context)
         {
-            context.Response = HubconResponse.Unauthorized();
+            context.Response = HubconResponse.StatusUnauthorized;
         }
     }
 }

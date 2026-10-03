@@ -13,7 +13,7 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
         {
             if (result is null)
             {
-                return HubconResponse.Ok();
+                return HubconResponse.StatusOk;
             }
             else
             {
@@ -29,7 +29,7 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             if (result is Task task)
                 await task;
 
-            return HubconResponse.Ok();
+            return HubconResponse.StatusOk;
         }
 
         internal static async ValueTask<HubconResponse> StreamResultHandler(object? result)
@@ -40,7 +40,7 @@ namespace Hubcon.Server.Core.Pipelines.ResultHandlers
             }
             else
             {
-                return HubconResponse.InternalError();
+                return HubconResponse.StatusInternalError;
             }
         }
 

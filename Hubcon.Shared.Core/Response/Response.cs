@@ -251,6 +251,31 @@ namespace Hubcon
             Data = data;
             OriginalResponse = originalResponse;
         }
+        
+        /// <summary>
+        /// Gets a predefined response indicating a successful operation (HTTP 200 OK).
+        /// </summary>
+        public static HubconResponse<T> StatusOk => HubconResponse.OkT<T>();
+
+        /// <summary>
+        /// Gets a predefined response indicating that the operation was cancelled by the client or server (HTTP 499 / Cancelled).
+        /// </summary>
+        public static HubconResponse<T> StatusCancelled => HubconResponse.Cancelled<T>();
+
+        /// <summary>
+        /// Gets a predefined response indicating that the requested resource was not found (HTTP 404 Not Found).
+        /// </summary>
+        public static HubconResponse<T> StatusNotFound => HubconResponse.NotFound<T>();
+
+        /// <summary>
+        /// Gets a predefined response indicating an unhandled server error (HTTP 500 Internal Server Error).
+        /// </summary>
+        public static HubconResponse<T> StatusInternalError => HubconResponse.InternalError<T>();
+
+        /// <summary>
+        /// Gets a predefined generic response indicating that a resource was successfully created without additional payload (HTTP 201 Created).
+        /// </summary>
+        public static HubconResponse<T> StatusCreated => HubconResponse.Created<T>(default!);
 
         /// <summary>
         /// Implicitly converts a value of type <typeparamref name="T"/> into a successful <see cref="HubconResponse{T}"/>.

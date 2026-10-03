@@ -127,7 +127,7 @@ namespace Hubcon
                     context.Response.StatusCode = 400;
                     context.Response.ContentType = "application/json";
 
-                    var response = HubconResponse.BadRequest();
+                    var response = HubconResponse.StatusBadRequest;
                     await context.Response.WriteAsJsonAsync(response);
                 }
                 catch (UnauthorizedAccessException)
@@ -135,7 +135,7 @@ namespace Hubcon
                     context.Response.StatusCode = 403;
                     context.Response.ContentType = "application/json";
 
-                    var response = HubconResponse.Unauthorized();
+                    var response = HubconResponse.StatusUnauthorized;
                     await context.Response.WriteAsJsonAsync(response);
                 }
                 catch (Exception ex)
@@ -154,7 +154,7 @@ namespace Hubcon
                     }
                     else
                     {
-                        response = HubconResponse.InternalError();
+                        response = HubconResponse.StatusInternalError;
                     }
                     await context.Response.WriteAsJsonAsync(response);
                 }
@@ -166,7 +166,7 @@ namespace Hubcon
                 {
                     context.HttpContext.Response.ContentType = "application/json";
 
-                    var response = HubconResponse.NotFound();
+                    var response = HubconResponse.StatusNotFound;
                     await context.HttpContext.Response.WriteAsJsonAsync(response);
                 }
             });

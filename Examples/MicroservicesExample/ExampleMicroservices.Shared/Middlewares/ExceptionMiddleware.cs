@@ -13,7 +13,7 @@ namespace ExampleMicroservices.Shared.Middlewares
             }
             catch (Exception ex)
             {
-                context.Response = HubconResponse.InternalError();
+                context.Response = HubconResponse.StatusInternalError;
                 context.Exception = ex;
                 logger.LogInformation(ex.ToString());
                 return;

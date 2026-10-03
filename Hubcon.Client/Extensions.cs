@@ -89,7 +89,7 @@ namespace Hubcon
             try
             {
                 await call.Invoke(contract);
-                response = (WrappedContext.CurrentWrapped.GetRawResponse() as HubconResponse<TOut?>)! ?? HubconResponse.OkT<TOut>()!;
+                response = (WrappedContext.CurrentWrapped.GetRawResponse() as HubconResponse<TOut?>)! ?? HubconResponse<TOut?>.StatusOk;
             }
             catch (Exception ex)
             {
@@ -166,7 +166,7 @@ namespace Hubcon
             try
             {
                 await call.Invoke(contract);
-                response = WrappedContext.CurrentWrapped.GetResponse() ?? HubconResponse.Ok()!;
+                response = WrappedContext.CurrentWrapped.GetResponse() ?? HubconResponse.StatusInternalError;
             }
             catch (Exception ex)
             {

@@ -158,7 +158,7 @@ namespace Hubcon.Server.Injection
                     context.HttpContext.Response.StatusCode = 429;
                     context.HttpContext.Response.ContentType = "application/json";
 
-                    var response = converter.SerializeToElement(HubconResponse.TooManyRequests());
+                    var response = converter.SerializeToElement(HubconResponse.StatusTooManyRequests);
 
                     await context.HttpContext.Response.WriteAsJsonAsync(response, token);
 

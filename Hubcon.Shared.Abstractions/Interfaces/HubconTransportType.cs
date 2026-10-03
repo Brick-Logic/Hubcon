@@ -6,6 +6,42 @@ namespace Hubcon
 {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Method |
                     AttributeTargets.Property)]
+    public abstract class HubconTransportAttribute<TTransportSettings, TClientSettings> : HubconTransportAttribute<TTransportSettings>
+        where TTransportSettings : class, ITransportSettings, new()
+        where TClientSettings : class, IClientSettings, new()
+    {
+        public HubconTransportAttribute()
+        {
+            _defaultTransportSettings = new TTransportSettings();
+            _defaultClientSettings = new TClientSettings();
+        }
+        
+        /// <summary>
+        /// The default settings for this transport.
+        /// </summary>
+        public new ITransportSettings DefaultTransportSettings => _defaultTransportSettings ??= new TTransportSettings();
+        
+        /// <summary>
+        /// Gets a default implementation for a Hubcon transport attribute and caches the result.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static HubconTransportAttribute<TTransportSettings, TClientSettings> GetDefault<T>() 
+            where T : HubconTransportAttribute<TTransportSettings, TClientSettings>, new()
+        {
+            if (_defaultInstances.TryGetValue(typeof(T), out var value)) 
+                return (T)value;
+            
+            var defaultValue = new T();
+            _defaultInstances.TryAdd(typeof(T), defaultValue);
+            return defaultValue;
+        }
+
+        public virtual TClientSettings TypedDefaultClientSettings => (TClientSettings)DefaultClientSettings;
+    }
+    
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Method |
+                    AttributeTargets.Property)]
     public abstract class HubconTransportAttribute<TSettings> : HubconTransportAttribute
         where TSettings : class, ITransportSettings, new()
     {
@@ -18,23 +54,6 @@ namespace Hubcon
         /// The default settings for this transport.
         /// </summary>
         public new ITransportSettings DefaultTransportSettings => _defaultTransportSettings ??= new TSettings();
-        
-        /// <summary>
-        /// Gets a default implementation for a Hubcon transport attribute and caches the result.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static HubconTransportAttribute<TSettings> GetDefault<T>() where T : HubconTransportAttribute<TSettings>, new()
-        {
-            if (!_defaultInstances.TryGetValue(typeof(T), out var value))
-            {
-                var defaultValue = new T();
-                _defaultInstances.TryAdd(typeof(T), defaultValue);
-                return defaultValue;
-            }
-
-            return (T)value;
-        }
 
         public virtual TSettings TypedDefaultTransportSettings => (TSettings)DefaultTransportSettings;
     }
@@ -88,14 +107,11 @@ namespace Hubcon
         /// <returns></returns>
         public static T GetDefault<T>() where T : HubconTransportAttribute, new()
         {
-            if (!_defaultInstances.TryGetValue(typeof(T), out var value))
-            {
-                var defaultValue = new T();
-                _defaultInstances.TryAdd(typeof(T), defaultValue);
-                return defaultValue;
-            }
-
-            return (T)value;
+            if (_defaultInstances.TryGetValue(typeof(T), out var value)) return (T)value;
+            
+            var defaultValue = new T();
+            _defaultInstances.TryAdd(typeof(T), defaultValue);
+            return defaultValue;
         }
 
         private Type? _transportType;
@@ -116,5 +132,12 @@ namespace Hubcon
         /// The default settings for this transport.
         /// </summary>
         public virtual ITransportSettings DefaultTransportSettings => _defaultTransportSettings ??= new TransportSettings();
+        
+        protected IClientSettings? _defaultClientSettings;
+
+        /// <summary>
+        /// The default settings for this client.
+        /// </summary>
+        public virtual IClientSettings DefaultClientSettings => _defaultClientSettings ??= new ClientSettings();
     }
 }

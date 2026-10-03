@@ -44,7 +44,7 @@ namespace Hubcon.Server.Core.Middlewares.DefaultMiddlewares
 
             if (!tracker.Counter.TryIncrement())
             {
-                context.Response = HubconResponse.TooManyRequests();
+                context.Response = HubconResponse.StatusTooManyRequests;
                 return;
             }
 
