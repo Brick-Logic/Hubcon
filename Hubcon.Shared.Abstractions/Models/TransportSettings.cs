@@ -110,6 +110,16 @@ namespace Hubcon
         /// <inheritdoc />
         public virtual Type? ConnectionAuthHandlerType { get; set; }
 
+        public void UseAuthHandler<T>() where T : class, IHubconAuthHandler
+        {
+            ConnectionAuthHandlerType ??= typeof(T);
+        }
+
+        public void UseTokenValidationParameters(TokenValidationParameters tokenValidationParameters)
+        {
+            TokenValidationParameters ??= tokenValidationParameters;
+        }
+
         /// <inheritdoc />
         public virtual TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(15);
 

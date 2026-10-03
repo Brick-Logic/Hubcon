@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using Hubcon.Shared.Abstractions.Interfaces;
 
 namespace Hubcon
 {
@@ -15,7 +16,7 @@ namespace Hubcon
     /// </summary>
     [HubconPreserve]
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
-    public interface IAuthHandler
+    public interface IAuthHandler : IHubconAuthHandler
     {
         /// <summary>
         /// Asynchronously performs authentication for the current operation.

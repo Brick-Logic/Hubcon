@@ -156,7 +156,7 @@ namespace HubconTest
                         x.IngestOperationLimitPerSecond = 999_999;
                         x.StreamOperationLimitPerSecond = 999_999;
                         
-                        x.ConnectionAuthHandlerType = typeof(JwtAuthHandler);
+                        x.UseAuthHandler<JwtAuthHandler>();
                         x.LoggingEnabled = true;
                         x.AllowRemoteCancellation = true;
                         x.MethodOverloadingEnabled = true;

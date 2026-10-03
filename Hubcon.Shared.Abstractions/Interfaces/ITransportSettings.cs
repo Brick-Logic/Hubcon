@@ -537,6 +537,18 @@ namespace Hubcon
         public new Type? ConnectionAuthHandlerType { get; set; }
         
         /// <summary>
+        /// Defines which auth handler should be used for transport-level authentication.
+        /// </summary>
+        /// <typeparam name="T">A Hubcon Auth Handler.</typeparam>
+        public void UseAuthHandler<T>() where T : class, IHubconAuthHandler;
+        
+        /// <summary>
+        /// The security parameters used to validate authentication tokens (e.g., JWT) supplied during transport handshake in compatible transports.
+        /// </summary>
+        /// <param name="tokenValidationParameters">The token validation parameters.</param>
+        public void UseTokenValidationParameters(TokenValidationParameters tokenValidationParameters);
+        
+        /// <summary>
         /// The maximum time allowed for a connection to be alive.
         /// </summary>
         /// <value>
