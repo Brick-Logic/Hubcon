@@ -24,7 +24,7 @@ namespace Hubcon
         public virtual bool EnablePing { get; set; } = true;
 
         /// <inheritdoc />
-        public int PingOperationLimitPerSecond { get; set; }
+        public int PingOperationLimitPerSecond { get; set; } = 999_999;
 
         /// <inheritdoc />
         public virtual bool EnablePong { get; set; } = true;
@@ -36,46 +36,46 @@ namespace Hubcon
         public virtual bool CallOperationEnabled { get; set; } = true;
 
         /// <inheritdoc />
-        public virtual TimeSpan CallOperationTimeout { get; set; }
+        public virtual TimeSpan CallOperationTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <inheritdoc />
-        public int CallOperationLimitPerSecond { get; set; }
+        public int CallOperationLimitPerSecond { get; set; } = 999_999;
 
         /// <inheritdoc />
         public virtual bool InvokeOperationEnabled { get; set; } = true;
 
         /// <inheritdoc />
-        public virtual TimeSpan InvokeOperationTimeout { get; set; }
+        public virtual TimeSpan InvokeOperationTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <inheritdoc />
-        public int InvokeOperationLimitPerSecond { get; set; }
+        public int InvokeOperationLimitPerSecond { get; set; } = 999_999;
 
         /// <inheritdoc />
         public virtual bool StreamOperationEnabled { get; set; } = true;
 
         /// <inheritdoc />
-        public virtual TimeSpan StreamOperationTimeout { get; set; }
+        public virtual TimeSpan StreamOperationTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <inheritdoc />
-        public int StreamOperationLimitPerSecond { get; set; }
+        public int StreamOperationLimitPerSecond { get; set; } = 999_999;
 
         /// <inheritdoc />
         public virtual bool IngestOperationEnabled { get; set; } = true;
 
         /// <inheritdoc />
-        public virtual TimeSpan IngestOperationTimeout { get; set; }
+        public virtual TimeSpan IngestOperationTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <inheritdoc />
-        public int IngestOperationLimitPerSecond { get; set; }
+        public int IngestOperationLimitPerSecond { get; set; } = 999_999;
 
         /// <inheritdoc />
-        public int ControlMessagesLimitPerSecond { get; set; }
+        public int ControlMessagesLimitPerSecond { get; set; } = 999_999;
 
         /// <inheritdoc />
-        public int ControlMessagesPerSecond { get; set; }
+        public int ControlMessagesPerSecond { get; set; } = 999_999;
 
         /// <inheritdoc />
-        public virtual bool RetryableMessagesEnabled { get; set; }
+        public virtual bool RetryableMessagesEnabled { get; set; } = false;
 
         /// <inheritdoc />
         public virtual bool UseRateLimiters { get; set; } = true;
@@ -87,7 +87,7 @@ namespace Hubcon
         public virtual bool AllowRemoteCancellation { get; set; }
 
         /// <inheritdoc />
-        public int TransportLimitPerSecond { get; set; }
+        public int TransportLimitPerSecond { get; set; } = 999_999;
 
         /// <inheritdoc />
         public IRateLimitAuthority? TransportRateLimitAuthority { get; set; }
@@ -99,7 +99,7 @@ namespace Hubcon
         public virtual int MaxConcurrentRequestsPerIp { get; set; } = 10;
 
         /// <inheritdoc />
-        public virtual bool AllowAnonymousClients { get; set; } = true;
+        public virtual bool AllowAnonymousClients { get; set; } = false;
 
         /// <inheritdoc />
         public virtual TokenValidationParameters? TokenValidationParameters { get; set; }
@@ -111,7 +111,7 @@ namespace Hubcon
         public virtual Type? ConnectionAuthHandlerType { get; set; }
 
         /// <inheritdoc />
-        public virtual TimeSpan ConnectionTimeout { get; set; }
+        public virtual TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <inheritdoc />
         public virtual bool RequiresAuth { get; set; } = true;

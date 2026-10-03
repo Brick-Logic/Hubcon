@@ -24,83 +24,33 @@ namespace Hubcon
     /// <inheritdoc/>
     public class HttpTransportSettings : TransportSettings
     {
-        /// <inheritdoc />
-        public override TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(15);
-
-        /// <inheritdoc />
-        public override int MaxConnections { get; set; } = 1000;
-
-        /// <inheritdoc />
-        public override int MaxConnectionsPerIp { get; set; } = 10;
-
-        /// <inheritdoc />
-        public override bool EnablePing { get; set; } = true;
-
-        /// <inheritdoc />
-        public override bool EnablePong { get; set; } = true;
-
-        /// <inheritdoc />
-        public override string TransportPrefix { get; set; } = "/";
-
-        /// <inheritdoc />
-        public override bool CallOperationEnabled { get; set; } = true;
-
-        /// <inheritdoc />
-        public override TimeSpan CallOperationTimeout { get; set; }
-
-        /// <inheritdoc />
-        public override bool InvokeOperationEnabled { get; set; } = true;
-
-        /// <inheritdoc />
-        public override TimeSpan InvokeOperationTimeout { get; set; }
-
-        /// <inheritdoc />
-        public override bool StreamOperationEnabled { get; set; } = true;
-
-        /// <inheritdoc />
-        public override TimeSpan StreamOperationTimeout { get; set; }
-
-        /// <inheritdoc />
-        public override bool IngestOperationEnabled { get; set; } = true;
-
-        /// <inheritdoc />
-        public override TimeSpan IngestOperationTimeout { get; set; }
-
-        /// <inheritdoc />
-        public override bool RetryableMessagesEnabled { get; set; }
-
-        /// <inheritdoc />
-        public override bool UseRateLimiters { get; set; } = true;
-
-        /// <inheritdoc />
-        public override bool LoggingEnabled { get; set; }
-
-        /// <inheritdoc />
-        public override bool AllowRemoteCancellation { get; set; }
-
-        /// <inheritdoc />
-        public override bool MethodOverloadingEnabled { get; set; }
-
-        /// <inheritdoc />
-        public override int MaxConcurrentRequestsPerIp { get; set; } = 10;
-
-        /// <inheritdoc />
-        public override bool AllowAnonymousClients { get; set; } = true;
-
-        /// <inheritdoc />
-        public override TokenValidationParameters? TokenValidationParameters { get; set; }
-
-        /// <inheritdoc />
-        public override bool CheckTokenExpirationOnMessageReceived { get; set; }
-
-        /// <inheritdoc />
-        public override Type? ConnectionAuthHandlerType { get; set; }
-
-        /// <inheritdoc />
-        public override TimeSpan ConnectionTimeout { get; set; }
-
-        /// <inheritdoc />
-        public override bool RequiresAuth { get; set; } = true;
+        public HttpTransportSettings()
+        {
+            base.RequestTimeout = TimeSpan.FromSeconds(15);
+            base.MaxConnections = 1000;
+            base.MaxConnectionsPerIp = 10;
+            base.EnablePing = true;
+            base.EnablePong = true;
+            base.TransportPrefix = "/";
+            base.CallOperationEnabled = true;
+            base.CallOperationTimeout = TimeSpan.FromSeconds(15);
+            base.InvokeOperationEnabled = true;
+            base.InvokeOperationTimeout = TimeSpan.FromSeconds(15);
+            base.StreamOperationEnabled = true;
+            base.StreamOperationTimeout = TimeSpan.FromSeconds(15);
+            base.IngestOperationEnabled = false;
+            base.IngestOperationTimeout = TimeSpan.MinValue;
+            base.RetryableMessagesEnabled = false;
+            base.UseRateLimiters = true;
+            base.LoggingEnabled = true;
+            base.AllowRemoteCancellation = true;
+            base.MethodOverloadingEnabled = false;
+            base.MaxConcurrentRequestsPerIp = 25;
+            base.AllowAnonymousClients = true;
+            base.CheckTokenExpirationOnMessageReceived = true;
+            base.ConnectionTimeout = TimeSpan.FromSeconds(15);
+            base.RequiresAuth = true;
+        }
     }
 
     /// <summary>
@@ -120,91 +70,38 @@ namespace Hubcon
     /// <inheritdoc/>
     public class WebSocketTransportSettings : TransportSettings
     {
-        /// <inheritdoc/>
-        public override long MaxMessageSizeInBytes { get; set; } = 65535;
-
-        /// <inheritdoc/>w
-        public override TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(30);
-
-        /// <inheritdoc/>
-        public override int MaxConnections { get; set; } = 5000;
-
-        /// <inheritdoc/>
-        public override int MaxConnectionsPerIp { get; set; } = 25;
-
-        /// <inheritdoc/>
-        public override bool EnablePing { get; set; } = true;
-
-        /// <inheritdoc/>
-        public override bool EnablePong { get; set; } = true;
-
-        /// <inheritdoc/>
-        public override string TransportPrefix { get; set; } = "/ws";
-
-        /// <inheritdoc/>
-        public override bool CallOperationEnabled { get; set; } = true;
-
-        /// <inheritdoc/>
-        public override TimeSpan CallOperationTimeout { get; set; } = TimeSpan.FromSeconds(10);
-
-        /// <inheritdoc/>
-        public override bool InvokeOperationEnabled { get; set; } = true;
-
-        /// <inheritdoc/>
-        public override TimeSpan InvokeOperationTimeout { get; set; } = TimeSpan.FromSeconds(30);
-
-        /// <inheritdoc/>
-        public override bool StreamOperationEnabled { get; set; } = true;
-
-        /// <inheritdoc/>
-        public override TimeSpan StreamOperationTimeout { get; set; } = TimeSpan.FromSeconds(30);
-
-        /// <inheritdoc/>
-        public override bool IngestOperationEnabled { get; set; } = true;
-
-        /// <inheritdoc/>
-        public override TimeSpan IngestOperationTimeout { get; set; } = TimeSpan.FromSeconds(30);
-
-        /// <inheritdoc/>
-        public override bool RetryableMessagesEnabled { get; set; }
-
-        /// <inheritdoc/>
-        public override bool UseRateLimiters { get; set; } = true;
-
-        /// <inheritdoc/>
-        public override bool LoggingEnabled { get; set; }
-
-        /// <inheritdoc/>
-        public override bool AllowRemoteCancellation { get; set; }
-
-        /// <inheritdoc/>
-        public override bool MethodOverloadingEnabled { get; set; } = true;
-
-        /// <inheritdoc/>
-        public override int MaxConcurrentRequestsPerIp { get; set; } = 25;
-
-        /// <inheritdoc/>
-        public override bool AllowAnonymousClients { get; set; } = true;
-
-        /// <inheritdoc/>
-        public override TokenValidationParameters? TokenValidationParameters { get; set; }
-
-        /// <inheritdoc/>
-        public override bool CheckTokenExpirationOnMessageReceived { get; set; } = true;
-
-        /// <inheritdoc/>
-        public override Type? ConnectionAuthHandlerType { get; set; }
-
-        /// <inheritdoc/>
-        public override TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromMinutes(60);
-
-        /// <inheritdoc/>
-        public override bool RequiresAuth { get; set; } = true;
+        public WebSocketTransportSettings()
+        {
+            base.MaxMessageSizeInBytes = 65535;
+            base.RequestTimeout = TimeSpan.FromSeconds(30);
+            base.MaxConnections = 5000;
+            base.MaxConnectionsPerIp = 20;
+            base.EnablePing = true;
+            base.EnablePong = true;
+            base.TransportPrefix = "/ws";
+            base.CallOperationEnabled = true;
+            base.CallOperationTimeout = TimeSpan.FromSeconds(10);
+            base.InvokeOperationEnabled = true;
+            base.InvokeOperationTimeout  = TimeSpan.FromSeconds(10);
+            base.StreamOperationEnabled  = true;
+            base.StreamOperationTimeout = TimeSpan.FromSeconds(15);
+            base.IngestOperationEnabled = true;
+            base.IngestOperationTimeout = TimeSpan.FromSeconds(15);
+            base.UseRateLimiters = true;
+            base.LoggingEnabled = true;
+            base.AllowRemoteCancellation = true;
+            base.MethodOverloadingEnabled = true;
+            base.MaxConcurrentRequestsPerIp = 25;
+            base.AllowAnonymousClients = false;
+            base.CheckTokenExpirationOnMessageReceived = true;
+            base.ConnectionTimeout = TimeSpan.MaxValue;
+            base.RequiresAuth = true;
+        }
 
         /// <summary>
         /// Determines the heartbeat expiration seconds. If the connection does not receive a ping in time, it may be aborted.
         /// </summary>
-        public int HeartBeatInSeconds { get; set; } = 90;
+        public int HeartBeatInSeconds { get; set; } = 120;
     }
 
     /// <summary>

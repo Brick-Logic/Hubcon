@@ -168,7 +168,6 @@ namespace HubconTest
                         x.MaxConcurrentRequestsPerIp = 999_999;
                         x.UseRateLimiters = true;
                         x.TransportLimitPerSecond = 50;
-                        x.IngestOperationLimitPerSecond = 50;
                         x.LoggingEnabled = true;
                         x.TokenValidationParameters = tokenValidationParameters;
                     });
