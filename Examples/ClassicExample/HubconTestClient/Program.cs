@@ -77,7 +77,7 @@ internal class Program
         var authManager = scope.ServiceProvider.GetRequiredService<AuthenticationManager>();
         var client2 = scope.ServiceProvider.GetRequiredService<ISecondTestContract>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<IUserContract>>();
-        var openAi = scope.ServiceProvider.GetRequiredService<IOpenAIContract>();
+        var openAi = scope.ServiceProvider.GetRequiredService<IOpenAiContract>();
         
         var login = new LoginCommand("username", "53535", true, new("353", new("456")));
         var results = new List<ValidationResult>();
@@ -369,7 +369,7 @@ internal class Program
             throw new Exception($"Error de test hubcon response: {response.Error}");
     }
 
-    private static async Task TestOpenAiIntegration(ILogger<IUserContract> logger, IOpenAIContract openAi)
+    private static async Task TestOpenAiIntegration(ILogger<IUserContract> logger, IOpenAiContract openAi)
     {
         logger.LogInformation("Probando creación de modelo de respuesta...");
         var command = new CreateResponseCommand()

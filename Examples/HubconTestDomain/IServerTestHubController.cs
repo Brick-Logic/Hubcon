@@ -35,6 +35,9 @@ namespace HubconTestDomain
     [HttpTransport]
     public interface IUserContract : IControllerContract
     {
+        IAsyncEnumerable<string> GetMessages(int count);
+        
+        
         Task<int> GetTemperatureFromServer(string test, CancellationToken cancellationToken = default);
 
         [HttpTransport]
@@ -42,11 +45,10 @@ namespace HubconTestDomain
 
         Task<HubconResponse<bool>> GetTemperatureFromServerCancelable(CancellationToken cancellationToken);
 
-        [ParseSseMessage("data: ")]
-        [ParseSseMessage("event: ")]
-        [ParseEndSseMessage("[DONE]")]
-        // [WebSocketTransport]
-        IAsyncEnumerable<string> GetMessages(int count);
+        // [ParseSseMessage("data: ")]
+        // [ParseSseMessage("event: ")]
+        // [ParseEndSseMessage("[DONE]")]
+        // // [WebSocketTransport]
 
         Task ShowTextOnServer();
         Task<IEnumerable<bool>> GetBooleans();

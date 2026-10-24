@@ -23,7 +23,7 @@ namespace HubconTestClient.Modules
 
             server.AddHeaderProvider("Authorization", x => "Bearer " + config["OpenAI:ApiKey"]);
 
-            server.Implements<IOpenAIContract>();
+            server.Implements<IOpenAiContract>();
         }
     }
 }

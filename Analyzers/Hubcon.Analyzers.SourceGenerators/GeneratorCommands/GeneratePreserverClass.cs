@@ -21,11 +21,6 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine($"{baseIndent}[System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]");
             sb.AppendLine($"{baseIndent}public static class {preserverName}PreserverModule");
             sb.AppendLine($"{baseIndent}{{");
-
-            sb.AppendLine(
-                $"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof({ifaceFullName}))]");
-
-            sb.AppendLine($"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors, typeof({ifaceFullName}))]");
             
 
             sb.AppendLine(
@@ -59,8 +54,8 @@ namespace Hubcon.Analyzers.SourceGenerators.GeneratorCommands
             sb.AppendLine($"{baseIndent}        }}");
             sb.AppendLine($"{baseIndent}    }}");
             sb.AppendLine($"{baseIndent}");
-            sb.AppendLine(
-                $"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof({fullProxyName}))]");
+            // sb.AppendLine(
+            //     $"{baseIndent}    [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof({fullProxyName}))]");
             sb.AppendLine($"{baseIndent}    public static void {preserverName}Preserver() {{ }}");
             sb.AppendLine($"{baseIndent}}}");
 

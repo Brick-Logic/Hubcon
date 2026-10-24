@@ -102,9 +102,11 @@ namespace Hubcon.Client.Builder
 
         public static Type? GetProxyType(Type contractType)
         {
-            if(ProxyLookup != null)
+            if (ProxyLookup != null)
+            {
                 return ProxyLookup.Invoke(contractType);
-
+            }
+            
             // Buscamos en todos los assemblies cargados
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {

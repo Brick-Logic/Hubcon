@@ -8,7 +8,7 @@ namespace HubconTestClient.Contracts
 {
     [Header("Authorization")]
     [NonHubconHttpTransport]
-    public interface IOpenAIContract : IControllerContract
+    public interface IOpenAiContract : IControllerContract
     {
         [HttpPost("/v1/responses")]
         public Task<OpenAIResponse> CreateModelResponse([AsBody] CreateResponseCommand command);

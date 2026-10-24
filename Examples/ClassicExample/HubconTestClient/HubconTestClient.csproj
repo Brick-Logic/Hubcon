@@ -17,7 +17,7 @@
 		
 		<PublishAot>true</PublishAot>
 		<IsAotCompatible>true</IsAotCompatible>
-		<TrimMode>link</TrimMode>
+		<TrimMode>full</TrimMode>
 
 		<PublishTrimmed>true</PublishTrimmed>
 		<IsTrimmable>true</IsTrimmable>

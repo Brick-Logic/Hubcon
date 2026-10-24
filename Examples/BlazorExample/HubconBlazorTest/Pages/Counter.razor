@@ -5,16 +5,38 @@
 
 @inject AuthenticationManager _authenticationManager
 @inject ILogger<Counter> _logger
-@inject IUserContract _userService
+@inject IUserContract _userContract
 
 <button class="btn btn-primary" @onclick="Login">Login</button>
-@* <button class="btn btn-primary" @onclick="TestSubscribe">TestSubscribe</button> *@
 <button class="btn btn-primary" @onclick="TestCreateUser">TestCreateUser</button>
 <button class="btn btn-primary" @onclick="TestStream">TestStream</button>
 
 @code {
     protected async void Login()
     {
+        bool estaRecortado = AppContext.TryGetSwitch("System.Runtime.CompilerServices.IsTrimmable", out var isTrimmable) && isTrimmable;
+        _logger.LogInformation(estaRecortado.ToString());
+        
+        bool esTrimmed = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTNET_BUNDLE_EXTRACT_BASE_DIR")) 
+            ;
+        _logger.LogInformation(esTrimmed.ToString());
+        
+#if __wasm__
+    _logger.LogInformation("es wasm");
+#endif
+
+#if NET7_0_OR_GREATER || NET8_0_OR_GREATER
+        if (OperatingSystem.IsBrowser())
+        {
+            bool esNativeAot = System.Runtime.CompilerServices.RuntimeFeature.IsSupported("IsDynamicCodeSupported") == false;
+    
+            if (esNativeAot)
+            {
+                Console.WriteLine("¡Corriendo en WebAssembly Native AOT con Trimming!");
+            }
+        }
+#endif
+        
         var res = await _authenticationManager.LoginAsync("36ytwse3", "asasasas");
 
         if (res.IsSuccess)
@@ -23,22 +45,21 @@
             _logger.LogInformation($"Login failure. Info: {res.ErrorMessage}");
     }
     
-    protected async Task TestCreateUser()
+    async Task TestCreateUser()
     {
-        var result = await _userService.Execute(x => x.CreateUser());
+        var result = await _userContract.Execute(x => x.CreateUser());
         _logger.LogInformation($"CreateUser {result.Success}");
     }
-
-    protected async Task TestStream()
+    
+    async Task TestStream()
     {
-        var stream = await _userService.Execute(x => x.GetMessages(10));
-        
+        var stream = await _userContract.Execute(contract => contract.GetMessages(10));
         await foreach (var item in stream.Data!)
         {
-            _logger.LogInformation($"Item de stream recibidos: {item}");
+            _logger.LogInformation("Received item: {Item}", item);
         }
         
-        var stream2 = _userService.GetMessages(10);
+        var stream2 = _userContract.GetMessages(10);
         
         await foreach (var item in stream2)
         {

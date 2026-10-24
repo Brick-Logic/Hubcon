@@ -44,18 +44,11 @@
         <PackageReference Include="Hubcon.Analyzers" Version="[2.0.0-rc1, 3.0.0)" />
         <PackageReference Include="Hubcon.Analyzers.CodeFixes" Version="[2.0.0-rc1, 3.0.0)"/>
         <PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="[2.0.0-rc1, 3.0.0)" />
-    </ItemGroup>
-
-    <ItemGroup Condition="$(SuppressHubconGenerators) == DEADCODE">
         <PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[2.0.0-rc1, 3.0.0)" />
     </ItemGroup>
-
+    
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Include="build\Hubcon.Server.targets" Pack="true" PackagePath="build\" />
     </ItemGroup>
 
     <ItemGroup>

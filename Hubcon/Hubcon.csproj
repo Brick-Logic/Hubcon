@@ -46,10 +46,6 @@
 		<PackageReference Include="Hubcon.Analyzers.DiagnosticSuppressors" Version="[2.0.0-rc1, 3.0.0)" />
 	</ItemGroup>
 	
-	<ItemGroup Condition="$(SuppressHubconGenerators) == DEADCODE">
-		<PackageReference Include="Hubcon.Analyzers.SourceGenerators" Version="[2.0.0-rc1, 3.0.0)" />
-	</ItemGroup>
-	
 	<ItemGroup>
 		<None Include="build\Hubcon.targets" Pack="true" PackagePath="build\" />
 	</ItemGroup>
